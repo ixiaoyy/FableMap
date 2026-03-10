@@ -26,6 +26,8 @@
   "pois": [],
   "roads": [],
   "landmarks": [],
+  "factions": [],
+  "historical_echoes": [],
   "state": {}
 }
 ```
@@ -42,6 +44,9 @@
 - `dominant_landuse`：主土地用途
 - `narrative_summary`：区域整体描述
 - `visual_style`：供 Godot 选择视觉模板
+- `social_tension`：地区社会张力或动荡程度
+- `class_tone`：地区阶层气质，如 `elite`, `working`, `collapsed`
+- `satire_profile`：该地区偏向哪种现实讽刺风格
 
 ## pois
 
@@ -59,6 +64,8 @@
 - `tags`：扩展标签
 - `visual_hint`：建议预制体和材质参数
 - `state_ref`：指向世界状态中的记录
+- `satire_hook`：现实隐喻或黑色幽默钩子
+- `faction_alignment`：地点倾向的阵营
 
 ## roads
 
@@ -83,6 +90,32 @@
 - `description`
 - `visual_hint`
 
+## factions
+
+用于描述区域内的组织、利益集团和权力节点。
+
+字段建议：
+
+- `id`
+- `name`
+- `archetype`
+- `influence`
+- `territories`
+- `relations`
+
+## historical_echoes
+
+用于描述区域内埋藏的历史碎片、异常残留和谜团入口。
+
+字段建议：
+
+- `id`
+- `source_type`
+- `summary`
+- `trigger_hint`
+- `severity`
+- `linked_pois`
+
 ## state
 
 状态层用于支持世界记忆和后续任务传播。
@@ -94,6 +127,10 @@
 - `poi_states`
 - `flags`
 - `story_events`
+- `faction_states`
+- `economy_state`
+- `disturbance_level`
+- `mystery_progress`
 
 ## 映射示例
 
@@ -108,3 +145,4 @@
 - Schema 必须支持“规则生成”与“LLM 润色”共存
 - Schema 必须保留原始 OSM 来源，便于回溯
 - Godot 侧只依赖稳定字段，不直接依赖原始标签格式
+- v0.1 不必一次用完所有未来字段，但应为阵营、历史和动态扰动预留扩展位
