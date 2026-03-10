@@ -28,6 +28,8 @@
   "landmarks": [],
   "factions": [],
   "historical_echoes": [],
+  "memory_anchors": [],
+  "sprites": [],
   "state": {}
 }
 ```
@@ -47,6 +49,9 @@
 - `social_tension`：地区社会张力或动荡程度
 - `class_tone`：地区阶层气质，如 `elite`, `working`, `collapsed`
 - `satire_profile`：该地区偏向哪种现实讽刺风格
+- `vibe_profile`：当前区域的审美镜头，如 `ghibli_town`, `neon_nostalgia`
+- `palette_hint`：色板建议
+- `comfort_level`：该区域偏治愈、浪漫或压迫的体验强度
 
 ## pois
 
@@ -66,6 +71,9 @@
 - `state_ref`：指向世界状态中的记录
 - `satire_hook`：现实隐喻或黑色幽默钩子
 - `faction_alignment`：地点倾向的阵营
+- `emotion_hook`：地点情绪触发点
+- `secret_slot`：是否可用于 Secret Garden 留痕
+- `sprite_spawn_hint`：是否可能产出都市精灵或收藏物
 
 ## roads
 
@@ -116,6 +124,32 @@
 - `severity`
 - `linked_pois`
 
+## memory_anchors
+
+用于描述地点级的情绪容器、匿名留言和私密叙事入口。
+
+字段建议：
+
+- `id`
+- `anchor_type`
+- `tone`
+- `visibility`
+- `linked_pois`
+- `unlock_conditions`
+
+## sprites
+
+用于描述都市精灵、收集物和风格化生物。
+
+字段建议：
+
+- `id`
+- `species`
+- `rarity`
+- `spawn_conditions`
+- `linked_poi`
+- `drop_tags`
+
 ## state
 
 状态层用于支持世界记忆和后续任务传播。
@@ -131,6 +165,11 @@
 - `economy_state`
 - `disturbance_level`
 - `mystery_progress`
+- `active_lens`
+- `collection_progress`
+- `home_inventory`
+- `home_style`
+- `private_marks`
 
 ## 映射示例
 
@@ -146,3 +185,4 @@
 - Schema 必须保留原始 OSM 来源，便于回溯
 - Godot 侧只依赖稳定字段，不直接依赖原始标签格式
 - v0.1 不必一次用完所有未来字段，但应为阵营、历史和动态扰动预留扩展位
+- 同理，也应为审美镜头、情感锚点、收集系统和家园系统预留扩展位
