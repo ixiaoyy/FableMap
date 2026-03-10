@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+from .cache import default_cache_dir
 from .world_builder import build_world, write_world
 
 
@@ -32,6 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Retry count for live Overpass requests.",
     )
     generate_parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        help="Optional local cache directory for live Overpass payloads.",
+    )
+    generate_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Ignore cached live payloads and fetch fresh Overpass data.",
+    )
+    generate_parser.add_argument(
         "--source-file",
         type=Path,
         help="Optional local Overpass-style JSON fixture for offline generation and testing.",
@@ -55,9 +66,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _run_generate(args: argparse.Namespace) -> int:
     source_data = None
     provider = "overpass"
+    cache_dir = None
+    cache_status = "disabled"
     if args.source_file:
         source_data = json.loads(args.source_file.read_text(encoding="utf-8"))
         provider = "fixture"
+        cache_status = "fixture"
+    else:
+        cache_dir = args.cache_dir or default_cache_dir()
+        cache_status = "refreshed" if args.refresh else "enabled"
 
     world = build_world(
         lat=args.lat,
@@ -68,6 +85,8 @@ def _run_generate(args: argparse.Namespace) -> int:
         provider=provider,
         fetch_timeout_seconds=args.request_timeout,
         fetch_max_retries=args.request_retries,
+        fetch_cache_dir=cache_dir,
+        refresh_cache=args.refresh,
     )
     write_world(args.output, world)
     print(
@@ -78,6 +97,8 @@ def _run_generate(args: argparse.Namespace) -> int:
                 "poi_count": len(world["pois"]),
                 "road_count": len(world["roads"]),
                 "landmark_count": len(world["landmarks"]),
+                "cache_status": cache_status,
+                "cache_dir": str(cache_dir) if cache_dir is not None else None,
                 "output": str(args.output),
             },
             ensure_ascii=False,

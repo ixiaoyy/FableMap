@@ -133,6 +133,8 @@ def build_world(
     provider: str = "overpass",
     fetch_timeout_seconds: int = 30,
     fetch_max_retries: int = 1,
+    fetch_cache_dir: str | Path | None = None,
+    refresh_cache: bool = False,
 ) -> dict[str, Any]:
     payload = source_data if source_data is not None else fetch_overpass_data(
         lat,
@@ -140,6 +142,8 @@ def build_world(
         radius,
         timeout_seconds=fetch_timeout_seconds,
         max_retries=fetch_max_retries,
+        cache_dir=fetch_cache_dir,
+        refresh=refresh_cache,
     )
     elements = payload.get("elements", [])
     fallback = {"lat": lat, "lon": lon}

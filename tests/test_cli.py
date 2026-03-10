@@ -41,6 +41,47 @@ class CliTests(unittest.TestCase):
             self.assertEqual(world["source"]["provider"], "fixture")
             self.assertGreaterEqual(len(world["pois"]), 3)
 
+    def test_generate_passes_cache_arguments_for_live_requests(self) -> None:
+        fake_world = {
+            "world_id": "world-demo",
+            "source": {"provider": "overpass"},
+            "pois": [],
+            "roads": [],
+            "landmarks": [],
+        }
+        with TemporaryDirectory() as tmpdir, patch(
+            "fablemap.cli.build_world",
+            return_value=fake_world,
+        ) as build_world_mock, patch("fablemap.cli.write_world"):
+            output_path = Path(tmpdir) / "world.json"
+            cache_dir = Path(tmpdir) / "cache"
+            exit_code = main(
+                [
+                    "generate",
+                    "--lat",
+                    "35.6580",
+                    "--lon",
+                    "139.7016",
+                    "--radius",
+                    "300",
+                    "--output",
+                    str(output_path),
+                    "--cache-dir",
+                    str(cache_dir),
+                    "--refresh",
+                    "--request-timeout",
+                    "5",
+                    "--request-retries",
+                    "2",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        kwargs = build_world_mock.call_args.kwargs
+        self.assertEqual(kwargs["fetch_cache_dir"], cache_dir)
+        self.assertTrue(kwargs["refresh_cache"])
+        self.assertEqual(kwargs["fetch_timeout_seconds"], 5)
+        self.assertEqual(kwargs["fetch_max_retries"], 2)
+
     def test_generate_returns_error_when_live_fetch_fails(self) -> None:
         stderr = io.StringIO()
         with TemporaryDirectory() as tmpdir, patch(
