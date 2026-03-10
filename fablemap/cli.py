@@ -20,6 +20,18 @@ def build_parser() -> argparse.ArgumentParser:
     generate_parser.add_argument("--output", type=Path, required=True, help="Output JSON file path")
     generate_parser.add_argument("--seed", help="Optional stable seed override")
     generate_parser.add_argument(
+        "--request-timeout",
+        type=_positive_int,
+        default=30,
+        help="Timeout in seconds for live Overpass requests.",
+    )
+    generate_parser.add_argument(
+        "--request-retries",
+        type=_non_negative_int,
+        default=1,
+        help="Retry count for live Overpass requests.",
+    )
+    generate_parser.add_argument(
         "--source-file",
         type=Path,
         help="Optional local Overpass-style JSON fixture for offline generation and testing.",
@@ -54,6 +66,8 @@ def _run_generate(args: argparse.Namespace) -> int:
         seed=args.seed,
         source_data=source_data,
         provider=provider,
+        fetch_timeout_seconds=args.request_timeout,
+        fetch_max_retries=args.request_retries,
     )
     write_world(args.output, world)
     print(
@@ -77,4 +91,11 @@ def _positive_int(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
         raise argparse.ArgumentTypeError("value must be a positive integer")
+    return parsed
+
+
+def _non_negative_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("value must be a non-negative integer")
     return parsed
