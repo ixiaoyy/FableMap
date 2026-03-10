@@ -47,11 +47,16 @@
 - `narrative_summary`：区域整体描述
 - `visual_style`：供 Godot 选择视觉模板
 - `social_tension`：地区社会张力或动荡程度
+- `commerce_flux`：地区商业/物流流动强度
+- `anomaly_pressure`：历史残响或异常现象被放大的倾向
 - `class_tone`：地区阶层气质，如 `elite`, `working`, `collapsed`
 - `satire_profile`：该地区偏向哪种现实讽刺风格
 - `vibe_profile`：当前区域的审美镜头，如 `ghibli_town`, `neon_nostalgia`
 - `palette_hint`：色板建议
 - `comfort_level`：该区域偏治愈、浪漫或压迫的体验强度
+- `dominant_faction`：主导阵营
+- `control_score`：地区控制力度
+- `strategic_value`：地区战略价值
 
 ## pois
 
@@ -107,7 +112,9 @@
 - `id`
 - `name`
 - `archetype`
+- `doctrine`
 - `influence`
+- `resource_focus`
 - `territories`
 - `relations`
 
@@ -164,12 +171,17 @@
 - `faction_states`
 - `economy_state`
 - `disturbance_level`
+- `signal_snapshot`
+- `spawn_window`
 - `mystery_progress`
 - `active_lens`
 - `collection_progress`
 - `home_inventory`
 - `home_style`
 - `private_marks`
+- `reputation`
+- `route_impact`
+- `resource_transfers`
 
 ## 映射示例
 
