@@ -37,6 +37,8 @@ class PageTests(unittest.TestCase):
                     health = json.loads(response.read().decode("utf-8"))
 
             self.assertIn("附近地图变异世界", html)
+            self.assertIn('id="language-select"', html)
+            self.assertIn("Language / 语言", html)
             self.assertEqual(health["status"], "ok")
             self.assertTrue(health["fixture_available"])
             self.assertEqual(health["output_root"], str(output_root.resolve()))
@@ -66,6 +68,8 @@ class PageTests(unittest.TestCase):
                 self.assertEqual(result["mode"], "fixture")
                 self.assertIn("/generated/run-", result["preview_url"])
                 self.assertIn("Around Late Lantern Cafe", preview_html)
+                self.assertIn('id="language-select"', preview_html)
+                self.assertIn("Language / 语言", preview_html)
                 self.assertTrue((output_root / result["run_id"] / "world.json").exists())
                 self.assertTrue((output_root / result["run_id"] / "bundle" / "index.html").exists())
 

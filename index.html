@@ -11,8 +11,12 @@
       .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 40px; }
       .hero, .panel { background: #111827; border: 1px solid #334155; border-radius: 20px; }
       .hero { padding: 28px; background: linear-gradient(135deg, #1e293b, #111827 60%, #0f172a); }
+      .hero-top { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+      .hero-copy { flex: 1; }
       .hero h1 { margin: 0 0 10px; font-size: 38px; }
       .hero p { line-height: 1.7; margin: 10px 0; }
+      .language-switcher { min-width: 180px; display: flex; flex-direction: column; gap: 8px; }
+      .language-switcher label { display: block; margin: 0; font-size: 13px; color: #cbd5e1; }
       .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
       .tag { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #312e81; font-size: 12px; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 18px; }
@@ -52,7 +56,9 @@
       ul { padding-left: 18px; line-height: 1.6; }
       a { color: #93c5fd; }
       @media (max-width: 760px) {
-        .row, .row-2 { grid-template-columns: 1fr; }
+        .hero-top, .row, .row-2 { grid-template-columns: 1fr; display: grid; }
+        .hero-top { gap: 16px; }
+        .language-switcher { min-width: 0; }
         iframe { min-height: 560px; }
       }
     </style>
@@ -60,92 +66,211 @@
   <body>
     <div class="wrap">
       <section class="hero">
-        <h1>FableMap / 寓言地图</h1>
-        <p><strong>这次不只是静态样品了。</strong> 这个页面现在是“附近地图变异世界”的真正页面入口：填坐标、点生成、直接看预览。</p>
-        <p>浏览器本身不能直接调用本地 Python，所以页面需要连接一个本地 FableMap 页面服务。服务启动后，这个页面就能把附近真实地图或离线样例直接变成异世界预览。</p>
-        <div class="tags">
-          <span class="tag">页面驱动</span>
-          <span class="tag">附近地图 → 异世界</span>
-          <span class="tag">标准库本地服务</span>
-          <span class="tag">bundle 预览直出</span>
+        <div class="hero-top">
+          <div class="hero-copy">
+            <h1 data-i18n="heroTitle">FableMap / 寓言地图</h1>
+            <p data-i18n-html="heroLead"><strong>这次不只是静态样品了。</strong> 这个页面现在是“附近地图变异世界”的真正页面入口：填坐标、点生成、直接看预览。</p>
+            <p data-i18n-html="heroBody">浏览器本身不能直接调用本地 Python，所以页面需要连接一个本地 FableMap 页面服务。服务启动后，这个页面就能把附近真实地图或离线样例直接变成异世界预览。</p>
+            <div class="tags">
+              <span class="tag" data-i18n="tagPageDriven">页面驱动</span>
+              <span class="tag" data-i18n="tagNearbyFantasy">附近地图 → 异世界</span>
+              <span class="tag" data-i18n="tagLocalServer">标准库本地服务</span>
+              <span class="tag" data-i18n="tagBundlePreview">bundle 预览直出</span>
+            </div>
+          </div>
+          <div class="language-switcher">
+            <label for="language-select" data-i18n="languageLabel">语言 / Language</label>
+            <select id="language-select">
+              <option value="zh-CN">中文</option>
+              <option value="en">English</option>
+            </select>
+          </div>
         </div>
       </section>
 
       <div class="grid">
         <section class="panel">
-          <h2>服务连接状态</h2>
-          <p class="status"><span id="status-dot" class="dot"></span><span id="status-text">正在检测本地页面服务…</span></p>
-          <label for="server-base">服务地址</label>
+          <h2 data-i18n="serviceStatusTitle">服务连接状态</h2>
+          <p class="status"><span id="status-dot" class="dot"></span><span id="status-text" data-i18n="checkingServer">正在检测本地页面服务…</span></p>
+          <label for="server-base" data-i18n="serverBaseLabel">服务地址</label>
           <div class="row-2">
             <input id="server-base" type="text" value="http://127.0.0.1:8765">
-            <button id="check-server" class="secondary" type="button">重新检测</button>
+            <button id="check-server" class="secondary" type="button" data-i18n="recheckButton">重新检测</button>
           </div>
-          <p class="note">默认会连接 <code>http://127.0.0.1:8765</code>。如果你是通过 `python -m fablemap page` 启动，这个地址通常不用改。</p>
-          <p class="note">如果当前未连接，请先启动本地页面服务：<code>python -m fablemap page</code></p>
+          <p class="note" data-i18n-html="serviceAddressNote">默认会连接 <code>http://127.0.0.1:8765</code>。如果你是通过 <code>python -m fablemap page</code> 启动，这个地址通常不用改。</p>
+          <p class="note" data-i18n-html="serviceStartNote">如果当前未连接，请先启动本地页面服务：<code>python -m fablemap page</code></p>
           <div id="health-details" class="note muted"></div>
         </section>
 
         <section class="panel">
-          <h2>生成附近异世界</h2>
+          <h2 data-i18n="generateTitle">生成附近异世界</h2>
           <form id="nearby-form">
             <div class="row">
               <div>
-                <label for="lat">纬度</label>
+                <label for="lat" data-i18n="latLabel">纬度</label>
                 <input id="lat" name="lat" type="number" step="0.000001" value="35.6580" required>
               </div>
               <div>
-                <label for="lon">经度</label>
+                <label for="lon" data-i18n="lonLabel">经度</label>
                 <input id="lon" name="lon" type="number" step="0.000001" value="139.7016" required>
               </div>
               <div>
-                <label for="radius">半径（米）</label>
+                <label for="radius" data-i18n="radiusLabel">半径（米）</label>
                 <input id="radius" name="radius" type="number" min="1" step="1" value="300" required>
               </div>
             </div>
             <div class="row-2">
               <div>
-                <label for="mode">生成模式</label>
+                <label for="mode" data-i18n="modeLabel">生成模式</label>
                 <select id="mode" name="mode">
-                  <option value="fixture">离线样例（稳定试跑）</option>
-                  <option value="live">真实 nearby（在线 Overpass）</option>
+                  <option value="fixture" data-i18n="modeFixture">离线样例（稳定试跑）</option>
+                  <option value="live" data-i18n="modeLive">真实 nearby（在线 Overpass）</option>
                 </select>
               </div>
               <div>
-                <label for="seed">Seed（可选）</label>
-                <input id="seed" name="seed" type="text" placeholder="可留空，自动生成">
+                <label for="seed" data-i18n="seedLabel">Seed（可选）</label>
+                <input id="seed" name="seed" type="text" placeholder="可留空，自动生成" data-i18n-placeholder="seedPlaceholder">
               </div>
             </div>
             <div class="actions">
-              <button id="generate-button" type="submit">生成预览页</button>
+              <button id="generate-button" type="submit" data-i18n="generateButton">生成预览页</button>
             </div>
           </form>
-          <p class="note">第一版页面入口优先解决“页面里触发生成 + 页面里看结果”，暂时还不是地图选点 Web App。</p>
+          <p class="note" data-i18n-html="generateNote">第一版页面入口优先解决“页面里触发生成 + 页面里看结果”，暂时还不是地图选点 Web App。</p>
         </section>
 
         <section class="panel result">
-          <h2>本次生成结果</h2>
-          <div id="result-box" class="note">还没有生成结果。连接服务后点一次“生成预览页”即可。</div>
+          <h2 data-i18n="resultTitle">本次生成结果</h2>
+          <div id="result-box" class="note" data-i18n="resultEmpty">还没有生成结果。连接服务后点一次“生成预览页”即可。</div>
         </section>
 
         <section class="panel">
-          <h2>体验说明</h2>
+          <h2 data-i18n="guideTitle">体验说明</h2>
           <ul>
-            <li>想先确认页面通不通：先用 <strong>离线样例</strong> 模式。</li>
-            <li>想试真实 nearby：切到 <strong>真实 nearby</strong> 模式后再生成。</li>
-            <li>生成完成后，下方会直接嵌入新预览页，也会给出独立打开链接。</li>
+            <li data-i18n-html="guideStep1">想先确认页面通不通：先用 <strong>离线样例</strong> 模式。</li>
+            <li data-i18n-html="guideStep2">想试真实 nearby：切到 <strong>真实 nearby</strong> 模式后再生成。</li>
+            <li data-i18n-html="guideStep3">生成完成后，下方会直接嵌入新预览页，也会给出独立打开链接。</li>
           </ul>
-          <p class="note">现有 CLI `python -m fablemap nearby ...` 仍然保留，适合脚本化或离线验证；这个页面入口则面向更直接的本地体验。</p>
+          <p class="note" data-i18n-html="guideNote">现有 CLI <code>python -m fablemap nearby ...</code> 仍然保留，适合脚本化或离线验证；这个页面入口则面向更直接的本地体验。</p>
         </section>
       </div>
 
       <section class="panel preview-shell">
-        <h2>预览页</h2>
-        <p class="note">生成成功后，下面会直接显示新 bundle 的 <code>index.html</code>。</p>
-        <iframe id="preview-frame" title="FableMap preview" hidden></iframe>
+        <h2 data-i18n="previewTitle">预览页</h2>
+        <p class="note" data-i18n-html="previewNote">生成成功后，下面会直接显示新 bundle 的 <code>index.html</code>。</p>
+        <iframe id="preview-frame" title="FableMap 预览页" hidden></iframe>
       </section>
     </div>
 
     <script>
+      const translations = {
+        "zh-CN": {
+          pageTitle: "FableMap · 附近地图变异世界",
+          heroTitle: "FableMap / 寓言地图",
+          heroLead: "<strong>这次不只是静态样品了。</strong> 这个页面现在是“附近地图变异世界”的真正页面入口：填坐标、点生成、直接看预览。",
+          heroBody: "浏览器本身不能直接调用本地 Python，所以页面需要连接一个本地 FableMap 页面服务。服务启动后，这个页面就能把附近真实地图或离线样例直接变成异世界预览。",
+          tagPageDriven: "页面驱动",
+          tagNearbyFantasy: "附近地图 → 异世界",
+          tagLocalServer: "标准库本地服务",
+          tagBundlePreview: "bundle 预览直出",
+          languageLabel: "语言 / Language",
+          serviceStatusTitle: "服务连接状态",
+          checkingServer: "正在检测本地页面服务…",
+          serverBaseLabel: "服务地址",
+          recheckButton: "重新检测",
+          serviceAddressNote: "默认会连接 <code>http://127.0.0.1:8765</code>。如果你是通过 <code>python -m fablemap page</code> 启动，这个地址通常不用改。",
+          serviceStartNote: "如果当前未连接，请先启动本地页面服务：<code>python -m fablemap page</code>",
+          serverConnected: "本地页面服务已连接，可以直接生成 nearby 预览。",
+          serverDisconnected: "本地页面服务未连接。请先启动 python -m fablemap page。",
+          serverDisconnectedNote: "如果你是直接双击打开本页，这属于正常情况：页面壳在，但本地 Python 服务还没有启动。",
+          healthDetailsTemplate: "fixture 可用：<code>{fixture_available}</code> · 输出目录：<code>{output_root}</code>",
+          generateTitle: "生成附近异世界",
+          latLabel: "纬度",
+          lonLabel: "经度",
+          radiusLabel: "半径（米）",
+          modeLabel: "生成模式",
+          modeFixture: "离线样例（稳定试跑）",
+          modeLive: "真实 nearby（在线 Overpass）",
+          seedLabel: "Seed（可选）",
+          seedPlaceholder: "可留空，自动生成",
+          generateButton: "生成预览页",
+          generateNote: "第一版页面入口优先解决“页面里触发生成 + 页面里看结果”，暂时还不是地图选点 Web App。",
+          resultTitle: "本次生成结果",
+          resultEmpty: "还没有生成结果。连接服务后点一次“生成预览页”即可。",
+          generating: "生成中…",
+          generatingMessage: "正在抓取并生成附近异世界，请稍等…",
+          generateFailedTitle: "生成失败",
+          guideTitle: "体验说明",
+          guideStep1: "想先确认页面通不通：先用 <strong>离线样例</strong> 模式。",
+          guideStep2: "想试真实 nearby：切到 <strong>真实 nearby</strong> 模式后再生成。",
+          guideStep3: "生成完成后，下方会直接嵌入新预览页，也会给出独立打开链接。",
+          guideNote: "现有 CLI <code>python -m fablemap nearby ...</code> 仍然保留，适合脚本化或离线验证；这个页面入口则面向更直接的本地体验。",
+          previewTitle: "预览页",
+          previewNote: "生成成功后，下面会直接显示新 bundle 的 <code>index.html</code>。",
+          iframeTitle: "FableMap 预览页",
+          defaultWorldTitle: "新世界",
+          resultWorldId: "world_id",
+          resultProviderCache: "provider / cache",
+          resultCounts: "POIs / Roads / Landmarks",
+          resultPreviewUrl: "预览地址",
+          resultOpenPreview: "打开新预览页",
+          resultBundleVersion: "bundle 版本",
+        },
+        en: {
+          pageTitle: "FableMap · Nearby Map into Fantasy World",
+          heroTitle: "FableMap / Living Fantasy from Real Places",
+          heroLead: "<strong>This is no longer just a static sample.</strong> This page is now the real entry for turning a nearby map into a fantasy world: fill in coordinates, click generate, and see the preview directly.",
+          heroBody: "Browsers cannot call local Python directly, so this page connects to a local FableMap page service. Once the service is running, the page can turn nearby real map data or an offline fixture into a fantasy preview.",
+          tagPageDriven: "page-driven",
+          tagNearbyFantasy: "nearby map → fantasy world",
+          tagLocalServer: "stdlib local service",
+          tagBundlePreview: "direct bundle preview",
+          languageLabel: "Language / 语言",
+          serviceStatusTitle: "Service Status",
+          checkingServer: "Checking local page service…",
+          serverBaseLabel: "Service URL",
+          recheckButton: "Check Again",
+          serviceAddressNote: "The page connects to <code>http://127.0.0.1:8765</code> by default. If you started it with <code>python -m fablemap page</code>, you usually do not need to change this.",
+          serviceStartNote: "If the page is offline, start the local page service first: <code>python -m fablemap page</code>",
+          serverConnected: "Local page service connected. You can generate a nearby preview now.",
+          serverDisconnected: "Local page service is offline. Start python -m fablemap page first.",
+          serverDisconnectedNote: "If you opened this file directly, this is expected: the page shell is here, but the local Python service is not running yet.",
+          healthDetailsTemplate: "fixture available: <code>{fixture_available}</code> · output root: <code>{output_root}</code>",
+          generateTitle: "Generate Nearby Fantasy World",
+          latLabel: "Latitude",
+          lonLabel: "Longitude",
+          radiusLabel: "Radius (meters)",
+          modeLabel: "Generation Mode",
+          modeFixture: "offline fixture (stable demo)",
+          modeLive: "live nearby (online Overpass)",
+          seedLabel: "Seed (optional)",
+          seedPlaceholder: "Leave blank for auto-generated seed",
+          generateButton: "Generate Preview",
+          generateNote: "This first page entry focuses on “trigger generation in the page + view the result in the page”, not on becoming a full map-picking web app yet.",
+          resultTitle: "Latest Result",
+          resultEmpty: "No result yet. Connect to the service and click Generate Preview once.",
+          generating: "Generating…",
+          generatingMessage: "Fetching map data and generating the nearby fantasy world. Please wait…",
+          generateFailedTitle: "Generation Failed",
+          guideTitle: "How to Use It",
+          guideStep1: "If you want to confirm the page works first, start with <strong>offline fixture</strong> mode.",
+          guideStep2: "If you want a real nearby run, switch to <strong>live nearby</strong> mode and generate again.",
+          guideStep3: "After generation, the new preview will appear below and an external preview link will also be provided.",
+          guideNote: "The existing CLI <code>python -m fablemap nearby ...</code> is still available for scripting and offline validation; this page entry is for a more direct local experience.",
+          previewTitle: "Preview Page",
+          previewNote: "After a successful run, the newly generated bundle <code>index.html</code> will appear below.",
+          iframeTitle: "FableMap Preview",
+          defaultWorldTitle: "New World",
+          resultWorldId: "world_id",
+          resultProviderCache: "provider / cache",
+          resultCounts: "POIs / Roads / Landmarks",
+          resultPreviewUrl: "preview URL",
+          resultOpenPreview: "Open preview in new tab",
+          resultBundleVersion: "bundle version",
+        },
+      };
+
+      const languageSelect = document.getElementById("language-select");
       const statusDot = document.getElementById("status-dot");
       const statusText = document.getElementById("status-text");
       const healthDetails = document.getElementById("health-details");
@@ -154,6 +279,7 @@
       const previewFrame = document.getElementById("preview-frame");
       const generateButton = document.getElementById("generate-button");
       const form = document.getElementById("nearby-form");
+      let lastResult = null;
 
       const sameOriginBase = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
       serverBaseInput.value = sameOriginBase.startsWith("http") ? sameOriginBase : "http://127.0.0.1:8765";
@@ -165,6 +291,70 @@
           .replaceAll(">", "&gt;")
           .replaceAll('"', "&quot;")
           .replaceAll("'", "&#39;");
+      }
+
+      function formatHtml(template, values) {
+        return String(template).replaceAll(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => escapeHtml(values[key] ?? ""));
+      }
+
+      function normalizeLanguage(value) {
+        if (!value) {
+          return "";
+        }
+        return String(value).toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+      }
+
+      function readStoredLanguage() {
+        try {
+          return window.localStorage.getItem("fablemap-language") || "";
+        } catch (error) {
+          return "";
+        }
+      }
+
+      function writeStoredLanguage(language) {
+        try {
+          window.localStorage.setItem("fablemap-language", language);
+        } catch (error) {
+          // Ignore storage failures.
+        }
+      }
+
+      function detectInitialLanguage() {
+        const params = new URLSearchParams(window.location.search);
+        return (
+          normalizeLanguage(params.get("lang")) ||
+          normalizeLanguage(readStoredLanguage()) ||
+          normalizeLanguage(window.navigator.language) ||
+          "zh-CN"
+        );
+      }
+
+      let currentLanguage = detectInitialLanguage();
+
+      function t(key) {
+        return translations[currentLanguage][key] || translations.en[key] || key;
+      }
+
+      function updateUrlLanguage() {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set("lang", currentLanguage);
+          window.history.replaceState(null, "", url);
+        } catch (error) {
+          // Ignore URL rewriting failures.
+        }
+      }
+
+      function localizedUrl(url) {
+        try {
+          const next = new URL(url, window.location.href);
+          next.searchParams.set("lang", currentLanguage);
+          return next.toString();
+        } catch (error) {
+          const separator = String(url).includes("?") ? "&" : "?";
+          return `${url}${separator}lang=${encodeURIComponent(currentLanguage)}`;
+        }
       }
 
       function normalizedBase() {
@@ -189,25 +379,48 @@
             throw new Error(`health ${response.status}`);
           }
           const data = await response.json();
-          setOnline("本地页面服务已连接，可以直接生成 nearby 预览。");
-          healthDetails.innerHTML = `fixture 可用：<code>${escapeHtml(data.fixture_available)}</code> · 输出目录：<code>${escapeHtml(data.output_root)}</code>`;
+          setOnline(t("serverConnected"));
+          healthDetails.innerHTML = formatHtml(t("healthDetailsTemplate"), data);
           return true;
         } catch (error) {
-          setOffline("本地页面服务未连接。请先启动 `python -m fablemap page`。");
-          healthDetails.textContent = "如果你是直接双击打开本页，这属于正常情况：页面壳在，但本地 Python 服务还没有启动。";
+          setOffline(t("serverDisconnected"));
+          healthDetails.textContent = t("serverDisconnectedNote");
           return false;
         }
       }
 
       function renderResult(data) {
+        lastResult = data;
+        const previewUrl = localizedUrl(data.preview_url);
         resultBox.innerHTML = `
-          <p><strong>${escapeHtml(data.title || data.world_id || "新世界")}</strong></p>
-          <p>world_id：<code>${escapeHtml(data.world_id)}</code></p>
-          <p>provider / cache：<code>${escapeHtml(data.provider)}</code> / <code>${escapeHtml(data.cache_status)}</code></p>
-          <p>POIs / Roads / Landmarks：<code>${escapeHtml(data.poi_count)}</code> / <code>${escapeHtml(data.road_count)}</code> / <code>${escapeHtml(data.landmark_count)}</code></p>
-          <p>预览地址：<a href="${escapeHtml(data.preview_url)}" target="_blank" rel="noopener">打开新预览页</a></p>
-          <p class="muted">bundle 版本：<code>${escapeHtml(data.bundle_version)}</code></p>
+          <p><strong>${escapeHtml(data.title || data.world_id || t("defaultWorldTitle"))}</strong></p>
+          <p>${escapeHtml(t("resultWorldId"))}: <code>${escapeHtml(data.world_id)}</code></p>
+          <p>${escapeHtml(t("resultProviderCache"))}: <code>${escapeHtml(data.provider)}</code> / <code>${escapeHtml(data.cache_status)}</code></p>
+          <p>${escapeHtml(t("resultCounts"))}: <code>${escapeHtml(data.poi_count)}</code> / <code>${escapeHtml(data.road_count)}</code> / <code>${escapeHtml(data.landmark_count)}</code></p>
+          <p>${escapeHtml(t("resultPreviewUrl"))}: <a href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener">${escapeHtml(t("resultOpenPreview"))}</a></p>
+          <p class="muted">${escapeHtml(t("resultBundleVersion"))}: <code>${escapeHtml(data.bundle_version)}</code></p>
         `;
+        previewFrame.hidden = false;
+        previewFrame.src = previewUrl;
+      }
+
+      function applyLanguage() {
+        document.documentElement.lang = currentLanguage;
+        document.title = t("pageTitle");
+        languageSelect.value = currentLanguage;
+        previewFrame.title = t("iframeTitle");
+        document.querySelectorAll("[data-i18n]").forEach((node) => {
+          node.textContent = t(node.dataset.i18n);
+        });
+        document.querySelectorAll("[data-i18n-html]").forEach((node) => {
+          node.innerHTML = t(node.dataset.i18nHtml);
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+          node.placeholder = t(node.dataset.i18nPlaceholder);
+        });
+        if (lastResult) {
+          renderResult(lastResult);
+        }
       }
 
       async function generateNearby(event) {
@@ -219,8 +432,8 @@
         const base = normalizedBase();
         const formData = new FormData(form);
         generateButton.disabled = true;
-        generateButton.textContent = "生成中…";
-        resultBox.textContent = "正在抓取并生成附近异世界，请稍等…";
+        generateButton.textContent = t("generating");
+        resultBox.textContent = t("generatingMessage");
         try {
           const response = await fetch(`${base}/api/nearby`, {
             method: "POST",
@@ -231,18 +444,27 @@
             throw new Error(data.error || `request failed: ${response.status}`);
           }
           renderResult(data);
-          previewFrame.hidden = false;
-          previewFrame.src = data.preview_url;
         } catch (error) {
-          resultBox.innerHTML = `<p><strong>生成失败</strong></p><p class="note">${escapeHtml(error.message || error)}</p>`;
+          resultBox.innerHTML = `<p><strong>${escapeHtml(t("generateFailedTitle"))}</strong></p><p class="note">${escapeHtml(error.message || error)}</p>`;
         } finally {
           generateButton.disabled = false;
-          generateButton.textContent = "生成预览页";
+          generateButton.textContent = t("generateButton");
         }
       }
 
+      languageSelect.addEventListener("change", async (event) => {
+        currentLanguage = normalizeLanguage(event.target.value) || "zh-CN";
+        writeStoredLanguage(currentLanguage);
+        updateUrlLanguage();
+        applyLanguage();
+        await checkServer();
+      });
+
       document.getElementById("check-server").addEventListener("click", checkServer);
       form.addEventListener("submit", generateNearby);
+
+      updateUrlLanguage();
+      applyLanguage();
       checkServer();
     </script>
   </body>

@@ -77,6 +77,10 @@ class BundleTests(unittest.TestCase):
         self.assertIn("<title>", preview_html)
         self.assertIn(world["region"]["name"], preview_html)
         self.assertIn("showcase.json", preview_html)
+        self.assertIn('id="language-select"', preview_html)
+        self.assertIn('value="zh-CN">中文</option>', preview_html)
+        self.assertIn('value="en">English</option>', preview_html)
+        self.assertIn("fablemap-language", preview_html)
 
 
 if __name__ == "__main__":
