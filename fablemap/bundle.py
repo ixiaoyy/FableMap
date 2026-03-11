@@ -792,16 +792,24 @@ def _render_map_observer_html(
                 {_echo_layer_svg(world, project)}
                 {_anchor_nodes_svg(world, project)}
                 {_capsule_marks_svg(world, project)}
-                {_home_anchor_svg(world, project)}
-                {_sprite_nodes_svg(world, world_state, project)}
-                {''.join(feature_nodes)}
+                  {_home_anchor_svg(world, project)}
+                  {_sprite_nodes_svg(world, world_state, project)}
+                  {_player_entity_svg(world, project)}
+                  {''.join(feature_nodes)}
               </svg>
             </div>
             <p class=\"map-note\" data-i18n=\"mapObserverNote\"></p>
             {_broadcast_bar_html(world, world_state)}
           </div>
-          <aside class=\"world-map-sidebar\" id=\"world-map-sidebar\">
-            <section class=\"world-map-panel detail-panel\" id=\"map-detail-panel\">
+            <aside class=\"world-map-sidebar\" id=\"world-map-sidebar\">
+              <section class=\"world-map-panel player-panel\" id=\"player-panel\">
+                <h4 class=\"player-panel-title\" data-i18n=\"detailPlayerStats\"></h4>
+                <ul class=\"detail-list player-stats\">
+                  <li><span data-i18n=\"detailPlayerPos\"></span>: <code id=\"player-pos-display\">—</code></li>
+                  <li><span data-i18n=\"detailPlayerStatus\"></span>: <span id=\"player-status-tag\" class=\"player-status-tag\" data-status=\"idle\" data-i18n=\"playerStatusIdle\"></span></li>
+                </ul>
+              </section>
+              <section class=\"world-map-panel detail-panel\" id=\"map-detail-panel\">
               <h3 data-i18n=\"mapDetailPanelTitle\"></h3>
               <div id=\"map-detail-cards\">{''.join(detail_cards)}</div>
             </section>
@@ -1222,7 +1230,14 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .home-anchor {{ pointer-events: none; transition: opacity 0.15s ease; }}
       .home-aura {{ pointer-events: none; }}
       .home-icon {{ pointer-events: none; filter: drop-shadow(0 0 4px currentColor); }}
-      .home-panel {{ margin-top: 0; }}
+        .player-status-tag[data-status="moving"] {{ color: #38bdf8; }}
+        .player-entity {{ transition: transform 0.1s linear; pointer-events: none; }}
+        .player-aura {{ fill: #38bdf8; opacity: 0.15; filter: blur(4px); }}
+        .player-icon {{ fill: #38bdf8; filter: drop-shadow(0 0 5px #38bdf8); }}
+        .player-panel {{ margin-bottom: 0; }}
+        .player-panel-title {{ margin: 0 0 10px; font-size: 14px; }}
+        .player-stats {{ padding-left: 0; list-style: none; margin: 0; display: flex; flex-direction: column; gap: 6px; }}
+        .home-panel {{ margin-top: 0; }}
       .home-panel-title {{ margin: 0 0 10px; font-size: 14px; }}
       .home-stats {{ padding-left: 0; list-style: none; margin: 0; display: flex; flex-direction: column; gap: 6px; }}
       .home-style-tag {{ font-weight: 600; text-transform: capitalize; }}
@@ -1394,10 +1409,98 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       const mapFeatures = Array.from(document.querySelectorAll("[data-feature-id]"));
       const detailCards = Array.from(document.querySelectorAll("[data-feature-card]"));
       const mapViewport = document.getElementById("world-map-viewport");
-      const semanticZoomIndicator = document.getElementById("semantic-zoom-indicator");
-      const semanticZoomValue = document.getElementById("semantic-zoom-value");
+        const semanticZoomIndicator = document.getElementById("semantic-zoom-indicator");
+        const semanticZoomValue = document.getElementById("semantic-zoom-value");
+        const playerPosDisplay = document.getElementById("player-pos-display");
+        const playerStatusTag = document.getElementById("player-status-tag");
 
-      // ── Map camera / viewport state ──────────────────────────────────────────
+        // ── Player / Character state ──────────────────────────────────────────
+        const playerEl = document.getElementById("player-entity");
+        const mapBackdrop = document.querySelector(".map-backdrop");
+        const roadsGroup = Array.from(document.querySelectorAll(".map-road"));
+        let playerX = 0, playerY = 0;
+        let isMoving = false;
+        const MOVE_SPEED = 2.5;
+
+        if (playerEl) {{
+          const transform = playerEl.getAttribute("transform") || "";
+          const match = transform.match(/translate\\\\(([\\\\d.-]+),\\\\s*([\\\\d.-]+)\\\\)/);
+          if (match) {{
+            playerX = parseFloat(match[1]);
+            playerY = parseFloat(match[2]);
+          }}
+        }}
+
+        function updatePlayerDisplay() {{
+          if (playerPosDisplay) playerPosDisplay.textContent = `${{Math.round(playerX)}}, ${{Math.round(playerY)}}`;
+          if (playerStatusTag) {{
+            const status = isMoving ? "moving" : "idle";
+            playerStatusTag.setAttribute("data-status", status);
+            playerStatusTag.textContent = t(isMoving ? "playerStatusMoving" : "playerStatusIdle");
+          }}
+        }}
+
+        function isPointNearRoad(x, y, threshold = 15) {{
+          if (roadsGroup.length === 0) return true; // No roads, allow free move
+          return roadsGroup.some(road => {{
+            if (road.getTotalLength) {{
+              // Approximate check using SVG points if possible, but simplest is distance to nearest point
+              // For MVP, we allow movement if near any point of any polyline
+              const points = road.getAttribute("points").split(" ").map(p => {{
+                const [px, py] = p.split(",").map(Number);
+                return {{x: px, y: py}};
+              }});
+              return points.some(p => Math.sqrt((p.x - x)**2 + (p.y - y)**2) < threshold);
+            }}
+            return false;
+          }});
+        }}
+
+        function movePlayer(dx, dy) {{
+          const nextX = playerX + dx;
+          const nextY = playerY + dy;
+          
+          // Simple street constraint: only move if near a road or within bounds
+          if (isPointNearRoad(nextX, nextY) || !roadsGroup.length) {{
+            playerX = nextX;
+            playerY = nextY;
+          }} else {{
+            // Sliding along axes if blocked
+            if (isPointNearRoad(nextX, playerY)) playerX = nextX;
+            else if (isPointNearRoad(playerX, nextY)) playerY = nextY;
+          }}
+
+          if (playerEl) playerEl.setAttribute("transform", `translate(${{playerX}}, ${{playerY}})`);
+          updatePlayerDisplay();
+          // Camera follow
+          vbX = playerX - vbW / 2;
+          vbY = playerY - vbH / 2;
+          applyViewBox();
+        }}
+
+        const keysPressed = {{}};
+        window.addEventListener("keydown", (e) => {{ keysPressed[e.key.toLowerCase()] = true; }});
+        window.addEventListener("keyup", (e) => {{ keysPressed[e.key.toLowerCase()] = false; }});
+
+        function gameLoop() {{
+          let dx = 0, dy = 0;
+          if (keysPressed["w"] || keysPressed["arrowup"]) dy -= MOVE_SPEED;
+          if (keysPressed["s"] || keysPressed["arrowdown"]) dy += MOVE_SPEED;
+          if (keysPressed["a"] || keysPressed["arrowleft"]) dx -= MOVE_SPEED;
+          if (keysPressed["d"] || keysPressed["arrowright"]) dx += MOVE_SPEED;
+
+          if (dx !== 0 || dy !== 0) {{
+            isMoving = true;
+            movePlayer(dx, dy);
+          }} else {{
+            isMoving = false;
+            updatePlayerDisplay();
+          }}
+          requestAnimationFrame(gameLoop);
+        }}
+        requestAnimationFrame(gameLoop);
+
+        // ── Map camera / viewport state ──────────────────────────────────────────
       const mapSvg = document.getElementById("observer-map");
       const initialViewBox = mapSvg ? mapSvg.viewBox.baseVal : null;
       let vbX = initialViewBox ? initialViewBox.x : 0;
@@ -1410,15 +1513,16 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       const MAX_ZOOM = 6.0;
       const ZOOM_STEP = 0.18;
 
-      function clampViewBox() {{
-        const pad = 0;
-        const minW = vbW0 * MIN_ZOOM;
-        const maxW = vbW0 * (1 / MIN_ZOOM);
-        vbW = Math.max(minW, Math.min(maxW, vbW));
-        vbH = Math.max(vbW0 * MIN_ZOOM * (vbH0 / vbW0), Math.min(vbW0 * (1 / MIN_ZOOM) * (vbH0 / vbW0), vbH));
-        vbX = Math.max(-vbW0 * 0.8, Math.min(vbW0 * 0.8, vbX));
-        vbY = Math.max(-vbH0 * 0.8, Math.min(vbH0 * 0.8, vbY));
-      }}
+        function clampViewBox() {{
+          const pad = 0;
+          const minW = vbW0 * MIN_ZOOM;
+          const maxW = vbW0 * (1 / MIN_ZOOM);
+          vbW = Math.max(minW, Math.min(maxW, vbW));
+          vbH = Math.max(vbW0 * MIN_ZOOM * (vbH0 / vbW0), Math.min(vbW0 * (1 / MIN_ZOOM) * (vbH0 / vbW0), vbH));
+          // Relax clamping for player exploration
+          vbX = Math.max(-vbW0 * 1.5, Math.min(vbW0 * 1.5, vbX));
+          vbY = Math.max(-vbH0 * 1.5, Math.min(vbH0 * 1.5, vbY));
+        }}
 
       function applyViewBox() {{
         if (!mapSvg) return;

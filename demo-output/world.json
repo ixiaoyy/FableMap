@@ -1,0 +1,322 @@
+{
+  "world_id": "world-7c101776f28e",
+  "seed": "3fa359010ff6",
+  "source": {
+    "lat": 35.658,
+    "lon": 139.7016,
+    "radius_m": 300,
+    "provider": "demo_fixture"
+  },
+  "region": {
+    "name": "Around Late Lantern Cafe",
+    "theme": "market_quarter",
+    "atmosphere": "quiet",
+    "dominant_landuse": "commercial",
+    "narrative_summary": "Around Late Lantern Cafe is rendered as a market_quarter with 4 mapped POIs and 1 traversable routes.",
+    "visual_style": "amber_evening",
+    "social_tension": 0.26,
+    "commerce_flux": 0.28,
+    "anomaly_pressure": 0.45,
+    "class_tone": "mixed",
+    "satire_profile": "Conversation is cozy, but time is always for sale.",
+    "vibe_profile": "amber_evening",
+    "palette_hint": "coffee_and_rose",
+    "comfort_level": 0.56,
+    "dominant_faction": "memory_collective",
+    "control_score": 0.45,
+    "strategic_value": 0.47
+  },
+  "pois": [
+    {
+      "id": "node-101",
+      "osm_type": "cafe",
+      "real_name": "Late Lantern Cafe",
+      "fantasy_name": "Late Lantern Cafe Parlor",
+      "fantasy_type": "ember_parlor",
+      "position": {
+        "lat": 35.6581,
+        "lon": 139.7015
+      },
+      "description": "A cafe recast as ember_parlor.",
+      "tags": [
+        "amenity=cafe"
+      ],
+      "visual_hint": {
+        "style": "amber_evening",
+        "palette": "coffee_and_rose"
+      },
+      "state_ref": "node-101",
+      "satire_hook": "Conversation is cozy, but time is always for sale.",
+      "faction_alignment": "memory_collective",
+      "emotion_hook": "Warmth, gossip and waiting quietly overlap here.",
+      "secret_slot": true,
+      "sprite_spawn_hint": true
+    },
+    {
+      "id": "node-102",
+      "osm_type": "convenience",
+      "real_name": "Pocket Mart",
+      "fantasy_name": "Pocket Mart Outpost",
+      "fantasy_type": "supply_outpost",
+      "position": {
+        "lat": 35.6584,
+        "lon": 139.7018
+      },
+      "description": "A convenience recast as supply_outpost.",
+      "tags": [
+        "shop=convenience"
+      ],
+      "visual_hint": {
+        "style": "neon_nostalgia",
+        "palette": "soda_neon"
+      },
+      "state_ref": "node-102",
+      "satire_hook": "Everything is available, just not equally affordable.",
+      "faction_alignment": "trade_guild",
+      "emotion_hook": "Small routines make the district feel survivable.",
+      "secret_slot": false,
+      "sprite_spawn_hint": true
+    },
+    {
+      "id": "node-105",
+      "osm_type": "hospital",
+      "real_name": "North Clinic",
+      "fantasy_name": "North Clinic Sanctum",
+      "fantasy_type": "healing_sanctum",
+      "position": {
+        "lat": 35.6589,
+        "lon": 139.7022
+      },
+      "description": "A hospital recast as healing_sanctum.",
+      "tags": [
+        "amenity=hospital"
+      ],
+      "visual_hint": {
+        "style": "quiet_rain",
+        "palette": "ceramic_white"
+      },
+      "state_ref": "node-105",
+      "satire_hook": "Care feels sacred, but access is still rationed.",
+      "faction_alignment": "clinic_circle",
+      "emotion_hook": "Anxious hope lingers around the doors.",
+      "secret_slot": false,
+      "sprite_spawn_hint": false
+    },
+    {
+      "id": "way-103",
+      "osm_type": "park",
+      "real_name": "Moss Park",
+      "fantasy_name": "Moss Park Grove",
+      "fantasy_type": "whispering_grove",
+      "position": {
+        "lat": 35.6587,
+        "lon": 139.7011
+      },
+      "description": "A park recast as whispering_grove.",
+      "tags": [
+        "leisure=park"
+      ],
+      "visual_hint": {
+        "style": "ghibli_town",
+        "palette": "moss_and_gold"
+      },
+      "state_ref": "way-103",
+      "satire_hook": "green relief survives beside commuter pressure.",
+      "faction_alignment": "night_bloom",
+      "emotion_hook": "A calm pocket where private memories can settle.",
+      "secret_slot": true,
+      "sprite_spawn_hint": true
+    }
+  ],
+  "roads": [
+    {
+      "id": "way-104",
+      "kind": "residential",
+      "points": [
+        {
+          "lat": 35.6579,
+          "lon": 139.701
+        },
+        {
+          "lat": 35.6582,
+          "lon": 139.7014
+        },
+        {
+          "lat": 35.6585,
+          "lon": 139.7019
+        }
+      ],
+      "fantasy_role": "lantern_lane"
+    }
+  ],
+  "landmarks": [
+    {
+      "id": "landmark-node-106",
+      "name": "Clock Gate",
+      "type": "attraction",
+      "description": "A place where the district's official story feels slightly unstable.",
+      "visual_hint": {
+        "position": {
+          "lat": 35.6577,
+          "lon": 139.7008
+        },
+        "style": "memory_spire"
+      }
+    }
+  ],
+  "factions": [
+    {
+      "id": "memory_collective",
+      "name": "Memory Collective",
+      "archetype": "memory_collective",
+      "doctrine": "Collects stories, grief and local rituals.",
+      "influence": 0.45,
+      "resource_focus": [
+        "attention",
+        "movement"
+      ],
+      "territories": [
+        "world-7c101776f28e"
+      ],
+      "relations": []
+    }
+  ],
+  "historical_echoes": [
+    {
+      "id": "echo-landmark-node-106",
+      "source_type": "attraction",
+      "summary": "Clock Gate carries a lingering public memory.",
+      "trigger_hint": "inspect_landmark",
+      "severity": "low",
+      "linked_pois": []
+    }
+  ],
+  "memory_anchors": [
+    {
+      "id": "anchor-node-101",
+      "anchor_type": "secret_garden_slot",
+      "tone": "tender",
+      "visibility": "private",
+      "linked_pois": [
+        "node-101"
+      ],
+      "unlock_conditions": [
+        "visit_poi"
+      ]
+    },
+    {
+      "id": "anchor-way-103",
+      "anchor_type": "secret_garden_slot",
+      "tone": "tender",
+      "visibility": "private",
+      "linked_pois": [
+        "way-103"
+      ],
+      "unlock_conditions": [
+        "visit_poi"
+      ]
+    }
+  ],
+  "sprites": [
+    {
+      "id": "sprite-node-101",
+      "species": "ember_parlor_sprite",
+      "rarity": "common",
+      "spawn_conditions": [
+        "visit_poi"
+      ],
+      "linked_poi": "node-101",
+      "drop_tags": [
+        "ember_parlor"
+      ]
+    },
+    {
+      "id": "sprite-node-102",
+      "species": "supply_outpost_sprite",
+      "rarity": "common",
+      "spawn_conditions": [
+        "visit_poi"
+      ],
+      "linked_poi": "node-102",
+      "drop_tags": [
+        "supply_outpost"
+      ]
+    },
+    {
+      "id": "sprite-way-103",
+      "species": "whispering_grove_sprite",
+      "rarity": "common",
+      "spawn_conditions": [
+        "visit_poi"
+      ],
+      "linked_poi": "way-103",
+      "drop_tags": [
+        "whispering_grove"
+      ]
+    }
+  ],
+  "state": {
+    "version": "0.1",
+    "visited": false,
+    "poi_states": {
+      "node-101": {
+        "status": "anomaly"
+      },
+      "node-102": {
+        "status": "active"
+      },
+      "node-105": {
+        "status": "idle"
+      },
+      "way-103": {
+        "status": "anomaly"
+      }
+    },
+    "flags": [],
+    "story_events": [],
+    "faction_states": [
+      {
+        "faction_id": "memory_collective",
+        "control_score": 0.45
+      }
+    ],
+    "economy_state": {
+      "market_pressure": 0.28
+    },
+    "disturbance_level": 0.45,
+    "signal_snapshot": {
+      "source_element_count": 7,
+      "mapped_poi_count": 4,
+      "road_count": 1
+    },
+    "spawn_window": "active",
+    "mystery_progress": 0,
+    "active_lens": "amber_evening",
+    "collection_progress": {},
+    "home_inventory": [],
+    "home_style": "warm_corner",
+    "private_marks": [
+      {
+        "id": "mark-node-101",
+        "linked_poi": "node-101",
+        "emotion": "Warmth, gossip and waiting quietly overlap here.",
+        "capsule_type": "emotion",
+        "visibility": "private"
+      },
+      {
+        "id": "mark-way-103",
+        "linked_poi": "way-103",
+        "emotion": "A calm pocket where private memories can settle.",
+        "capsule_type": "emotion",
+        "visibility": "private"
+      }
+    ],
+    "reputation": {
+      "memory_collective": 0
+    },
+    "route_impact": {
+      "road_count": 1
+    },
+    "resource_transfers": []
+  }
+}
