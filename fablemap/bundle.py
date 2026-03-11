@@ -360,32 +360,41 @@ def _render_map_observer_html(
         )
 
     observer_html = f"""
-      <section class=\"observer-stage panel\" id=\"section-map-observer\">
-        <div class=\"observer-header\">
-          <div>
+      <section class=\"world-map-stage\" id=\"section-map-observer\">
+        <div class=\"world-map-stage-head\">
+          <div class=\"world-map-titleblock\">
             <h2 data-i18n=\"sectionMapObserver\"></h2>
             <p data-i18n=\"mapObserverLead\"></p>
           </div>
-          <div class=\"observer-legend\">
+          <div class=\"observer-legend\" aria-label=\"Map legend\">
             <span class=\"legend-item\"><span class=\"legend-swatch road\"></span><span data-i18n=\"mapLegendRoads\"></span></span>
             <span class=\"legend-item\"><span class=\"legend-swatch poi\"></span><span data-i18n=\"mapLegendPois\"></span></span>
             <span class=\"legend-item\"><span class=\"legend-swatch landmark\"></span><span data-i18n=\"mapLegendLandmarks\"></span></span>
           </div>
         </div>
-        <div class=\"observer-layout\">
-          <div class=\"map-shell\">
-            <svg id=\"observer-map\" viewBox=\"0 0 {viewport['width']} {viewport['height']}\" role=\"img\" aria-labelledby=\"observer-map-title observer-map-desc\">
-              <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
-              <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
-              <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
-              {''.join(road_shapes)}
-              {''.join(feature_nodes)}
-            </svg>
+        <div class=\"world-map-stage-body\">
+          <div class=\"world-map-viewport\" id=\"world-map-viewport\">
+            <div class=\"world-map-canvas\">
+              <div class=\"map-zoom-controls\" aria-hidden=\"true\">
+                <button class=\"map-zoom-btn\" id=\"map-zoom-in\" title=\"Zoom in\">+</button>
+                <button class=\"map-zoom-btn\" id=\"map-zoom-out\" title=\"Zoom out\">\u2212</button>
+                <button class=\"map-zoom-btn\" id=\"map-zoom-reset\" title=\"Reset view\" style=\"font-size:13px\">&#x2302;</button>
+              </div>
+              <svg id=\"observer-map\" viewBox=\"0 0 {viewport['width']} {viewport['height']}\" role=\"img\" aria-labelledby=\"observer-map-title observer-map-desc\">
+                <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
+                <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
+                <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
+                {''.join(road_shapes)}
+                {''.join(feature_nodes)}
+              </svg>
+            </div>
             <p class=\"map-note\" data-i18n=\"mapObserverNote\"></p>
           </div>
-          <aside class=\"detail-panel\" id=\"map-detail-panel\">
-            <h3 data-i18n=\"mapDetailPanelTitle\"></h3>
-            <div id=\"map-detail-cards\">{''.join(detail_cards)}</div>
+          <aside class=\"world-map-sidebar\" id=\"world-map-sidebar\">
+            <section class=\"world-map-panel detail-panel\" id=\"map-detail-panel\">
+              <h3 data-i18n=\"mapDetailPanelTitle\"></h3>
+              <div id=\"map-detail-cards\">{''.join(detail_cards)}</div>
+            </section>
           </aside>
         </div>
       </section>
@@ -413,8 +422,8 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "tagTheme": "主题",
             "tagAtmosphere": "氛围",
             "tagBundleVersion": "包版本",
-            "sectionMapObserver": "地图观察窗",
-            "mapObserverLead": "主舞台直接复用当前 world.json 的真实空间关系：道路构成骨架，POI 与地标可点选查看详情。",
+            "sectionMapObserver": "2D 世界地图主舞台",
+            "mapObserverLead": "当前浏览器入口已经改为地图舞台优先：道路构成骨架，POI 与地标作为世界对象直接落在同一张 2D 地图上。",
             "mapObserverNote": "当前采用局部经纬度归一化，只适用于 nearby 小范围世界观察，不等于完整 GIS 投影系统。",
             "mapLegendRoads": "道路骨架",
             "mapLegendPois": "POI 节点",
@@ -492,8 +501,8 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "tagTheme": "theme",
             "tagAtmosphere": "atmosphere",
             "tagBundleVersion": "bundle v",
-            "sectionMapObserver": "Map Observer",
-            "mapObserverLead": "The main stage now reuses spatial relations from world.json directly: roads form the skeleton while POIs and landmarks can be selected for detail.",
+            "sectionMapObserver": "2D World Map Stage",
+            "mapObserverLead": "The browser entry is now map-stage-first: roads form the spatial skeleton while POIs and landmarks land on the same 2D world map as selectable world objects.",
             "mapObserverNote": "This view uses local lat/lon normalization for nearby-scale observation only; it is not a full GIS projection system.",
             "mapLegendRoads": "Road skeleton",
             "mapLegendPois": "POI nodes",
@@ -647,47 +656,58 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
     <title>{escape(showcase.get('title') or 'FableMap Preview')}</title>
     <style>
       :root {{ color-scheme: dark; }}
-      body {{ margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #111827; color: #e5e7eb; }}
-      .wrap {{ max-width: 1220px; margin: 0 auto; padding: 32px 20px 48px; }}
-      .hero {{ padding: 24px; border-radius: 18px; background: linear-gradient(135deg, #1f2937, #111827); border: 1px solid #374151; }}
+      body {{ margin: 0; min-height: 100vh; font-family: Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top, #1e293b 0%, #0f172a 32%, #020617 100%); color: #e5e7eb; }}
+      .wrap {{ max-width: 1440px; margin: 0 auto; padding: 20px 20px 36px; }}
+      .world-shell {{ display: flex; flex-direction: column; gap: 20px; }}
+      .hero {{ padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96)); border: 1px solid #334155; box-shadow: 0 24px 60px rgba(2, 6, 23, 0.28); }}
       .hero-top {{ display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }}
-      .hero h1 {{ margin: 0 0 10px; font-size: 36px; }}
-      .hero p {{ margin: 8px 0; line-height: 1.6; }}
+      .hero h1 {{ margin: 0 0 8px; font-size: clamp(28px, 3.4vw, 40px); }}
+      .hero p {{ margin: 6px 0; line-height: 1.55; max-width: 920px; }}
       .language-switcher {{ min-width: 180px; display: flex; flex-direction: column; gap: 8px; }}
       .language-switcher label {{ font-size: 13px; color: #cbd5e1; }}
       .language-switcher select {{ border-radius: 10px; border: 1px solid #475569; background: #111827; color: #e5e7eb; padding: 10px 12px; font: inherit; }}
-      .observer-stage {{ margin-top: 20px; }}
-      .observer-header {{ display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }}
-      .observer-header h2 {{ margin-bottom: 8px; }}
-      .observer-header p {{ margin: 0; color: #cbd5e1; line-height: 1.5; max-width: 680px; }}
-      .observer-layout {{ display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 16px; }}
+      .world-map-stage {{ display: flex; flex-direction: column; gap: 16px; padding: 18px; border-radius: 24px; min-height: clamp(560px, 74vh, 900px); background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.96)); border: 1px solid #334155; box-shadow: 0 28px 80px rgba(2, 6, 23, 0.38); }}
+      .world-map-stage-head {{ display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }}
+      .world-map-titleblock h2 {{ margin: 0 0 8px; font-size: 24px; }}
+      .world-map-titleblock p {{ margin: 0; color: #cbd5e1; line-height: 1.55; max-width: 760px; }}
+      .world-map-stage-body {{ display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(320px, 0.95fr); gap: 16px; align-items: stretch; flex: 1; min-height: 0; }}
       .observer-legend {{ display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }}
       .legend-item {{ display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: #0f172a; border: 1px solid #334155; font-size: 12px; }}
       .legend-swatch {{ width: 10px; height: 10px; border-radius: 999px; display: inline-block; }}
       .legend-swatch.road {{ background: #7dd3fc; }}
       .legend-swatch.poi {{ background: #38bdf8; }}
       .legend-swatch.landmark {{ background: #fbbf24; }}
-      .map-shell {{ background: linear-gradient(180deg, #0f172a, #111827); border: 1px solid #334155; border-radius: 18px; padding: 14px; }}
-      #observer-map {{ width: 100%; height: auto; display: block; }}
+      .world-map-viewport {{ min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98)); border: 1px solid #334155; border-radius: 20px; }}
+      #observer-map {{ width: 100%; height: 100%; min-height: 520px; display: block; cursor: grab; user-select: none; -webkit-user-select: none; }}
+      #observer-map.is-panning {{ cursor: grabbing; }}
       .map-backdrop {{ fill: #020617; stroke: #334155; stroke-width: 2; }}
       .map-road {{ fill: none; stroke: #67e8f9; stroke-opacity: 0.75; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }}
       .map-feature {{ cursor: pointer; outline: none; }}
+      .map-tooltip {{ position: fixed; pointer-events: none; z-index: 100; padding: 6px 10px; background: rgba(15,23,42,0.95); border: 1px solid #475569; border-radius: 8px; font-size: 12px; color: #e2e8f0; white-space: nowrap; opacity: 0; transition: opacity 0.12s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }}
+      .map-tooltip.is-visible {{ opacity: 1; }}
+      .map-zoom-controls {{ display: flex; gap: 6px; position: absolute; top: 12px; right: 12px; }}
+      .map-zoom-btn {{ width: 32px; height: 32px; border-radius: 8px; border: 1px solid #475569; background: rgba(15,23,42,0.9); color: #e2e8f0; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }}
+      .map-zoom-btn:hover {{ background: rgba(30,41,59,0.98); }}
+      .world-map-canvas {{ flex: 1; min-height: 0; position: relative; }}
       .map-feature text {{ fill: #0f172a; font-size: 10px; font-weight: 700; pointer-events: none; }}
       .map-poi circle {{ fill: #38bdf8; stroke: #e0f2fe; stroke-width: 2; transition: transform 0.15s ease, stroke-width 0.15s ease; }}
       .map-landmark rect {{ fill: #fbbf24; stroke: #fef3c7; stroke-width: 2; transition: transform 0.15s ease, stroke-width 0.15s ease; }}
       .map-feature.is-active circle, .map-feature:focus-visible circle {{ stroke-width: 4; transform: scale(1.08); transform-origin: center; transform-box: fill-box; }}
       .map-feature.is-active rect, .map-feature:focus-visible rect {{ stroke-width: 4; transform: scale(1.08); transform-origin: center; transform-box: fill-box; }}
       .map-note {{ margin: 12px 4px 0; color: #94a3b8; font-size: 13px; line-height: 1.5; }}
-      .detail-panel {{ background: #0f172a; border: 1px solid #334155; border-radius: 18px; padding: 18px; }}
+      .world-map-sidebar {{ display: flex; flex-direction: column; gap: 16px; min-height: 0; }}
+      .world-map-panel {{ background: rgba(15, 23, 42, 0.88); border: 1px solid #334155; border-radius: 18px; padding: 18px; }}
+      .detail-panel {{ display: flex; flex-direction: column; min-height: 0; }}
       .detail-panel h3 {{ margin-top: 0; margin-bottom: 14px; font-size: 18px; }}
+      #map-detail-cards {{ flex: 1; }}
       .detail-card {{ display: none; }}
       .detail-card.is-active {{ display: block; }}
       .detail-card h3 {{ margin: 0 0 8px; font-size: 22px; }}
       .detail-card p {{ margin: 8px 0; line-height: 1.6; }}
       .detail-kicker {{ margin: 0 0 8px; color: #93c5fd; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
       .detail-list {{ padding-left: 18px; margin-top: 12px; }}
-      .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 20px; }}
-      .panel {{ background: #1f2937; border: 1px solid #374151; border-radius: 16px; padding: 18px; }}
+      .world-secondary-panels {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }}
+      .panel {{ background: rgba(31, 41, 55, 0.92); border: 1px solid #374151; border-radius: 16px; padding: 18px; }}
       .panel h2 {{ margin-top: 0; font-size: 20px; }}
       ul {{ padding-left: 18px; margin: 10px 0 0; }}
       li {{ margin: 10px 0; line-height: 1.5; }}
@@ -696,43 +716,49 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .links a {{ color: #93c5fd; text-decoration: none; margin-right: 12px; }}
       .links a:hover {{ text-decoration: underline; }}
       code {{ color: #c4b5fd; }}
+      @media (max-width: 980px) {{
+        .world-map-stage {{ min-height: 0; }}
+        .world-map-stage-body {{ grid-template-columns: 1fr; }}
+        #observer-map {{ min-height: 420px; }}
+      }}
       @media (max-width: 720px) {{
         .hero-top {{ flex-direction: column; }}
         .language-switcher {{ min-width: 0; width: 100%; }}
-        .observer-header {{ flex-direction: column; }}
-        .observer-layout {{ grid-template-columns: 1fr; }}
+        .world-map-stage-head {{ flex-direction: column; }}
         .observer-legend {{ justify-content: flex-start; }}
+        #observer-map {{ min-height: 320px; }}
       }}
     </style>
   </head>
   <body>
     <div class=\"wrap\">
-      <section class=\"hero\">
-        <div class=\"hero-top\">
-          <div>
-            <h1 id=\"hero-title\"{' data-i18n="untitledDistrict"' if not showcase.get('title') else ''}>{escape(showcase.get('title') or '')}</h1>
-            {subtitle_html}
-            {narrative_html}
+      <main class=\"world-shell\">
+        <section class=\"hero\" id=\"world-hud\">
+          <div class=\"hero-top\">
+            <div>
+              <h1 id=\"hero-title\"{' data-i18n="untitledDistrict"' if not showcase.get('title') else ''}>{escape(showcase.get('title') or '')}</h1>
+              {subtitle_html}
+              {narrative_html}
+            </div>
+            <div class=\"language-switcher\">
+              <label for=\"language-select\" data-i18n=\"languageLabel\"></label>
+              <select id=\"language-select\">
+                <option value=\"zh-CN\">中文</option>
+                <option value=\"en\">English</option>
+              </select>
+            </div>
           </div>
-          <div class=\"language-switcher\">
-            <label for=\"language-select\" data-i18n=\"languageLabel\"></label>
-            <select id=\"language-select\">
-              <option value=\"zh-CN\">中文</option>
-              <option value=\"en\">English</option>
-            </select>
+          <div class=\"meta\">
+            <span class=\"tag\"><span data-i18n=\"tagWorld\"></span>: {localized_value(showcase.get('world_id'))}</span>
+            <span class=\"tag\"><span data-i18n=\"tagTheme\"></span>: {localized_value(summary.get('theme'))}</span>
+            <span class=\"tag\"><span data-i18n=\"tagAtmosphere\"></span>: {localized_value(summary.get('atmosphere'))}</span>
+            <span class=\"tag\"><span data-i18n=\"tagBundleVersion\"></span>{escape(str(manifest.get('bundle_version') or '0'))}</span>
           </div>
-        </div>
-        <div class=\"meta\">
-          <span class=\"tag\"><span data-i18n=\"tagWorld\"></span>: {localized_value(showcase.get('world_id'))}</span>
-          <span class=\"tag\"><span data-i18n=\"tagTheme\"></span>: {localized_value(summary.get('theme'))}</span>
-          <span class=\"tag\"><span data-i18n=\"tagAtmosphere\"></span>: {localized_value(summary.get('atmosphere'))}</span>
-          <span class=\"tag\"><span data-i18n=\"tagBundleVersion\"></span>{escape(str(manifest.get('bundle_version') or '0'))}</span>
-        </div>
-      </section>
+        </section>
 
-      {map_observer_html}
+        {map_observer_html}
 
-      <div class=\"grid\">
+        <section class=\"world-secondary-panels\" id=\"world-secondary-panels\">
         <section class=\"panel\" id=\"section-reality\">
           <h2 data-i18n=\"sectionReality\"></h2>
           <ul>
@@ -787,19 +813,20 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             <li><span data-i18n=\"presentationAnomalyPressure\"></span>: {localized_value(hooks.get('anomaly_pressure'))}</li>
           </ul>
         </section>
-      </div>
+        </section>
 
-      <section class=\"panel links\" style=\"margin-top:20px;\">
-        <h2 data-i18n=\"sectionBundleFiles\"></h2>
-        <p>
-          <a href=\"world.json\">world.json</a>
-          <a href=\"summary.json\">summary.json</a>
-          <a href=\"showcase.json\">showcase.json</a>
-          <a href=\"showcase.md\">showcase.md</a>
-          <a href=\"manifest.json\">manifest.json</a>
-        </p>
-        <p><small><span data-i18n=\"primaryPreviewSlot\"></span>: <code>{escape(manifest.get('entrypoints', {}).get('primary_preview') or 'index.html')}</code></small></p>
-      </section>
+        <section class=\"panel links\" id=\"section-bundle-files\">
+          <h2 data-i18n=\"sectionBundleFiles\"></h2>
+          <p>
+            <a href=\"world.json\">world.json</a>
+            <a href=\"summary.json\">summary.json</a>
+            <a href=\"showcase.json\">showcase.json</a>
+            <a href=\"showcase.md\">showcase.md</a>
+            <a href=\"manifest.json\">manifest.json</a>
+          </p>
+          <p><small><span data-i18n=\"primaryPreviewSlot\"></span>: <code>{escape(manifest.get('entrypoints', {}).get('primary_preview') or 'index.html')}</code></small></p>
+        </section>
+      </main>
     </div>
     <script>
       const translations = {translations_json};
@@ -808,6 +835,197 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       const heroTitle = document.getElementById("hero-title");
       const mapFeatures = Array.from(document.querySelectorAll("[data-feature-id]"));
       const detailCards = Array.from(document.querySelectorAll("[data-feature-card]"));
+
+      // ── Map camera / viewport state ──────────────────────────────────────────
+      const mapSvg = document.getElementById("observer-map");
+      const initialViewBox = mapSvg ? mapSvg.viewBox.baseVal : null;
+      let vbX = initialViewBox ? initialViewBox.x : 0;
+      let vbY = initialViewBox ? initialViewBox.y : 0;
+      let vbW = initialViewBox ? initialViewBox.width : 880;
+      let vbH = initialViewBox ? initialViewBox.height : 520;
+      const vbW0 = vbW;
+      const vbH0 = vbH;
+      const MIN_ZOOM = 0.25;
+      const MAX_ZOOM = 6.0;
+      const ZOOM_STEP = 0.18;
+
+      function clampViewBox() {{
+        const pad = 0;
+        const minW = vbW0 * MIN_ZOOM;
+        const maxW = vbW0 * (1 / MIN_ZOOM);
+        vbW = Math.max(minW, Math.min(maxW, vbW));
+        vbH = Math.max(vbW0 * MIN_ZOOM * (vbH0 / vbW0), Math.min(vbW0 * (1 / MIN_ZOOM) * (vbH0 / vbW0), vbH));
+        vbX = Math.max(-vbW0 * 0.8, Math.min(vbW0 * 0.8, vbX));
+        vbY = Math.max(-vbH0 * 0.8, Math.min(vbH0 * 0.8, vbY));
+      }}
+
+      function applyViewBox() {{
+        if (!mapSvg) return;
+        clampViewBox();
+        mapSvg.setAttribute("viewBox", `${{vbX}} ${{vbY}} ${{vbW}} ${{vbH}}`);
+      }}
+
+      function svgCoordsFromClient(clientX, clientY) {{
+        if (!mapSvg) return {{ x: 0, y: 0 }};
+        const rect = mapSvg.getBoundingClientRect();
+        const scaleX = vbW / rect.width;
+        const scaleY = vbH / rect.height;
+        return {{
+          x: vbX + (clientX - rect.left) * scaleX,
+          y: vbY + (clientY - rect.top) * scaleY,
+        }};
+      }}
+
+      function zoomAroundPoint(svgX, svgY, factor) {{
+        const newW = vbW / factor;
+        const newH = vbH / factor;
+        const clampedFactor = vbW0 / Math.max(vbW0 * MIN_ZOOM, Math.min(vbW0 / MIN_ZOOM, newW));
+        const adjustedW = vbW / clampedFactor;
+        const adjustedH = vbH / clampedFactor;
+        vbX = svgX - (svgX - vbX) * (adjustedW / vbW);
+        vbY = svgY - (svgY - vbY) * (adjustedH / vbH);
+        vbW = adjustedW;
+        vbH = adjustedH;
+        applyViewBox();
+      }}
+
+      // ── Pan (mouse drag) ─────────────────────────────────────────────────────
+      let panActive = false;
+      let panStartSvg = {{ x: 0, y: 0 }};
+      let panStartVb = {{ x: 0, y: 0 }};
+
+      if (mapSvg) {{
+        mapSvg.addEventListener("mousedown", (e) => {{
+          if (e.button !== 0) return;
+          panActive = true;
+          panStartSvg = svgCoordsFromClient(e.clientX, e.clientY);
+          panStartVb = {{ x: vbX, y: vbY }};
+          mapSvg.classList.add("is-panning");
+          e.preventDefault();
+        }});
+
+        window.addEventListener("mousemove", (e) => {{
+          if (!panActive) return;
+          const rect = mapSvg.getBoundingClientRect();
+          const scaleX = vbW / rect.width;
+          const scaleY = vbH / rect.height;
+          vbX = panStartVb.x - (e.clientX - rect.left) * scaleX + panStartSvg.x - panStartVb.x;
+          vbY = panStartVb.y - (e.clientY - rect.top) * scaleY + panStartSvg.y - panStartVb.y;
+          applyViewBox();
+        }});
+
+        window.addEventListener("mouseup", () => {{
+          if (!panActive) return;
+          panActive = false;
+          mapSvg.classList.remove("is-panning");
+        }});
+
+        // ── Zoom (wheel) ────────────────────────────────────────────────────────
+        mapSvg.addEventListener("wheel", (e) => {{
+          e.preventDefault();
+          const factor = e.deltaY < 0 ? (1 + ZOOM_STEP) : 1 / (1 + ZOOM_STEP);
+          const svgPt = svgCoordsFromClient(e.clientX, e.clientY);
+          zoomAroundPoint(svgPt.x, svgPt.y, factor);
+        }}, {{ passive: false }});
+
+        // ── Touch pan / pinch-zoom ───────────────────────────────────────────────
+        let touches = [];
+        let lastPinchDist = 0;
+        let touchPanStart = null;
+        let touchVbStart = null;
+
+        mapSvg.addEventListener("touchstart", (e) => {{
+          touches = Array.from(e.touches);
+          if (touches.length === 1) {{
+            touchPanStart = svgCoordsFromClient(touches[0].clientX, touches[0].clientY);
+            touchVbStart = {{ x: vbX, y: vbY }};
+          }} else if (touches.length === 2) {{
+            const dx = touches[1].clientX - touches[0].clientX;
+            const dy = touches[1].clientY - touches[0].clientY;
+            lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+          }}
+          e.preventDefault();
+        }}, {{ passive: false }});
+
+        mapSvg.addEventListener("touchmove", (e) => {{
+          touches = Array.from(e.touches);
+          if (touches.length === 1 && touchPanStart && touchVbStart) {{
+            const rect = mapSvg.getBoundingClientRect();
+            const scaleX = vbW / rect.width;
+            const scaleY = vbH / rect.height;
+            vbX = touchVbStart.x - (touches[0].clientX - rect.left) * scaleX + touchPanStart.x - touchVbStart.x;
+            vbY = touchVbStart.y - (touches[0].clientY - rect.top) * scaleY + touchPanStart.y - touchVbStart.y;
+            applyViewBox();
+          }} else if (touches.length === 2) {{
+            const dx = touches[1].clientX - touches[0].clientX;
+            const dy = touches[1].clientY - touches[0].clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (lastPinchDist > 0) {{
+              const factor = dist / lastPinchDist;
+              const midX = (touches[0].clientX + touches[1].clientX) / 2;
+              const midY = (touches[0].clientY + touches[1].clientY) / 2;
+              const svgPt = svgCoordsFromClient(midX, midY);
+              zoomAroundPoint(svgPt.x, svgPt.y, factor);
+            }}
+            lastPinchDist = dist;
+          }}
+          e.preventDefault();
+        }}, {{ passive: false }});
+
+        mapSvg.addEventListener("touchend", (e) => {{
+          touches = Array.from(e.touches);
+          if (touches.length < 2) lastPinchDist = 0;
+          if (touches.length === 0) {{ touchPanStart = null; touchVbStart = null; }}
+        }});
+      }}
+
+      // ── Zoom buttons ─────────────────────────────────────────────────────────
+      document.getElementById("map-zoom-in")?.addEventListener("click", () => {{
+        zoomAroundPoint(vbX + vbW / 2, vbY + vbH / 2, 1 + ZOOM_STEP * 1.5);
+      }});
+      document.getElementById("map-zoom-out")?.addEventListener("click", () => {{
+        zoomAroundPoint(vbX + vbW / 2, vbY + vbH / 2, 1 / (1 + ZOOM_STEP * 1.5));
+      }});
+      document.getElementById("map-zoom-reset")?.addEventListener("click", () => {{
+        vbX = 0; vbY = 0; vbW = vbW0; vbH = vbH0;
+        applyViewBox();
+      }});
+
+      // ── Hover tooltip ────────────────────────────────────────────────────────
+      const tooltip = document.createElement("div");
+      tooltip.className = "map-tooltip";
+      document.body.appendChild(tooltip);
+      let tooltipVisible = false;
+
+      function showTooltip(text, x, y) {{
+        tooltip.textContent = text;
+        tooltip.style.left = (x + 14) + "px";
+        tooltip.style.top = (y - 8) + "px";
+        tooltip.classList.add("is-visible");
+        tooltipVisible = true;
+      }}
+
+      function hideTooltip() {{
+        tooltip.classList.remove("is-visible");
+        tooltipVisible = false;
+      }}
+
+      mapFeatures.forEach((node) => {{
+        node.addEventListener("mouseenter", (e) => {{
+          if (panActive) return;
+          showTooltip(node.getAttribute("aria-label") || "", e.clientX, e.clientY);
+        }});
+        node.addEventListener("mousemove", (e) => {{
+          if (!tooltipVisible) return;
+          tooltip.style.left = (e.clientX + 14) + "px";
+          tooltip.style.top = (e.clientY - 8) + "px";
+        }});
+        node.addEventListener("mouseleave", () => hideTooltip());
+        node.addEventListener("focus", (e) => {{
+          showTooltip(node.getAttribute("aria-label") || "", node.getBoundingClientRect().right, node.getBoundingClientRect().top);
+        }});
+        node.addEventListener("blur", () => hideTooltip());
+      }});
 
       function normalizeLanguage(value) {{
         if (!value) {{
@@ -858,6 +1076,38 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
         }}
       }}
 
+      function featureSvgCenter(featureId) {{
+        const node = mapFeatures.find((n) => n.dataset.featureId === featureId);
+        if (!node || !mapSvg) return null;
+        const circle = node.querySelector("circle");
+        const rect = node.querySelector("rect");
+        if (circle) return {{ x: parseFloat(circle.getAttribute("cx")), y: parseFloat(circle.getAttribute("cy")) }};
+        if (rect) return {{
+          x: parseFloat(rect.getAttribute("x")) + parseFloat(rect.getAttribute("width")) / 2,
+          y: parseFloat(rect.getAttribute("y")) + parseFloat(rect.getAttribute("height")) / 2,
+        }};
+        return null;
+      }}
+
+      function focusToFeature(featureId) {{
+        const center = featureSvgCenter(featureId);
+        if (!center || !mapSvg) return;
+        const targetX = center.x - vbW / 2;
+        const targetY = center.y - vbH / 2;
+        const startX = vbX, startY = vbY;
+        const duration = 320;
+        const startTime = performance.now();
+        function ease(t) {{ return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }}
+        function step(now) {{
+          const t = Math.min((now - startTime) / duration, 1);
+          vbX = startX + (targetX - startX) * ease(t);
+          vbY = startY + (targetY - startY) * ease(t);
+          applyViewBox();
+          if (t < 1) requestAnimationFrame(step);
+        }}
+        requestAnimationFrame(step);
+      }}
+
       function setActiveFeature(featureId) {{
         const resolvedFeatureId = detailCards.some((card) => card.dataset.featureCard === featureId)
           ? featureId
@@ -870,6 +1120,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
         detailCards.forEach((card) => {{
           card.classList.toggle("is-active", card.dataset.featureCard === resolvedFeatureId);
         }});
+        if (resolvedFeatureId !== "map-overview") focusToFeature(resolvedFeatureId);
       }}
 
       function applyLanguage() {{
