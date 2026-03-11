@@ -463,6 +463,23 @@ v0.1 不需要：
 1. 先用规则生成稳定 ripple 结果
 2. 再让 LLM 润色 `narrative_summary`、NPC 语气和广播文本
 
+## v0.1 机器可读规则草案
+
+为帮助后续实现层落地，当前可以先维护一份：
+
+- `docs/CAUSAL_RIPPLE_RULES_V0.1.json`
+
+这份文件优先把以下结构化信息固定下来：
+
+- `formula`
+- `carrier_types`
+- `impact_layers`
+- `context_modifiers`
+- `event_templates`
+- `writeback_targets`
+
+它的定位是**规则草案与实现前配置骨架**，不是已经冻结的运行时契约。
+
 ## 需要避免的坏味道
 
 - 把传播简单写成“以源点为圆心的统一减半半径”
