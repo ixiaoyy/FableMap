@@ -145,6 +145,62 @@ class CliTests(unittest.TestCase):
         self.assertIn("error:", stderr.getvalue())
         self.assertIn("missing-world.json", stderr.getvalue())
 
+    def test_inspect_returns_schema_error_when_world_id_is_missing(self) -> None:
+        stderr = io.StringIO()
+        world = build_world(
+            lat=35.6580,
+            lon=139.7016,
+            radius=300,
+            source_data=json.loads(FIXTURE_PATH.read_text(encoding="utf-8")),
+            provider="fixture",
+        )
+        del world["world_id"]
+        with TemporaryDirectory() as tmpdir:
+            input_path = Path(tmpdir) / "invalid-world.json"
+            write_world(input_path, world)
+            with redirect_stderr(stderr):
+                exit_code = main(["inspect", "--input", str(input_path)])
+        self.assertEqual(exit_code, 4)
+        self.assertIn("world schema validation failed", stderr.getvalue())
+        self.assertIn("missing top-level field 'world_id'", stderr.getvalue())
+
+    def test_inspect_returns_schema_error_when_state_version_is_missing(self) -> None:
+        stderr = io.StringIO()
+        world = build_world(
+            lat=35.6580,
+            lon=139.7016,
+            radius=300,
+            source_data=json.loads(FIXTURE_PATH.read_text(encoding="utf-8")),
+            provider="fixture",
+        )
+        del world["state"]["version"]
+        with TemporaryDirectory() as tmpdir:
+            input_path = Path(tmpdir) / "invalid-world.json"
+            write_world(input_path, world)
+            with redirect_stderr(stderr):
+                exit_code = main(["inspect", "--input", str(input_path)])
+        self.assertEqual(exit_code, 4)
+        self.assertIn("world schema validation failed", stderr.getvalue())
+        self.assertIn("state.version", stderr.getvalue())
+
+    def test_inspect_returns_schema_error_when_pois_is_not_a_list(self) -> None:
+        stderr = io.StringIO()
+        world = build_world(
+            lat=35.6580,
+            lon=139.7016,
+            radius=300,
+            source_data=json.loads(FIXTURE_PATH.read_text(encoding="utf-8")),
+            provider="fixture",
+        )
+        world["pois"] = "not-a-list"
+        with TemporaryDirectory() as tmpdir:
+            input_path = Path(tmpdir) / "invalid-world.json"
+            write_world(input_path, world)
+            with redirect_stderr(stderr):
+                exit_code = main(["inspect", "--input", str(input_path)])
+        self.assertEqual(exit_code, 4)
+        self.assertIn("field 'pois' must be a list", stderr.getvalue())
+
 
 
 if __name__ == "__main__":

@@ -10,6 +10,10 @@ from .cache import default_cache_dir
 from .world_builder import build_world, write_world
 
 
+class WorldSchemaError(ValueError):
+    """Raised when a world JSON file does not match the minimum expected schema."""
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fablemap", description="Generate and inspect FableMap world JSON.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -61,6 +65,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_generate(args)
         if args.command == "inspect":
             return _run_inspect(args)
+    except WorldSchemaError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 4
     except Exception as exc:  # pragma: no cover - handled by smoke tests
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -115,6 +122,7 @@ def _run_generate(args: argparse.Namespace) -> int:
 
 def _run_inspect(args: argparse.Namespace) -> int:
     world = json.loads(args.input.read_text(encoding="utf-8"))
+    _validate_world_schema(world)
     print(json.dumps(_build_inspect_summary(world, args.input), ensure_ascii=False, indent=2))
     return 0
 
@@ -142,6 +150,53 @@ def _build_inspect_summary(world: dict[str, Any], input_path: Path) -> dict[str,
         "active_lens": state.get("active_lens"),
         "input": str(input_path),
     }
+
+
+def _validate_world_schema(world: Any) -> None:
+    if not isinstance(world, dict):
+        raise WorldSchemaError("world schema validation failed: root JSON value must be an object.")
+
+    required_top_level_fields = {
+        "world_id": str,
+        "seed": str,
+        "source": dict,
+        "region": dict,
+        "pois": list,
+        "roads": list,
+        "landmarks": list,
+        "factions": list,
+        "historical_echoes": list,
+        "memory_anchors": list,
+        "sprites": list,
+        "state": dict,
+    }
+    for field_name, expected_type in required_top_level_fields.items():
+        if field_name not in world:
+            raise WorldSchemaError(f"world schema validation failed: missing top-level field '{field_name}'.")
+        if not isinstance(world[field_name], expected_type):
+            raise WorldSchemaError(
+                f"world schema validation failed: field '{field_name}' must be a {_type_label(expected_type)}."
+            )
+
+    source = world["source"]
+    if "provider" not in source:
+        raise WorldSchemaError("world schema validation failed: missing required field 'source.provider'.")
+    if not isinstance(source["provider"], str):
+        raise WorldSchemaError("world schema validation failed: field 'source.provider' must be a string.")
+
+    state = world["state"]
+    if "version" not in state:
+        raise WorldSchemaError("world schema validation failed: missing required field 'state.version'.")
+    if not isinstance(state["version"], str):
+        raise WorldSchemaError("world schema validation failed: field 'state.version' must be a string.")
+
+
+def _type_label(expected_type: type[Any]) -> str:
+    return {
+        str: "string",
+        dict: "object",
+        list: "list",
+    }.get(expected_type, expected_type.__name__)
 
 
 def _positive_int(value: str) -> int:
