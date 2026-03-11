@@ -39,18 +39,21 @@ class BundleTests(unittest.TestCase):
             summary_path = output_dir / "summary.json"
             showcase_json_path = output_dir / "showcase.json"
             showcase_md_path = output_dir / "showcase.md"
+            preview_html_path = output_dir / "index.html"
             manifest_path = output_dir / "manifest.json"
 
             self.assertTrue(bundle_world_path.exists())
             self.assertTrue(summary_path.exists())
             self.assertTrue(showcase_json_path.exists())
             self.assertTrue(showcase_md_path.exists())
+            self.assertTrue(preview_html_path.exists())
             self.assertTrue(manifest_path.exists())
 
             manifest_stdout = json.loads(stdout.getvalue())
             bundled_world = json.loads(bundle_world_path.read_text(encoding="utf-8"))
             summary = json.loads(summary_path.read_text(encoding="utf-8"))
             showcase = json.loads(showcase_json_path.read_text(encoding="utf-8"))
+            preview_html = preview_html_path.read_text(encoding="utf-8")
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         self.assertEqual(manifest_stdout["world_id"], world["world_id"])
@@ -60,12 +63,20 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(manifest["world_id"], world["world_id"])
         self.assertEqual(manifest["files"]["world"], "world.json")
         self.assertEqual(manifest["entrypoints"]["primary_showcase"], "showcase.json")
-        self.assertEqual(manifest["bundle_version"], "0.2")
+        self.assertEqual(manifest_stdout["preview"], str(preview_html_path))
+        self.assertEqual(manifest["bundle_version"], "0.3")
+        self.assertEqual(manifest["files"]["preview_html"], "index.html")
+        self.assertEqual(manifest["entrypoints"]["primary_preview"], "index.html")
         self.assertEqual(manifest["slots"]["world_data"]["path"], "world.json")
+        self.assertEqual(manifest["slots"]["preview_html"]["format"], "html")
         self.assertEqual(manifest["slots"]["showcase_markdown"]["format"], "markdown")
-        self.assertEqual(len(manifest["resources"]), 4)
+        self.assertEqual(len(manifest["resources"]), 5)
         self.assertEqual(manifest["resources"][0]["slot"], "world_data")
         self.assertEqual(manifest["resources"][2]["role"], "showcase_payload")
+        self.assertEqual(manifest["resources"][4]["role"], "interactive_preview")
+        self.assertIn("<title>", preview_html)
+        self.assertIn(world["region"]["name"], preview_html)
+        self.assertIn("showcase.json", preview_html)
 
 
 if __name__ == "__main__":
