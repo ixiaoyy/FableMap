@@ -250,6 +250,12 @@ def _render_map_observer_html(
     poi_states = state.get("poi_states") or {}
     project, viewport = _build_map_projector(world)
 
+    _ROAD_TIER = {
+        "motorway": "arterial", "trunk": "arterial",
+        "primary": "arterial", "secondary": "arterial",
+        "tertiary": "street", "residential": "street", "unclassified": "street",
+        "footway": "path", "path": "path", "cycleway": "path", "steps": "path",
+    }
     road_shapes: list[str] = []
     for road in roads:
         projected_points: list[str] = []
@@ -257,10 +263,22 @@ def _render_map_observer_html(
             projected = project(point)
             projected_points.append(f"{projected['x']},{projected['y']}")
         if len(projected_points) >= 2:
+            kind = str(road.get("kind") or "")
+            tier = _ROAD_TIER.get(kind, "street")
             road_shapes.append(
-                f'<polyline class="map-road" points="{" ".join(projected_points)}" '
-                f'data-road-kind="{escape(str(road.get("kind") or ""))}" />'
+                f'<polyline class="map-road map-road-{escape(tier)}" points="{" ".join(projected_points)}" '
+                f'data-road-kind="{escape(kind)}" />'
             )
+
+    _POI_ICON: dict[str, str] = {
+        "whispering_grove": "M0,-11 C-6,-11 -11,-6 -11,0 C-11,7 -5,11 0,13 C5,11 11,7 11,0 C11,-6 6,-11 0,-11Z M0,-6 L2,0 L7,0 L3,3 L5,9 L0,6 L-5,9 L-3,3 L-7,0 L-2,0Z",
+        "healing_sanctum": "M0,-12 L3,-4 L12,-4 L5,2 L8,10 L0,5 L-8,10 L-5,2 L-12,-4 L-3,-4Z",
+        "supply_outpost": "M-9,-9 L9,-9 L9,9 L-9,9Z M-5,-5 L5,-5 L5,5 L-5,5Z M-1,-9 L1,-9 L1,-5 L-1,-5Z M-1,5 L1,5 L1,9 L-1,9Z",
+        "judgement_tower": "M0,-12 L4,-4 L12,-4 L6,2 L9,12 L0,7 L-9,12 L-6,2 L-12,-4 L-4,-4Z",
+        "ember_parlor": "M0,-11 C-7,-11 -11,-5 -8,1 C-5,7 -2,9 0,12 C2,9 5,7 8,1 C11,-5 7,-11 0,-11Z",
+        "lore_academy": "M-10,-8 L10,-8 L10,10 L-10,10Z M-6,-8 L-6,-12 L6,-12 L6,-8Z M-3,0 L3,0 M0,-4 L0,4",
+    }
+    _LANDMARK_ICON = "M0,-13 L4,-4 L13,-4 L6,2 L9,13 L0,8 L-9,13 L-6,2 L-13,-4 L-4,-4Z"
 
     feature_items: list[dict[str, Any]] = []
     for index, poi in enumerate(pois, start=1):
@@ -270,11 +288,12 @@ def _render_map_observer_html(
         feature_id = str(poi.get("id") or f"poi-{index}")
         marker_name = str(poi.get("fantasy_name") or poi.get("real_name") or "POI").strip() or "POI"
         poi_state = poi_states.get(poi.get("state_ref") or poi.get("id") or "") or {}
+        fantasy_type = str(poi.get("fantasy_type") or "")
         feature_items.append(
             {
                 "id": feature_id,
                 "kind": "poi",
-                "label": "P",
+                "fantasy_type": fantasy_type,
                 "position": position,
                 "marker_name": marker_name,
                 "detail_body": (
@@ -300,7 +319,7 @@ def _render_map_observer_html(
             {
                 "id": feature_id,
                 "kind": "landmark",
-                "label": "L",
+                "fantasy_type": "landmark",
                 "position": position,
                 "marker_name": marker_name,
                 "detail_body": (
@@ -339,18 +358,21 @@ def _render_map_observer_html(
         y = projected["y"]
         is_active = item["id"] == default_feature_id
         active_class = " is-active" if is_active else ""
+        ftype = item.get("fantasy_type") or ""
         if item["kind"] == "poi":
+            icon_path = _POI_ICON.get(ftype, _POI_ICON.get("supply_outpost", ""))
             shape_html = (
-                f'<circle cx="{x}" cy="{y}" r="10"></circle>'
-                f'<text x="{x}" y="{y + 4}" text-anchor="middle">{escape(str(item["label"]))}</text>'
+                f'<circle cx="{x}" cy="{y}" r="14" class="poi-bg"></circle>'
+                f'<path d="{icon_path}" transform="translate({x},{y})" class="poi-icon"></path>'
             )
         else:
             shape_html = (
-                f'<rect x="{x - 9}" y="{y - 9}" width="18" height="18" rx="4"></rect>'
-                f'<text x="{x}" y="{y + 4}" text-anchor="middle">{escape(str(item["label"]))}</text>'
+                f'<circle cx="{x}" cy="{y}" r="14" class="landmark-bg"></circle>'
+                f'<path d="{_LANDMARK_ICON}" transform="translate({x},{y})" class="landmark-icon"></path>'
             )
+        type_class = f" map-ft-{escape(ftype)}" if ftype else ""
         feature_nodes.append(
-            f'<g class="map-feature map-{escape(str(item["kind"]))}{active_class}" '
+            f'<g class="map-feature map-{escape(str(item["kind"]))}{type_class}{active_class}" '
             f'data-feature-id="{escape(str(item["id"]))}" tabindex="0" role="button" '
             f'aria-pressed="{"true" if is_active else "false"}" aria-label="{escape(str(item["marker_name"]))}">'
             f"{shape_html}</g>"
@@ -367,7 +389,9 @@ def _render_map_observer_html(
             <p data-i18n=\"mapObserverLead\"></p>
           </div>
           <div class=\"observer-legend\" aria-label=\"Map legend\">
-            <span class=\"legend-item\"><span class=\"legend-swatch road\"></span><span data-i18n=\"mapLegendRoads\"></span></span>
+            <span class=\"legend-item\"><span class=\"legend-swatch road-arterial\"></span><span data-i18n=\"mapLegendArterial\"></span></span>
+            <span class=\"legend-item\"><span class=\"legend-swatch road-street\"></span><span data-i18n=\"mapLegendStreet\"></span></span>
+            <span class=\"legend-item\"><span class=\"legend-swatch road-path\"></span><span data-i18n=\"mapLegendPath\"></span></span>
             <span class=\"legend-item\"><span class=\"legend-swatch poi\"></span><span data-i18n=\"mapLegendPois\"></span></span>
             <span class=\"legend-item\"><span class=\"legend-swatch landmark\"></span><span data-i18n=\"mapLegendLandmarks\"></span></span>
           </div>
@@ -425,7 +449,9 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "sectionMapObserver": "2D 世界地图主舞台",
             "mapObserverLead": "当前浏览器入口已经改为地图舞台优先：道路构成骨架，POI 与地标作为世界对象直接落在同一张 2D 地图上。",
             "mapObserverNote": "当前采用局部经纬度归一化，只适用于 nearby 小范围世界观察，不等于完整 GIS 投影系统。",
-            "mapLegendRoads": "道路骨架",
+            "mapLegendArterial": "主干道",
+            "mapLegendStreet": "街道",
+            "mapLegendPath": "步行路",
             "mapLegendPois": "POI 节点",
             "mapLegendLandmarks": "地标记忆点",
             "mapDetailPanelTitle": "地点详情",
@@ -504,7 +530,9 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "sectionMapObserver": "2D World Map Stage",
             "mapObserverLead": "The browser entry is now map-stage-first: roads form the spatial skeleton while POIs and landmarks land on the same 2D world map as selectable world objects.",
             "mapObserverNote": "This view uses local lat/lon normalization for nearby-scale observation only; it is not a full GIS projection system.",
-            "mapLegendRoads": "Road skeleton",
+            "mapLegendArterial": "Arterial roads",
+            "mapLegendStreet": "Streets",
+            "mapLegendPath": "Footways",
             "mapLegendPois": "POI nodes",
             "mapLegendLandmarks": "Landmark memory points",
             "mapDetailPanelTitle": "Location Details",
@@ -674,15 +702,21 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .observer-legend {{ display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }}
       .legend-item {{ display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: #0f172a; border: 1px solid #334155; font-size: 12px; }}
       .legend-swatch {{ width: 10px; height: 10px; border-radius: 999px; display: inline-block; }}
-      .legend-swatch.road {{ background: #7dd3fc; }}
+      .legend-swatch.road-arterial {{ background: #7dd3fc; }}
+      .legend-swatch.road-street {{ background: #67e8f9; }}
+      .legend-swatch.road-path {{ background: #a5f3fc; border: 1px dashed #67e8f9; }}
       .legend-swatch.poi {{ background: #38bdf8; }}
       .legend-swatch.landmark {{ background: #fbbf24; }}
       .world-map-viewport {{ min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98)); border: 1px solid #334155; border-radius: 20px; }}
       #observer-map {{ width: 100%; height: 100%; min-height: 520px; display: block; cursor: grab; user-select: none; -webkit-user-select: none; }}
       #observer-map.is-panning {{ cursor: grabbing; }}
       .map-backdrop {{ fill: #020617; stroke: #334155; stroke-width: 2; }}
-      .map-road {{ fill: none; stroke: #67e8f9; stroke-opacity: 0.75; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }}
-      .map-feature {{ cursor: pointer; outline: none; }}
+      .map-road {{ fill: none; stroke-opacity: 0.75; stroke-linecap: round; stroke-linejoin: round; }}
+      .map-road-arterial {{ stroke: #7dd3fc; stroke-width: 5; }}
+      .map-road-street {{ stroke: #67e8f9; stroke-width: 3; }}
+      .map-road-path {{ stroke: #a5f3fc; stroke-width: 1.5; stroke-dasharray: 6 4; }}
+      .map-feature {{ cursor: pointer; outline: none; transition: transform 0.15s ease; }}
+      .map-feature.is-active, .map-feature:focus-visible {{ transform: scale(1.12); transform-origin: center; transform-box: fill-box; }}
       .map-tooltip {{ position: fixed; pointer-events: none; z-index: 100; padding: 6px 10px; background: rgba(15,23,42,0.95); border: 1px solid #475569; border-radius: 8px; font-size: 12px; color: #e2e8f0; white-space: nowrap; opacity: 0; transition: opacity 0.12s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }}
       .map-tooltip.is-visible {{ opacity: 1; }}
       .map-zoom-controls {{ display: flex; gap: 6px; position: absolute; top: 12px; right: 12px; }}
@@ -690,10 +724,24 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .map-zoom-btn:hover {{ background: rgba(30,41,59,0.98); }}
       .world-map-canvas {{ flex: 1; min-height: 0; position: relative; }}
       .map-feature text {{ fill: #0f172a; font-size: 10px; font-weight: 700; pointer-events: none; }}
-      .map-poi circle {{ fill: #38bdf8; stroke: #e0f2fe; stroke-width: 2; transition: transform 0.15s ease, stroke-width 0.15s ease; }}
-      .map-landmark rect {{ fill: #fbbf24; stroke: #fef3c7; stroke-width: 2; transition: transform 0.15s ease, stroke-width 0.15s ease; }}
-      .map-feature.is-active circle, .map-feature:focus-visible circle {{ stroke-width: 4; transform: scale(1.08); transform-origin: center; transform-box: fill-box; }}
-      .map-feature.is-active rect, .map-feature:focus-visible rect {{ stroke-width: 4; transform: scale(1.08); transform-origin: center; transform-box: fill-box; }}
+      .poi-bg {{ fill: #1e3a5f; stroke: #38bdf8; stroke-width: 2; transition: stroke-width 0.15s ease, r 0.15s ease; }}
+      .poi-icon {{ fill: #7dd3fc; pointer-events: none; }}
+      .landmark-bg {{ fill: #3b2a0a; stroke: #fbbf24; stroke-width: 2; transition: stroke-width 0.15s ease; }}
+      .landmark-icon {{ fill: #fbbf24; pointer-events: none; }}
+      .map-ft-whispering_grove .poi-bg {{ fill: #14302a; stroke: #4ade80; }}
+      .map-ft-whispering_grove .poi-icon {{ fill: #86efac; }}
+      .map-ft-healing_sanctum .poi-bg {{ fill: #1e3040; stroke: #e0f2fe; }}
+      .map-ft-healing_sanctum .poi-icon {{ fill: #bae6fd; }}
+      .map-ft-supply_outpost .poi-bg {{ fill: #1f2937; stroke: #fb923c; }}
+      .map-ft-supply_outpost .poi-icon {{ fill: #fdba74; }}
+      .map-ft-judgement_tower .poi-bg {{ fill: #1e1b2e; stroke: #a78bfa; }}
+      .map-ft-judgement_tower .poi-icon {{ fill: #c4b5fd; }}
+      .map-ft-ember_parlor .poi-bg {{ fill: #2d1a0e; stroke: #fb7185; }}
+      .map-ft-ember_parlor .poi-icon {{ fill: #fda4af; }}
+      .map-ft-lore_academy .poi-bg {{ fill: #1a1a2e; stroke: #facc15; }}
+      .map-ft-lore_academy .poi-icon {{ fill: #fde68a; }}
+      .map-feature.is-active .poi-bg, .map-feature:focus-visible .poi-bg {{ stroke-width: 4; }}
+      .map-feature.is-active .landmark-bg, .map-feature:focus-visible .landmark-bg {{ stroke-width: 4; }}
       .map-note {{ margin: 12px 4px 0; color: #94a3b8; font-size: 13px; line-height: 1.5; }}
       .world-map-sidebar {{ display: flex; flex-direction: column; gap: 16px; min-height: 0; }}
       .world-map-panel {{ background: rgba(15, 23, 42, 0.88); border: 1px solid #334155; border-radius: 18px; padding: 18px; }}

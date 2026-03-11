@@ -39,7 +39,7 @@ W3 补齐这一块交互能力，让地图成为真正可操控的观察窗。
 - **`focusToFeature(featureId)`**：以 easeInOut 缓动（320ms）平滑移动 viewBox 使要素居中
 - **`setActiveFeature(featureId)`**：在原有选中逻辑基础上，对非 `map-overview` 要素调用 `focusToFeature`
 
-### `tests/test_bundle.py`
+### `tests/test_bundle.py` / `tests/test_page.py`
 
 新增 12 条断言，验证生成 HTML 包含：
 
@@ -53,6 +53,7 @@ W3 补齐这一块交互能力，让地图成为真正可操控的观察窗。
 
 - `fablemap/bundle.py`：CSS / HTML / JS 变更，全部在 `_render_map_observer_html` 和 `_render_preview_html` 内
 - `tests/test_bundle.py`：新增断言
+- `tests/test_page.py`：新增页面服务返回 preview 的交互层断言
 
 ## 没改什么
 
@@ -67,13 +68,9 @@ W3 补齐这一块交互能力，让地图成为真正可操控的观察窗。
 
 ## 做了哪些验证
 
-- `python -m unittest tests/test_bundle.py tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_demo.py tests/test_showcase.py`：17 个测试全部通过
-- 手动运行 `python -m fablemap.demo --output-dir demo-output` 并在浏览器中验证：
-  - 拖拽地图可平移（光标切换为 grabbing）
-  - 滚轮缩放保持焦点不偏移
-  - 悬停 POI / 地标节点显示名称 tooltip
-  - 点击要素后地图平滑聚焦到该要素中心
-  - 缩放按钮（+/−/⌂）工作正常
+- `python -m unittest tests/test_bundle.py tests/test_page.py`：通过
+- `python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`：17 个测试全部通过
+- `git diff --check`：无 diff 格式错误（仅现有 LF/CRLF 提示）
 
 ## 风险点
 

@@ -113,6 +113,19 @@ class BundleTests(unittest.TestCase):
         self.assertIn("panActive", preview_html)
         self.assertIn("is-panning", preview_html)
         self.assertIn("cursor: grab", preview_html)
+        self.assertIn("map-road-arterial", preview_html)
+        self.assertIn("map-road-street", preview_html)
+        self.assertIn("map-road-path", preview_html)
+        self.assertIn("poi-bg", preview_html)
+        self.assertIn("poi-icon", preview_html)
+        self.assertIn("landmark-bg", preview_html)
+        self.assertIn("landmark-icon", preview_html)
+        self.assertIn("map-ft-", preview_html)
+        self.assertIn('data-i18n="mapLegendArterial"', preview_html)
+        self.assertIn('data-i18n="mapLegendStreet"', preview_html)
+        self.assertIn('data-i18n="mapLegendPath"', preview_html)
+        self.assertIn("legend-swatch road-arterial", preview_html)
+        self.assertIn("legend-swatch road-street", preview_html)
 
 
 if __name__ == "__main__":

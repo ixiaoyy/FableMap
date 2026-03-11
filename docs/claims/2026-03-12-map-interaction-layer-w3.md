@@ -1,9 +1,9 @@
 # 模块认领说明
 
 - 模块名 / 区域名：2D 世界地图交互层 W3（平移 / 缩放 / 悬停 / 聚焦）
-- 负责人：Cascade
+- 负责人：Augment Agent
 - 改动类型：功能
-- 当前状态：in_progress
+- 当前状态：done
 
 ## 目标
 
@@ -20,6 +20,7 @@
 
 - `fablemap/bundle.py`：在 `_render_preview_html` 的 `<style>` 和 `<script>` 区块中添加交互逻辑
 - `tests/test_bundle.py`：补充断言，验证交互关键标识符存在于生成 HTML 中
+- `tests/test_page.py`：补充断言，验证页面服务返回的 preview 同样包含 W3 交互层标识
 
 ## 明确不改范围
 
@@ -47,14 +48,22 @@
 - 点击选中要素时地图相机平滑聚焦到该要素
 - 对应测试断言通过
 
+## 实际完成情况
+
+- `bundle/index.html` 已具备拖拽平移、滚轮 / 按钮 / 触摸缩放、tooltip 悬停与选中聚焦能力
+- 交互逻辑全部保留在 `fablemap/bundle.py` 生成的静态 HTML 内，不影响 `page.py` 服务层与世界数据协议
+- `tests/test_bundle.py` 已锁定 W3 关键结构与函数标识
+- 本轮补充了 `tests/test_page.py` 断言，确保页面服务返回的 preview 同样携带 W3 交互能力
+
 ## 验证方式
 
-- `python -m unittest tests/test_bundle.py`
-- 回归：`python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_demo.py tests/test_showcase.py`
-- 生成 demo bundle 后在浏览器中手动验证平移 / 缩放 / 悬停 / 聚焦效果
+- `python -m unittest tests/test_bundle.py tests/test_page.py`
+- 回归：`python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`
+- `git diff --check`
 
 ## 风险与备注
 
 - 交互逻辑全部在 `<script>` 中实现，不影响服务端 Python 逻辑
 - SVG transform 方案采用 `viewBox` 动态更新（无外部依赖，兼容性好）
 - 平滑聚焦采用 CSS transition + JS 动态更新 viewBox 实现，不依赖 Web Animations API
+- 当前自动化验证主要覆盖生成 HTML 中的交互结构与脚本标识；更细的浏览器事件体验仍可在后续需要时补端到端检查
