@@ -4,14 +4,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from .cache import default_cache_dir
 from .world_builder import build_world, write_world
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="fablemap", description="Generate a FableMap world JSON from coordinates.")
+    parser = argparse.ArgumentParser(prog="fablemap", description="Generate and inspect FableMap world JSON.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     generate_parser = subparsers.add_parser("generate", help="Generate a world JSON.")
@@ -47,6 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional local Overpass-style JSON fixture for offline generation and testing.",
     )
+
+    inspect_parser = subparsers.add_parser("inspect", help="Inspect an existing world JSON.")
+    inspect_parser.add_argument("--input", type=Path, required=True, help="Input world JSON file path")
     return parser
 
 
@@ -56,6 +59,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "generate":
             return _run_generate(args)
+        if args.command == "inspect":
+            return _run_inspect(args)
     except Exception as exc:  # pragma: no cover - handled by smoke tests
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -106,6 +111,37 @@ def _run_generate(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _run_inspect(args: argparse.Namespace) -> int:
+    world = json.loads(args.input.read_text(encoding="utf-8"))
+    print(json.dumps(_build_inspect_summary(world, args.input), ensure_ascii=False, indent=2))
+    return 0
+
+
+def _build_inspect_summary(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
+    region = world.get("region") or {}
+    state = world.get("state") or {}
+    source = world.get("source") or {}
+    return {
+        "world_id": world.get("world_id"),
+        "seed": world.get("seed"),
+        "provider": source.get("provider"),
+        "theme": region.get("theme"),
+        "atmosphere": region.get("atmosphere"),
+        "dominant_faction": region.get("dominant_faction"),
+        "poi_count": len(world.get("pois") or []),
+        "road_count": len(world.get("roads") or []),
+        "landmark_count": len(world.get("landmarks") or []),
+        "faction_count": len(world.get("factions") or []),
+        "historical_echo_count": len(world.get("historical_echoes") or []),
+        "memory_anchor_count": len(world.get("memory_anchors") or []),
+        "sprite_count": len(world.get("sprites") or []),
+        "state_version": state.get("version"),
+        "disturbance_level": state.get("disturbance_level"),
+        "active_lens": state.get("active_lens"),
+        "input": str(input_path),
+    }
 
 
 def _positive_int(value: str) -> int:

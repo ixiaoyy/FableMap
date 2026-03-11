@@ -1,6 +1,6 @@
 import io
 import json
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from fablemap.cli import main
 from fablemap.overpass import OverpassError
+from fablemap.world_builder import build_world, write_world
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"
@@ -110,6 +111,39 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertIn("Overpass request failed due to network error", stderr.getvalue())
         self.assertFalse(output_path.exists())
+
+    def test_inspect_reads_world_file_and_prints_summary(self) -> None:
+        stdout = io.StringIO()
+        world = build_world(
+            lat=35.6580,
+            lon=139.7016,
+            radius=300,
+            source_data=json.loads(FIXTURE_PATH.read_text(encoding="utf-8")),
+            provider="fixture",
+        )
+        with TemporaryDirectory() as tmpdir:
+            input_path = Path(tmpdir) / "world.json"
+            write_world(input_path, world)
+            with redirect_stdout(stdout):
+                exit_code = main(["inspect", "--input", str(input_path)])
+        self.assertEqual(exit_code, 0)
+        summary = json.loads(stdout.getvalue())
+        self.assertEqual(summary["world_id"], world["world_id"])
+        self.assertEqual(summary["provider"], "fixture")
+        self.assertEqual(summary["theme"], world["region"]["theme"])
+        self.assertEqual(summary["poi_count"], len(world["pois"]))
+        self.assertEqual(summary["landmark_count"], len(world["landmarks"]))
+        self.assertEqual(summary["state_version"], world["state"]["version"])
+        self.assertEqual(summary["input"], str(input_path))
+
+    def test_inspect_returns_error_when_input_is_missing(self) -> None:
+        stderr = io.StringIO()
+        missing_path = Path("missing-world.json")
+        with redirect_stderr(stderr):
+            exit_code = main(["inspect", "--input", str(missing_path)])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("error:", stderr.getvalue())
+        self.assertIn("missing-world.json", stderr.getvalue())
 
 
 
