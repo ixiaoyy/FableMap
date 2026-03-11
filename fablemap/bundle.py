@@ -76,8 +76,19 @@ def _load_world(input_path: Path) -> dict[str, Any]:
 
 def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) -> dict[str, Any]:
     hooks = showcase.get("hooks") or {}
+    slots = {
+        "world_data": {"path": "world.json", "format": "json", "kind": "world", "required": True},
+        "summary_data": {"path": "summary.json", "format": "json", "kind": "summary", "required": True},
+        "showcase_data": {"path": "showcase.json", "format": "json", "kind": "showcase", "required": True},
+        "showcase_markdown": {
+            "path": "showcase.md",
+            "format": "markdown",
+            "kind": "document",
+            "required": True,
+        },
+    }
     return {
-        "bundle_version": "0.1",
+        "bundle_version": "0.2",
         "world_id": summary.get("world_id"),
         "title": showcase.get("title"),
         "subtitle": showcase.get("subtitle"),
@@ -92,6 +103,41 @@ def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) ->
             "primary_showcase": "showcase.json",
             "primary_readme": "showcase.md",
         },
+        "slots": slots,
+        "resources": [
+            {
+                "id": "world",
+                "slot": "world_data",
+                "path": slots["world_data"]["path"],
+                "format": slots["world_data"]["format"],
+                "kind": slots["world_data"]["kind"],
+                "role": "primary_world",
+            },
+            {
+                "id": "summary",
+                "slot": "summary_data",
+                "path": slots["summary_data"]["path"],
+                "format": slots["summary_data"]["format"],
+                "kind": slots["summary_data"]["kind"],
+                "role": "inspect_summary",
+            },
+            {
+                "id": "showcase_json",
+                "slot": "showcase_data",
+                "path": slots["showcase_data"]["path"],
+                "format": slots["showcase_data"]["format"],
+                "kind": slots["showcase_data"]["kind"],
+                "role": "showcase_payload",
+            },
+            {
+                "id": "showcase_markdown",
+                "slot": "showcase_markdown",
+                "path": slots["showcase_markdown"]["path"],
+                "format": slots["showcase_markdown"]["format"],
+                "kind": slots["showcase_markdown"]["kind"],
+                "role": "showcase_document",
+            },
+        ],
         "presentation": {
             "theme": summary.get("theme"),
             "atmosphere": summary.get("atmosphere"),

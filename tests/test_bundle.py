@@ -60,6 +60,12 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(manifest["world_id"], world["world_id"])
         self.assertEqual(manifest["files"]["world"], "world.json")
         self.assertEqual(manifest["entrypoints"]["primary_showcase"], "showcase.json")
+        self.assertEqual(manifest["bundle_version"], "0.2")
+        self.assertEqual(manifest["slots"]["world_data"]["path"], "world.json")
+        self.assertEqual(manifest["slots"]["showcase_markdown"]["format"], "markdown")
+        self.assertEqual(len(manifest["resources"]), 4)
+        self.assertEqual(manifest["resources"][0]["slot"], "world_data")
+        self.assertEqual(manifest["resources"][2]["role"], "showcase_payload")
 
 
 if __name__ == "__main__":
