@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from .bundle import export_bundle
 from .cache import default_cache_dir
@@ -68,60 +68,86 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def run_nearby(args: argparse.Namespace) -> int:
     try:
-        source_data = None
-        provider = "overpass"
-        cache_dir = None
-        cache_status = "disabled"
-        if args.source_file:
-            source_data = json.loads(args.source_file.read_text(encoding="utf-8"))
-            provider = "fixture"
-            cache_status = "fixture"
-        else:
-            cache_dir = args.cache_dir or default_cache_dir()
-            cache_status = "refreshed" if args.refresh else "enabled"
-
-        world = build_world(
+        result = generate_nearby_preview(
             lat=args.lat,
             lon=args.lon,
             radius=args.radius,
+            output_dir=args.output_dir,
             seed=args.seed,
-            source_data=source_data,
-            provider=provider,
-            fetch_timeout_seconds=args.request_timeout,
-            fetch_max_retries=args.request_retries,
-            fetch_cache_dir=cache_dir,
-            refresh_cache=args.refresh,
+            request_timeout=args.request_timeout,
+            request_retries=args.request_retries,
+            cache_dir=args.cache_dir,
+            refresh=args.refresh,
+            source_file=args.source_file,
         )
-
-        args.output_dir.mkdir(parents=True, exist_ok=True)
-        world_path = args.output_dir / "world.json"
-        bundle_dir = args.output_dir / "bundle"
-
-        write_world(world_path, world)
-        bundle_result = export_bundle(world, bundle_dir)
-
-        print(
-            json.dumps(
-                {
-                    "world_id": world["world_id"],
-                    "provider": world["source"]["provider"],
-                    "cache_status": cache_status,
-                    "cache_dir": str(cache_dir) if cache_dir is not None else None,
-                    "output_dir": str(args.output_dir),
-                    "world": str(world_path),
-                    "bundle_dir": str(bundle_dir),
-                    "manifest": bundle_result["manifest"],
-                    "preview": bundle_result["preview"],
-                    "bundle_version": bundle_result["bundle_version"],
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except Exception as exc:  # pragma: no cover - exercised by smoke tests
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+
+def generate_nearby_preview(
+    *,
+    lat: float,
+    lon: float,
+    radius: int,
+    output_dir: Path,
+    seed: str | None = None,
+    request_timeout: int = 30,
+    request_retries: int = 1,
+    cache_dir: Path | None = None,
+    refresh: bool = False,
+    source_file: Path | None = None,
+) -> dict[str, Any]:
+    source_data = None
+    provider = "overpass"
+    resolved_cache_dir = None
+    cache_status = "disabled"
+    if source_file:
+        source_data = json.loads(source_file.read_text(encoding="utf-8"))
+        provider = "fixture"
+        cache_status = "fixture"
+    else:
+        resolved_cache_dir = cache_dir or default_cache_dir()
+        cache_status = "refreshed" if refresh else "enabled"
+
+    world = build_world(
+        lat=lat,
+        lon=lon,
+        radius=radius,
+        seed=seed,
+        source_data=source_data,
+        provider=provider,
+        fetch_timeout_seconds=request_timeout,
+        fetch_max_retries=request_retries,
+        fetch_cache_dir=resolved_cache_dir,
+        refresh_cache=refresh,
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    world_path = output_dir / "world.json"
+    bundle_dir = output_dir / "bundle"
+
+    write_world(world_path, world)
+    bundle_result = export_bundle(world, bundle_dir)
+
+    return {
+        "world_id": world["world_id"],
+        "title": bundle_result.get("title"),
+        "provider": world["source"]["provider"],
+        "poi_count": len(world.get("pois") or []),
+        "road_count": len(world.get("roads") or []),
+        "landmark_count": len(world.get("landmarks") or []),
+        "cache_status": cache_status,
+        "cache_dir": str(resolved_cache_dir) if resolved_cache_dir is not None else None,
+        "output_dir": str(output_dir),
+        "world": str(world_path),
+        "bundle_dir": str(bundle_dir),
+        "manifest": bundle_result["manifest"],
+        "preview": bundle_result["preview"],
+        "bundle_version": bundle_result["bundle_version"],
+    }
 
 
 def _positive_int(value: str) -> int:

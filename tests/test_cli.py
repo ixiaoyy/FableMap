@@ -144,6 +144,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result["cache_status"], "fixture")
         self.assertEqual(result["preview"], str(output_dir / "bundle" / "index.html"))
 
+    def test_page_subcommand_delegates_to_page_runner(self) -> None:
+        with patch("fablemap.page.run_page", return_value=0) as run_page_mock:
+            exit_code = main(["page", "--port", "8765", "--no-open"])
+        self.assertEqual(exit_code, 0)
+        args = run_page_mock.call_args.args[0]
+        self.assertEqual(args.port, 8765)
+        self.assertTrue(args.no_open)
+
     def test_inspect_reads_world_file_and_prints_summary(self) -> None:
         stdout = io.StringIO()
         world = build_world(

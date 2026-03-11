@@ -3,102 +3,247 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FableMap · 一页体验入口</title>
+    <title>FableMap · 附近地图变异世界</title>
     <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
       body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
-      .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 48px; }
-      .hero, .panel { background: #111827; border: 1px solid #334155; border-radius: 18px; }
-      .hero { padding: 28px; background: linear-gradient(135deg, #1e293b, #111827); }
+      .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 40px; }
+      .hero, .panel { background: #111827; border: 1px solid #334155; border-radius: 20px; }
+      .hero { padding: 28px; background: linear-gradient(135deg, #1e293b, #111827 60%, #0f172a); }
       .hero h1 { margin: 0 0 10px; font-size: 38px; }
-      .hero p { line-height: 1.7; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 18px; }
+      .hero p { line-height: 1.7; margin: 10px 0; }
+      .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+      .tag { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #312e81; font-size: 12px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 18px; }
       .panel { padding: 18px; }
-      .panel h2 { margin-top: 0; font-size: 20px; }
-      .tag { display: inline-block; margin: 6px 8px 0 0; padding: 6px 10px; border-radius: 999px; background: #312e81; font-size: 12px; }
-      ul { padding-left: 20px; line-height: 1.6; }
-      a { color: #93c5fd; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      .note { color: #cbd5e1; font-size: 14px; }
-      code { color: #c4b5fd; }
+      .panel h2 { margin: 0 0 12px; font-size: 20px; }
+      .status { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+      .dot.ok { background: #22c55e; }
+      .note { color: #cbd5e1; font-size: 14px; line-height: 1.6; }
+      .muted { color: #94a3b8; }
+      label { display: block; margin: 12px 0 6px; font-size: 14px; color: #cbd5e1; }
+      input, select, button, textarea {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid #475569;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 11px 12px;
+        font: inherit;
+      }
+      .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .row-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+      .actions { display: flex; gap: 12px; margin-top: 16px; }
+      button { cursor: pointer; background: linear-gradient(135deg, #2563eb, #4f46e5); border: none; font-weight: 700; }
+      button.secondary { background: #1e293b; border: 1px solid #475569; }
+      button:disabled { opacity: 0.7; cursor: wait; }
+      code { color: #c4b5fd; word-break: break-all; }
+      .result { min-height: 140px; }
+      .preview-shell { margin-top: 18px; }
+      iframe {
+        width: 100%;
+        min-height: 720px;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        background: #020617;
+      }
+      ul { padding-left: 18px; line-height: 1.6; }
+      a { color: #93c5fd; }
+      @media (max-width: 760px) {
+        .row, .row-2 { grid-template-columns: 1fr; }
+        iframe { min-height: 560px; }
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <section class="hero">
         <h1>FableMap / 寓言地图</h1>
-        <p><strong>这就是当前的一页体验入口。</strong> 你现在不需要先运行任何命令，直接打开这个页面就能感受项目现在已经做到什么程度。</p>
-        <p>当前展示样品基于 repo 内稳定 demo fixture 生成：把真实地理骨架重新解释成一个带阵营、情绪、叙事与视觉气质的平行世界街区。</p>
-        <div>
-          <span class="tag">可直接打开</span>
-          <span class="tag">无命令门槛</span>
-          <span class="tag">静态样品页</span>
-          <span class="tag">当前 demo 快照</span>
+        <p><strong>这次不只是静态样品了。</strong> 这个页面现在是“附近地图变异世界”的真正页面入口：填坐标、点生成、直接看预览。</p>
+        <p>浏览器本身不能直接调用本地 Python，所以页面需要连接一个本地 FableMap 页面服务。服务启动后，这个页面就能把附近真实地图或离线样例直接变成异世界预览。</p>
+        <div class="tags">
+          <span class="tag">页面驱动</span>
+          <span class="tag">附近地图 → 异世界</span>
+          <span class="tag">标准库本地服务</span>
+          <span class="tag">bundle 预览直出</span>
         </div>
       </section>
 
       <div class="grid">
         <section class="panel">
-          <h2>当前样品</h2>
-          <p><strong>Around Late Lantern Cafe</strong></p>
-          <p>market_quarter · quiet · held by Memory Collective</p>
-          <p class="note">Around Late Lantern Cafe is rendered as a market_quarter with 4 mapped POIs and 1 traversable routes.</p>
+          <h2>服务连接状态</h2>
+          <p class="status"><span id="status-dot" class="dot"></span><span id="status-text">正在检测本地页面服务…</span></p>
+          <label for="server-base">服务地址</label>
+          <div class="row-2">
+            <input id="server-base" type="text" value="http://127.0.0.1:8765">
+            <button id="check-server" class="secondary" type="button">重新检测</button>
+          </div>
+          <p class="note">默认会连接 <code>http://127.0.0.1:8765</code>。如果你是通过 `python -m fablemap page` 启动，这个地址通常不用改。</p>
+          <p class="note">如果当前未连接，请先启动本地页面服务：<code>python -m fablemap page</code></p>
+          <div id="health-details" class="note muted"></div>
         </section>
 
         <section class="panel">
-          <h2>District Snapshot</h2>
+          <h2>生成附近异世界</h2>
+          <form id="nearby-form">
+            <div class="row">
+              <div>
+                <label for="lat">纬度</label>
+                <input id="lat" name="lat" type="number" step="0.000001" value="35.6580" required>
+              </div>
+              <div>
+                <label for="lon">经度</label>
+                <input id="lon" name="lon" type="number" step="0.000001" value="139.7016" required>
+              </div>
+              <div>
+                <label for="radius">半径（米）</label>
+                <input id="radius" name="radius" type="number" min="1" step="1" value="300" required>
+              </div>
+            </div>
+            <div class="row-2">
+              <div>
+                <label for="mode">生成模式</label>
+                <select id="mode" name="mode">
+                  <option value="fixture">离线样例（稳定试跑）</option>
+                  <option value="live">真实 nearby（在线 Overpass）</option>
+                </select>
+              </div>
+              <div>
+                <label for="seed">Seed（可选）</label>
+                <input id="seed" name="seed" type="text" placeholder="可留空，自动生成">
+              </div>
+            </div>
+            <div class="actions">
+              <button id="generate-button" type="submit">生成预览页</button>
+            </div>
+          </form>
+          <p class="note">第一版页面入口优先解决“页面里触发生成 + 页面里看结果”，暂时还不是地图选点 Web App。</p>
+        </section>
+
+        <section class="panel result">
+          <h2>本次生成结果</h2>
+          <div id="result-box" class="note">还没有生成结果。连接服务后点一次“生成预览页”即可。</div>
+        </section>
+
+        <section class="panel">
+          <h2>体验说明</h2>
           <ul>
-            <li>World ID: <code>world-7c101776f28e</code></li>
-            <li>POIs / Roads / Landmarks: 4 / 1 / 1</li>
-            <li>Sprites / Memory Anchors / Echoes: 3 / 2 / 1</li>
-            <li>Disturbance Level: <code>0.45</code></li>
-            <li>Active Lens: <code>amber_evening</code></li>
+            <li>想先确认页面通不通：先用 <strong>离线样例</strong> 模式。</li>
+            <li>想试真实 nearby：切到 <strong>真实 nearby</strong> 模式后再生成。</li>
+            <li>生成完成后，下方会直接嵌入新预览页，也会给出独立打开链接。</li>
           </ul>
-        </section>
-
-        <section class="panel">
-          <h2>Faction Spotlight</h2>
-          <p><strong>Memory Collective</strong> (<code>memory_collective</code>)</p>
-          <p>Collects stories, grief and local rituals.</p>
-          <p class="note">Influence: 0.45</p>
-        </section>
-
-        <section class="panel">
-          <h2>Highlight POIs</h2>
-          <ul>
-            <li><strong>Late Lantern Cafe Parlor</strong> — Warmth, gossip and waiting quietly overlap here.</li>
-            <li><strong>Pocket Mart Outpost</strong> — Small routines make the district feel survivable.</li>
-            <li><strong>North Clinic Sanctum</strong> — Anxious hope lingers around the doors.</li>
-          </ul>
-        </section>
-
-        <section class="panel">
-          <h2>Landmark Hook</h2>
-          <ul>
-            <li><strong>Clock Gate</strong> — A place where the district's official story feels slightly unstable.</li>
-          </ul>
-        </section>
-
-        <section class="panel">
-          <h2>Presentation Hooks</h2>
-          <ul>
-            <li>Visual Style: <code>amber_evening</code></li>
-            <li>Palette Hint: <code>coffee_and_rose</code></li>
-            <li>Comfort / Anomaly: <code>0.56</code> / <code>0.45</code></li>
-            <li>Satire: Conversation is cozy, but time is always for sale.</li>
-          </ul>
+          <p class="note">现有 CLI `python -m fablemap nearby ...` 仍然保留，适合脚本化或离线验证；这个页面入口则面向更直接的本地体验。</p>
         </section>
       </div>
 
-      <section class="panel" style="margin-top: 18px;">
-        <h2>你接下来可以怎么用</h2>
-        <ul>
-          <li>如果你只是想先感受一下：就停在这个页面即可。</li>
-          <li>如果你想看项目说明：打开 <a href="README.md">README.md</a></li>
-          <li>如果你想看设计文档：打开 <a href="docs/PRODUCT_BRIEF.md">docs/PRODUCT_BRIEF.md</a></li>
-          <li>如果你之后想生成新的样品：再使用 `demo -> bundle` 那条开发流程。</li>
-        </ul>
-        <p class="note">说明：这个页面是 repo 内的静态体验入口，目的是把“先体验一下”这件事收敛成一个页面，而不是替代后续真正的交互 demo。</p>
+      <section class="panel preview-shell">
+        <h2>预览页</h2>
+        <p class="note">生成成功后，下面会直接显示新 bundle 的 <code>index.html</code>。</p>
+        <iframe id="preview-frame" title="FableMap preview" hidden></iframe>
       </section>
     </div>
+
+    <script>
+      const statusDot = document.getElementById("status-dot");
+      const statusText = document.getElementById("status-text");
+      const healthDetails = document.getElementById("health-details");
+      const serverBaseInput = document.getElementById("server-base");
+      const resultBox = document.getElementById("result-box");
+      const previewFrame = document.getElementById("preview-frame");
+      const generateButton = document.getElementById("generate-button");
+      const form = document.getElementById("nearby-form");
+
+      const sameOriginBase = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
+      serverBaseInput.value = sameOriginBase.startsWith("http") ? sameOriginBase : "http://127.0.0.1:8765";
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function normalizedBase() {
+        return serverBaseInput.value.trim().replace(/\/$/, "");
+      }
+
+      function setOffline(message) {
+        statusDot.classList.remove("ok");
+        statusText.textContent = message;
+      }
+
+      function setOnline(message) {
+        statusDot.classList.add("ok");
+        statusText.textContent = message;
+      }
+
+      async function checkServer() {
+        const base = normalizedBase();
+        try {
+          const response = await fetch(`${base}/api/health`);
+          if (!response.ok) {
+            throw new Error(`health ${response.status}`);
+          }
+          const data = await response.json();
+          setOnline("本地页面服务已连接，可以直接生成 nearby 预览。");
+          healthDetails.innerHTML = `fixture 可用：<code>${escapeHtml(data.fixture_available)}</code> · 输出目录：<code>${escapeHtml(data.output_root)}</code>`;
+          return true;
+        } catch (error) {
+          setOffline("本地页面服务未连接。请先启动 `python -m fablemap page`。");
+          healthDetails.textContent = "如果你是直接双击打开本页，这属于正常情况：页面壳在，但本地 Python 服务还没有启动。";
+          return false;
+        }
+      }
+
+      function renderResult(data) {
+        resultBox.innerHTML = `
+          <p><strong>${escapeHtml(data.title || data.world_id || "新世界")}</strong></p>
+          <p>world_id：<code>${escapeHtml(data.world_id)}</code></p>
+          <p>provider / cache：<code>${escapeHtml(data.provider)}</code> / <code>${escapeHtml(data.cache_status)}</code></p>
+          <p>POIs / Roads / Landmarks：<code>${escapeHtml(data.poi_count)}</code> / <code>${escapeHtml(data.road_count)}</code> / <code>${escapeHtml(data.landmark_count)}</code></p>
+          <p>预览地址：<a href="${escapeHtml(data.preview_url)}" target="_blank" rel="noopener">打开新预览页</a></p>
+          <p class="muted">bundle 版本：<code>${escapeHtml(data.bundle_version)}</code></p>
+        `;
+      }
+
+      async function generateNearby(event) {
+        event.preventDefault();
+        const isOnline = await checkServer();
+        if (!isOnline) {
+          return;
+        }
+        const base = normalizedBase();
+        const formData = new FormData(form);
+        generateButton.disabled = true;
+        generateButton.textContent = "生成中…";
+        resultBox.textContent = "正在抓取并生成附近异世界，请稍等…";
+        try {
+          const response = await fetch(`${base}/api/nearby`, {
+            method: "POST",
+            body: new URLSearchParams(formData),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || `request failed: ${response.status}`);
+          }
+          renderResult(data);
+          previewFrame.hidden = false;
+          previewFrame.src = data.preview_url;
+        } catch (error) {
+          resultBox.innerHTML = `<p><strong>生成失败</strong></p><p class="note">${escapeHtml(error.message || error)}</p>`;
+        } finally {
+          generateButton.disabled = false;
+          generateButton.textContent = "生成预览页";
+        }
+      }
+
+      document.getElementById("check-server").addEventListener("click", checkServer);
+      form.addEventListener("submit", generateNearby);
+      checkServer();
+    </script>
   </body>
 </html>

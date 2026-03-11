@@ -60,6 +60,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_nearby_arguments(nearby_parser)
 
+    from .page import add_arguments as add_page_arguments
+
+    page_parser = subparsers.add_parser(
+        "page",
+        help="Start the local page-driven nearby preview experience.",
+    )
+    add_page_arguments(page_parser)
+
     inspect_parser = subparsers.add_parser("inspect", help="Inspect an existing world JSON.")
     inspect_parser.add_argument("--input", type=Path, required=True, help="Input world JSON file path")
     return parser
@@ -75,6 +83,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             from .nearby import run_nearby
 
             return run_nearby(args)
+        if args.command == "page":
+            from .page import run_page
+
+            return run_page(args)
         if args.command == "inspect":
             return _run_inspect(args)
     except WorldSchemaError as exc:
