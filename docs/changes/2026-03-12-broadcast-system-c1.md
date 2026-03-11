@@ -70,10 +70,20 @@ viewport div 关闭之前——播报条始终位于地图下方。
 新增 5 条断言：`world-broadcast-bar` / `broadcast-track` / `broadcast-item` /
 `broadcast-scroll` / `data-i18n="broadcastBarTitle"`
 
+### `tests/test_page.py`
+
+补充页面服务级断言，确保通过 `page.py` 返回的 preview HTML 也稳定包含：
+
+- `world-broadcast-bar`
+- `broadcast-track` / `broadcast-item`
+- `broadcast-scroll`
+- `broadcastBarTitle`
+
 ## 影响范围
 
 - `fablemap/bundle.py`：2 个新函数 + 1 处调用插入 + CSS + i18n
 - `tests/test_bundle.py`：新增 5 条断言
+- `tests/test_page.py`：新增页面服务返回 preview 的播报栏断言
 
 ## 没改什么
 
@@ -83,7 +93,9 @@ viewport div 关闭之前——播报条始终位于地图下方。
 
 ## 验证
 
-- 17 个测试全部通过（无回归）
+- `python -m unittest tests/test_bundle.py tests/test_page.py`：通过
+- `python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`：17 个测试全部通过
+- `git diff --check`：无 diff 格式错误（仅现有 LF/CRLF 提示）
 - fixture 数据（anomaly_pressure=0.45, spawn_window=active, active_lens=neon_nostalgia）
   生成约 5 条播报文字，包含扰动中等、精灵活跃、镜头描述等
 

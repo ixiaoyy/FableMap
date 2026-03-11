@@ -1,9 +1,9 @@
 # 模块认领说明
 
 - 模块名 / 区域名：现实路况 -> NPC / 拥挤隐喻动态代理层 V2
-- 负责人：Cascade
+- 负责人：Augment Agent
 - 改动类型：功能
-- 当前状态：in_progress
+- 当前状态：done
 
 ## 目标
 
@@ -26,6 +26,8 @@
 
 - `fablemap/bundle.py`：`_render_map_observer_html` + `_render_preview_html`
   的 CSS / HTML / i18n
+- `tests/test_bundle.py`：补充断言，验证 bundle 生成 HTML 中包含动态代理层关键标识
+- `tests/test_page.py`：补充断言，验证页面服务返回的 preview 同样包含动态代理层关键标识
 
 ## 明确不改范围
 
@@ -45,4 +47,13 @@
 
 ## 验证方式
 
-- `python -m unittest tests/test_bundle.py` 及完整回归套件通过
+- `python -m unittest tests/test_bundle.py tests/test_page.py`
+- `python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`
+- `git diff --check`
+
+## 实际完成情况
+
+- `fablemap/bundle.py` 已实现区域扰动色晕、NPC 流动代理点、POI 状态徽章与侧边扰动指标面板
+- `tests/test_bundle.py` 已锁定 `poi-status-*`、`disturbance-aura`、`npc-agent-dot`、`disturbance-panel` 与相关 i18n 标识
+- 本轮补充了 `tests/test_page.py` 断言，确保通过页面服务返回的 preview 也稳定包含 V2 动态代理层结构
+- 本轮将 claim 状态与负责人同步到仓库当前真实完成状态

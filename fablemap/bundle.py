@@ -476,6 +476,23 @@ def _home_anchor_svg(world: dict[str, Any], project: Any) -> str:
     )
 
 
+def _player_entity_svg(world: dict[str, Any], project: Any) -> str:
+    source = world.get("source") or {}
+    lat = source.get("lat")
+    lon = source.get("lon")
+    if lat is None or lon is None:
+        return ""
+    projected = project({"lat": lat, "lon": lon})
+    x = round(projected["x"], 1)
+    y = round(projected["y"], 1)
+    return (
+        f'<g id="player-entity" class="player-entity" transform="translate({x}, {y})" aria-label="Player">'
+        f'<circle cx="0" cy="0" r="10" class="player-aura"></circle>'
+        f'<path d="M0,-8 L6,4 L-6,4 Z" class="player-icon"></path>'
+        f'</g>'
+    )
+
+
 def _broadcast_messages(world: dict[str, Any], world_state: dict[str, Any]) -> list[str]:
     region = world.get("region") or {}
     social = float(region.get("social_tension") or 0.0)
@@ -753,14 +770,18 @@ def _render_map_observer_html(
           </div>
         </div>
         <div class=\"world-map-stage-body\">
-          <div class=\"world-map-viewport\" id=\"world-map-viewport\">
+          <div class=\"world-map-viewport\" id=\"world-map-viewport\" data-zoom-tier=\"survey\">
             <div class=\"world-map-canvas\">
+              <div class=\"semantic-zoom-indicator\" id=\"semantic-zoom-indicator\" data-zoom-tier=\"survey\" aria-live=\"polite\">
+                <span class=\"semantic-zoom-label\" data-i18n=\"semanticZoomTitle\"></span>
+                <strong id=\"semantic-zoom-value\"></strong>
+              </div>
               <div class=\"map-zoom-controls\" aria-hidden=\"true\">
                 <button class=\"map-zoom-btn\" id=\"map-zoom-in\" title=\"Zoom in\">+</button>
                 <button class=\"map-zoom-btn\" id=\"map-zoom-out\" title=\"Zoom out\">\u2212</button>
                 <button class=\"map-zoom-btn\" id=\"map-zoom-reset\" title=\"Reset view\" style=\"font-size:13px\">&#x2302;</button>
               </div>
-              <svg id=\"observer-map\" viewBox=\"0 0 {viewport['width']} {viewport['height']}\" role=\"img\" aria-labelledby=\"observer-map-title observer-map-desc\">
+              <svg id=\"observer-map\" viewBox=\"0 0 {viewport['width']} {viewport['height']}\" data-zoom-tier=\"survey\" role=\"img\" aria-labelledby=\"observer-map-title observer-map-desc\">
                 <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
                 <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
                 <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
@@ -827,6 +848,10 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "mapLegendPath": "步行路",
             "mapLegendPois": "POI 节点",
             "mapLegendLandmarks": "地标记忆点",
+            "semanticZoomTitle": "语义缩放",
+            "semanticZoomSurvey": "总览骨架",
+            "semanticZoomDistrict": "区域脉冲",
+            "semanticZoomIntimate": "街区低语",
             "mapDetailPanelTitle": "地点详情",
             "detailOverviewKicker": "世界概览",
             "mapDetailHint": "点选地图上的 POI 或地标，右侧会切换为对应详情。",
@@ -843,6 +868,11 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailComfortLevel": "地区治愈度",
             "detailSpriteCount": "可收集精灵",
             "detailAnchorCount": "情感锚点",
+            "detailPlayerStats": "玩家状态",
+            "detailPlayerPos": "当前位置",
+            "detailPlayerStatus": "行动状态",
+            "playerStatusIdle": "驻足",
+            "playerStatusMoving": "跋涉中",
             "broadcastBarTitle": "世界播报",
             "detailEchoTitle": "历史回声",
             "homePanelTitle": "镜像家园",
@@ -922,6 +952,10 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "mapLegendPath": "Footways",
             "mapLegendPois": "POI nodes",
             "mapLegendLandmarks": "Landmark memory points",
+            "semanticZoomTitle": "Semantic Zoom",
+            "semanticZoomSurvey": "Survey Skeleton",
+            "semanticZoomDistrict": "District Pulse",
+            "semanticZoomIntimate": "Street Whisper",
             "mapDetailPanelTitle": "Location Details",
             "detailOverviewKicker": "World Overview",
             "mapDetailHint": "Select a POI or landmark on the map to switch the detail panel.",
@@ -938,6 +972,11 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailComfortLevel": "Comfort level",
             "detailSpriteCount": "Collectable sprites",
             "detailAnchorCount": "Memory anchors",
+            "detailPlayerStats": "Player Stats",
+            "detailPlayerPos": "Position",
+            "detailPlayerStatus": "Status",
+            "playerStatusIdle": "Idle",
+            "playerStatusMoving": "Moving",
             "broadcastBarTitle": "World Broadcast",
             "detailEchoTitle": "Historical Echo",
             "homePanelTitle": "Mirror Home",
@@ -1120,14 +1159,20 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .map-feature.is-active, .map-feature:focus-visible {{ transform: scale(1.12); transform-origin: center; transform-box: fill-box; }}
       .map-tooltip {{ position: fixed; pointer-events: none; z-index: 100; padding: 6px 10px; background: rgba(15,23,42,0.95); border: 1px solid #475569; border-radius: 8px; font-size: 12px; color: #e2e8f0; white-space: nowrap; opacity: 0; transition: opacity 0.12s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }}
       .map-tooltip.is-visible {{ opacity: 1; }}
-      .map-zoom-controls {{ display: flex; gap: 6px; position: absolute; top: 12px; right: 12px; }}
+      .semantic-zoom-indicator {{ position: absolute; top: 12px; left: 12px; z-index: 2; display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid #334155; background: rgba(15, 23, 42, 0.88); color: #e2e8f0; box-shadow: 0 8px 24px rgba(2, 6, 23, 0.28); transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease; }}
+      .semantic-zoom-label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }}
+      #semantic-zoom-value {{ font-size: 13px; line-height: 1; }}
+      .semantic-zoom-indicator[data-zoom-tier="survey"] {{ border-color: #334155; color: #cbd5e1; }}
+      .semantic-zoom-indicator[data-zoom-tier="district"] {{ border-color: #0ea5e9; color: #bae6fd; background: rgba(8, 47, 73, 0.78); }}
+      .semantic-zoom-indicator[data-zoom-tier="intimate"] {{ border-color: #c084fc; color: #f5d0fe; background: rgba(59, 7, 100, 0.78); }}
+      .map-zoom-controls {{ display: flex; gap: 6px; position: absolute; top: 12px; right: 12px; z-index: 2; }}
       .map-zoom-btn {{ width: 32px; height: 32px; border-radius: 8px; border: 1px solid #475569; background: rgba(15,23,42,0.9); color: #e2e8f0; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }}
       .map-zoom-btn:hover {{ background: rgba(30,41,59,0.98); }}
       .world-map-canvas {{ flex: 1; min-height: 0; position: relative; }}
-      .map-feature text {{ fill: #0f172a; font-size: 10px; font-weight: 700; pointer-events: none; }}
-      .poi-bg {{ fill: #1e3a5f; stroke: #38bdf8; stroke-width: 2; transition: stroke-width 0.15s ease, r 0.15s ease; }}
+      .map-feature text {{ fill: #0f172a; font-size: 10px; font-weight: 700; pointer-events: none; opacity: 0.66; transition: opacity 0.15s ease, font-size 0.15s ease, letter-spacing 0.15s ease; }}
+      .poi-bg {{ fill: #1e3a5f; stroke: #38bdf8; stroke-width: 2; transform-box: fill-box; transform-origin: center; transition: stroke-width 0.15s ease, r 0.15s ease, transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease; }}
       .poi-icon {{ fill: #7dd3fc; pointer-events: none; }}
-      .landmark-bg {{ fill: #3b2a0a; stroke: #fbbf24; stroke-width: 2; transition: stroke-width 0.15s ease; }}
+      .landmark-bg {{ fill: #3b2a0a; stroke: #fbbf24; stroke-width: 2; transform-box: fill-box; transform-origin: center; transition: stroke-width 0.15s ease, transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease; }}
       .landmark-icon {{ fill: #fbbf24; pointer-events: none; }}
       .map-ft-whispering_grove .poi-bg {{ fill: #14302a; stroke: #4ade80; }}
       .map-ft-whispering_grove .poi-icon {{ fill: #86efac; }}
@@ -1143,21 +1188,38 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .map-ft-lore_academy .poi-icon {{ fill: #fde68a; }}
       .map-feature.is-active .poi-bg, .map-feature:focus-visible .poi-bg {{ stroke-width: 4; }}
       .map-feature.is-active .landmark-bg, .map-feature:focus-visible .landmark-bg {{ stroke-width: 4; }}
+      .world-map-viewport[data-zoom-tier="survey"] .map-feature text {{ opacity: 0.28; letter-spacing: 0.02em; }}
+      .world-map-viewport[data-zoom-tier="survey"] .poi-bg,
+      .world-map-viewport[data-zoom-tier="survey"] .landmark-bg {{ transform: scale(0.92); opacity: 0.9; }}
+      .world-map-viewport[data-zoom-tier="survey"] .echo-node,
+      .world-map-viewport[data-zoom-tier="survey"] .capsule-mark,
+      .world-map-viewport[data-zoom-tier="survey"] .sprite-node,
+      .world-map-viewport[data-zoom-tier="survey"] .home-anchor {{ opacity: 0.42; }}
+      .world-map-viewport[data-zoom-tier="district"] .map-feature text {{ opacity: 0.74; }}
+      .world-map-viewport[data-zoom-tier="district"] .poi-bg,
+      .world-map-viewport[data-zoom-tier="district"] .landmark-bg {{ filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.22)); }}
+      .world-map-viewport[data-zoom-tier="intimate"] .map-feature text {{ opacity: 1; font-size: 11px; }}
+      .world-map-viewport[data-zoom-tier="intimate"] .poi-bg,
+      .world-map-viewport[data-zoom-tier="intimate"] .landmark-bg {{ transform: scale(1.08); stroke-width: 3; filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.35)); }}
+      .world-map-viewport[data-zoom-tier="intimate"] .echo-node,
+      .world-map-viewport[data-zoom-tier="intimate"] .capsule-mark,
+      .world-map-viewport[data-zoom-tier="intimate"] .sprite-node,
+      .world-map-viewport[data-zoom-tier="intimate"] .home-anchor {{ opacity: 1; }}
       .comfort-aura {{ pointer-events: none; }}
-      .sprite-node {{ pointer-events: none; }}
+      .sprite-node {{ pointer-events: none; transition: opacity 0.15s ease; }}
       .sprite-gem {{ filter: drop-shadow(0 0 5px currentColor); }}
       .sprite-core {{ pointer-events: none; }}
       .anchor-node {{ pointer-events: none; }}
       .anchor-heart {{ fill: #fb7185; filter: drop-shadow(0 0 3px #fb7185); }}
-      .echo-node {{ pointer-events: none; }}
+      .echo-node {{ pointer-events: none; transition: opacity 0.15s ease; }}
       .echo-text {{ font-size: 9px; fill: #94a3b8; font-style: italic; }}
-      .capsule-mark {{ pointer-events: none; }}
+      .capsule-mark {{ pointer-events: none; transition: opacity 0.15s ease; }}
       .capsule-bubble {{ fill: #818cf8; filter: drop-shadow(0 0 3px #818cf8); }}
       .capsule-dot {{ fill: white; opacity: 0.8; pointer-events: none; }}
       .echo-panel {{ margin-top: 12px; border-top: 1px solid #1e293b; padding-top: 8px; }}
       .echo-panel-title {{ margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }}
       .echo-summary {{ margin: 0; font-size: 12px; color: #94a3b8; font-style: italic; line-height: 1.6; }}
-      .home-anchor {{ pointer-events: none; }}
+      .home-anchor {{ pointer-events: none; transition: opacity 0.15s ease; }}
       .home-aura {{ pointer-events: none; }}
       .home-icon {{ pointer-events: none; filter: drop-shadow(0 0 4px currentColor); }}
       .home-panel {{ margin-top: 0; }}
@@ -1331,6 +1393,9 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       const heroTitle = document.getElementById("hero-title");
       const mapFeatures = Array.from(document.querySelectorAll("[data-feature-id]"));
       const detailCards = Array.from(document.querySelectorAll("[data-feature-card]"));
+      const mapViewport = document.getElementById("world-map-viewport");
+      const semanticZoomIndicator = document.getElementById("semantic-zoom-indicator");
+      const semanticZoomValue = document.getElementById("semantic-zoom-value");
 
       // ── Map camera / viewport state ──────────────────────────────────────────
       const mapSvg = document.getElementById("observer-map");
@@ -1359,6 +1424,24 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
         if (!mapSvg) return;
         clampViewBox();
         mapSvg.setAttribute("viewBox", `${{vbX}} ${{vbY}} ${{vbW}} ${{vbH}}`);
+        updateSemanticZoomTier();
+      }}
+
+      function updateSemanticZoomTier() {{
+        const zoomRatio = vbW0 / vbW;
+        let tier = "survey";
+        let labelKey = "semanticZoomSurvey";
+        if (zoomRatio >= 2.2) {{
+          tier = "intimate";
+          labelKey = "semanticZoomIntimate";
+        }} else if (zoomRatio >= 1.35) {{
+          tier = "district";
+          labelKey = "semanticZoomDistrict";
+        }}
+        mapViewport?.setAttribute("data-zoom-tier", tier);
+        mapSvg?.setAttribute("data-zoom-tier", tier);
+        semanticZoomIndicator?.setAttribute("data-zoom-tier", tier);
+        if (semanticZoomValue) semanticZoomValue.textContent = t(labelKey);
       }}
 
       function svgCoordsFromClient(clientX, clientY) {{
@@ -1625,6 +1708,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
         document.querySelectorAll("[data-i18n]").forEach((node) => {{
           node.textContent = t(node.dataset.i18n);
         }});
+        updateSemanticZoomTier();
         const visibleTitle = heroTitle.textContent.trim() || t("untitledDistrict");
         document.title = `${{visibleTitle}} · ${{t("pageTitleSuffix")}}`;
       }}

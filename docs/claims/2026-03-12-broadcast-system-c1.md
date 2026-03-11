@@ -1,9 +1,9 @@
 # 模块认领说明
 
 - 模块名 / 区域名：全城播报系统 C1
-- 负责人：Cascade
+- 负责人：Augment Agent
 - 改动类型：功能
-- 当前状态：in_progress
+- 当前状态：done
 
 ## 目标
 
@@ -24,6 +24,8 @@
 
 - `fablemap/bundle.py`：新增 `_broadcast_messages` + `_broadcast_bar_html`；
   在 `_render_map_observer_html` 中插入；添加 CSS；添加 i18n key
+- `tests/test_bundle.py`：补充断言，验证播报栏关键结构与 i18n 标识
+- `tests/test_page.py`：补充断言，验证页面服务返回的 preview 同样包含播报栏
 
 ## 明确不改范围
 
@@ -36,3 +38,16 @@
 - `docs/AI_SHARED_TASKLIST.md`（任务 C1）
 - `docs/DISTURBANCE_MODEL.md`
 - `docs/AI参与开发协议.md`
+
+## 验证方式
+
+- `python -m unittest tests/test_bundle.py tests/test_page.py`
+- `python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`
+- `git diff --check`
+
+## 实际完成情况
+
+- `fablemap/bundle.py` 已实现 `_broadcast_messages` 与 `_broadcast_bar_html`，在地图主舞台底部渲染滚动世界播报栏
+- `tests/test_bundle.py` 已锁定 `world-broadcast-bar`、`broadcast-track`、`broadcast-item`、`broadcast-scroll` 与 `broadcastBarTitle`
+- 本轮补充了 `tests/test_page.py` 断言，确保页面服务返回的 preview 也稳定包含播报栏结构与标题 i18n 标识
+- 本轮将 claim 负责人与状态同步为当前仓库真实完成状态

@@ -62,7 +62,7 @@
 
 ### D. 世界入口深化
 
-- `D1` · `planned` · 语义坍缩与缩放变形效果钩子。
+- `D1` · `done` · 语义坍缩与缩放变形效果钩子：已为地图主舞台补充 semantic zoom tier（`survey / district / intimate`），缩放时同步更新 `data-zoom-tier` 与语义提示条，并通过 CSS 让标签、POI / landmark 强调度、回声 / 胶囊 / 精灵 / home anchor 随镜头层级发生可见变化。
 - `D2` · `planned` · 像素角色行走与街道通行抽象。
 - `D3` · `planned` · 玩家参与感与城市神话共创主线文档化收束。
 

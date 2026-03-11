@@ -78,10 +78,19 @@ V3 把这三个字段接入地图渲染层，形成"黑暗讽刺（扰动）"与
 新增 9 条断言：`comfort-aura` / `sprite-node` / `sprite-gem` / `anchor-node` /
 `anchor-heart` / 3 个 data-i18n key
 
+### `tests/test_page.py`
+
+补充页面服务级断言，确保通过 `page.py` 返回的 preview HTML 也稳定包含：
+
+- `comfort-aura` / `sprite-node` / `sprite-gem`
+- `anchor-node` / `anchor-heart`
+- `detailComfortLevel` / `detailSpriteCount` / `detailAnchorCount`
+
 ## 影响范围
 
 - `fablemap/bundle.py`：3 个新辅助函数 + SVG 调用点 + detail-card + CSS + i18n
 - `tests/test_bundle.py`：新增 9 条断言
+- `tests/test_page.py`：新增页面服务返回 preview 的 V3 断言
 
 ## 没改什么
 
@@ -91,7 +100,9 @@ V3 把这三个字段接入地图渲染层，形成"黑暗讽刺（扰动）"与
 
 ## 验证
 
-- 17 个测试全部通过（无回归）
+- `python -m unittest tests/test_bundle.py tests/test_page.py`：通过
+- `python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`：17 个测试全部通过
+- `git diff --check`：无 diff 格式错误（仅现有 LF/CRLF 提示）
 - `spawn_window=active` 时（fixture 数据 `anomaly_pressure=0.45>=0.4`）精灵节点正确渲染
 - `comfort_level=0.38` 时 comfort 色晕正确渲染
 - `memory_anchors` 有 2 条（fixture 数据有 2 个 `secret_slot=True` 的 POI）

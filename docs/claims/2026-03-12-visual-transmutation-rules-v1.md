@@ -1,9 +1,9 @@
 # 模块认领说明
 
 - 模块名 / 区域名：OSM -> 2D 建筑实体视觉转义规则库 V1
-- 负责人：Cascade
+- 负责人：Augment Agent
 - 改动类型：功能
-- 当前状态：in_progress
+- 当前状态：done
 
 ## 目标
 
@@ -21,6 +21,8 @@
 - `fablemap/bundle.py`：
   - `_render_map_observer_html`：图标路径数据注入 SVG `<defs>/<symbol>` 或直接内联 path
   - `_render_preview_html`：CSS 添加各 fantasy_type 的颜色 token 和道路分层样式
+- `tests/test_bundle.py`：补充断言，验证 bundle 生成 HTML 中包含视觉转义关键标识
+- `tests/test_page.py`：补充断言，验证页面服务返回的 preview 同样包含视觉转义关键标识
 
 ## 明确不改范围
 
@@ -46,12 +48,22 @@
 - 图例更新以反映新图标
 - 对应测试断言通过
 
+## 实际完成情况
+
+- `fablemap/bundle.py` 已实现道路三层级渲染：`arterial / street / path`
+- 已实现 6 种 `fantasy_type` 的 POI 语义图标，以及 landmark 专属图标
+- 图例与中英双语 i18n 已切换为 `mapLegendArterial / mapLegendStreet / mapLegendPath`
+- `tests/test_bundle.py` 已锁定 V1 关键视觉标识
+- 本轮补充了 `tests/test_page.py` 断言，确保页面服务返回的 preview 同样包含 V1 视觉转义结构
+
 ## 验证方式
 
-- `python -m unittest tests/test_bundle.py` 及完整回归套件
-- 手动生成 demo bundle 在浏览器中验证图标可见
+- `python -m unittest tests/test_bundle.py tests/test_page.py`
+- `python -m unittest tests/test_page.py tests/test_nearby.py tests/test_cli.py tests/test_bundle.py tests/test_demo.py tests/test_showcase.py`
+- `git diff --check`
 
 ## 风险与备注
 
 - 图标全部用内联 SVG path，无外部依赖
 - 图标设计原则：同 archetype 的 Cynic / Muse 两轨共享同一图形，颜色区分氛围（当前 V1 只做单一颜色，双轨切换留给后续 V2）
+- 当前自动化验证覆盖的是生成 HTML 中的视觉转义结构与 i18n 标识；更细的浏览器视觉观感可在后续需要时再做端到端检查
