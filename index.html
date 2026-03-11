@@ -39,9 +39,20 @@
       }
       .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
       .row-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-      .actions { display: flex; gap: 12px; margin-top: 16px; }
+      .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+      .action-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
       button { cursor: pointer; background: linear-gradient(135deg, #2563eb, #4f46e5); border: none; font-weight: 700; }
       button.secondary { background: #1e293b; border: 1px solid #475569; }
+      .preset-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+      .preset-button { text-align: left; line-height: 1.5; }
+      .preset-button strong, .preset-button span { display: block; }
+      .location-status { margin-top: 12px; min-height: 22px; }
+      .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
+      .result-card { padding: 12px; border: 1px solid #334155; border-radius: 14px; background: #0b1220; }
+      .result-card strong { display: block; margin-bottom: 6px; color: #cbd5e1; }
+      .result-main { margin-top: 0; }
+      .result-summary { margin-top: 14px; }
+      .link-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
       button:disabled { opacity: 0.7; cursor: wait; }
       code { color: #c4b5fd; word-break: break-all; }
       .result { min-height: 140px; }
@@ -105,6 +116,30 @@
         <section class="panel">
           <h2 data-i18n="generateTitle">生成附近异世界</h2>
           <form id="nearby-form">
+            <label data-i18n="quickActionLabel">快捷体验</label>
+            <div class="action-row">
+              <button id="use-location" class="secondary" type="button" data-i18n="useLocationButton">用我的当前位置</button>
+            </div>
+            <div id="location-status" class="note muted location-status" data-i18n="locationHint">你也可以直接点预设地点，快速体验真实地点如何被扭成异世界。</div>
+            <label data-i18n="presetLabel">预设地点</label>
+            <div id="preset-grid" class="preset-grid">
+              <button class="secondary preset-button" type="button" data-preset="tokyo-shibuya-live">
+                <strong data-i18n="presetShibuyaTitle">东京涩谷站口</strong>
+                <span data-i18n="presetShibuyaMeta">live · 35.6580, 139.7016 · 300m</span>
+              </button>
+              <button class="secondary preset-button" type="button" data-preset="tokyo-akihabara-live">
+                <strong data-i18n="presetAkihabaraTitle">东京秋叶原电器街</strong>
+                <span data-i18n="presetAkihabaraMeta">live · 35.6984, 139.7730 · 280m</span>
+              </button>
+              <button class="secondary preset-button" type="button" data-preset="hongkong-central-live">
+                <strong data-i18n="presetCentralTitle">香港中环街区</strong>
+                <span data-i18n="presetCentralMeta">live · 22.2819, 114.1586 · 320m</span>
+              </button>
+              <button class="secondary preset-button" type="button" data-preset="fixture-demo">
+                <strong data-i18n="presetFixtureTitle">离线样例稳定 demo</strong>
+                <span data-i18n="presetFixtureMeta">fixture · 35.6580, 139.7016 · 300m</span>
+              </button>
+            </div>
             <div class="row">
               <div>
                 <label for="lat" data-i18n="latLabel">纬度</label>
@@ -136,7 +171,7 @@
               <button id="generate-button" type="submit" data-i18n="generateButton">生成预览页</button>
             </div>
           </form>
-          <p class="note" data-i18n-html="generateNote">第一版页面入口优先解决“页面里触发生成 + 页面里看结果”，暂时还不是地图选点 Web App。</p>
+          <p class="note" data-i18n="generateNote">现在除了手填坐标，还支持“我的位置”和预设地点；结果卡片也会显示现实来源与生成元信息，方便判断这次 demo 有多“真”。</p>
         </section>
 
         <section class="panel result">
@@ -185,6 +220,25 @@
           serverDisconnectedNote: "如果你是直接双击打开本页，这属于正常情况：页面壳在，但本地 Python 服务还没有启动。",
           healthDetailsTemplate: "fixture 可用：<code>{fixture_available}</code> · 输出目录：<code>{output_root}</code>",
           generateTitle: "生成附近异世界",
+          quickActionLabel: "快捷体验",
+          useLocationButton: "用我的当前位置",
+          locationHint: "你也可以直接点预设地点，快速体验真实地点如何被扭成异世界。",
+          locating: "正在读取当前位置…",
+          locationApplied: "已填入你的位置：{lat}, {lon}，半径 {radius}m。",
+          locationFailed: "读取当前位置失败：{message}",
+          locationUnavailable: "当前浏览器不支持地理定位。",
+          presetLabel: "预设地点",
+          presetApplied: "已应用预设：{name}（{mode} · {lat}, {lon} · {radius}m）",
+          presetShibuyaTitle: "东京涩谷站口",
+          presetShibuyaMeta: "live · 35.6580, 139.7016 · 300m",
+          presetAkihabaraTitle: "东京秋叶原电器街",
+          presetAkihabaraMeta: "live · 35.6984, 139.7730 · 280m",
+          presetCentralTitle: "香港中环街区",
+          presetCentralMeta: "live · 22.2819, 114.1586 · 320m",
+          presetFixtureTitle: "离线样例稳定 demo",
+          presetFixtureMeta: "fixture · 35.6580, 139.7016 · 300m",
+          modeFixtureShort: "离线样例",
+          modeLiveShort: "真实 nearby",
           latLabel: "纬度",
           lonLabel: "经度",
           radiusLabel: "半径（米）",
@@ -194,12 +248,15 @@
           seedLabel: "Seed（可选）",
           seedPlaceholder: "可留空，自动生成",
           generateButton: "生成预览页",
-          generateNote: "第一版页面入口优先解决“页面里触发生成 + 页面里看结果”，暂时还不是地图选点 Web App。",
+          generateNote: "现在除了手填坐标，还支持“我的位置”和预设地点；结果卡片也会显示现实来源与生成元信息，方便判断这次 demo 有多“真”。",
           resultTitle: "本次生成结果",
           resultEmpty: "还没有生成结果。连接服务后点一次“生成预览页”即可。",
           generating: "生成中…",
           generatingMessage: "正在抓取并生成附近异世界，请稍等…",
           generateFailedTitle: "生成失败",
+          resultRealityTitle: "现实来源",
+          resultFantasyTitle: "异世界解释",
+          resultAssetsTitle: "生成资产",
           guideTitle: "体验说明",
           guideStep1: "想先确认页面通不通：先用 <strong>离线样例</strong> 模式。",
           guideStep2: "想试真实 nearby：切到 <strong>真实 nearby</strong> 模式后再生成。",
@@ -210,11 +267,27 @@
           iframeTitle: "FableMap 预览页",
           defaultWorldTitle: "新世界",
           resultWorldId: "world_id",
+          resultSeed: "seed",
           resultProviderCache: "provider / cache",
+          resultMode: "模式",
+          resultCoordinates: "坐标 / 半径",
           resultCounts: "POIs / Roads / Landmarks",
+          resultSourceElements: "源要素数",
+          resultRegionName: "区域名",
+          resultTheme: "主题",
+          resultDominantFaction: "主导派系",
+          resultSummary: "区域摘要",
+          resultGeneratedAt: "生成时间",
+          resultSourceFile: "源文件",
+          resultOpenStreetMap: "OpenStreetMap",
           resultPreviewUrl: "预览地址",
+          resultManifestUrl: "manifest",
+          resultWorldUrl: "world.json",
           resultOpenPreview: "打开新预览页",
+          resultOpenManifest: "打开 manifest",
+          resultOpenWorld: "打开 world.json",
           resultBundleVersion: "bundle 版本",
+          resultUnavailable: "无",
         },
         en: {
           pageTitle: "FableMap · Nearby Map into Fantasy World",
@@ -237,6 +310,25 @@
           serverDisconnectedNote: "If you opened this file directly, this is expected: the page shell is here, but the local Python service is not running yet.",
           healthDetailsTemplate: "fixture available: <code>{fixture_available}</code> · output root: <code>{output_root}</code>",
           generateTitle: "Generate Nearby Fantasy World",
+          quickActionLabel: "Quick Start",
+          useLocationButton: "Use My Current Location",
+          locationHint: "You can also click a preset place to quickly see how a real location gets distorted into a fantasy world.",
+          locating: "Reading your current location…",
+          locationApplied: "Your location has been filled in: {lat}, {lon}, radius {radius}m.",
+          locationFailed: "Failed to read your location: {message}",
+          locationUnavailable: "Geolocation is not available in this browser.",
+          presetLabel: "Preset Places",
+          presetApplied: "Preset applied: {name} ({mode} · {lat}, {lon} · {radius}m)",
+          presetShibuyaTitle: "Tokyo Shibuya Crossing",
+          presetShibuyaMeta: "live · 35.6580, 139.7016 · 300m",
+          presetAkihabaraTitle: "Tokyo Akihabara Electric Town",
+          presetAkihabaraMeta: "live · 35.6984, 139.7730 · 280m",
+          presetCentralTitle: "Hong Kong Central District",
+          presetCentralMeta: "live · 22.2819, 114.1586 · 320m",
+          presetFixtureTitle: "Offline Fixture Demo",
+          presetFixtureMeta: "fixture · 35.6580, 139.7016 · 300m",
+          modeFixtureShort: "fixture",
+          modeLiveShort: "live nearby",
           latLabel: "Latitude",
           lonLabel: "Longitude",
           radiusLabel: "Radius (meters)",
@@ -246,12 +338,15 @@
           seedLabel: "Seed (optional)",
           seedPlaceholder: "Leave blank for auto-generated seed",
           generateButton: "Generate Preview",
-          generateNote: "This first page entry focuses on “trigger generation in the page + view the result in the page”, not on becoming a full map-picking web app yet.",
+          generateNote: "You can now use your current location or presets, and the result card exposes provenance and generation metadata so the demo feels more real.",
           resultTitle: "Latest Result",
           resultEmpty: "No result yet. Connect to the service and click Generate Preview once.",
           generating: "Generating…",
           generatingMessage: "Fetching map data and generating the nearby fantasy world. Please wait…",
           generateFailedTitle: "Generation Failed",
+          resultRealityTitle: "Reality Source",
+          resultFantasyTitle: "Fantasy Interpretation",
+          resultAssetsTitle: "Generated Assets",
           guideTitle: "How to Use It",
           guideStep1: "If you want to confirm the page works first, start with <strong>offline fixture</strong> mode.",
           guideStep2: "If you want a real nearby run, switch to <strong>live nearby</strong> mode and generate again.",
@@ -262,11 +357,27 @@
           iframeTitle: "FableMap Preview",
           defaultWorldTitle: "New World",
           resultWorldId: "world_id",
+          resultSeed: "seed",
           resultProviderCache: "provider / cache",
+          resultMode: "mode",
+          resultCoordinates: "coordinates / radius",
           resultCounts: "POIs / Roads / Landmarks",
+          resultSourceElements: "source elements",
+          resultRegionName: "region name",
+          resultTheme: "theme",
+          resultDominantFaction: "dominant faction",
+          resultSummary: "region summary",
+          resultGeneratedAt: "generated at",
+          resultSourceFile: "source file",
+          resultOpenStreetMap: "OpenStreetMap",
           resultPreviewUrl: "preview URL",
+          resultManifestUrl: "manifest",
+          resultWorldUrl: "world.json",
           resultOpenPreview: "Open preview in new tab",
+          resultOpenManifest: "Open manifest",
+          resultOpenWorld: "Open world.json",
           resultBundleVersion: "bundle version",
+          resultUnavailable: "n/a",
         },
       };
 
@@ -278,8 +389,22 @@
       const resultBox = document.getElementById("result-box");
       const previewFrame = document.getElementById("preview-frame");
       const generateButton = document.getElementById("generate-button");
+      const useLocationButton = document.getElementById("use-location");
+      const locationStatus = document.getElementById("location-status");
       const form = document.getElementById("nearby-form");
+      const latInput = document.getElementById("lat");
+      const lonInput = document.getElementById("lon");
+      const radiusInput = document.getElementById("radius");
+      const modeInput = document.getElementById("mode");
       let lastResult = null;
+      let lastLocationNotice = null;
+
+      const presets = {
+        "tokyo-shibuya-live": { lat: 35.658, lon: 139.7016, radius: 300, mode: "live", labelKey: "presetShibuyaTitle" },
+        "tokyo-akihabara-live": { lat: 35.6984, lon: 139.773, radius: 280, mode: "live", labelKey: "presetAkihabaraTitle" },
+        "hongkong-central-live": { lat: 22.2819, lon: 114.1586, radius: 320, mode: "live", labelKey: "presetCentralTitle" },
+        "fixture-demo": { lat: 35.658, lon: 139.7016, radius: 300, mode: "fixture", labelKey: "presetFixtureTitle" },
+      };
 
       const sameOriginBase = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
       serverBaseInput.value = sameOriginBase.startsWith("http") ? sameOriginBase : "http://127.0.0.1:8765";
@@ -295,6 +420,32 @@
 
       function formatHtml(template, values) {
         return String(template).replaceAll(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => escapeHtml(values[key] ?? ""));
+      }
+
+      function formatNumber(value, digits = 4) {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric.toFixed(digits) : t("resultUnavailable");
+      }
+
+      function textOrUnavailable(value) {
+        return value === undefined || value === null || value === "" ? t("resultUnavailable") : String(value);
+      }
+
+      function modeLabel(value) {
+        return value === "fixture" ? t("modeFixtureShort") : value === "live" ? t("modeLiveShort") : textOrUnavailable(value);
+      }
+
+      function updateLocationStatus() {
+        if (!lastLocationNotice) {
+          locationStatus.textContent = t("locationHint");
+          return;
+        }
+        locationStatus.textContent = formatHtml(t(lastLocationNotice.key), lastLocationNotice.values || {});
+      }
+
+      function setLocationNotice(key, values = {}) {
+        lastLocationNotice = { key, values };
+        updateLocationStatus();
       }
 
       function normalizeLanguage(value) {
@@ -392,16 +543,96 @@
       function renderResult(data) {
         lastResult = data;
         const previewUrl = localizedUrl(data.preview_url);
+        const manifestUrl = data.manifest_url ? localizedUrl(data.manifest_url) : "";
+        const worldUrl = data.world_url ? localizedUrl(data.world_url) : "";
+        const title = data.title || data.region_name || data.world_id || t("defaultWorldTitle");
+        const coordinates = `${formatNumber(data.source_lat, 4)}, ${formatNumber(data.source_lon, 4)} · ${textOrUnavailable(data.source_radius_m)}m`;
         resultBox.innerHTML = `
-          <p><strong>${escapeHtml(data.title || data.world_id || t("defaultWorldTitle"))}</strong></p>
-          <p>${escapeHtml(t("resultWorldId"))}: <code>${escapeHtml(data.world_id)}</code></p>
-          <p>${escapeHtml(t("resultProviderCache"))}: <code>${escapeHtml(data.provider)}</code> / <code>${escapeHtml(data.cache_status)}</code></p>
-          <p>${escapeHtml(t("resultCounts"))}: <code>${escapeHtml(data.poi_count)}</code> / <code>${escapeHtml(data.road_count)}</code> / <code>${escapeHtml(data.landmark_count)}</code></p>
-          <p>${escapeHtml(t("resultPreviewUrl"))}: <a href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener">${escapeHtml(t("resultOpenPreview"))}</a></p>
-          <p class="muted">${escapeHtml(t("resultBundleVersion"))}: <code>${escapeHtml(data.bundle_version)}</code></p>
+          <p class="result-main"><strong>${escapeHtml(title)}</strong></p>
+          <div class="result-grid">
+            <div class="result-card">
+              <strong>${escapeHtml(t("resultRealityTitle"))}</strong>
+              <div>${escapeHtml(t("resultProviderCache"))}: <code>${escapeHtml(textOrUnavailable(data.provider))}</code> / <code>${escapeHtml(textOrUnavailable(data.cache_status))}</code></div>
+              <div>${escapeHtml(t("resultMode"))}: <code>${escapeHtml(modeLabel(data.mode))}</code></div>
+              <div>${escapeHtml(t("resultCoordinates"))}: <code>${escapeHtml(coordinates)}</code></div>
+              <div>${escapeHtml(t("resultSourceElements"))}: <code>${escapeHtml(textOrUnavailable(data.source_element_count))}</code></div>
+              <div>${escapeHtml(t("resultOpenStreetMap"))}: ${data.osm_url ? `<a href="${escapeHtml(data.osm_url)}" target="_blank" rel="noopener">${escapeHtml(t("resultOpenStreetMap"))}</a>` : `<span class="muted">${escapeHtml(t("resultUnavailable"))}</span>`}</div>
+            </div>
+            <div class="result-card">
+              <strong>${escapeHtml(t("resultFantasyTitle"))}</strong>
+              <div>${escapeHtml(t("resultRegionName"))}: <code>${escapeHtml(textOrUnavailable(data.region_name))}</code></div>
+              <div>${escapeHtml(t("resultTheme"))}: <code>${escapeHtml(textOrUnavailable(data.region_theme))}</code></div>
+              <div>${escapeHtml(t("resultDominantFaction"))}: <code>${escapeHtml(textOrUnavailable(data.dominant_faction))}</code></div>
+              <div>${escapeHtml(t("resultCounts"))}: <code>${escapeHtml(textOrUnavailable(data.poi_count))}</code> / <code>${escapeHtml(textOrUnavailable(data.road_count))}</code> / <code>${escapeHtml(textOrUnavailable(data.landmark_count))}</code></div>
+            </div>
+            <div class="result-card">
+              <strong>${escapeHtml(t("resultAssetsTitle"))}</strong>
+              <div>${escapeHtml(t("resultWorldId"))}: <code>${escapeHtml(textOrUnavailable(data.world_id))}</code></div>
+              <div>${escapeHtml(t("resultSeed"))}: <code>${escapeHtml(textOrUnavailable(data.seed))}</code></div>
+              <div>${escapeHtml(t("resultGeneratedAt"))}: <code>${escapeHtml(textOrUnavailable(data.generated_at))}</code></div>
+              <div>${escapeHtml(t("resultBundleVersion"))}: <code>${escapeHtml(textOrUnavailable(data.bundle_version))}</code></div>
+              <div>${escapeHtml(t("resultSourceFile"))}: <code>${escapeHtml(textOrUnavailable(data.source_file))}</code></div>
+            </div>
+          </div>
+          <p class="result-summary">${escapeHtml(t("resultSummary"))}: ${escapeHtml(textOrUnavailable(data.region_summary))}</p>
+          <div class="link-row">
+            <a href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener">${escapeHtml(t("resultOpenPreview"))}</a>
+            ${manifestUrl ? `<a href="${escapeHtml(manifestUrl)}" target="_blank" rel="noopener">${escapeHtml(t("resultOpenManifest"))}</a>` : ""}
+            ${worldUrl ? `<a href="${escapeHtml(worldUrl)}" target="_blank" rel="noopener">${escapeHtml(t("resultOpenWorld"))}</a>` : ""}
+          </div>
         `;
         previewFrame.hidden = false;
         previewFrame.src = previewUrl;
+      }
+
+      function applyPreset(name) {
+        const preset = presets[name];
+        if (!preset) {
+          return;
+        }
+        latInput.value = String(preset.lat);
+        lonInput.value = String(preset.lon);
+        radiusInput.value = String(preset.radius);
+        modeInput.value = preset.mode;
+        setLocationNotice("presetApplied", {
+          name: t(preset.labelKey),
+          mode: modeLabel(preset.mode),
+          lat: formatNumber(preset.lat, 4),
+          lon: formatNumber(preset.lon, 4),
+          radius: preset.radius,
+        });
+      }
+
+      function useCurrentLocation() {
+        if (!window.navigator.geolocation) {
+          setLocationNotice("locationUnavailable");
+          return;
+        }
+        useLocationButton.disabled = true;
+        useLocationButton.textContent = t("locating");
+        setLocationNotice("locating");
+        window.navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            latInput.value = Number(latitude).toFixed(6);
+            lonInput.value = Number(longitude).toFixed(6);
+            radiusInput.value = radiusInput.value || "300";
+            modeInput.value = "live";
+            setLocationNotice("locationApplied", {
+              lat: formatNumber(latitude, 6),
+              lon: formatNumber(longitude, 6),
+              radius: radiusInput.value,
+            });
+            useLocationButton.disabled = false;
+            useLocationButton.textContent = t("useLocationButton");
+          },
+          (error) => {
+            setLocationNotice("locationFailed", { message: error && error.message ? error.message : String(error) });
+            useLocationButton.disabled = false;
+            useLocationButton.textContent = t("useLocationButton");
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
       }
 
       function applyLanguage() {
@@ -418,6 +649,8 @@
         document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
           node.placeholder = t(node.dataset.i18nPlaceholder);
         });
+        updateLocationStatus();
+        useLocationButton.textContent = useLocationButton.disabled ? t("locating") : t("useLocationButton");
         if (lastResult) {
           renderResult(lastResult);
         }
@@ -461,6 +694,10 @@
       });
 
       document.getElementById("check-server").addEventListener("click", checkServer);
+      useLocationButton.addEventListener("click", useCurrentLocation);
+      document.querySelectorAll("[data-preset]").forEach((button) => {
+        button.addEventListener("click", () => applyPreset(button.dataset.preset));
+      });
       form.addEventListener("submit", generateNearby);
 
       updateUrlLanguage();

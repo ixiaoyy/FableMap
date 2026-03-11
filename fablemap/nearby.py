@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -132,15 +133,34 @@ def generate_nearby_preview(
     write_world(world_path, world)
     bundle_result = export_bundle(world, bundle_dir)
 
+    source = world.get("source") or {}
+    region = world.get("region") or {}
+    state = world.get("state") or {}
+    signal_snapshot = state.get("signal_snapshot") or {}
+    source_lat = source.get("lat")
+    source_lon = source.get("lon")
+
     return {
         "world_id": world["world_id"],
-        "title": bundle_result.get("title"),
-        "provider": world["source"]["provider"],
+        "title": bundle_result.get("title") or region.get("name") or world["world_id"],
+        "provider": source.get("provider", provider),
+        "seed": world.get("seed"),
+        "source_lat": source_lat,
+        "source_lon": source_lon,
+        "source_radius_m": source.get("radius_m"),
+        "source_file": str(source_file.resolve()) if source_file is not None else None,
+        "osm_url": _openstreetmap_url(source_lat, source_lon) if source_lat is not None and source_lon is not None else None,
+        "region_name": region.get("name"),
+        "region_theme": region.get("theme"),
+        "region_summary": region.get("narrative_summary"),
+        "dominant_faction": region.get("dominant_faction"),
+        "source_element_count": signal_snapshot.get("source_element_count"),
         "poi_count": len(world.get("pois") or []),
         "road_count": len(world.get("roads") or []),
         "landmark_count": len(world.get("landmarks") or []),
         "cache_status": cache_status,
         "cache_dir": str(resolved_cache_dir) if resolved_cache_dir is not None else None,
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "output_dir": str(output_dir),
         "world": str(world_path),
         "bundle_dir": str(bundle_dir),
@@ -162,6 +182,10 @@ def _non_negative_int(value: str) -> int:
     if parsed < 0:
         raise argparse.ArgumentTypeError("value must be a non-negative integer")
     return parsed
+
+
+def _openstreetmap_url(lat: float, lon: float) -> str:
+    return f"https://www.openstreetmap.org/?mlat={lat:.6f}&mlon={lon:.6f}#map=18/{lat:.6f}/{lon:.6f}"
 
 
 if __name__ == "__main__":
