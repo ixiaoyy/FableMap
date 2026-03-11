@@ -49,7 +49,7 @@
 ### B. 视觉转义 / 模式切换
 
 - `V1` · `done` · OSM -> 2D 建筑实体视觉转义规则库：已实现 6 种 fantasy_type 语义图标（公园 / 医院 / 补给站 / 权力塔 / 茶馆 / 学院）+ landmark 专属图标 + 道路三层级渲染（主干道 / 街道 / 步行路），图例同步更新。
-- `V2` · `planned` · 现实路况 -> NPC / 拥挤隐喻动态代理层。
+- `V2` · `done` · 现实路况 -> NPC / 拥挤隐喻动态代理层：已基于 disturbance_level / spawn_window / poi_states 实现区域氛围脉动色晕、NPC 流动代理点、POI 状态徽章（idle/active/anomaly）及侧边扰动指标面板（social_tension / commerce_flux / anomaly_pressure）。
 - `V3` · `planned` · 治愈向精灵收集与情感锚点 MVP 钩子。
 
 ### C. 参与感 / 共创

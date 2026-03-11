@@ -126,6 +126,20 @@ class BundleTests(unittest.TestCase):
         self.assertIn('data-i18n="mapLegendPath"', preview_html)
         self.assertIn("legend-swatch road-arterial", preview_html)
         self.assertIn("legend-swatch road-street", preview_html)
+        self.assertIn("poi-status-badge", preview_html)
+        self.assertIn("poi-status-idle", preview_html)
+        self.assertIn("poi-status-active", preview_html)
+        self.assertIn("poi-status-anomaly", preview_html)
+        self.assertIn("disturbance-aura", preview_html)
+        self.assertIn("npc-agent-dot", preview_html)
+        self.assertIn("disturbance-panel", preview_html)
+        self.assertIn("disturbance-metrics", preview_html)
+        self.assertIn("metric-bar-wrap", preview_html)
+        self.assertIn('data-i18n="detailDisturbanceMetrics"', preview_html)
+        self.assertIn('data-i18n="detailSocialTension"', preview_html)
+        self.assertIn('data-i18n="detailCommerceFlux"', preview_html)
+        self.assertIn('data-i18n="detailAnomalyPressure"', preview_html)
+        self.assertIn('data-i18n="detailSpawnWindow"', preview_html)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from html import escape
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -238,6 +239,61 @@ def _build_map_projector(
     return project, {"width": width, "height": height}
 
 
+def _disturbance_aura_svg(world_state: dict[str, Any], viewport: dict[str, Any]) -> str:
+    level = float(world_state.get("disturbance_level") or 0.0)
+    if level < 0.05:
+        return ""
+    cx = round(viewport["width"] / 2, 1)
+    cy = round(viewport["height"] / 2, 1)
+    r = round(min(viewport["width"], viewport["height"]) * 0.55, 1)
+    opacity = round(min(0.22, level * 0.28), 3)
+    color = "#a78bfa" if level > 0.6 else "#38bdf8"
+    dur = round(max(1.8, 3.5 - level * 2), 2)
+    return (
+        f'<radialGradient id="aura-grad" cx="50%" cy="50%" r="50%">'
+        f'<stop offset="0%" stop-color="{color}" stop-opacity="{opacity}"/>'
+        f'<stop offset="100%" stop-color="{color}" stop-opacity="0"/>'
+        f'</radialGradient>'
+        f'<ellipse cx="{cx}" cy="{cy}" rx="{r}" ry="{round(r * 0.6, 1)}" '
+        f'fill="url(#aura-grad)" class="disturbance-aura">'
+        f'<animate attributeName="opacity" values="0.6;1;0.6" dur="{dur}s" repeatCount="indefinite"/>'
+        f'</ellipse>'
+    )
+
+
+def _npc_agent_dots_svg(world_state: dict[str, Any], viewport: dict[str, Any]) -> str:
+    commerce = float(world_state.get("disturbance_level") or 0.0)
+    spawn = str(world_state.get("spawn_window") or "stable")
+    count = 0
+    if commerce > 0.3:
+        count += 2
+    if commerce > 0.6:
+        count += 2
+    if spawn in ("active", "rare"):
+        count += 2
+    if count == 0:
+        return ""
+    w, h = viewport["width"], viewport["height"]
+    seed_str = f"{w}{h}{commerce}{spawn}"
+    seed = int(hashlib.md5(seed_str.encode()).hexdigest(), 16)
+    dots = []
+    for i in range(count):
+        s = (seed >> (i * 7)) & 0xFFFF
+        x = round(20 + (s % (w - 40)), 1)
+        y = round(20 + ((s >> 4) % (h - 40)), 1)
+        r = 3 if spawn in ("active", "rare") and i >= count - 2 else 2
+        color = "#fbbf24" if spawn in ("active", "rare") and i >= count - 2 else "#67e8f9"
+        dur = round(3.0 + (s % 30) * 0.1, 1)
+        dx = round(((s >> 2) % 40) - 20, 1)
+        dy = round(((s >> 6) % 40) - 20, 1)
+        dots.append(
+            f'<circle cx="{x}" cy="{y}" r="{r}" fill="{color}" opacity="0.7" class="npc-agent-dot">'
+            f'<animateMotion path="M0,0 q{dx},{dy} 0,0" dur="{dur}s" repeatCount="indefinite"/>'
+            f'</circle>'
+        )
+    return "".join(dots)
+
+
 def _render_map_observer_html(
     world: dict[str, Any],
     showcase: dict[str, Any],
@@ -335,6 +391,9 @@ def _render_map_observer_html(
         )
 
     default_feature_id = feature_items[0]["id"] if feature_items else "map-overview"
+    region = world.get("region") or {}
+    _fmt_metric = lambda v: f"{float(v):.2f}" if v is not None else "—"
+    spawn_window = escape(str(world_state.get("spawn_window") or "—"))
     detail_cards = [
         (
             f'<article class="detail-card{" is-active" if default_feature_id == "map-overview" else ""}" '
@@ -348,9 +407,20 @@ def _render_map_observer_html(
             f'<li><span data-i18n="detailLandmarkCount"></span>: {escape(str(len(landmarks)))}</li>'
             f'<li><span data-i18n="detailActiveLens"></span>: {_localized_html(world_state.get("active_lens"))}</li>'
             f'<li><span data-i18n="detailDisturbance"></span>: {_localized_html(world_state.get("disturbance_level"))}</li>'
-            "</ul></article>"
+            '</ul>'
+            '<div class="disturbance-panel">'
+            '<p class="disturbance-panel-title" data-i18n="detailDisturbanceMetrics"></p>'
+            '<ul class="detail-list disturbance-metrics">'
+            f'<li><span data-i18n="detailSocialTension"></span>: <span class="metric-bar-wrap"><span class="metric-bar" style="width:{_fmt_metric(region.get("social_tension"))}em"></span></span> {_fmt_metric(region.get("social_tension"))}</li>'
+            f'<li><span data-i18n="detailCommerceFlux"></span>: <span class="metric-bar-wrap"><span class="metric-bar commerce" style="width:{_fmt_metric(region.get("commerce_flux"))}em"></span></span> {_fmt_metric(region.get("commerce_flux"))}</li>'
+            f'<li><span data-i18n="detailAnomalyPressure"></span>: <span class="metric-bar-wrap"><span class="metric-bar anomaly" style="width:{_fmt_metric(region.get("anomaly_pressure"))}em"></span></span> {_fmt_metric(region.get("anomaly_pressure"))}</li>'
+            f'<li><span data-i18n="detailSpawnWindow"></span>: {spawn_window}</li>'
+            '</ul></div>'
+            "</article>"
         )
     ]
+    _STATUS_CLASS = {"active": "poi-status-active", "anomaly": "poi-status-anomaly"}
+
     feature_nodes: list[str] = []
     for item in feature_items:
         projected = project(item["position"])
@@ -359,16 +429,21 @@ def _render_map_observer_html(
         is_active = item["id"] == default_feature_id
         active_class = " is-active" if is_active else ""
         ftype = item.get("fantasy_type") or ""
+        poi_status = (poi_states.get(item["id"]) or {}).get("status") or "idle"
+        status_cls = _STATUS_CLASS.get(poi_status, "poi-status-idle")
+        badge_html = f'<circle cx="{x + 10}" cy="{y - 10}" r="4" class="poi-status-badge {status_cls}"></circle>'
         if item["kind"] == "poi":
             icon_path = _POI_ICON.get(ftype, _POI_ICON.get("supply_outpost", ""))
             shape_html = (
                 f'<circle cx="{x}" cy="{y}" r="14" class="poi-bg"></circle>'
                 f'<path d="{icon_path}" transform="translate({x},{y})" class="poi-icon"></path>'
+                + badge_html
             )
         else:
             shape_html = (
                 f'<circle cx="{x}" cy="{y}" r="14" class="landmark-bg"></circle>'
                 f'<path d="{_LANDMARK_ICON}" transform="translate({x},{y})" class="landmark-icon"></path>'
+                + badge_html
             )
         type_class = f" map-ft-{escape(ftype)}" if ftype else ""
         feature_nodes.append(
@@ -408,7 +483,9 @@ def _render_map_observer_html(
                 <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
                 <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
                 <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
+                {_disturbance_aura_svg(world_state, viewport)}
                 {''.join(road_shapes)}
+                {_npc_agent_dots_svg(world_state, viewport)}
                 {''.join(feature_nodes)}
               </svg>
             </div>
@@ -462,6 +539,11 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailLandmarkCount": "地标数",
             "detailActiveLens": "观察镜头",
             "detailDisturbance": "扰动等级",
+            "detailDisturbanceMetrics": "动态扰动指标",
+            "detailSocialTension": "社会张力",
+            "detailCommerceFlux": "贸易流强",
+            "detailAnomalyPressure": "异常压力",
+            "detailSpawnWindow": "刷新窗口",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "地标",
             "detailType": "类型",
@@ -543,6 +625,11 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailLandmarkCount": "Landmark count",
             "detailActiveLens": "Active lens",
             "detailDisturbance": "Disturbance",
+            "detailDisturbanceMetrics": "Disturbance Metrics",
+            "detailSocialTension": "Social tension",
+            "detailCommerceFlux": "Commerce flux",
+            "detailAnomalyPressure": "Anomaly pressure",
+            "detailSpawnWindow": "Spawn window",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "Landmark",
             "detailType": "Type",
@@ -742,6 +829,21 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .map-ft-lore_academy .poi-icon {{ fill: #fde68a; }}
       .map-feature.is-active .poi-bg, .map-feature:focus-visible .poi-bg {{ stroke-width: 4; }}
       .map-feature.is-active .landmark-bg, .map-feature:focus-visible .landmark-bg {{ stroke-width: 4; }}
+      .poi-status-badge {{ pointer-events: none; }}
+      .poi-status-idle {{ fill: #475569; }}
+      .poi-status-active {{ fill: #4ade80; filter: drop-shadow(0 0 3px #4ade80); }}
+      .poi-status-anomaly {{ fill: #f87171; filter: drop-shadow(0 0 4px #f87171); animation: anomaly-pulse 1.2s ease-in-out infinite; }}
+      @keyframes anomaly-pulse {{ 0%,100% {{ opacity: 1; }} 50% {{ opacity: 0.35; }} }}
+      .disturbance-aura {{ pointer-events: none; }}
+      .npc-agent-dot {{ pointer-events: none; }}
+      .disturbance-panel {{ margin-top: 14px; border-top: 1px solid #1e293b; padding-top: 10px; }}
+      .disturbance-panel-title {{ margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }}
+      .disturbance-metrics {{ padding-left: 0; list-style: none; margin-top: 0; display: flex; flex-direction: column; gap: 6px; }}
+      .disturbance-metrics li {{ display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }}
+      .metric-bar-wrap {{ display: inline-block; width: 40px; height: 4px; background: #1e293b; border-radius: 2px; overflow: hidden; }}
+      .metric-bar {{ display: block; height: 4px; background: #38bdf8; border-radius: 2px; max-width: 40px; }}
+      .metric-bar.commerce {{ background: #fb923c; }}
+      .metric-bar.anomaly {{ background: #a78bfa; }}
       .map-note {{ margin: 12px 4px 0; color: #94a3b8; font-size: 13px; line-height: 1.5; }}
       .world-map-sidebar {{ display: flex; flex-direction: column; gap: 16px; min-height: 0; }}
       .world-map-panel {{ background: rgba(15, 23, 42, 0.88); border: 1px solid #334155; border-radius: 18px; padding: 18px; }}
