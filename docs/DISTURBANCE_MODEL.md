@@ -216,15 +216,34 @@
 - `social_tension`
 - `commerce_flux`
 - `anomaly_pressure`
-- `comfort_level`
+- `comfort_level`（区域平滑后的体验强度，不等于短时漂移）
 - `vibe_amplitude`
 
 ### `state`
 
 - `disturbance_level`
 - `signal_snapshot`
+- `disturbance_metrics`
 - `active_lens`
 - `spawn_window`
+
+建议 `disturbance_metrics` 至少包含：
+
+- `social_tension`
+- `commerce_flux`
+- `anomaly_pressure`
+- `comfort_drift`
+- `vibe_amplitude`
+- `spawn_potential`
+
+### `state.poi_states`
+
+- `disturbance_tags`
+- `local_anomaly`
+- `local_spawn_bonus`
+- `interaction_mood`
+
+`comfort_drift` 应视为状态层的短时偏移，不应替代 `region.comfort_level`。
 
 ## 第一版与后续边界
 

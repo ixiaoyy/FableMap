@@ -19,6 +19,7 @@
 - `docs/DUAL_TRACK_MAPPING.md`：定义 archetype 如何坍缩为双轨世界镜头下的具体地点身份
 - `docs/CULTURAL_INTERPRETATION.md`：定义现实功能如何被解释为异世界语义
 - `docs/DISTURBANCE_MODEL.md`：定义现实信号如何变成动态状态
+- `docs/DISTURBANCE_INTERFACE_ALIGNMENT.md`：定义扰动指标在 `region / state / poi_states` 之间的落点与表现层消费方式
 - `docs/WEB_2D_SPIRIT_VIEW.md`：定义浏览器中的第一版表现层
 
 这份协议位于它们之上，负责说明这些文档为什么属于同一套世界物理。
@@ -122,6 +123,8 @@
 - NPC / 精灵刷新
 - 事件概率
 - 播报与任务口吻
+
+具体到 `region / state / poi_states` 的字段分层与接口约束，统一以 `docs/DISTURBANCE_INTERFACE_ALIGNMENT.md` 为准。
 
 ### 第五层：玩家写回与历史深度层 Write-back + Historical Depth
 

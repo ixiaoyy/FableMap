@@ -53,7 +53,7 @@
 - `satire_profile`：该地区偏向哪种现实讽刺风格
 - `vibe_profile`：当前区域的审美镜头，如 `ghibli_town`, `neon_nostalgia`
 - `palette_hint`：色板建议
-- `comfort_level`：该区域偏治愈、浪漫或压迫的体验强度
+- `comfort_level`：该区域经过平滑后的治愈、浪漫或压迫体验强度
 - `dominant_faction`：主导阵营
 - `control_score`：地区控制力度
 - `strategic_value`：地区战略价值
@@ -165,13 +165,14 @@
 
 - `version`
 - `visited`
-- `poi_states`
+- `poi_states`：记录 POI 访问、局部扰动与临时交互窗口
 - `flags`
 - `story_events`
 - `faction_states`
 - `economy_state`
 - `disturbance_level`
 - `signal_snapshot`
+- `disturbance_metrics`
 - `spawn_window`
 - `mystery_progress`
 - `active_lens`
@@ -182,6 +183,17 @@
 - `reputation`
 - `route_impact`
 - `resource_transfers`
+
+建议 `disturbance_metrics` 至少包含：
+
+- `social_tension`
+- `commerce_flux`
+- `anomaly_pressure`
+- `comfort_drift`
+- `vibe_amplitude`
+- `spawn_potential`
+
+其中 `region.comfort_level` 用于表达区域层体验强度，`state.disturbance_metrics.comfort_drift` 用于表达相对基线的短时偏移。
 
 ## 映射示例
 

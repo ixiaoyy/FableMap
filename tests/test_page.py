@@ -84,6 +84,13 @@ class PageTests(unittest.TestCase):
                 self.assertIn("Around Late Lantern Cafe", preview_html)
                 self.assertIn('id="language-select"', preview_html)
                 self.assertIn("Language / 语言", preview_html)
+                self.assertIn('id="section-map-observer"', preview_html)
+                self.assertIn('id="observer-map"', preview_html)
+                self.assertIn('id="map-detail-panel"', preview_html)
+                self.assertIn('data-feature-id="', preview_html)
+                self.assertIn('data-feature-card="', preview_html)
+                self.assertIn("const defaultFeatureId = ", preview_html)
+                self.assertIn("function setActiveFeature(featureId)", preview_html)
                 self.assertTrue((output_root / result["run_id"] / "world.json").exists())
                 self.assertTrue((output_root / result["run_id"] / "bundle" / "index.html").exists())
 

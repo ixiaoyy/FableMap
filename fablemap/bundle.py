@@ -5,7 +5,7 @@ from html import escape
 import json
 import sys
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from .cli import _build_inspect_summary, _validate_world_schema
 from .showcase import _build_showcase, _render_showcase_markdown
@@ -63,7 +63,7 @@ def export_bundle(world: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     showcase_json_path.write_text(json.dumps(showcase, ensure_ascii=False, indent=2), encoding="utf-8")
     showcase_md_path.write_text(_render_showcase_markdown(showcase), encoding="utf-8")
-    preview_html_path.write_text(_render_preview_html(showcase, manifest), encoding="utf-8")
+    preview_html_path.write_text(_render_preview_html(world, showcase, manifest), encoding="utf-8")
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return {
@@ -170,7 +170,230 @@ def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) ->
     }
 
 
-def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> str:
+def _localized_html(value: Any, fallback_key: str = "unknown") -> str:
+    if value is None:
+        return f'<span data-i18n="{fallback_key}"></span>'
+    text = str(value).strip()
+    if not text:
+        return f'<span data-i18n="{fallback_key}"></span>'
+    return escape(text)
+
+
+def _position_or_none(value: Any) -> dict[str, float] | None:
+    if not isinstance(value, dict):
+        return None
+    lat = value.get("lat")
+    lon = value.get("lon")
+    if lat is None or lon is None:
+        return None
+    try:
+        return {"lat": float(lat), "lon": float(lon)}
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_map_projector(
+    world: dict[str, Any],
+    width: int = 880,
+    height: int = 520,
+    padding: int = 36,
+) -> tuple[Callable[[Any], dict[str, float]], dict[str, int]]:
+    points: list[dict[str, float]] = []
+    for road in world.get("roads") or []:
+        for point in road.get("points") or []:
+            normalized = _position_or_none(point)
+            if normalized is not None:
+                points.append(normalized)
+    for poi in world.get("pois") or []:
+        normalized = _position_or_none(poi.get("position"))
+        if normalized is not None:
+            points.append(normalized)
+    for landmark in world.get("landmarks") or []:
+        normalized = _position_or_none((landmark.get("visual_hint") or {}).get("position"))
+        if normalized is not None:
+            points.append(normalized)
+
+    source_position = _position_or_none(world.get("source") or {})
+    if source_position is not None:
+        points.append(source_position)
+    if not points:
+        points.append({"lat": 0.0, "lon": 0.0})
+
+    min_lat = min(point["lat"] for point in points)
+    max_lat = max(point["lat"] for point in points)
+    min_lon = min(point["lon"] for point in points)
+    max_lon = max(point["lon"] for point in points)
+    lat_span = max(max_lat - min_lat, 0.0001)
+    lon_span = max(max_lon - min_lon, 0.0001)
+    inner_width = max(width - padding * 2, 1)
+    inner_height = max(height - padding * 2, 1)
+
+    def project(value: Any) -> dict[str, float]:
+        default_point = source_position or {"lat": (min_lat + max_lat) / 2, "lon": (min_lon + max_lon) / 2}
+        point = _position_or_none(value) or default_point
+        x = padding + ((point["lon"] - min_lon) / lon_span) * inner_width
+        y = padding + ((max_lat - point["lat"]) / lat_span) * inner_height
+        return {"x": round(x, 2), "y": round(y, 2)}
+
+    return project, {"width": width, "height": height}
+
+
+def _render_map_observer_html(
+    world: dict[str, Any],
+    showcase: dict[str, Any],
+    world_state: dict[str, Any],
+) -> tuple[str, str]:
+    roads = world.get("roads") or []
+    pois = world.get("pois") or []
+    landmarks = world.get("landmarks") or []
+    state = world.get("state") or {}
+    poi_states = state.get("poi_states") or {}
+    project, viewport = _build_map_projector(world)
+
+    road_shapes: list[str] = []
+    for road in roads:
+        projected_points: list[str] = []
+        for point in road.get("points") or []:
+            projected = project(point)
+            projected_points.append(f"{projected['x']},{projected['y']}")
+        if len(projected_points) >= 2:
+            road_shapes.append(
+                f'<polyline class="map-road" points="{" ".join(projected_points)}" '
+                f'data-road-kind="{escape(str(road.get("kind") or ""))}" />'
+            )
+
+    feature_items: list[dict[str, Any]] = []
+    for index, poi in enumerate(pois, start=1):
+        position = _position_or_none(poi.get("position"))
+        if position is None:
+            continue
+        feature_id = str(poi.get("id") or f"poi-{index}")
+        marker_name = str(poi.get("fantasy_name") or poi.get("real_name") or "POI").strip() or "POI"
+        poi_state = poi_states.get(poi.get("state_ref") or poi.get("id") or "") or {}
+        feature_items.append(
+            {
+                "id": feature_id,
+                "kind": "poi",
+                "label": "P",
+                "position": position,
+                "marker_name": marker_name,
+                "detail_body": (
+                    '<p class="detail-kicker" data-i18n="detailPoiKicker"></p>'
+                    f"<h3>{_localized_html(poi.get('fantasy_name'), 'unknownPoi')}</h3>"
+                    f"<p>{_localized_html(poi.get('emotion_hook'), 'noHook')}</p>"
+                    '<ul class="detail-list">'
+                    f'<li><span data-i18n="detailType"></span>: {_localized_html(poi.get("fantasy_type"), "unknownType")}</li>'
+                    f'<li><span data-i18n="detailRealName"></span>: {_localized_html(poi.get("real_name"))}</li>'
+                    f'<li><span data-i18n="detailFaction"></span>: {_localized_html(poi.get("faction_alignment"), "unknownFaction")}</li>'
+                    f'<li><span data-i18n="detailState"></span>: {_localized_html(poi_state.get("status"))}</li>'
+                    "</ul>"
+                ),
+            }
+        )
+    for index, landmark in enumerate(landmarks, start=1):
+        position = _position_or_none((landmark.get("visual_hint") or {}).get("position"))
+        if position is None:
+            continue
+        feature_id = str(landmark.get("id") or f"landmark-{index}")
+        marker_name = str(landmark.get("name") or "Landmark").strip() or "Landmark"
+        feature_items.append(
+            {
+                "id": feature_id,
+                "kind": "landmark",
+                "label": "L",
+                "position": position,
+                "marker_name": marker_name,
+                "detail_body": (
+                    '<p class="detail-kicker" data-i18n="detailLandmarkKicker"></p>'
+                    f"<h3>{_localized_html(landmark.get('name'), 'unknownLandmark')}</h3>"
+                    f"<p>{_localized_html(landmark.get('description'), 'noDescription')}</p>"
+                    '<ul class="detail-list">'
+                    f'<li><span data-i18n="detailType"></span>: {_localized_html(landmark.get("type"), "unknownType")}</li>'
+                    f'<li><span data-i18n="detailDescription"></span>: {_localized_html(landmark.get("description"), "noDescription")}</li>'
+                    "</ul>"
+                ),
+            }
+        )
+
+    default_feature_id = feature_items[0]["id"] if feature_items else "map-overview"
+    detail_cards = [
+        (
+            f'<article class="detail-card{" is-active" if default_feature_id == "map-overview" else ""}" '
+            'data-feature-card="map-overview">'
+            '<p class="detail-kicker" data-i18n="detailOverviewKicker"></p>'
+            f"<h3>{_localized_html(showcase.get('title'), 'untitledDistrict')}</h3>"
+            '<p data-i18n="mapDetailHint"></p>'
+            '<ul class="detail-list">'
+            f'<li><span data-i18n="detailRoadCount"></span>: {escape(str(len(roads)))}</li>'
+            f'<li><span data-i18n="detailPoiCount"></span>: {escape(str(len(pois)))}</li>'
+            f'<li><span data-i18n="detailLandmarkCount"></span>: {escape(str(len(landmarks)))}</li>'
+            f'<li><span data-i18n="detailActiveLens"></span>: {_localized_html(world_state.get("active_lens"))}</li>'
+            f'<li><span data-i18n="detailDisturbance"></span>: {_localized_html(world_state.get("disturbance_level"))}</li>'
+            "</ul></article>"
+        )
+    ]
+    feature_nodes: list[str] = []
+    for item in feature_items:
+        projected = project(item["position"])
+        x = projected["x"]
+        y = projected["y"]
+        is_active = item["id"] == default_feature_id
+        active_class = " is-active" if is_active else ""
+        if item["kind"] == "poi":
+            shape_html = (
+                f'<circle cx="{x}" cy="{y}" r="10"></circle>'
+                f'<text x="{x}" y="{y + 4}" text-anchor="middle">{escape(str(item["label"]))}</text>'
+            )
+        else:
+            shape_html = (
+                f'<rect x="{x - 9}" y="{y - 9}" width="18" height="18" rx="4"></rect>'
+                f'<text x="{x}" y="{y + 4}" text-anchor="middle">{escape(str(item["label"]))}</text>'
+            )
+        feature_nodes.append(
+            f'<g class="map-feature map-{escape(str(item["kind"]))}{active_class}" '
+            f'data-feature-id="{escape(str(item["id"]))}" tabindex="0" role="button" '
+            f'aria-pressed="{"true" if is_active else "false"}" aria-label="{escape(str(item["marker_name"]))}">'
+            f"{shape_html}</g>"
+        )
+        detail_cards.append(
+            f'<article class="detail-card{active_class}" data-feature-card="{escape(str(item["id"]))}">{item["detail_body"]}</article>'
+        )
+
+    observer_html = f"""
+      <section class=\"observer-stage panel\" id=\"section-map-observer\">
+        <div class=\"observer-header\">
+          <div>
+            <h2 data-i18n=\"sectionMapObserver\"></h2>
+            <p data-i18n=\"mapObserverLead\"></p>
+          </div>
+          <div class=\"observer-legend\">
+            <span class=\"legend-item\"><span class=\"legend-swatch road\"></span><span data-i18n=\"mapLegendRoads\"></span></span>
+            <span class=\"legend-item\"><span class=\"legend-swatch poi\"></span><span data-i18n=\"mapLegendPois\"></span></span>
+            <span class=\"legend-item\"><span class=\"legend-swatch landmark\"></span><span data-i18n=\"mapLegendLandmarks\"></span></span>
+          </div>
+        </div>
+        <div class=\"observer-layout\">
+          <div class=\"map-shell\">
+            <svg id=\"observer-map\" viewBox=\"0 0 {viewport['width']} {viewport['height']}\" role=\"img\" aria-labelledby=\"observer-map-title observer-map-desc\">
+              <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
+              <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
+              <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
+              {''.join(road_shapes)}
+              {''.join(feature_nodes)}
+            </svg>
+            <p class=\"map-note\" data-i18n=\"mapObserverNote\"></p>
+          </div>
+          <aside class=\"detail-panel\" id=\"map-detail-panel\">
+            <h3 data-i18n=\"mapDetailPanelTitle\"></h3>
+            <div id=\"map-detail-cards\">{''.join(detail_cards)}</div>
+          </aside>
+        </div>
+      </section>
+    """
+    return observer_html, default_feature_id
+
+
+def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manifest: dict[str, Any]) -> str:
     summary = showcase.get("summary") or {}
     reality = showcase.get("reality_skeleton") or {}
     world_state = showcase.get("world_state") or {}
@@ -178,14 +401,7 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
     faction = showcase.get("faction_spotlight") or {}
     playable_hooks = showcase.get("playable_hooks") or []
     hooks = showcase.get("hooks") or {}
-
-    def localized_value(value: Any, fallback_key: str = "unknown") -> str:
-        if value is None:
-            return f'<span data-i18n="{fallback_key}"></span>'
-        text = str(value).strip()
-        if not text:
-            return f'<span data-i18n="{fallback_key}"></span>'
-        return escape(text)
+    localized_value = _localized_html
 
     translations = {
         "zh-CN": {
@@ -197,6 +413,27 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
             "tagTheme": "主题",
             "tagAtmosphere": "氛围",
             "tagBundleVersion": "包版本",
+            "sectionMapObserver": "地图观察窗",
+            "mapObserverLead": "主舞台直接复用当前 world.json 的真实空间关系：道路构成骨架，POI 与地标可点选查看详情。",
+            "mapObserverNote": "当前采用局部经纬度归一化，只适用于 nearby 小范围世界观察，不等于完整 GIS 投影系统。",
+            "mapLegendRoads": "道路骨架",
+            "mapLegendPois": "POI 节点",
+            "mapLegendLandmarks": "地标记忆点",
+            "mapDetailPanelTitle": "地点详情",
+            "detailOverviewKicker": "世界概览",
+            "mapDetailHint": "点选地图上的 POI 或地标，右侧会切换为对应详情。",
+            "detailRoadCount": "道路数",
+            "detailPoiCount": "POI 数",
+            "detailLandmarkCount": "地标数",
+            "detailActiveLens": "观察镜头",
+            "detailDisturbance": "扰动等级",
+            "detailPoiKicker": "POI",
+            "detailLandmarkKicker": "地标",
+            "detailType": "类型",
+            "detailRealName": "现实名称",
+            "detailFaction": "阵营",
+            "detailState": "当前状态",
+            "detailDescription": "描述",
             "sectionReality": "现实骨架",
             "realityProvider": "来源",
             "realityCoordinates": "坐标",
@@ -255,6 +492,27 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
             "tagTheme": "theme",
             "tagAtmosphere": "atmosphere",
             "tagBundleVersion": "bundle v",
+            "sectionMapObserver": "Map Observer",
+            "mapObserverLead": "The main stage now reuses spatial relations from world.json directly: roads form the skeleton while POIs and landmarks can be selected for detail.",
+            "mapObserverNote": "This view uses local lat/lon normalization for nearby-scale observation only; it is not a full GIS projection system.",
+            "mapLegendRoads": "Road skeleton",
+            "mapLegendPois": "POI nodes",
+            "mapLegendLandmarks": "Landmark memory points",
+            "mapDetailPanelTitle": "Location Details",
+            "detailOverviewKicker": "World Overview",
+            "mapDetailHint": "Select a POI or landmark on the map to switch the detail panel.",
+            "detailRoadCount": "Road count",
+            "detailPoiCount": "POI count",
+            "detailLandmarkCount": "Landmark count",
+            "detailActiveLens": "Active lens",
+            "detailDisturbance": "Disturbance",
+            "detailPoiKicker": "POI",
+            "detailLandmarkKicker": "Landmark",
+            "detailType": "Type",
+            "detailRealName": "Real name",
+            "detailFaction": "Faction",
+            "detailState": "Current state",
+            "detailDescription": "Description",
             "sectionReality": "Reality Skeleton",
             "realityProvider": "Provider",
             "realityCoordinates": "Coordinates",
@@ -306,6 +564,8 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
         },
     }
     translations_json = json.dumps(translations, ensure_ascii=False)
+    map_observer_html, default_feature_id = _render_map_observer_html(world, showcase, world_state)
+    default_feature_id_json = json.dumps(default_feature_id, ensure_ascii=False)
 
     poi_highlights = showcase.get("poi_highlights") or []
     poi_items = (
@@ -388,7 +648,7 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
     <style>
       :root {{ color-scheme: dark; }}
       body {{ margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #111827; color: #e5e7eb; }}
-      .wrap {{ max-width: 980px; margin: 0 auto; padding: 32px 20px 48px; }}
+      .wrap {{ max-width: 1220px; margin: 0 auto; padding: 32px 20px 48px; }}
       .hero {{ padding: 24px; border-radius: 18px; background: linear-gradient(135deg, #1f2937, #111827); border: 1px solid #374151; }}
       .hero-top {{ display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }}
       .hero h1 {{ margin: 0 0 10px; font-size: 36px; }}
@@ -396,6 +656,36 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
       .language-switcher {{ min-width: 180px; display: flex; flex-direction: column; gap: 8px; }}
       .language-switcher label {{ font-size: 13px; color: #cbd5e1; }}
       .language-switcher select {{ border-radius: 10px; border: 1px solid #475569; background: #111827; color: #e5e7eb; padding: 10px 12px; font: inherit; }}
+      .observer-stage {{ margin-top: 20px; }}
+      .observer-header {{ display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }}
+      .observer-header h2 {{ margin-bottom: 8px; }}
+      .observer-header p {{ margin: 0; color: #cbd5e1; line-height: 1.5; max-width: 680px; }}
+      .observer-layout {{ display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 16px; }}
+      .observer-legend {{ display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }}
+      .legend-item {{ display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: #0f172a; border: 1px solid #334155; font-size: 12px; }}
+      .legend-swatch {{ width: 10px; height: 10px; border-radius: 999px; display: inline-block; }}
+      .legend-swatch.road {{ background: #7dd3fc; }}
+      .legend-swatch.poi {{ background: #38bdf8; }}
+      .legend-swatch.landmark {{ background: #fbbf24; }}
+      .map-shell {{ background: linear-gradient(180deg, #0f172a, #111827); border: 1px solid #334155; border-radius: 18px; padding: 14px; }}
+      #observer-map {{ width: 100%; height: auto; display: block; }}
+      .map-backdrop {{ fill: #020617; stroke: #334155; stroke-width: 2; }}
+      .map-road {{ fill: none; stroke: #67e8f9; stroke-opacity: 0.75; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }}
+      .map-feature {{ cursor: pointer; outline: none; }}
+      .map-feature text {{ fill: #0f172a; font-size: 10px; font-weight: 700; pointer-events: none; }}
+      .map-poi circle {{ fill: #38bdf8; stroke: #e0f2fe; stroke-width: 2; transition: transform 0.15s ease, stroke-width 0.15s ease; }}
+      .map-landmark rect {{ fill: #fbbf24; stroke: #fef3c7; stroke-width: 2; transition: transform 0.15s ease, stroke-width 0.15s ease; }}
+      .map-feature.is-active circle, .map-feature:focus-visible circle {{ stroke-width: 4; transform: scale(1.08); transform-origin: center; transform-box: fill-box; }}
+      .map-feature.is-active rect, .map-feature:focus-visible rect {{ stroke-width: 4; transform: scale(1.08); transform-origin: center; transform-box: fill-box; }}
+      .map-note {{ margin: 12px 4px 0; color: #94a3b8; font-size: 13px; line-height: 1.5; }}
+      .detail-panel {{ background: #0f172a; border: 1px solid #334155; border-radius: 18px; padding: 18px; }}
+      .detail-panel h3 {{ margin-top: 0; margin-bottom: 14px; font-size: 18px; }}
+      .detail-card {{ display: none; }}
+      .detail-card.is-active {{ display: block; }}
+      .detail-card h3 {{ margin: 0 0 8px; font-size: 22px; }}
+      .detail-card p {{ margin: 8px 0; line-height: 1.6; }}
+      .detail-kicker {{ margin: 0 0 8px; color: #93c5fd; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+      .detail-list {{ padding-left: 18px; margin-top: 12px; }}
       .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 20px; }}
       .panel {{ background: #1f2937; border: 1px solid #374151; border-radius: 16px; padding: 18px; }}
       .panel h2 {{ margin-top: 0; font-size: 20px; }}
@@ -409,6 +699,9 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
       @media (max-width: 720px) {{
         .hero-top {{ flex-direction: column; }}
         .language-switcher {{ min-width: 0; width: 100%; }}
+        .observer-header {{ flex-direction: column; }}
+        .observer-layout {{ grid-template-columns: 1fr; }}
+        .observer-legend {{ justify-content: flex-start; }}
       }}
     </style>
   </head>
@@ -436,6 +729,8 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
           <span class=\"tag\"><span data-i18n=\"tagBundleVersion\"></span>{escape(str(manifest.get('bundle_version') or '0'))}</span>
         </div>
       </section>
+
+      {map_observer_html}
 
       <div class=\"grid\">
         <section class=\"panel\" id=\"section-reality\">
@@ -508,8 +803,11 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
     </div>
     <script>
       const translations = {translations_json};
+      const defaultFeatureId = {default_feature_id_json};
       const languageSelect = document.getElementById("language-select");
       const heroTitle = document.getElementById("hero-title");
+      const mapFeatures = Array.from(document.querySelectorAll("[data-feature-id]"));
+      const detailCards = Array.from(document.querySelectorAll("[data-feature-card]"));
 
       function normalizeLanguage(value) {{
         if (!value) {{
@@ -560,6 +858,20 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
         }}
       }}
 
+      function setActiveFeature(featureId) {{
+        const resolvedFeatureId = detailCards.some((card) => card.dataset.featureCard === featureId)
+          ? featureId
+          : "map-overview";
+        mapFeatures.forEach((node) => {{
+          const isActive = node.dataset.featureId === resolvedFeatureId;
+          node.classList.toggle("is-active", isActive);
+          node.setAttribute("aria-pressed", isActive ? "true" : "false");
+        }});
+        detailCards.forEach((card) => {{
+          card.classList.toggle("is-active", card.dataset.featureCard === resolvedFeatureId);
+        }});
+      }}
+
       function applyLanguage() {{
         document.documentElement.lang = currentLanguage;
         languageSelect.value = currentLanguage;
@@ -577,7 +889,20 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
         applyLanguage();
       }});
 
+      mapFeatures.forEach((node) => {{
+        node.addEventListener("click", () => {{
+          setActiveFeature(node.dataset.featureId);
+        }});
+        node.addEventListener("keydown", (event) => {{
+          if (event.key === "Enter" || event.key === " ") {{
+            event.preventDefault();
+            setActiveFeature(node.dataset.featureId);
+          }}
+        }});
+      }});
+
       updateUrlLanguage();
+      setActiveFeature(defaultFeatureId);
       applyLanguage();
     </script>
   </body>
