@@ -52,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional local Overpass-style JSON fixture for offline generation and testing.",
     )
 
+    from .nearby import add_arguments as add_nearby_arguments
+
+    nearby_parser = subparsers.add_parser(
+        "nearby",
+        help="Generate a nearby-world preview bundle from coordinates.",
+    )
+    add_nearby_arguments(nearby_parser)
+
     inspect_parser = subparsers.add_parser("inspect", help="Inspect an existing world JSON.")
     inspect_parser.add_argument("--input", type=Path, required=True, help="Input world JSON file path")
     return parser
@@ -63,6 +71,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "generate":
             return _run_generate(args)
+        if args.command == "nearby":
+            from .nearby import run_nearby
+
+            return run_nearby(args)
         if args.command == "inspect":
             return _run_inspect(args)
     except WorldSchemaError as exc:

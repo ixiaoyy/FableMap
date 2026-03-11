@@ -112,6 +112,38 @@ class CliTests(unittest.TestCase):
         self.assertIn("Overpass request failed due to network error", stderr.getvalue())
         self.assertFalse(output_path.exists())
 
+    def test_nearby_subcommand_writes_world_and_bundle(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir) / "nearby-output"
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "nearby",
+                        "--lat",
+                        "35.6580",
+                        "--lon",
+                        "139.7016",
+                        "--radius",
+                        "300",
+                        "--output-dir",
+                        str(output_dir),
+                        "--source-file",
+                        str(FIXTURE_PATH),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(stderr.getvalue(), "")
+            result = json.loads(stdout.getvalue())
+            self.assertTrue((output_dir / "world.json").exists())
+            self.assertTrue((output_dir / "bundle" / "index.html").exists())
+
+        self.assertEqual(result["provider"], "fixture")
+        self.assertEqual(result["cache_status"], "fixture")
+        self.assertEqual(result["preview"], str(output_dir / "bundle" / "index.html"))
+
     def test_inspect_reads_world_file_and_prints_summary(self) -> None:
         stdout = io.StringIO()
         world = build_world(

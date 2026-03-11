@@ -33,41 +33,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         input_path = args.input
         output_dir = args.output_dir or (input_path.parent / "bundle")
         world = _load_world(input_path)
-        _validate_world_schema(world)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        summary = _build_inspect_summary(world, Path("world.json"))
-        showcase = _build_showcase(world, Path("world.json"))
-        manifest = _build_bundle_manifest(summary, showcase)
-
-        bundle_world_path = output_dir / "world.json"
-        summary_path = output_dir / "summary.json"
-        showcase_json_path = output_dir / "showcase.json"
-        showcase_md_path = output_dir / "showcase.md"
-        preview_html_path = output_dir / "index.html"
-        manifest_path = output_dir / "manifest.json"
-
-        write_world(bundle_world_path, world)
-        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-        showcase_json_path.write_text(json.dumps(showcase, ensure_ascii=False, indent=2), encoding="utf-8")
-        showcase_md_path.write_text(_render_showcase_markdown(showcase), encoding="utf-8")
-        preview_html_path.write_text(_render_preview_html(showcase, manifest), encoding="utf-8")
-        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        print(
-            json.dumps(
-                {
-                    "world_id": manifest["world_id"],
-                    "title": manifest["title"],
-                    "output_dir": str(output_dir),
-                    "manifest": str(manifest_path),
-                    "preview": str(preview_html_path),
-                    "bundle_version": manifest["bundle_version"],
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        print(json.dumps(export_bundle(world, output_dir), ensure_ascii=False, indent=2))
         return 0
     except Exception as exc:  # pragma: no cover - exercised by smoke tests
         print(f"error: {exc}", file=sys.stderr)
@@ -76,6 +42,38 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _load_world(input_path: Path) -> dict[str, Any]:
     return json.loads(input_path.read_text(encoding="utf-8"))
+
+
+def export_bundle(world: dict[str, Any], output_dir: Path) -> dict[str, Any]:
+    _validate_world_schema(world)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    summary = _build_inspect_summary(world, Path("world.json"))
+    showcase = _build_showcase(world, Path("world.json"))
+    manifest = _build_bundle_manifest(summary, showcase)
+
+    bundle_world_path = output_dir / "world.json"
+    summary_path = output_dir / "summary.json"
+    showcase_json_path = output_dir / "showcase.json"
+    showcase_md_path = output_dir / "showcase.md"
+    preview_html_path = output_dir / "index.html"
+    manifest_path = output_dir / "manifest.json"
+
+    write_world(bundle_world_path, world)
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    showcase_json_path.write_text(json.dumps(showcase, ensure_ascii=False, indent=2), encoding="utf-8")
+    showcase_md_path.write_text(_render_showcase_markdown(showcase), encoding="utf-8")
+    preview_html_path.write_text(_render_preview_html(showcase, manifest), encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return {
+        "world_id": manifest["world_id"],
+        "title": manifest["title"],
+        "output_dir": str(output_dir),
+        "manifest": str(manifest_path),
+        "preview": str(preview_html_path),
+        "bundle_version": manifest["bundle_version"],
+    }
 
 
 def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) -> dict[str, Any]:
