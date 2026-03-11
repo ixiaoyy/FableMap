@@ -172,7 +172,11 @@ def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) ->
 
 def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> str:
     summary = showcase.get("summary") or {}
+    reality = showcase.get("reality_skeleton") or {}
+    world_state = showcase.get("world_state") or {}
+    continuity = showcase.get("continuity_threads") or {}
     faction = showcase.get("faction_spotlight") or {}
+    playable_hooks = showcase.get("playable_hooks") or []
     hooks = showcase.get("hooks") or {}
 
     def localized_value(value: Any, fallback_key: str = "unknown") -> str:
@@ -193,16 +197,36 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
             "tagTheme": "主题",
             "tagAtmosphere": "氛围",
             "tagBundleVersion": "包版本",
-            "sectionSnapshot": "区域快照",
-            "snapshotPois": "兴趣点",
-            "snapshotRoads": "道路",
-            "snapshotLandmarks": "地标",
-            "snapshotSprites": "精灵",
-            "snapshotDisturbance": "扰动等级",
+            "sectionReality": "现实骨架",
+            "realityProvider": "来源",
+            "realityCoordinates": "坐标",
+            "realityRadius": "半径（米）",
+            "realityLanduse": "主导用地",
+            "realitySourceElements": "源元素数",
+            "realityMappedPois": "已映射 POI",
+            "realityRoads": "道路数",
+            "sectionWorldState": "世界状态",
+            "stateDominantFaction": "主导阵营",
+            "stateControlScore": "控制度",
+            "stateStrategicValue": "战略价值",
+            "stateSocialTension": "社会张力",
+            "stateCommerceFlux": "商业流动",
+            "stateDisturbance": "扰动等级",
+            "stateAnomalyPressure": "异常压力",
+            "stateActiveLens": "观察镜头",
+            "stateSpawnWindow": "生成窗口",
+            "stateVisitStatus": "访问状态",
+            "stateMysteryProgress": "谜团进度",
+            "sectionContinuity": "持续线索",
+            "continuityCounts": "记忆锚点 / 回响 / 精灵",
+            "continuityMemory": "记忆",
+            "continuityEcho": "历史回响",
+            "continuitySprite": "精灵信号",
             "sectionFaction": "阵营聚焦",
             "factionInfluence": "影响力",
             "sectionPoiHighlights": "重点 POI",
             "sectionLandmarkHooks": "地标钩子",
+            "sectionPlayableHooks": "可玩钩子",
             "sectionPresentation": "表现提示",
             "presentationVisualStyle": "视觉风格",
             "presentationPaletteHint": "色板提示",
@@ -231,16 +255,36 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
             "tagTheme": "theme",
             "tagAtmosphere": "atmosphere",
             "tagBundleVersion": "bundle v",
-            "sectionSnapshot": "District Snapshot",
-            "snapshotPois": "POIs",
-            "snapshotRoads": "Roads",
-            "snapshotLandmarks": "Landmarks",
-            "snapshotSprites": "Sprites",
-            "snapshotDisturbance": "Disturbance",
+            "sectionReality": "Reality Skeleton",
+            "realityProvider": "Provider",
+            "realityCoordinates": "Coordinates",
+            "realityRadius": "Radius (m)",
+            "realityLanduse": "Dominant landuse",
+            "realitySourceElements": "Source elements",
+            "realityMappedPois": "Mapped POIs",
+            "realityRoads": "Roads",
+            "sectionWorldState": "World State",
+            "stateDominantFaction": "Dominant faction",
+            "stateControlScore": "Control score",
+            "stateStrategicValue": "Strategic value",
+            "stateSocialTension": "Social tension",
+            "stateCommerceFlux": "Commerce flux",
+            "stateDisturbance": "Disturbance",
+            "stateAnomalyPressure": "Anomaly pressure",
+            "stateActiveLens": "Active lens",
+            "stateSpawnWindow": "Spawn window",
+            "stateVisitStatus": "Visit status",
+            "stateMysteryProgress": "Mystery progress",
+            "sectionContinuity": "Continuity Threads",
+            "continuityCounts": "Memory anchors / echoes / sprites",
+            "continuityMemory": "Memory",
+            "continuityEcho": "Echo",
+            "continuitySprite": "Sprite signal",
             "sectionFaction": "Faction Spotlight",
             "factionInfluence": "Influence",
             "sectionPoiHighlights": "Highlight POIs",
             "sectionLandmarkHooks": "Landmark Hooks",
+            "sectionPlayableHooks": "Playable Hooks",
             "sectionPresentation": "Presentation Hooks",
             "presentationVisualStyle": "Visual style",
             "presentationPaletteHint": "Palette hint",
@@ -284,6 +328,41 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
         )
         if landmark_highlights
         else '<li data-i18n="noHighlightedLandmarks"></li>'
+    )
+    continuity_items: list[str] = [
+        '<li><span data-i18n="continuityCounts"></span>: '
+        f"{escape(str(continuity.get('memory_anchor_count') or 0))} / "
+        f"{escape(str(continuity.get('historical_echo_count') or 0))} / "
+        f"{escape(str(continuity.get('sprite_count') or 0))}</li>"
+    ]
+    for item in continuity.get("memory_threads") or []:
+        linked = ", ".join(str(value) for value in (item.get("linked_pois") or []) if value)
+        continuity_items.append(
+            f'<li><strong><span data-i18n="continuityMemory"></span></strong>: '
+            f"{localized_value(item.get('anchor_type'))} / {localized_value(item.get('tone'))} / {localized_value(item.get('visibility'))}"
+            f"<br><small>{escape(linked) if linked else localized_value(None)}</small></li>"
+        )
+    for item in continuity.get("historical_threads") or []:
+        continuity_items.append(
+            f'<li><strong><span data-i18n="continuityEcho"></span></strong>: '
+            f"{localized_value(item.get('source_type'))} / {localized_value(item.get('severity'))}"
+            f"<br><small>{localized_value(item.get('summary'), 'noDescription')}</small></li>"
+        )
+    for item in continuity.get("sprite_signals") or []:
+        drop_tags = ", ".join(str(value) for value in (item.get("drop_tags") or []) if value)
+        detail = localized_value(item.get("linked_poi"))
+        if drop_tags:
+            detail = f"{detail} / {escape(drop_tags)}"
+        continuity_items.append(
+            f'<li><strong><span data-i18n="continuitySprite"></span></strong>: '
+            f"{localized_value(item.get('species'))} / {localized_value(item.get('rarity'))}"
+            f"<br><small>{detail}</small></li>"
+        )
+    continuity_html = "".join(continuity_items)
+    playable_hook_items = (
+        "".join(f"<li>{escape(str(item))}</li>" for item in playable_hooks)
+        if playable_hooks
+        else '<li data-i18n="noHook"></li>'
     )
     subtitle_html = f"<p>{escape(showcase.get('subtitle') or '')}</p>" if showcase.get("subtitle") else ""
     if showcase.get("narrative_summary"):
@@ -359,17 +438,39 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
       </section>
 
       <div class=\"grid\">
-        <section class=\"panel\">
-          <h2 data-i18n=\"sectionSnapshot\"></h2>
+        <section class=\"panel\" id=\"section-reality\">
+          <h2 data-i18n=\"sectionReality\"></h2>
           <ul>
-            <li><span data-i18n=\"snapshotPois\"></span>: {escape(str(summary.get('poi_count') or 0))}</li>
-            <li><span data-i18n=\"snapshotRoads\"></span>: {escape(str(summary.get('road_count') or 0))}</li>
-            <li><span data-i18n=\"snapshotLandmarks\"></span>: {escape(str(summary.get('landmark_count') or 0))}</li>
-            <li><span data-i18n=\"snapshotSprites\"></span>: {escape(str(summary.get('sprite_count') or 0))}</li>
-            <li><span data-i18n=\"snapshotDisturbance\"></span>: {localized_value(summary.get('disturbance_level'))}</li>
+            <li><span data-i18n=\"realityProvider\"></span>: {localized_value(reality.get('provider'))}</li>
+            <li><span data-i18n=\"realityCoordinates\"></span>: {localized_value(f"{reality.get('lat')}, {reality.get('lon')}" if reality.get('lat') is not None and reality.get('lon') is not None else None)}</li>
+            <li><span data-i18n=\"realityRadius\"></span>: {localized_value(reality.get('radius_m'))}</li>
+            <li><span data-i18n=\"realityLanduse\"></span>: {localized_value(reality.get('dominant_landuse'))}</li>
+            <li><span data-i18n=\"realitySourceElements\"></span>: {localized_value(reality.get('source_element_count'))}</li>
+            <li><span data-i18n=\"realityMappedPois\"></span>: {localized_value(reality.get('mapped_poi_count'))}</li>
+            <li><span data-i18n=\"realityRoads\"></span>: {localized_value(reality.get('road_count'))}</li>
+          </ul>
+        </section>
+        <section class=\"panel\" id=\"section-world-state\">
+          <h2 data-i18n=\"sectionWorldState\"></h2>
+          <ul>
+            <li><span data-i18n=\"stateDominantFaction\"></span>: {localized_value(world_state.get('dominant_faction'), 'unknownFaction')}</li>
+            <li><span data-i18n=\"stateControlScore\"></span>: {localized_value(world_state.get('control_score'))}</li>
+            <li><span data-i18n=\"stateStrategicValue\"></span>: {localized_value(world_state.get('strategic_value'))}</li>
+            <li><span data-i18n=\"stateSocialTension\"></span>: {localized_value(world_state.get('social_tension'))}</li>
+            <li><span data-i18n=\"stateCommerceFlux\"></span>: {localized_value(world_state.get('commerce_flux'))}</li>
+            <li><span data-i18n=\"stateDisturbance\"></span>: {localized_value(world_state.get('disturbance_level'))}</li>
+            <li><span data-i18n=\"stateAnomalyPressure\"></span>: {localized_value(world_state.get('anomaly_pressure'))}</li>
+            <li><span data-i18n=\"stateActiveLens\"></span>: {localized_value(world_state.get('active_lens'))}</li>
+            <li><span data-i18n=\"stateSpawnWindow\"></span>: {localized_value(world_state.get('spawn_window'))}</li>
+            <li><span data-i18n=\"stateVisitStatus\"></span>: {localized_value(world_state.get('visit_status'))}</li>
+            <li><span data-i18n=\"stateMysteryProgress\"></span>: {localized_value(world_state.get('mystery_progress'))}</li>
           </ul>
         </section>
         {faction_html}
+        <section class=\"panel\" id=\"section-continuity\">
+          <h2 data-i18n=\"sectionContinuity\"></h2>
+          <ul>{continuity_html}</ul>
+        </section>
         <section class=\"panel\">
           <h2 data-i18n=\"sectionPoiHighlights\"></h2>
           <ul>{poi_items}</ul>
@@ -377,6 +478,10 @@ def _render_preview_html(showcase: dict[str, Any], manifest: dict[str, Any]) -> 
         <section class=\"panel\">
           <h2 data-i18n=\"sectionLandmarkHooks\"></h2>
           <ul>{landmark_items}</ul>
+        </section>
+        <section class=\"panel\" id=\"section-playable-hooks\">
+          <h2 data-i18n=\"sectionPlayableHooks\"></h2>
+          <ul>{playable_hook_items}</ul>
         </section>
         <section class=\"panel\">
           <h2 data-i18n=\"sectionPresentation\"></h2>

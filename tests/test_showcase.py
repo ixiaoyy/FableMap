@@ -47,9 +47,16 @@ class ShowcaseTests(unittest.TestCase):
         self.assertEqual(manifest["world_id"], world["world_id"])
         self.assertEqual(showcase["world_id"], world["world_id"])
         self.assertEqual(showcase["title"], world["region"]["name"])
+        self.assertEqual(showcase["reality_skeleton"]["provider"], world["source"]["provider"])
+        self.assertEqual(showcase["world_state"]["dominant_faction"], world["region"]["dominant_faction"])
+        self.assertEqual(showcase["continuity_threads"]["memory_anchor_count"], len(world["memory_anchors"]))
+        self.assertGreater(len(showcase["playable_hooks"]), 0)
         self.assertGreater(len(showcase["poi_highlights"]), 0)
         self.assertIn(world["region"]["name"], markdown)
-        self.assertIn("District Snapshot", markdown)
+        self.assertIn("Reality Skeleton", markdown)
+        self.assertIn("World State", markdown)
+        self.assertIn("Continuity Threads", markdown)
+        self.assertIn("Playable Hooks", markdown)
         self.assertIn(showcase["poi_highlights"][0]["fantasy_name"], markdown)
 
 
