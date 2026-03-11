@@ -236,7 +236,11 @@ def build_world(
             "active_lens": vibe_profile,
             "collection_progress": {},
             "home_inventory": [],
-            "home_style": "blank_slate",
+            "home_style": (
+                "verdant_nest" if comfort_level >= 0.6
+                else "warm_corner" if comfort_level >= 0.3
+                else "blank_slate"
+            ),
             "private_marks": _build_private_marks(pois),
             "reputation": {dominant_faction: 0},
             "route_impact": {"road_count": len(roads)},

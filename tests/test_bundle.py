@@ -159,6 +159,13 @@ class BundleTests(unittest.TestCase):
         self.assertIn("capsule-bubble", preview_html)
         self.assertIn("echo-panel", preview_html)
         self.assertIn('data-i18n="detailEchoTitle"', preview_html)
+        self.assertIn("home-anchor", preview_html)
+        self.assertIn("home-icon", preview_html)
+        self.assertIn("home-panel", preview_html)
+        self.assertIn('data-i18n="homePanelTitle"', preview_html)
+        self.assertIn('data-i18n="homeStyle"', preview_html)
+        self.assertIn('data-i18n="homeInventory"', preview_html)
+        self.assertIn('data-i18n="homeReputation"', preview_html)
 
 
 if __name__ == "__main__":

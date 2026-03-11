@@ -445,6 +445,37 @@ def _capsule_marks_svg(world: dict[str, Any], project: Any) -> str:
     return "".join(nodes)
 
 
+def _home_anchor_svg(world: dict[str, Any], project: Any) -> str:
+    source = world.get("source") or {}
+    lat = source.get("lat")
+    lon = source.get("lon")
+    if lat is None or lon is None:
+        return ""
+    state = world.get("state") or {}
+    home_style = str(state.get("home_style") or "blank_slate")
+    _STYLE_COLOR = {
+        "verdant_nest": "#4ade80",
+        "warm_corner": "#fbbf24",
+        "blank_slate": "#94a3b8",
+    }
+    color = _STYLE_COLOR.get(home_style, "#94a3b8")
+    projected = project({"lat": lat, "lon": lon})
+    x = round(projected["x"], 1)
+    y = round(projected["y"], 1)
+    _HOUSE = "M0,-12 L10,0 L7,0 L7,10 L-7,10 L-7,0 L-10,0 Z"
+    return (
+        f'<g class="home-anchor" data-home-style="{escape(home_style)}" aria-label="home anchor">'
+        f'<circle cx="{x}" cy="{y}" r="18" class="home-aura" fill="{color}" opacity="0.08">'
+        f'<animate attributeName="r" values="14;20;14" dur="3s" repeatCount="indefinite"/>'
+        f'<animate attributeName="opacity" values="0.05;0.15;0.05" dur="3s" repeatCount="indefinite"/>'
+        f'</circle>'
+        f'<path d="{_HOUSE}" transform="translate({x},{y})" class="home-icon" fill="{color}" opacity="0.85">'
+        f'<animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>'
+        f'</path>'
+        f'</g>'
+    )
+
+
 def _broadcast_messages(world: dict[str, Any], world_state: dict[str, Any]) -> list[str]:
     region = world.get("region") or {}
     social = float(region.get("social_tension") or 0.0)
@@ -701,6 +732,11 @@ def _render_map_observer_html(
             f'<article class="detail-card{active_class}" data-feature-card="{escape(str(item["id"]))}">{item["detail_body"]}</article>'
         )
 
+    _home_rep_str = ", ".join(
+        f"{escape(str(k))} {escape(str(v))}"
+        for k, v in (world_state.get("reputation") or {}).items()
+    ) or "\u2014"
+
     observer_html = f"""
       <section class=\"world-map-stage\" id=\"section-map-observer\">
         <div class=\"world-map-stage-head\">
@@ -735,6 +771,7 @@ def _render_map_observer_html(
                 {_echo_layer_svg(world, project)}
                 {_anchor_nodes_svg(world, project)}
                 {_capsule_marks_svg(world, project)}
+                {_home_anchor_svg(world, project)}
                 {_sprite_nodes_svg(world, world_state, project)}
                 {''.join(feature_nodes)}
               </svg>
@@ -746,6 +783,14 @@ def _render_map_observer_html(
             <section class=\"world-map-panel detail-panel\" id=\"map-detail-panel\">
               <h3 data-i18n=\"mapDetailPanelTitle\"></h3>
               <div id=\"map-detail-cards\">{''.join(detail_cards)}</div>
+            </section>
+            <section class=\"world-map-panel home-panel\" id=\"home-panel\">
+              <h4 class=\"home-panel-title\" data-i18n=\"homePanelTitle\"></h4>
+              <ul class=\"detail-list home-stats\">
+                <li><span data-i18n=\"homeStyle\"></span>: <span class=\"home-style-tag home-style-{escape(str(world_state.get('home_style') or 'blank_slate'))}\">{escape(str(world_state.get('home_style') or 'blank_slate').replace('_', ' '))}</span></li>
+                <li><span data-i18n=\"homeInventory\"></span>: {escape(str(len(world_state.get('home_inventory') or [])))}</li>
+                <li><span data-i18n=\"homeReputation\"></span>: {_home_rep_str}</li>
+              </ul>
             </section>
           </aside>
         </div>
@@ -800,6 +845,10 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailAnchorCount": "情感锚点",
             "broadcastBarTitle": "世界播报",
             "detailEchoTitle": "历史回声",
+            "homePanelTitle": "镜像家园",
+            "homeStyle": "家园风格",
+            "homeInventory": "收藏数量",
+            "homeReputation": "阵营好感",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "地标",
             "detailType": "类型",
@@ -891,6 +940,10 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailAnchorCount": "Memory anchors",
             "broadcastBarTitle": "World Broadcast",
             "detailEchoTitle": "Historical Echo",
+            "homePanelTitle": "Mirror Home",
+            "homeStyle": "Home style",
+            "homeInventory": "Inventory",
+            "homeReputation": "Reputation",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "Landmark",
             "detailType": "Type",
@@ -1104,6 +1157,16 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .echo-panel {{ margin-top: 12px; border-top: 1px solid #1e293b; padding-top: 8px; }}
       .echo-panel-title {{ margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }}
       .echo-summary {{ margin: 0; font-size: 12px; color: #94a3b8; font-style: italic; line-height: 1.6; }}
+      .home-anchor {{ pointer-events: none; }}
+      .home-aura {{ pointer-events: none; }}
+      .home-icon {{ pointer-events: none; filter: drop-shadow(0 0 4px currentColor); }}
+      .home-panel {{ margin-top: 0; }}
+      .home-panel-title {{ margin: 0 0 10px; font-size: 14px; }}
+      .home-stats {{ padding-left: 0; list-style: none; margin: 0; display: flex; flex-direction: column; gap: 6px; }}
+      .home-style-tag {{ font-weight: 600; text-transform: capitalize; }}
+      .home-style-verdant_nest {{ color: #4ade80; }}
+      .home-style-warm_corner {{ color: #fbbf24; }}
+      .home-style-blank_slate {{ color: #94a3b8; }}
       .poi-status-badge {{ pointer-events: none; }}
       .poi-status-idle {{ fill: #475569; }}
       .poi-status-active {{ fill: #4ade80; filter: drop-shadow(0 0 3px #4ade80); }}
