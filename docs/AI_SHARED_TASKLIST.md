@@ -54,7 +54,7 @@
 
 ### C. 参与感 / 共创
 
-- `C1` · `planned` · 全城播报系统与世界变更公告反馈。
+- `C1` · `done` · 全城播报系统：已基于 social_tension/commerce_flux/anomaly_pressure/comfort_level/spawn_window/active_lens/disturbance_level 生成规则驱动世界播报文字，CSS keyframe 无缝横向滚动条插入地图底部，支持 hover 暂停，双语 i18n。
 - `C2` · `planned` · 情绪胶囊、私密留言与地点记忆回声。
 - `C3` · `planned` · 镜像家园与现实住所锚点系统。
 

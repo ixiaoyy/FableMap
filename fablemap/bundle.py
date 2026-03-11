@@ -385,6 +385,83 @@ def _anchor_nodes_svg(
     return "".join(nodes)
 
 
+def _broadcast_messages(world: dict[str, Any], world_state: dict[str, Any]) -> list[str]:
+    region = world.get("region") or {}
+    social = float(region.get("social_tension") or 0.0)
+    commerce = float(region.get("commerce_flux") or 0.0)
+    anomaly = float(region.get("anomaly_pressure") or 0.0)
+    comfort = float(region.get("comfort_level") or 0.0)
+    spawn = str(world_state.get("spawn_window") or "stable")
+    lens = str(world_state.get("active_lens") or "quiet_rain")
+    dist = float(world_state.get("disturbance_level") or 0.0)
+    factions = world.get("factions") or []
+    faction_name = factions[0].get("name") if factions else "Unknown Faction"
+    region_name = region.get("name") or "This District"
+
+    msgs: list[str] = []
+
+    if social >= 0.5:
+        msgs.append(f"⚠ {region_name}: social pressure elevated — movement patterns tightening.")
+    elif social >= 0.25:
+        msgs.append(f"◈ {region_name}: friction detectable in circulation flows.")
+
+    if commerce >= 0.5:
+        msgs.append(f"↑ Commerce flux high — {faction_name} supply lines active.")
+    elif commerce >= 0.2:
+        msgs.append(f"~ Trade pulse stable. {faction_name} maintains route visibility.")
+
+    if anomaly >= 0.6:
+        msgs.append("⬡ Anomaly pressure critical — historical echoes amplifying. Proceed with caution.")
+    elif anomaly >= 0.35:
+        msgs.append("◉ Anomaly pressure rising. Memory residue detected in landmark zones.")
+
+    if comfort >= 0.4:
+        msgs.append(f"♡ Comfort index favorable — secret garden windows may open near grove zones.")
+    elif comfort >= 0.2:
+        msgs.append(f"· Quiet undercurrent detected. Emotional anchors accessible after dark.")
+
+    if spawn == "rare":
+        msgs.append("✦ RARE spawn window open — urban sprites manifesting. Collect before dispersal.")
+    elif spawn == "active":
+        msgs.append("✧ Spawn window active — sprites visible near high-memory nodes.")
+
+    _LENS_MSG = {
+        "ghibli_town": "🌿 World lens: verdant calm. Hidden paths more likely to surface.",
+        "quiet_rain":  "🌧 World lens: quiet rain. Emotional resonance heightened.",
+        "neon_nostalgia": "🌃 World lens: neon nostalgia. Night-mode aesthetics at peak.",
+        "amber_evening": "🕯 World lens: amber evening. Warmth signals concentrated.",
+        "iron_blue": "🔵 World lens: iron blue. Bureau presence dominant.",
+        "chalk_dawn": "📖 World lens: chalk dawn. Scholar frequencies active.",
+    }
+    if lens in _LENS_MSG:
+        msgs.append(_LENS_MSG[lens])
+
+    if dist >= 0.6:
+        msgs.append(f"🔴 {region_name} disturbance CRITICAL — world state unstable.")
+    elif dist >= 0.3:
+        msgs.append(f"🟡 {region_name} disturbance moderate — watch for sudden state shifts.")
+
+    if not msgs:
+        msgs.append(f"· {region_name}: all systems nominal. World state stable.")
+
+    return msgs
+
+
+def _broadcast_bar_html(world: dict[str, Any], world_state: dict[str, Any]) -> str:
+    msgs = _broadcast_messages(world, world_state)
+    items = "".join(
+        f'<span class="broadcast-item">{escape(m)}</span><span class="broadcast-sep" aria-hidden="true">◆</span>'
+        for m in msgs
+    )
+    track = f'<span class="broadcast-track" aria-live="off">{items}{items}</span>'
+    return (
+        f'<div class="world-broadcast-bar" role="marquee" aria-label="World broadcast">'
+        f'<span class="broadcast-label" data-i18n="broadcastBarTitle"></span>'
+        f'<div class="broadcast-scroll-wrap">{track}</div>'
+        f'</div>'
+    )
+
+
 def _render_map_observer_html(
     world: dict[str, Any],
     showcase: dict[str, Any],
@@ -587,6 +664,7 @@ def _render_map_observer_html(
               </svg>
             </div>
             <p class=\"map-note\" data-i18n=\"mapObserverNote\"></p>
+            {_broadcast_bar_html(world, world_state)}
           </div>
           <aside class=\"world-map-sidebar\" id=\"world-map-sidebar\">
             <section class=\"world-map-panel detail-panel\" id=\"map-detail-panel\">
@@ -644,6 +722,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailComfortLevel": "地区治愈度",
             "detailSpriteCount": "可收集精灵",
             "detailAnchorCount": "情感锚点",
+            "broadcastBarTitle": "世界播报",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "地标",
             "detailType": "类型",
@@ -733,6 +812,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailComfortLevel": "Comfort level",
             "detailSpriteCount": "Collectable sprites",
             "detailAnchorCount": "Memory anchors",
+            "broadcastBarTitle": "World Broadcast",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "Landmark",
             "detailType": "Type",
@@ -954,6 +1034,14 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .metric-bar.commerce {{ background: #fb923c; }}
       .metric-bar.anomaly {{ background: #a78bfa; }}
       .map-note {{ margin: 12px 4px 0; color: #94a3b8; font-size: 13px; line-height: 1.5; }}
+      .world-broadcast-bar {{ display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 7px 12px; background: rgba(2,6,23,0.85); border: 1px solid #1e293b; border-radius: 10px; overflow: hidden; min-height: 32px; }}
+      .broadcast-label {{ flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #38bdf8; white-space: nowrap; padding-right: 8px; border-right: 1px solid #1e3a5f; }}
+      .broadcast-scroll-wrap {{ flex: 1; overflow: hidden; position: relative; }}
+      .broadcast-track {{ display: inline-flex; align-items: center; gap: 0; white-space: nowrap; animation: broadcast-scroll 38s linear infinite; }}
+      .broadcast-track:hover {{ animation-play-state: paused; }}
+      .broadcast-item {{ font-size: 12px; color: #cbd5e1; padding: 0 18px; }}
+      .broadcast-sep {{ color: #334155; font-size: 10px; padding: 0 4px; }}
+      @keyframes broadcast-scroll {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
       .world-map-sidebar {{ display: flex; flex-direction: column; gap: 16px; min-height: 0; }}
       .world-map-panel {{ background: rgba(15, 23, 42, 0.88); border: 1px solid #334155; border-radius: 18px; padding: 18px; }}
       .detail-panel {{ display: flex; flex-direction: column; min-height: 0; }}

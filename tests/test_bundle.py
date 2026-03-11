@@ -148,6 +148,11 @@ class BundleTests(unittest.TestCase):
         self.assertIn('data-i18n="detailComfortLevel"', preview_html)
         self.assertIn('data-i18n="detailSpriteCount"', preview_html)
         self.assertIn('data-i18n="detailAnchorCount"', preview_html)
+        self.assertIn("world-broadcast-bar", preview_html)
+        self.assertIn("broadcast-track", preview_html)
+        self.assertIn("broadcast-item", preview_html)
+        self.assertIn("broadcast-scroll", preview_html)
+        self.assertIn('data-i18n="broadcastBarTitle"', preview_html)
 
 
 if __name__ == "__main__":
