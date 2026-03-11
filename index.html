@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FableMap · 一页体验入口</title>
+    <style>
+      body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
+      .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 48px; }
+      .hero, .panel { background: #111827; border: 1px solid #334155; border-radius: 18px; }
+      .hero { padding: 28px; background: linear-gradient(135deg, #1e293b, #111827); }
+      .hero h1 { margin: 0 0 10px; font-size: 38px; }
+      .hero p { line-height: 1.7; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 18px; }
+      .panel { padding: 18px; }
+      .panel h2 { margin-top: 0; font-size: 20px; }
+      .tag { display: inline-block; margin: 6px 8px 0 0; padding: 6px 10px; border-radius: 999px; background: #312e81; font-size: 12px; }
+      ul { padding-left: 20px; line-height: 1.6; }
+      a { color: #93c5fd; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .note { color: #cbd5e1; font-size: 14px; }
+      code { color: #c4b5fd; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="hero">
+        <h1>FableMap / 寓言地图</h1>
+        <p><strong>这就是当前的一页体验入口。</strong> 你现在不需要先运行任何命令，直接打开这个页面就能感受项目现在已经做到什么程度。</p>
+        <p>当前展示样品基于 repo 内稳定 demo fixture 生成：把真实地理骨架重新解释成一个带阵营、情绪、叙事与视觉气质的平行世界街区。</p>
+        <div>
+          <span class="tag">可直接打开</span>
+          <span class="tag">无命令门槛</span>
+          <span class="tag">静态样品页</span>
+          <span class="tag">当前 demo 快照</span>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>当前样品</h2>
+          <p><strong>Around Late Lantern Cafe</strong></p>
+          <p>market_quarter · quiet · held by Memory Collective</p>
+          <p class="note">Around Late Lantern Cafe is rendered as a market_quarter with 4 mapped POIs and 1 traversable routes.</p>
+        </section>
+
+        <section class="panel">
+          <h2>District Snapshot</h2>
+          <ul>
+            <li>World ID: <code>world-7c101776f28e</code></li>
+            <li>POIs / Roads / Landmarks: 4 / 1 / 1</li>
+            <li>Sprites / Memory Anchors / Echoes: 3 / 2 / 1</li>
+            <li>Disturbance Level: <code>0.45</code></li>
+            <li>Active Lens: <code>amber_evening</code></li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2>Faction Spotlight</h2>
+          <p><strong>Memory Collective</strong> (<code>memory_collective</code>)</p>
+          <p>Collects stories, grief and local rituals.</p>
+          <p class="note">Influence: 0.45</p>
+        </section>
+
+        <section class="panel">
+          <h2>Highlight POIs</h2>
+          <ul>
+            <li><strong>Late Lantern Cafe Parlor</strong> — Warmth, gossip and waiting quietly overlap here.</li>
+            <li><strong>Pocket Mart Outpost</strong> — Small routines make the district feel survivable.</li>
+            <li><strong>North Clinic Sanctum</strong> — Anxious hope lingers around the doors.</li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2>Landmark Hook</h2>
+          <ul>
+            <li><strong>Clock Gate</strong> — A place where the district's official story feels slightly unstable.</li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2>Presentation Hooks</h2>
+          <ul>
+            <li>Visual Style: <code>amber_evening</code></li>
+            <li>Palette Hint: <code>coffee_and_rose</code></li>
+            <li>Comfort / Anomaly: <code>0.56</code> / <code>0.45</code></li>
+            <li>Satire: Conversation is cozy, but time is always for sale.</li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="panel" style="margin-top: 18px;">
+        <h2>你接下来可以怎么用</h2>
+        <ul>
+          <li>如果你只是想先感受一下：就停在这个页面即可。</li>
+          <li>如果你想看项目说明：打开 <a href="README.md">README.md</a></li>
+          <li>如果你想看设计文档：打开 <a href="docs/PRODUCT_BRIEF.md">docs/PRODUCT_BRIEF.md</a></li>
+          <li>如果你之后想生成新的样品：再使用 `demo -> bundle` 那条开发流程。</li>
+        </ul>
+        <p class="note">说明：这个页面是 repo 内的静态体验入口，目的是把“先体验一下”这件事收敛成一个页面，而不是替代后续真正的交互 demo。</p>
+      </section>
+    </div>
+  </body>
+</html>
