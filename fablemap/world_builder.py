@@ -237,7 +237,7 @@ def build_world(
             "collection_progress": {},
             "home_inventory": [],
             "home_style": "blank_slate",
-            "private_marks": [],
+            "private_marks": _build_private_marks(pois),
             "reputation": {dominant_faction: 0},
             "route_impact": {"road_count": len(roads)},
             "resource_transfers": [],
@@ -378,6 +378,23 @@ def _build_sprites(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return sprites[:3]
+
+
+def _build_private_marks(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    marks = []
+    for poi in pois:
+        if not poi.get("secret_slot"):
+            continue
+        marks.append(
+            {
+                "id": f"mark-{poi['id']}",
+                "linked_poi": poi["id"],
+                "emotion": poi.get("emotion_hook") or "A quiet moment lingers here.",
+                "capsule_type": "emotion",
+                "visibility": "private",
+            }
+        )
+    return marks[:3]
 
 
 def _build_historical_echoes(landmarks: list[dict[str, Any]]) -> list[dict[str, Any]]:

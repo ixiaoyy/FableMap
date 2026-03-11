@@ -153,6 +153,12 @@ class BundleTests(unittest.TestCase):
         self.assertIn("broadcast-item", preview_html)
         self.assertIn("broadcast-scroll", preview_html)
         self.assertIn('data-i18n="broadcastBarTitle"', preview_html)
+        self.assertIn("echo-node", preview_html)
+        self.assertIn("echo-text", preview_html)
+        self.assertIn("capsule-mark", preview_html)
+        self.assertIn("capsule-bubble", preview_html)
+        self.assertIn("echo-panel", preview_html)
+        self.assertIn('data-i18n="detailEchoTitle"', preview_html)
 
 
 if __name__ == "__main__":

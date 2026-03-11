@@ -385,6 +385,66 @@ def _anchor_nodes_svg(
     return "".join(nodes)
 
 
+def _echo_layer_svg(world: dict[str, Any], project: Any) -> str:
+    echoes = world.get("historical_echoes") or []
+    landmarks = world.get("landmarks") or []
+    lm_by_id = {lm["id"]: lm for lm in landmarks}
+    nodes = []
+    for echo in echoes:
+        eid = escape(str(echo.get("id") or ""))
+        summary = escape(str(echo.get("summary") or ""))
+        if not summary:
+            continue
+        linked_lm_id = str(echo.get("id") or "").replace("echo-", "", 1)
+        lm = lm_by_id.get(linked_lm_id)
+        if not lm:
+            continue
+        pos = (lm.get("visual_hint") or {}).get("position")
+        if not pos:
+            continue
+        projected = project(pos)
+        x = round(projected["x"] + 18, 1)
+        y = round(projected["y"] - 20, 1)
+        max_chars = 48
+        display = summary if len(summary) <= max_chars else summary[:max_chars] + "…"
+        nodes.append(
+            f'<g class="echo-node" data-echo-id="{eid}">'
+            f'<text x="{x}" y="{y}" class="echo-text">'
+            f'<animate attributeName="opacity" values="0;0.7;0.5;0.7;0" dur="6s" begin="{len(nodes)}s" repeatCount="indefinite"/>'
+            f'{display}</text>'
+            f'</g>'
+        )
+    return "".join(nodes)
+
+
+def _capsule_marks_svg(world: dict[str, Any], project: Any) -> str:
+    state = world.get("state") or {}
+    marks = state.get("private_marks") or []
+    pois_by_id = {poi["id"]: poi for poi in (world.get("pois") or [])}
+    nodes = []
+    _BUBBLE = "M-8,-14 L8,-14 Q12,-14 12,-10 L12,0 Q12,4 8,4 L2,4 L0,8 L-2,4 L-8,4 Q-12,4 -12,0 L-12,-10 Q-12,-14 -8,-14 Z"
+    for mark in marks:
+        poi = pois_by_id.get(mark.get("linked_poi") or "")
+        if not poi:
+            continue
+        pos = poi.get("position")
+        if not pos:
+            continue
+        projected = project(pos)
+        x = round(projected["x"] + 12, 1)
+        y = round(projected["y"] - 28, 1)
+        mid = escape(str(mark.get("id") or ""))
+        nodes.append(
+            f'<g class="capsule-mark" data-mark-id="{mid}" aria-label="emotion capsule">'
+            f'<path d="{_BUBBLE}" transform="translate({x},{y})" class="capsule-bubble">'
+            f'<animate attributeName="opacity" values="0.3;0.8;0.3" dur="4.5s" repeatCount="indefinite"/>'
+            f'</path>'
+            f'<circle cx="{x}" cy="{y - 5}" r="2" class="capsule-dot"></circle>'
+            f'</g>'
+        )
+    return "".join(nodes)
+
+
 def _broadcast_messages(world: dict[str, Any], world_state: dict[str, Any]) -> list[str]:
     region = world.get("region") or {}
     social = float(region.get("social_tension") or 0.0)
@@ -554,6 +614,20 @@ def _render_map_observer_html(
                     f'<li><span data-i18n="detailType"></span>: {_localized_html(landmark.get("type"), "unknownType")}</li>'
                     f'<li><span data-i18n="detailDescription"></span>: {_localized_html(landmark.get("description"), "noDescription")}</li>'
                     "</ul>"
+                    + (
+                        lambda _echo: (
+                            f'<div class="echo-panel">'
+                            f'<p class="echo-panel-title" data-i18n="detailEchoTitle"></p>'
+                            f'<p class="echo-summary">{escape(str(_echo.get("summary") or ""))}</p>'
+                            f'</div>'
+                        ) if _echo else ""
+                    )(
+                        next(
+                            (e for e in (world.get("historical_echoes") or [])
+                             if e.get("id") == f"echo-{landmark['id']}"),
+                            None
+                        )
+                    )
                 ),
             }
         )
@@ -658,7 +732,9 @@ def _render_map_observer_html(
                 {_disturbance_aura_svg(world_state, viewport)}
                 {''.join(road_shapes)}
                 {_npc_agent_dots_svg(world_state, region, viewport)}
+                {_echo_layer_svg(world, project)}
                 {_anchor_nodes_svg(world, project)}
+                {_capsule_marks_svg(world, project)}
                 {_sprite_nodes_svg(world, world_state, project)}
                 {''.join(feature_nodes)}
               </svg>
@@ -723,6 +799,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailSpriteCount": "可收集精灵",
             "detailAnchorCount": "情感锚点",
             "broadcastBarTitle": "世界播报",
+            "detailEchoTitle": "历史回声",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "地标",
             "detailType": "类型",
@@ -813,6 +890,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailSpriteCount": "Collectable sprites",
             "detailAnchorCount": "Memory anchors",
             "broadcastBarTitle": "World Broadcast",
+            "detailEchoTitle": "Historical Echo",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "Landmark",
             "detailType": "Type",
@@ -1018,6 +1096,14 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .sprite-core {{ pointer-events: none; }}
       .anchor-node {{ pointer-events: none; }}
       .anchor-heart {{ fill: #fb7185; filter: drop-shadow(0 0 3px #fb7185); }}
+      .echo-node {{ pointer-events: none; }}
+      .echo-text {{ font-size: 9px; fill: #94a3b8; font-style: italic; }}
+      .capsule-mark {{ pointer-events: none; }}
+      .capsule-bubble {{ fill: #818cf8; filter: drop-shadow(0 0 3px #818cf8); }}
+      .capsule-dot {{ fill: white; opacity: 0.8; pointer-events: none; }}
+      .echo-panel {{ margin-top: 12px; border-top: 1px solid #1e293b; padding-top: 8px; }}
+      .echo-panel-title {{ margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }}
+      .echo-summary {{ margin: 0; font-size: 12px; color: #94a3b8; font-style: italic; line-height: 1.6; }}
       .poi-status-badge {{ pointer-events: none; }}
       .poi-status-idle {{ fill: #475569; }}
       .poi-status-active {{ fill: #4ade80; filter: drop-shadow(0 0 3px #4ade80); }}

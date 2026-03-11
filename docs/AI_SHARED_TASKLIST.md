@@ -55,7 +55,7 @@
 ### C. 参与感 / 共创
 
 - `C1` · `done` · 全城播报系统：已基于 social_tension/commerce_flux/anomaly_pressure/comfort_level/spawn_window/active_lens/disturbance_level 生成规则驱动世界播报文字，CSS keyframe 无缝横向滚动条插入地图底部，支持 hover 暂停，双语 i18n。
-- `C2` · `planned` · 情绪胶囊、私密留言与地点记忆回声。
+- `C2` · `done` · 情绪胶囊、私密留言与地点记忆回声：已实现 historical_echoes 悬浮文字回声层（地标旁淡入淡出 SVG text）、情绪胶囊泡泡标记（private_marks 派生自 secret_slot POI emotion_hook）、地标 detail-card 补充回声摘要 echo-panel。
 - `C3` · `planned` · 镜像家园与现实住所锚点系统。
 
 ## P1：第二层协作任务
