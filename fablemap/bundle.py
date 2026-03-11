@@ -261,8 +261,8 @@ def _disturbance_aura_svg(world_state: dict[str, Any], viewport: dict[str, Any])
     )
 
 
-def _npc_agent_dots_svg(world_state: dict[str, Any], viewport: dict[str, Any]) -> str:
-    commerce = float(world_state.get("disturbance_level") or 0.0)
+def _npc_agent_dots_svg(world_state: dict[str, Any], region: dict[str, Any], viewport: dict[str, Any]) -> str:
+    commerce = float(region.get("commerce_flux") or 0.0)
     spawn = str(world_state.get("spawn_window") or "stable")
     count = 0
     if commerce > 0.3:
@@ -485,7 +485,7 @@ def _render_map_observer_html(
                 <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
                 {_disturbance_aura_svg(world_state, viewport)}
                 {''.join(road_shapes)}
-                {_npc_agent_dots_svg(world_state, viewport)}
+                {_npc_agent_dots_svg(world_state, region, viewport)}
                 {''.join(feature_nodes)}
               </svg>
             </div>

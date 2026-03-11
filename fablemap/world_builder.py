@@ -207,7 +207,16 @@ def build_world(
         "state": {
             "version": "0.1",
             "visited": False,
-            "poi_states": {poi["id"]: {"status": "idle"} for poi in pois},
+            "poi_states": {
+                poi["id"]: {
+                    "status": (
+                        "anomaly" if poi.get("secret_slot")
+                        else "active" if poi.get("faction_alignment") == "trade_guild"
+                        else "idle"
+                    )
+                }
+                for poi in pois
+            },
             "flags": [],
             "story_events": [],
             "faction_states": [{"faction_id": dominant_faction, "control_score": control_score}],
@@ -218,7 +227,11 @@ def build_world(
                 "mapped_poi_count": len(pois),
                 "road_count": len(roads),
             },
-            "spawn_window": "stable",
+            "spawn_window": (
+                "rare" if anomaly_pressure >= 0.7
+                else "active" if anomaly_pressure >= 0.4
+                else "stable"
+            ),
             "mystery_progress": 0,
             "active_lens": vibe_profile,
             "collection_progress": {},
