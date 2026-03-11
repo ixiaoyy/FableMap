@@ -140,6 +140,14 @@ class BundleTests(unittest.TestCase):
         self.assertIn('data-i18n="detailCommerceFlux"', preview_html)
         self.assertIn('data-i18n="detailAnomalyPressure"', preview_html)
         self.assertIn('data-i18n="detailSpawnWindow"', preview_html)
+        self.assertIn("comfort-aura", preview_html)
+        self.assertIn("sprite-node", preview_html)
+        self.assertIn("sprite-gem", preview_html)
+        self.assertIn("anchor-node", preview_html)
+        self.assertIn("anchor-heart", preview_html)
+        self.assertIn('data-i18n="detailComfortLevel"', preview_html)
+        self.assertIn('data-i18n="detailSpriteCount"', preview_html)
+        self.assertIn('data-i18n="detailAnchorCount"', preview_html)
 
 
 if __name__ == "__main__":

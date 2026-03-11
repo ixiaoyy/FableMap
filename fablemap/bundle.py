@@ -294,6 +294,97 @@ def _npc_agent_dots_svg(world_state: dict[str, Any], region: dict[str, Any], vie
     return "".join(dots)
 
 
+def _comfort_aura_svg(region: dict[str, Any], viewport: dict[str, Any]) -> str:
+    level = float(region.get("comfort_level") or 0.0)
+    if level < 0.15:
+        return ""
+    cx = round(viewport["width"] / 2, 1)
+    cy = round(viewport["height"] / 2, 1)
+    r = round(min(viewport["width"], viewport["height"]) * 0.45, 1)
+    opacity = round(min(0.18, level * 0.22), 3)
+    dur = round(max(2.5, 5.0 - level * 2.5), 2)
+    return (
+        f'<radialGradient id="comfort-grad" cx="50%" cy="50%" r="50%">'
+        f'<stop offset="0%" stop-color="#fbbf24" stop-opacity="{opacity}"/>'
+        f'<stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>'
+        f'</radialGradient>'
+        f'<ellipse cx="{cx}" cy="{cy}" rx="{r}" ry="{round(r * 0.55, 1)}" '
+        f'fill="url(#comfort-grad)" class="comfort-aura">'
+        f'<animate attributeName="opacity" values="0.5;1;0.5" dur="{dur}s" repeatCount="indefinite"/>'
+        f'</ellipse>'
+    )
+
+
+def _sprite_nodes_svg(
+    world: dict[str, Any],
+    world_state: dict[str, Any],
+    project: Any,
+) -> str:
+    spawn = str(world_state.get("spawn_window") or "stable")
+    if spawn not in ("active", "rare"):
+        return ""
+    sprites = world.get("sprites") or []
+    pois_by_id = {poi["id"]: poi for poi in (world.get("pois") or [])}
+    nodes = []
+    _RARITY_COLOR = {"rare": "#e879f9", "uncommon": "#a78bfa", "common": "#86efac"}
+    for sprite in sprites:
+        poi = pois_by_id.get(sprite.get("linked_poi") or "")
+        if not poi:
+            continue
+        pos = poi.get("position")
+        if not pos:
+            continue
+        projected = project(pos)
+        x, y = projected["x"], projected["y"]
+        color = _RARITY_COLOR.get(sprite.get("rarity") or "common", "#86efac")
+        dur = "2.4s" if spawn == "rare" else "3.2s"
+        sid = escape(str(sprite.get("id") or ""))
+        species = escape(str(sprite.get("species") or "sprite"))
+        nodes.append(
+            f'<g class="sprite-node" data-sprite-id="{sid}" aria-label="{species}">'
+            f'<path d="M{x},{y - 10} L{x + 7},{y} L{x},{y + 10} L{x - 7},{y} Z" '
+            f'class="sprite-gem" fill="{color}">'
+            f'<animate attributeName="opacity" values="0.3;1;0.3" dur="{dur}" repeatCount="indefinite"/>'
+            f'<animateTransform attributeName="transform" type="rotate" '
+            f'from="0 {x} {y}" to="360 {x} {y}" dur="8s" repeatCount="indefinite"/>'
+            f'</path>'
+            f'<circle cx="{x}" cy="{y}" r="3" fill="white" opacity="0.7" class="sprite-core"></circle>'
+            f'</g>'
+        )
+    return "".join(nodes)
+
+
+def _anchor_nodes_svg(
+    world: dict[str, Any],
+    project: Any,
+) -> str:
+    anchors = world.get("memory_anchors") or []
+    pois_by_id = {poi["id"]: poi for poi in (world.get("pois") or [])}
+    nodes = []
+    _HEART = "M0,-5 C0,-8 -5,-8 -5,-4 C-5,0 0,5 0,7 C0,5 5,0 5,-4 C5,-8 0,-8 0,-5Z"
+    for anchor in anchors:
+        linked = (anchor.get("linked_pois") or [])
+        poi = pois_by_id.get(linked[0]) if linked else None
+        if not poi:
+            continue
+        pos = poi.get("position")
+        if not pos:
+            continue
+        projected = project(pos)
+        x = round(projected["x"] - 16, 1)
+        y = round(projected["y"] - 16, 1)
+        aid = escape(str(anchor.get("id") or ""))
+        tone = escape(str(anchor.get("tone") or "tender"))
+        nodes.append(
+            f'<g class="anchor-node" data-anchor-id="{aid}" aria-label="{tone}">'
+            f'<path d="{_HEART}" transform="translate({x},{y})" class="anchor-heart">'
+            f'<animate attributeName="opacity" values="0.4;0.9;0.4" dur="3.8s" repeatCount="indefinite"/>'
+            f'</path>'
+            f'</g>'
+        )
+    return "".join(nodes)
+
+
 def _render_map_observer_html(
     world: dict[str, Any],
     showcase: dict[str, Any],
@@ -415,6 +506,9 @@ def _render_map_observer_html(
             f'<li><span data-i18n="detailCommerceFlux"></span>: <span class="metric-bar-wrap"><span class="metric-bar commerce" style="width:{_fmt_metric(region.get("commerce_flux"))}em"></span></span> {_fmt_metric(region.get("commerce_flux"))}</li>'
             f'<li><span data-i18n="detailAnomalyPressure"></span>: <span class="metric-bar-wrap"><span class="metric-bar anomaly" style="width:{_fmt_metric(region.get("anomaly_pressure"))}em"></span></span> {_fmt_metric(region.get("anomaly_pressure"))}</li>'
             f'<li><span data-i18n="detailSpawnWindow"></span>: {spawn_window}</li>'
+            f'<li><span data-i18n="detailComfortLevel"></span>: <span class="metric-bar-wrap"><span class="metric-bar" style="width:{_fmt_metric(region.get("comfort_level"))}em;background:#fbbf24"></span></span> {_fmt_metric(region.get("comfort_level"))}</li>'
+            f'<li><span data-i18n="detailSpriteCount"></span>: {escape(str(len(world.get("sprites") or [])))}</li>'
+            f'<li><span data-i18n="detailAnchorCount"></span>: {escape(str(len(world.get("memory_anchors") or [])))}</li>'
             '</ul></div>'
             "</article>"
         )
@@ -483,9 +577,12 @@ def _render_map_observer_html(
                 <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
                 <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
                 <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
+                {_comfort_aura_svg(region, viewport)}
                 {_disturbance_aura_svg(world_state, viewport)}
                 {''.join(road_shapes)}
                 {_npc_agent_dots_svg(world_state, region, viewport)}
+                {_anchor_nodes_svg(world, project)}
+                {_sprite_nodes_svg(world, world_state, project)}
                 {''.join(feature_nodes)}
               </svg>
             </div>
@@ -544,6 +641,9 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailCommerceFlux": "贸易流强",
             "detailAnomalyPressure": "异常压力",
             "detailSpawnWindow": "刷新窗口",
+            "detailComfortLevel": "地区治愈度",
+            "detailSpriteCount": "可收集精灵",
+            "detailAnchorCount": "情感锚点",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "地标",
             "detailType": "类型",
@@ -630,6 +730,9 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "detailCommerceFlux": "Commerce flux",
             "detailAnomalyPressure": "Anomaly pressure",
             "detailSpawnWindow": "Spawn window",
+            "detailComfortLevel": "Comfort level",
+            "detailSpriteCount": "Collectable sprites",
+            "detailAnchorCount": "Memory anchors",
             "detailPoiKicker": "POI",
             "detailLandmarkKicker": "Landmark",
             "detailType": "Type",
@@ -829,6 +932,12 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .map-ft-lore_academy .poi-icon {{ fill: #fde68a; }}
       .map-feature.is-active .poi-bg, .map-feature:focus-visible .poi-bg {{ stroke-width: 4; }}
       .map-feature.is-active .landmark-bg, .map-feature:focus-visible .landmark-bg {{ stroke-width: 4; }}
+      .comfort-aura {{ pointer-events: none; }}
+      .sprite-node {{ pointer-events: none; }}
+      .sprite-gem {{ filter: drop-shadow(0 0 5px currentColor); }}
+      .sprite-core {{ pointer-events: none; }}
+      .anchor-node {{ pointer-events: none; }}
+      .anchor-heart {{ fill: #fb7185; filter: drop-shadow(0 0 3px #fb7185); }}
       .poi-status-badge {{ pointer-events: none; }}
       .poi-status-idle {{ fill: #475569; }}
       .poi-status-active {{ fill: #4ade80; filter: drop-shadow(0 0 3px #4ade80); }}
