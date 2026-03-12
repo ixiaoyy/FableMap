@@ -192,6 +192,7 @@ def _validate_world_schema(world: Any) -> None:
         "historical_echoes": list,
         "memory_anchors": list,
         "sprites": list,
+        "co_creation": dict,
         "state": dict,
     }
     for field_name, expected_type in required_top_level_fields.items():

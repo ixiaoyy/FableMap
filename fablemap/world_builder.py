@@ -186,6 +186,14 @@ def build_world(
     memory_anchors = _build_memory_anchors(pois)
     sprites = _build_sprites(pois)
     historical_echoes = _build_historical_echoes(landmarks)
+    co_creation = _build_co_creation_layer(
+        world_id=world_id,
+        dominant_faction=dominant_faction,
+        pois=pois,
+        memory_anchors=memory_anchors,
+        historical_echoes=historical_echoes,
+        comfort_level=comfort_level,
+    )
 
     return {
         "world_id": world_id,
@@ -204,6 +212,7 @@ def build_world(
         "historical_echoes": historical_echoes,
         "memory_anchors": memory_anchors,
         "sprites": sprites,
+        "co_creation": co_creation,
         "state": {
             "version": "0.1",
             "visited": False,
@@ -413,6 +422,82 @@ def _build_historical_echoes(landmarks: list[dict[str, Any]]) -> list[dict[str, 
         }
         for landmark in landmarks[:2]
     ]
+
+
+def _build_co_creation_layer(
+    *,
+    world_id: str,
+    dominant_faction: str,
+    pois: list[dict[str, Any]],
+    memory_anchors: list[dict[str, Any]],
+    historical_echoes: list[dict[str, Any]],
+    comfort_level: float,
+) -> dict[str, Any]:
+    seed_poi = pois[0] if pois else {}
+    private_mark_capacity = min(3, len(memory_anchors))
+    local_legend_capacity = min(2, max(1, len(historical_echoes) or len(pois)))
+    ritual_capacity = min(2, max(1, len([poi for poi in pois if poi.get("secret_slot")]) or 1))
+    participation_modes = [
+        {
+            "id": "private_capsules",
+            "name": "Private Capsules",
+            "visibility": "private",
+            "player_action": "leave_emotion_capsule",
+            "capacity_hint": private_mark_capacity,
+            "status": "open" if private_mark_capacity else "limited",
+        },
+        {
+            "id": "street_legends",
+            "name": "Street Legends",
+            "visibility": "local_public",
+            "player_action": "add_place_legend",
+            "capacity_hint": local_legend_capacity,
+            "status": "open",
+        },
+        {
+            "id": "repair_rituals",
+            "name": "Repair Rituals",
+            "visibility": "global",
+            "player_action": "contribute_repair_trace",
+            "capacity_hint": ritual_capacity,
+            "status": "open" if comfort_level >= 0.3 else "fragile",
+        },
+    ]
+    return {
+        "city_myth_stage": "seeded",
+        "writing_rights": {
+            "private": ["emotion_capsule", "memory_anchor_note"],
+            "local_public": ["place_legend", "route_note"],
+            "global": ["repair_trace", "district_broadcast_vote"],
+        },
+        "participation_modes": participation_modes,
+        "memory_policy": {
+            "district_memory_open": True,
+            "retention_model": "layered_echo",
+            "echo_sources": len(historical_echoes),
+            "anchor_sources": len(memory_anchors),
+        },
+        "open_threads": [
+            {
+                "id": f"thread-{world_id}-capsule",
+                "title": f"Leave a private capsule near {seed_poi.get('fantasy_name') or 'the district edge'}.",
+                "visibility": "private",
+                "goal": "Turn a passing feeling into a recoverable local memory.",
+            },
+            {
+                "id": f"thread-{world_id}-legend",
+                "title": "Add a street legend that future visitors can inherit.",
+                "visibility": "local_public",
+                "goal": f"Expand the district myth beyond {dominant_faction} control.",
+            },
+            {
+                "id": f"thread-{world_id}-repair",
+                "title": "Leave a repair trace the whole district can remember.",
+                "visibility": "global",
+                "goal": "Make care accumulate as visible civic mythology.",
+            },
+        ],
+    }
 
 
 def _pick_theme(pois: list[dict[str, Any]]) -> str:

@@ -68,6 +68,7 @@ def _build_showcase(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
     region = world.get("region") or {}
     source = world.get("source") or {}
     state = world.get("state") or {}
+    co_creation = world.get("co_creation") or {}
     signal_snapshot = state.get("signal_snapshot") or {}
     pois = world.get("pois") or []
     landmarks = world.get("landmarks") or []
@@ -118,6 +119,13 @@ def _build_showcase(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
         "historical_threads": [_historical_thread(echo) for echo in historical_echoes[:2]],
         "sprite_signals": [_sprite_signal(sprite, poi_lookup) for sprite in sprites[:3]],
     }
+    co_creation_storyline = {
+        "city_myth_stage": co_creation.get("city_myth_stage"),
+        "writing_rights": co_creation.get("writing_rights") or {},
+        "participation_modes": [_participation_mode(mode) for mode in (co_creation.get("participation_modes") or [])[:3]],
+        "open_threads": [_co_creation_thread(thread) for thread in (co_creation.get("open_threads") or [])[:3]],
+        "memory_policy": co_creation.get("memory_policy") or {},
+    }
 
     return {
         "world_id": summary["world_id"],
@@ -128,10 +136,11 @@ def _build_showcase(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
         "reality_skeleton": reality_skeleton,
         "world_state": world_state,
         "continuity_threads": continuity_threads,
+        "co_creation_storyline": co_creation_storyline,
         "faction_spotlight": faction,
         "poi_highlights": poi_highlights,
         "landmark_highlights": landmark_highlights,
-        "playable_hooks": _build_playable_hooks(world_state, faction, continuity_threads),
+        "playable_hooks": _build_playable_hooks(world_state, faction, continuity_threads, co_creation_storyline),
         "hooks": {
             "satire_profile": region.get("satire_profile"),
             "visual_style": region.get("visual_style"),
@@ -149,6 +158,7 @@ def _build_playable_hooks(
     world_state: dict[str, Any],
     faction: dict[str, Any],
     continuity_threads: dict[str, Any],
+    co_creation_storyline: dict[str, Any],
 ) -> list[str]:
     hooks: list[str] = []
     faction_name = faction.get("name") or world_state.get("dominant_faction")
@@ -177,6 +187,11 @@ def _build_playable_hooks(
         hooks.append(
             f"Disturbance {world_state.get('disturbance_level')} under lens {world_state.get('active_lens')} "
             f"with spawn window {world_state.get('spawn_window')} frames the district as a live state snapshot."
+        )
+    if co_creation_storyline.get("participation_modes"):
+        hooks.append(
+            f"City myth stage {co_creation_storyline.get('city_myth_stage')} exposes "
+            f"{len(co_creation_storyline.get('participation_modes') or [])} participation modes for player write-back."
         )
     return hooks[:4]
 
@@ -242,6 +257,26 @@ def _sprite_signal(sprite: dict[str, Any], poi_lookup: dict[str, dict[str, Any]]
     }
 
 
+def _participation_mode(mode: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": mode.get("id"),
+        "name": mode.get("name"),
+        "visibility": mode.get("visibility"),
+        "player_action": mode.get("player_action"),
+        "capacity_hint": mode.get("capacity_hint"),
+        "status": mode.get("status"),
+    }
+
+
+def _co_creation_thread(thread: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": thread.get("id"),
+        "title": thread.get("title"),
+        "visibility": thread.get("visibility"),
+        "goal": thread.get("goal"),
+    }
+
+
 def _linked_poi_names(linked_pois: list[str], poi_lookup: dict[str, dict[str, Any]]) -> list[str]:
     names: list[str] = []
     for poi_id in linked_pois:
@@ -254,6 +289,7 @@ def _render_showcase_markdown(showcase: dict[str, Any]) -> str:
     reality = showcase.get("reality_skeleton") or {}
     world_state = showcase.get("world_state") or {}
     continuity = showcase.get("continuity_threads") or {}
+    co_creation = showcase.get("co_creation_storyline") or {}
     faction = showcase.get("faction_spotlight") or {}
     hooks = showcase.get("hooks") or {}
     lines = [
@@ -307,6 +343,22 @@ def _render_showcase_markdown(showcase: dict[str, Any]) -> str:
     for sprite in continuity.get("sprite_signals") or []:
         lines.append(
             f"- Sprite: `{sprite.get('species')}` / `{sprite.get('rarity')}` -> {sprite.get('linked_poi')}"
+        )
+    lines.append("")
+
+    lines.extend(
+        [
+            "## Co-Creation Storyline",
+            f"- City myth stage: `{co_creation.get('city_myth_stage')}`",
+        ]
+    )
+    for mode in co_creation.get("participation_modes") or []:
+        lines.append(
+            f"- Mode: **{mode.get('name')}** / `{mode.get('visibility')}` / `{mode.get('status')}` -> {mode.get('player_action')} (capacity {mode.get('capacity_hint')})"
+        )
+    for thread in co_creation.get("open_threads") or []:
+        lines.append(
+            f"- Thread: **{thread.get('title')}** / `{thread.get('visibility')}` -> {thread.get('goal')}"
         )
     lines.append("")
 

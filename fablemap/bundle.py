@@ -79,6 +79,7 @@ def export_bundle(world: dict[str, Any], output_dir: Path) -> dict[str, Any]:
 
 def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) -> dict[str, Any]:
     hooks = showcase.get("hooks") or {}
+    co_creation = showcase.get("co_creation_storyline") or {}
     slots = {
         "world_data": {"path": "world.json", "format": "json", "kind": "world", "required": True},
         "summary_data": {"path": "summary.json", "format": "json", "kind": "summary", "required": True},
@@ -167,6 +168,8 @@ def _build_bundle_manifest(summary: dict[str, Any], showcase: dict[str, Any]) ->
             "memory_anchor_count": summary.get("memory_anchor_count"),
             "historical_echo_count": summary.get("historical_echo_count"),
             "disturbance_level": summary.get("disturbance_level"),
+            "city_myth_stage": co_creation.get("city_myth_stage"),
+            "participation_mode_count": len(co_creation.get("participation_modes") or []),
         },
     }
 
@@ -833,6 +836,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
     reality = showcase.get("reality_skeleton") or {}
     world_state = showcase.get("world_state") or {}
     continuity = showcase.get("continuity_threads") or {}
+    co_creation = showcase.get("co_creation_storyline") or {}
     faction = showcase.get("faction_spotlight") or {}
     playable_hooks = showcase.get("playable_hooks") or []
     hooks = showcase.get("hooks") or {}
@@ -924,6 +928,11 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "sectionPoiHighlights": "重点 POI",
             "sectionLandmarkHooks": "地标钩子",
             "sectionPlayableHooks": "可玩钩子",
+            "sectionCoCreation": "共创主线",
+            "coCreationStage": "城市神话阶段",
+            "coCreationMode": "参与模式",
+            "coCreationThread": "开放线索",
+            "coCreationWritingRights": "写回权限",
             "sectionPresentation": "表现提示",
             "presentationVisualStyle": "视觉风格",
             "presentationPaletteHint": "色板提示",
@@ -1028,6 +1037,11 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             "sectionPoiHighlights": "Highlight POIs",
             "sectionLandmarkHooks": "Landmark Hooks",
             "sectionPlayableHooks": "Playable Hooks",
+            "sectionCoCreation": "Co-Creation Storyline",
+            "coCreationStage": "City myth stage",
+            "coCreationMode": "Participation mode",
+            "coCreationThread": "Open thread",
+            "coCreationWritingRights": "Writing rights",
             "sectionPresentation": "Presentation Hooks",
             "presentationVisualStyle": "Visual style",
             "presentationPaletteHint": "Palette hint",
@@ -1104,6 +1118,23 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
             f"<br><small>{detail}</small></li>"
         )
     continuity_html = "".join(continuity_items)
+    co_creation_items = [
+        f'<li><span data-i18n="coCreationStage"></span>: {localized_value(co_creation.get("city_myth_stage"))}</li>',
+        f'<li><span data-i18n="coCreationWritingRights"></span>: {localized_value(", ".join(sorted((co_creation.get("writing_rights") or {}).keys())) or None)}</li>',
+    ]
+    for item in co_creation.get("participation_modes") or []:
+        co_creation_items.append(
+            f'<li><strong><span data-i18n="coCreationMode"></span></strong>: '
+            f'{escape(str(item.get("name") or "—"))} ({escape(str(item.get("visibility") or "—"))} / {escape(str(item.get("status") or "—"))})'
+            f'<br><small>{escape(str(item.get("player_action") or "—"))}</small></li>'
+        )
+    for item in co_creation.get("open_threads") or []:
+        co_creation_items.append(
+            f'<li><strong><span data-i18n="coCreationThread"></span></strong>: '
+            f'{escape(str(item.get("title") or "—"))} ({escape(str(item.get("visibility") or "—"))})'
+            f'<br><small>{escape(str(item.get("goal") or "—"))}</small></li>'
+        )
+    co_creation_html = "".join(co_creation_items)
     playable_hook_items = (
         "".join(f"<li>{escape(str(item))}</li>" for item in playable_hooks)
         if playable_hooks
@@ -1376,6 +1407,10 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
         <section class=\"panel\" id=\"section-playable-hooks\">
           <h2 data-i18n=\"sectionPlayableHooks\"></h2>
           <ul>{playable_hook_items}</ul>
+        </section>
+        <section class=\"panel\" id=\"section-co-creation\">
+          <h2 data-i18n=\"sectionCoCreation\"></h2>
+          <ul>{co_creation_html}</ul>
         </section>
         <section class=\"panel\">
           <h2 data-i18n=\"sectionPresentation\"></h2>
