@@ -824,6 +824,14 @@ def _render_map_observer_html(
                 <li><span data-i18n=\"homeReputation\"></span>: {_home_rep_str}</li>
               </ul>
             </section>
+            <section class=\"world-map-panel mythline-panel\" id=\"mythline-panel\">
+              <h4 class=\"mythline-panel-title\" data-i18n=\"sectionMythlineThreads\"></h4>
+              <p class=\"mythline-lead\" data-i18n=\"mythlineThreadsLead\"></p>
+              <ul class=\"detail-list mythline-list\">{_render_mythline_threads_html(showcase.get('mythline_threads') or [])}</ul>
+              <h4 class=\"participation-title\" data-i18n=\"sectionParticipationEntries\"></h4>
+              <p class=\"participation-lead\" data-i18n=\"participationEntriesLead\"></p>
+              <ul class=\"detail-list participation-list\">{_render_participation_entries_html(showcase.get('participation_entries') or [])}</ul>
+            </section>
           </aside>
         </div>
       </section>
