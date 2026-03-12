@@ -831,6 +831,54 @@ def _render_map_observer_html(
     return observer_html, default_feature_id
 
 
+_MYTHLINE_TYPE_I18N: dict[str, str] = {
+    "secret_annotation": "mythlineTypeSecretAnnotation",
+    "echo_deposit": "mythlineTypeEchoDeposit",
+    "history_inscription": "mythlineTypeHistoryInscription",
+}
+
+
+def _render_mythline_threads_html(threads: list[dict[str, Any]]) -> str:
+    if not threads:
+        return '<li data-i18n="noMythlineThreads"></li>'
+    parts: list[str] = []
+    for thread in threads:
+        ttype = thread.get("type") or ""
+        i18n_key = _MYTHLINE_TYPE_I18N.get(ttype, "unknown")
+        title = escape(str(thread.get("title") or ""))
+        hint = escape(str(thread.get("participation_hint") or ""))
+        status = escape(str(thread.get("status") or "open"))
+        parts.append(
+            f'<li class="mythline-item mythline-{escape(ttype)}">'
+            f'<span class="mythline-type-badge" data-i18n="{i18n_key}"></span> '
+            f"<strong>{title}</strong>"
+            f'<br><small class="mythline-hint">{hint}</small>'
+            f'<span class="mythline-status mythline-status-{status}">{status}</span>'
+            "</li>"
+        )
+    return "".join(parts)
+
+
+def _render_participation_entries_html(entries: list[dict[str, Any]]) -> str:
+    if not entries:
+        return '<li data-i18n="noParticipationEntries"></li>'
+    parts: list[str] = []
+    for entry in entries:
+        action = escape(str(entry.get("action") or ""))
+        label_en = escape(str(entry.get("label_en") or ""))
+        label_zh = escape(str(entry.get("label_zh") or ""))
+        reward = escape(str(entry.get("reward_hint") or ""))
+        count = escape(str(entry.get("target_count") or ""))
+        parts.append(
+            f'<li class="participation-item participation-{action}">'
+            f'<strong class="participation-label" data-label-en="{label_en}" data-label-zh="{label_zh}">{label_en}</strong>'
+            f'<span class="participation-count">×{count}</span>'
+            f'<br><small class="participation-reward">{reward}</small>'
+            "</li>"
+        )
+    return "".join(parts)
+
+
 def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manifest: dict[str, Any]) -> str:
     summary = showcase.get("summary") or {}
     reality = showcase.get("reality_skeleton") or {}
@@ -1275,6 +1323,23 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .home-style-verdant_nest {{ color: #4ade80; }}
       .home-style-warm_corner {{ color: #fbbf24; }}
       .home-style-blank_slate {{ color: #94a3b8; }}
+      .mythline-panel {{ border-top: 1px solid #1e293b; padding-top: 14px; margin-top: 4px; }}
+      .mythline-panel-title {{ margin: 0 0 6px; font-size: 14px; color: #c4b5fd; }}
+      .mythline-lead {{ margin: 0 0 10px; font-size: 11px; color: #64748b; line-height: 1.5; }}
+      .mythline-list {{ padding-left: 0; list-style: none; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; }}
+      .mythline-item {{ font-size: 12px; color: #cbd5e1; background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(139, 92, 246, 0.18); border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 3px; }}
+      .mythline-type-badge {{ display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #a78bfa; margin-bottom: 2px; }}
+      .mythline-hint {{ color: #64748b; font-style: italic; }}
+      .mythline-status {{ display: inline-block; margin-top: 3px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 999px; }}
+      .mythline-status-open {{ background: rgba(99, 102, 241, 0.2); color: #818cf8; }}
+      .mythline-status-seeded {{ background: rgba(251, 191, 36, 0.15); color: #fbbf24; }}
+      .participation-title {{ margin: 10px 0 6px; font-size: 14px; color: #6ee7b7; }}
+      .participation-lead {{ margin: 0 0 10px; font-size: 11px; color: #64748b; line-height: 1.5; }}
+      .participation-list {{ padding-left: 0; list-style: none; margin: 0; display: flex; flex-direction: column; gap: 8px; }}
+      .participation-item {{ font-size: 12px; color: #cbd5e1; background: rgba(52, 211, 153, 0.05); border: 1px solid rgba(52, 211, 153, 0.15); border-radius: 8px; padding: 7px 10px; }}
+      .participation-label {{ display: block; margin-bottom: 2px; }}
+      .participation-count {{ font-size: 11px; color: #6ee7b7; margin-left: 6px; }}
+      .participation-reward {{ color: #64748b; font-style: italic; }}
       .poi-status-badge {{ pointer-events: none; }}
       .poi-status-idle {{ fill: #475569; }}
       .poi-status-active {{ fill: #4ade80; filter: drop-shadow(0 0 3px #4ade80); }}
@@ -1846,6 +1911,9 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
         languageSelect.value = currentLanguage;
         document.querySelectorAll("[data-i18n]").forEach((node) => {{
           node.textContent = t(node.dataset.i18n);
+        }});
+        document.querySelectorAll(".participation-label[data-label-en][data-label-zh]").forEach((node) => {{
+          node.textContent = currentLanguage === "zh-CN" ? node.dataset.labelZh : node.dataset.labelEn;
         }});
         updateSemanticZoomTier();
         const visibleTitle = heroTitle.textContent.trim() || t("untitledDistrict");

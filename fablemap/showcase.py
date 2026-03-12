@@ -127,6 +127,9 @@ def _build_showcase(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
         "memory_policy": co_creation.get("memory_policy") or {},
     }
 
+    mythline_threads = _build_mythline_threads(pois, memory_anchors, historical_echoes)
+    participation_entries = _build_participation_entries(pois, sprites, memory_anchors)
+
     return {
         "world_id": summary["world_id"],
         "title": title,
@@ -141,6 +144,8 @@ def _build_showcase(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
         "poi_highlights": poi_highlights,
         "landmark_highlights": landmark_highlights,
         "playable_hooks": _build_playable_hooks(world_state, faction, continuity_threads, co_creation_storyline),
+        "mythline_threads": mythline_threads,
+        "participation_entries": participation_entries,
         "hooks": {
             "satire_profile": region.get("satire_profile"),
             "visual_style": region.get("visual_style"),
@@ -152,6 +157,98 @@ def _build_showcase(world: dict[str, Any], input_path: Path) -> dict[str, Any]:
             "historical_echo_count": summary.get("historical_echo_count"),
         },
     }
+
+
+def _build_mythline_threads(
+    pois: list[dict[str, Any]],
+    memory_anchors: list[dict[str, Any]],
+    historical_echoes: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    threads: list[dict[str, Any]] = []
+    for poi in pois:
+        if not poi.get("secret_slot"):
+            continue
+        threads.append({
+            "id": f"myth-secret-{poi.get('id')}",
+            "type": "secret_annotation",
+            "title": poi.get("fantasy_name") or poi.get("real_name") or "Hidden Place",
+            "description": poi.get("emotion_hook") or "A place where private memory can settle.",
+            "linked_to": poi.get("id"),
+            "linked_name": poi.get("fantasy_name"),
+            "participation_hint": "Visit this location to leave a memory capsule or annotate the hidden story.",
+            "status": "open",
+        })
+    for anchor in memory_anchors:
+        linked_pois = anchor.get("linked_pois") or []
+        threads.append({
+            "id": f"myth-anchor-{anchor.get('id')}",
+            "type": "echo_deposit",
+            "title": f"Memory Anchor · {anchor.get('tone') or 'quiet'}",
+            "description": f"A {anchor.get('anchor_type') or 'memory anchor'} with {anchor.get('visibility') or 'private'} visibility.",
+            "linked_to": anchor.get("id"),
+            "linked_name": linked_pois[0] if linked_pois else None,
+            "participation_hint": "Unlock by visiting the linked POI; deposit an emotion to complete the thread.",
+            "status": "open",
+        })
+    for echo in historical_echoes:
+        threads.append({
+            "id": f"myth-echo-{echo.get('id')}",
+            "type": "history_inscription",
+            "title": f"Historical Echo · {echo.get('era') or 'unspecified'}",
+            "description": echo.get("fragment") or "A fragment of the district's older story.",
+            "linked_to": echo.get("id"),
+            "linked_name": echo.get("linked_landmark"),
+            "participation_hint": "Explore the linked landmark to surface and corroborate this historical fragment.",
+            "status": "seeded",
+        })
+    return threads[:6]
+
+
+def _build_participation_entries(
+    pois: list[dict[str, Any]],
+    sprites: list[dict[str, Any]],
+    memory_anchors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    sprite_pois = [p for p in pois if p.get("sprite_spawn_hint")]
+    if sprite_pois:
+        entries.append({
+            "action": "observe_sprite",
+            "label_en": f"Observe sprites at {len(sprite_pois)} active POI(s)",
+            "label_zh": f"在 {len(sprite_pois)} 个激活地点观测精灵",
+            "target_type": "poi_sprite",
+            "target_count": len(sprite_pois),
+            "reward_hint": "Sprite observation logs contribute to the district's collective field record.",
+        })
+    secret_pois = [p for p in pois if p.get("secret_slot")]
+    if secret_pois:
+        entries.append({
+            "action": "leave_memory",
+            "label_en": f"Deposit a memory capsule at {len(secret_pois)} secret slot(s)",
+            "label_zh": f"在 {len(secret_pois)} 个隐藏锚点留下记忆胶囊",
+            "target_type": "secret_slot",
+            "target_count": len(secret_pois),
+            "reward_hint": "Memory deposits become echoes that future visitors can surface.",
+        })
+    if memory_anchors:
+        entries.append({
+            "action": "unlock_anchor",
+            "label_en": f"Unlock {len(memory_anchors)} memory anchor(s) by visiting linked POIs",
+            "label_zh": f"走访关联地点解锁 {len(memory_anchors)} 个记忆锚点",
+            "target_type": "memory_anchor",
+            "target_count": len(memory_anchors),
+            "reward_hint": "Unlocked anchors feed back into the district's comfort and narrative score.",
+        })
+    if sprites:
+        entries.append({
+            "action": "collect_sprite",
+            "label_en": f"Collect {len(sprites)} sprite(s) linked to district POIs",
+            "label_zh": f"收集 {len(sprites)} 只与地区 POI 绑定的精灵",
+            "target_type": "sprite",
+            "target_count": len(sprites),
+            "reward_hint": "Each collected sprite carries a drop tag that tags your participation in the district story.",
+        })
+    return entries[:4]
 
 
 def _build_playable_hooks(
@@ -381,6 +478,22 @@ def _render_showcase_markdown(showcase: dict[str, Any]) -> str:
         lines.append("## Playable Hooks")
         for item in showcase["playable_hooks"]:
             lines.append(f"- {item}")
+        lines.append("")
+
+    if showcase.get("mythline_threads"):
+        lines.append("## Mythline Threads")
+        for thread in showcase["mythline_threads"]:
+            lines.append(
+                f"- **[{thread.get('type')}]** {thread.get('title')}: {thread.get('description')}"
+            )
+            lines.append(f"  - _{thread.get('participation_hint')}_")
+        lines.append("")
+
+    if showcase.get("participation_entries"):
+        lines.append("## Participation Entries")
+        for entry in showcase["participation_entries"]:
+            lines.append(f"- **{entry.get('label_en')}** (`{entry.get('action')}`)")
+            lines.append(f"  - {entry.get('reward_hint')}")
         lines.append("")
 
     lines.extend(

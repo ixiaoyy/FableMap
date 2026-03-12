@@ -104,6 +104,135 @@ RULES: list[tuple[str, str, dict[str, Any]]] = [
             "sprite_spawn_hint": False,
         },
     ),
+    # --- 新增 9 种 OSM → fantasy_type 映射规则 ---
+    (
+        "amenity",
+        "bank",
+        {
+            "fantasy_type": "debt_cathedral",
+            "suffix": "Cathedral",
+            "theme": "bureau_district",
+            "faction": "order_bureau",
+            "satire": "Wealth is worshipped here, in columns and queues.",
+            "emotion": "A low hum of obligation never fully lifts.",
+            "vibe": "iron_blue",
+            "palette": "slate_and_silver",
+            "secret_slot": False,
+            "sprite_spawn_hint": False,
+        },
+    ),
+    (
+        "amenity",
+        "restaurant",
+        {
+            "fantasy_type": "feast_hall",
+            "suffix": "Hall",
+            "theme": "market_quarter",
+            "faction": "trade_guild",
+            "satire": "Pleasure is always available, just priced for the right crowd.",
+            "emotion": "Hunger and celebration share the same table.",
+            "vibe": "amber_evening",
+            "palette": "spice_and_ember",
+            "secret_slot": False,
+            "sprite_spawn_hint": True,
+        },
+    ),
+    (
+        "amenity",
+        "fast_food",
+        {
+            "fantasy_type": "refuel_station",
+            "suffix": "Station",
+            "theme": "market_quarter",
+            "faction": "trade_guild",
+            "satire": "Speed and convenience disguise what is lost in the trade.",
+            "emotion": "Efficiency colonises every pause.",
+            "vibe": "neon_nostalgia",
+            "palette": "chrome_yellow",
+            "secret_slot": False,
+            "sprite_spawn_hint": True,
+        },
+    ),
+    (
+        "amenity",
+        "library",
+        {
+            "fantasy_type": "memory_archive",
+            "suffix": "Archive",
+            "theme": "scholar_quarter",
+            "faction": "memory_collective",
+            "satire": "Public memory is kept here, awaiting someone who still cares.",
+            "emotion": "Quiet, deliberate, slightly dusty with accumulated care.",
+            "vibe": "chalk_dawn",
+            "palette": "ink_and_teal",
+            "secret_slot": True,
+            "sprite_spawn_hint": False,
+        },
+    ),
+    (
+        "amenity",
+        "place_of_worship",
+        {
+            "fantasy_type": "spirit_sanctum",
+            "suffix": "Sanctum",
+            "theme": "healing_quarter",
+            "faction": "night_bloom",
+            "satire": "The sacred persists even when the congregation shrinks.",
+            "emotion": "Something older than the city watches from here.",
+            "vibe": "quiet_rain",
+            "palette": "violet_and_gold",
+            "secret_slot": True,
+            "sprite_spawn_hint": False,
+        },
+    ),
+    (
+        "amenity",
+        "parking",
+        {
+            "fantasy_type": "dormant_lot",
+            "suffix": "Lot",
+            "theme": "threshold_district",
+            "faction": "order_bureau",
+            "satire": "Space is allocated for machines before people.",
+            "emotion": "An absence shaped like expectation.",
+            "vibe": "iron_blue",
+            "palette": "ash_and_concrete",
+            "secret_slot": False,
+            "sprite_spawn_hint": False,
+        },
+    ),
+    (
+        "amenity",
+        "pharmacy",
+        {
+            "fantasy_type": "remedy_post",
+            "suffix": "Post",
+            "theme": "healing_quarter",
+            "faction": "clinic_circle",
+            "satire": "Relief is available, at a price the body keeps paying.",
+            "emotion": "Small urgency, chronic patience.",
+            "vibe": "quiet_rain",
+            "palette": "mint_and_white",
+            "secret_slot": False,
+            "sprite_spawn_hint": False,
+        },
+    ),
+    (
+        "leisure",
+        "fitness_centre",
+        {
+            "fantasy_type": "labor_forge",
+            "suffix": "Forge",
+            "theme": "market_quarter",
+            "faction": "trade_guild",
+            "satire": "The body is optimised like a production unit.",
+            "emotion": "Effort and exhaustion are performed in public.",
+            "vibe": "iron_blue",
+            "palette": "red_and_iron",
+            "secret_slot": False,
+            "sprite_spawn_hint": True,
+        },
+    ),
 ]
 
 ROAD_ROLES = {
@@ -411,17 +540,19 @@ def _build_private_marks(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _build_historical_echoes(landmarks: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": f"echo-{landmark['id']}",
-            "source_type": landmark["type"],
-            "summary": f"{landmark['name']} carries a lingering public memory.",
-            "trigger_hint": "inspect_landmark",
-            "severity": "low",
-            "linked_pois": [],
-        }
-        for landmark in landmarks[:2]
-    ]
+    echoes = []
+    for landmark in landmarks:
+        echoes.append(
+            {
+                "id": f"echo-{landmark['id']}",
+                "linked_landmark": landmark["id"],
+                "era": "unspecified",
+                "tone": "melancholic",
+                "fragment": "Something important happened here, though few remember exactly what.",
+                "visibility": "public",
+            }
+        )
+    return echoes[:3]
 
 
 def _build_co_creation_layer(
@@ -502,15 +633,25 @@ def _build_co_creation_layer(
 
 def _pick_theme(pois: list[dict[str, Any]]) -> str:
     scores: dict[str, int] = {}
+    theme_map = {
+        "whispering_grove": "verdant_district",
+        "healing_sanctum": "healing_quarter",
+        "supply_outpost": "market_quarter",
+        "judgement_tower": "bureau_district",
+        "ember_parlor": "market_quarter",
+        "lore_academy": "scholar_quarter",
+        "debt_cathedral": "bureau_district",
+        "feast_hall": "market_quarter",
+        "refuel_station": "market_quarter",
+        "memory_archive": "scholar_quarter",
+        "spirit_sanctum": "healing_quarter",
+        "dormant_lot": "threshold_district",
+        "remedy_post": "healing_quarter",
+        "labor_forge": "market_quarter",
+        "contract_spire": "bureau_district",
+    }
     for poi in pois:
-        theme = {
-            "whispering_grove": "verdant_district",
-            "healing_sanctum": "healing_quarter",
-            "supply_outpost": "market_quarter",
-            "judgement_tower": "bureau_district",
-            "ember_parlor": "market_quarter",
-            "lore_academy": "scholar_quarter",
-        }.get(poi["fantasy_type"], "threshold_district")
+        theme = theme_map.get(poi["fantasy_type"], "threshold_district")
         scores[theme] = scores.get(theme, 0) + 1
     return max(scores, key=scores.get) if scores else "threshold_district"
 
@@ -560,6 +701,20 @@ def _match_mapping(tags: dict[str, Any]) -> dict[str, Any] | None:
     for key, value, mapping in RULES:
         if tags.get(key) == value:
             return mapping
+    # office 通配：任何 office=* 标签均映射为 contract_spire（置于精确匹配之后）
+    if "office" in tags:
+        return next((mapping for key, value, mapping in RULES if key == "office"), {
+            "fantasy_type": "contract_spire",
+            "suffix": "Spire",
+            "theme": "bureau_district",
+            "faction": "order_bureau",
+            "satire": "Hierarchy is expressed in floor count and badge colour.",
+            "emotion": "Ambition circulates here under fluorescent light.",
+            "vibe": "iron_blue",
+            "palette": "grey_and_blue",
+            "secret_slot": False,
+            "sprite_spawn_hint": False,
+        })
     if "shop" in tags:
         return next(mapping for key, value, mapping in RULES if key == "shop" and value == "convenience")
     return None

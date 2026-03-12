@@ -97,6 +97,66 @@
         "landuse": "commercial",
         "name": "Market Block"
       }
+    },
+    {
+      "type": "node",
+      "id": 110,
+      "lat": 35.6583,
+      "lon": 139.7021,
+      "tags": {
+        "amenity": "bank",
+        "name": "City Trust Bank"
+      }
+    },
+    {
+      "type": "node",
+      "id": 111,
+      "lat": 35.6576,
+      "lon": 139.7025,
+      "tags": {
+        "amenity": "restaurant",
+        "name": "Sakura Diner"
+      }
+    },
+    {
+      "type": "node",
+      "id": 112,
+      "lat": 35.6571,
+      "lon": 139.7008,
+      "tags": {
+        "amenity": "library",
+        "name": "Municipal Library"
+      }
+    },
+    {
+      "type": "node",
+      "id": 113,
+      "lat": 35.6578,
+      "lon": 139.7031,
+      "tags": {
+        "amenity": "pharmacy",
+        "name": "Green Cross Pharmacy"
+      }
+    },
+    {
+      "type": "node",
+      "id": 114,
+      "lat": 35.6566,
+      "lon": 139.702,
+      "tags": {
+        "office": "company",
+        "name": "East Trade Tower"
+      }
+    },
+    {
+      "type": "node",
+      "id": 115,
+      "lat": 35.6592,
+      "lon": 139.7028,
+      "tags": {
+        "leisure": "fitness_centre",
+        "name": "Iron Studio"
+      }
     }
   ]
 }
