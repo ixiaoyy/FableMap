@@ -112,6 +112,10 @@
 4. 增加侧边详情与底部电台
 5. 再引入 NPC 密度与精灵刷新等动态代理层
 
+## 相关补充文档
+
+- [`docs/PLAYER_STATE.md`](docs/PLAYER_STATE.md)：定义玩家状态的三层结构（即时状态、世界关系、长期人格 / 审美）、MVP 字段与 UI 映射，作为 Web-2D 主舞台后续玩家状态设计基线。
+
 ## 明确不在 v0.1 的目标
 
 - 完整 GIS 瓦片系统
@@ -124,5 +128,6 @@
 - `docs/AESTHETIC_EMOTION_SYSTEMS.md`：定义情感锚点与收集方向
 - `docs/STYLE_VIBES_MANIFESTO.md`：定义 vibe 参数边界
 - `docs/ROADMAP.md`：定义整体阶段顺序
+- [`docs/PLAYER_STATE.md`](docs/PLAYER_STATE.md)：定义玩家状态三层模型、触发规则、MVP 字段与右侧状态卡映射
 - 本文档：负责把上述设计压缩成浏览器 2D 的可执行里程碑
 

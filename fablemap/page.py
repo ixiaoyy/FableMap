@@ -151,10 +151,11 @@ def _build_handler(repo_root: Path, output_root: Path, fixture_file: Path | None
                 radius = int(_form_value(form, "radius", "300"))
                 if radius <= 0:
                     raise ValueError("radius must be a positive integer")
-                mode = _form_value(form, "mode", "fixture").lower()
+                mode = _form_value(form, "mode", "live").lower()
                 if mode not in {"fixture", "live"}:
                     raise ValueError("mode must be 'fixture' or 'live'")
                 seed = _form_value(form, "seed", "") or None
+                refresh = _form_value(form, "refresh", "false").lower() == "true"
                 source_file = None
                 if mode == "fixture":
                     if not fixture_file or not fixture_file.exists():
@@ -168,6 +169,7 @@ def _build_handler(repo_root: Path, output_root: Path, fixture_file: Path | None
                     output_dir=output_root / run_id,
                     seed=seed,
                     source_file=source_file,
+                    refresh=refresh,
                 )
                 base_url = self._base_url()
                 result.update(

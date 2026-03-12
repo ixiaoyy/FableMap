@@ -184,11 +184,11 @@
   "historical_echoes": [
     {
       "id": "echo-landmark-node-106",
-      "source_type": "attraction",
-      "summary": "Clock Gate carries a lingering public memory.",
-      "trigger_hint": "inspect_landmark",
-      "severity": "low",
-      "linked_pois": []
+      "linked_landmark": "landmark-node-106",
+      "era": "unspecified",
+      "tone": "melancholic",
+      "fragment": "Something important happened here, though few remember exactly what.",
+      "visibility": "public"
     }
   ],
   "memory_anchors": [
@@ -255,6 +255,75 @@
       ]
     }
   ],
+  "co_creation": {
+    "city_myth_stage": "seeded",
+    "writing_rights": {
+      "private": [
+        "emotion_capsule",
+        "memory_anchor_note"
+      ],
+      "local_public": [
+        "place_legend",
+        "route_note"
+      ],
+      "global": [
+        "repair_trace",
+        "district_broadcast_vote"
+      ]
+    },
+    "participation_modes": [
+      {
+        "id": "private_capsules",
+        "name": "Private Capsules",
+        "visibility": "private",
+        "player_action": "leave_emotion_capsule",
+        "capacity_hint": 2,
+        "status": "open"
+      },
+      {
+        "id": "street_legends",
+        "name": "Street Legends",
+        "visibility": "local_public",
+        "player_action": "add_place_legend",
+        "capacity_hint": 1,
+        "status": "open"
+      },
+      {
+        "id": "repair_rituals",
+        "name": "Repair Rituals",
+        "visibility": "global",
+        "player_action": "contribute_repair_trace",
+        "capacity_hint": 2,
+        "status": "open"
+      }
+    ],
+    "memory_policy": {
+      "district_memory_open": true,
+      "retention_model": "layered_echo",
+      "echo_sources": 1,
+      "anchor_sources": 2
+    },
+    "open_threads": [
+      {
+        "id": "thread-world-7c101776f28e-capsule",
+        "title": "Leave a private capsule near Late Lantern Cafe Parlor.",
+        "visibility": "private",
+        "goal": "Turn a passing feeling into a recoverable local memory."
+      },
+      {
+        "id": "thread-world-7c101776f28e-legend",
+        "title": "Add a street legend that future visitors can inherit.",
+        "visibility": "local_public",
+        "goal": "Expand the district myth beyond memory_collective control."
+      },
+      {
+        "id": "thread-world-7c101776f28e-repair",
+        "title": "Leave a repair trace the whole district can remember.",
+        "visibility": "global",
+        "goal": "Make care accumulate as visible civic mythology."
+      }
+    ]
+  },
   "state": {
     "version": "0.1",
     "visited": false,

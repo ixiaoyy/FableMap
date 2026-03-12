@@ -63,7 +63,7 @@
 ### D. 世界入口深化
 
   - `D1` · `done` · 语义坍缩与缩放变形效果钩子：已为地图主舞台补充 semantic zoom tier（`survey / district / intimate`），缩放时同步更新 `data-zoom-tier` 与语义提示条，并通过 CSS 让标签、POI / landmark 强调度、回声 / 胶囊 / 精灵 / home anchor 随镜头层级发生可见变化。
-  - `D2` · `done` · 像素角色行走与街道通行抽象：已实现 WASD/方向键控制的玩家实体、基于道路骨架的通行限制与滑动逻辑、以及自动随人移动的相机跟随系统。
+  - `D2` · `done` · 像素角色行走与街道通行抽象：已实现 WASD/方向键控制的玩家实体、基于道路骨架的通行限制与滑动逻辑、以及自动随人移动的相机跟随系统；玩家状态设计基线已整理至 [`docs/PLAYER_STATE.md`](docs/PLAYER_STATE.md)。
   - `D3` · `in_progress` · 玩家参与感与城市神话共创主线文档化收束：已补充 `world.co_creation` 共创数据块（city_myth_stage / participation_modes / open_threads）、showcase `co_creation_storyline` 字段、`mythline_threads` / `participation_entries` 细粒度共创线索、bundle 预览页神话线索面板与参与入口面板（含双语 i18n）；world_builder RULES 同步扩展至 15 种 fantasy_type。
 
 ### E. 社会化与轻社区

@@ -158,8 +158,8 @@
               <div>
                 <label for="mode" data-i18n="modeLabel">生成模式</label>
                 <select id="mode" name="mode">
+                  <option value="live" data-i18n="modeLive">真实地图（OSM 缓存）</option>
                   <option value="fixture" data-i18n="modeFixture">离线样例（稳定试跑）</option>
-                  <option value="live" data-i18n="modeLive">真实 nearby（在线 Overpass）</option>
                 </select>
               </div>
               <div>
@@ -167,9 +167,12 @@
                 <input id="seed" name="seed" type="text" placeholder="可留空，自动生成" data-i18n-placeholder="seedPlaceholder">
               </div>
             </div>
+            <input type="hidden" id="refresh-flag" name="refresh" value="false">
             <div class="actions">
               <button id="generate-button" type="submit" data-i18n="generateButton">生成预览页</button>
+              <button id="refresh-button" class="secondary" type="button" data-i18n="refreshButton">更新最新地图</button>
             </div>
+            <p class="note" id="cache-hint" data-i18n-html="cacheHint">真实地图数据会自动缓存到本地，同一坐标不会重复请求。点击<strong>更新最新地图</strong>可强制拉取最新 OSM 数据。</p>
           </form>
           <p class="note" data-i18n="generateNote">现在除了手填坐标，还支持“我的位置”和预设地点；结果卡片也会显示现实来源与生成元信息，方便判断这次 demo 有多“真”。</p>
         </section>
@@ -244,10 +247,12 @@
           radiusLabel: "半径（米）",
           modeLabel: "生成模式",
           modeFixture: "离线样例（稳定试跑）",
-          modeLive: "真实 nearby（在线 Overpass）",
+          modeLive: "真实地图（OSM 缓存）",
           seedLabel: "Seed（可选）",
           seedPlaceholder: "可留空，自动生成",
           generateButton: "生成预览页",
+          refreshButton: "更新最新地图",
+          cacheHint: "真实地图数据会自动缓存到本地，同一坐标不会重复请求。点击<strong>更新最新地图</strong>可强制拉取最新 OSM 数据。",
           generateNote: "现在除了手填坐标，还支持“我的位置”和预设地点；结果卡片也会显示现实来源与生成元信息，方便判断这次 demo 有多“真”。",
           resultTitle: "本次生成结果",
           resultEmpty: "还没有生成结果。连接服务后点一次“生成预览页”即可。",
@@ -259,7 +264,7 @@
           resultAssetsTitle: "生成资产",
           guideTitle: "体验说明",
           guideStep1: "想先确认页面通不通：先用 <strong>离线样例</strong> 模式。",
-          guideStep2: "想试真实 nearby：切到 <strong>真实 nearby</strong> 模式后再生成。",
+          guideStep2: "真实地图默认启用本地缓存，同一地点不重复拉取数据；需要刷新时点 <strong>更新最新地图</strong>。",
           guideStep3: "生成完成后，下方会直接嵌入新预览页，也会给出独立打开链接。",
           guideNote: "现有 CLI <code>python -m fablemap nearby ...</code> 仍然保留，适合脚本化或离线验证；这个页面入口则面向更直接的本地体验。",
           previewTitle: "预览页",
@@ -334,10 +339,12 @@
           radiusLabel: "Radius (meters)",
           modeLabel: "Generation Mode",
           modeFixture: "offline fixture (stable demo)",
-          modeLive: "live nearby (online Overpass)",
+          modeLive: "real map (OSM cached)",
           seedLabel: "Seed (optional)",
           seedPlaceholder: "Leave blank for auto-generated seed",
           generateButton: "Generate Preview",
+          refreshButton: "Refresh Map Data",
+          cacheHint: "Real map data is cached locally — the same coordinates will not trigger a new Overpass request. Click <strong>Refresh Map Data</strong> to force a fresh OSM download.",
           generateNote: "You can now use your current location or presets, and the result card exposes provenance and generation metadata so the demo feels more real.",
           resultTitle: "Latest Result",
           resultEmpty: "No result yet. Connect to the service and click Generate Preview once.",
@@ -349,7 +356,7 @@
           resultAssetsTitle: "Generated Assets",
           guideTitle: "How to Use It",
           guideStep1: "If you want to confirm the page works first, start with <strong>offline fixture</strong> mode.",
-          guideStep2: "If you want a real nearby run, switch to <strong>live nearby</strong> mode and generate again.",
+          guideStep2: "Real map mode uses local cache by default — no re-fetch for the same location. Click <strong>Refresh Map Data</strong> when you need the latest OSM data.",
           guideStep3: "After generation, the new preview will appear below and an external preview link will also be provided.",
           guideNote: "The existing CLI <code>python -m fablemap nearby ...</code> is still available for scripting and offline validation; this page entry is for a more direct local experience.",
           previewTitle: "Preview Page",
@@ -389,6 +396,7 @@
       const resultBox = document.getElementById("result-box");
       const previewFrame = document.getElementById("preview-frame");
       const generateButton = document.getElementById("generate-button");
+      const refreshButton = document.getElementById("refresh-button");
       const useLocationButton = document.getElementById("use-location");
       const locationStatus = document.getElementById("location-status");
       const form = document.getElementById("nearby-form");
@@ -396,6 +404,7 @@
       const lonInput = document.getElementById("lon");
       const radiusInput = document.getElementById("radius");
       const modeInput = document.getElementById("mode");
+      const refreshFlag = document.getElementById("refresh-flag");
       let lastResult = null;
       let lastLocationNotice = null;
 
@@ -651,6 +660,9 @@
         });
         updateLocationStatus();
         useLocationButton.textContent = useLocationButton.disabled ? t("locating") : t("useLocationButton");
+        if (!refreshButton.disabled) {
+          refreshButton.textContent = t("refreshButton");
+        }
         if (lastResult) {
           renderResult(lastResult);
         }
@@ -664,7 +676,9 @@
         }
         const base = normalizedBase();
         const formData = new FormData(form);
+        const isRefresh = refreshFlag.value === "true";
         generateButton.disabled = true;
+        refreshButton.disabled = true;
         generateButton.textContent = t("generating");
         resultBox.textContent = t("generatingMessage");
         try {
@@ -680,9 +694,16 @@
         } catch (error) {
           resultBox.innerHTML = `<p><strong>${escapeHtml(t("generateFailedTitle"))}</strong></p><p class="note">${escapeHtml(error.message || error)}</p>`;
         } finally {
+          refreshFlag.value = "false";
           generateButton.disabled = false;
+          refreshButton.disabled = false;
           generateButton.textContent = t("generateButton");
         }
+      }
+
+      function triggerRefresh() {
+        refreshFlag.value = "true";
+        form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
       }
 
       languageSelect.addEventListener("change", async (event) => {
@@ -695,6 +716,7 @@
 
       document.getElementById("check-server").addEventListener("click", checkServer);
       useLocationButton.addEventListener("click", useCurrentLocation);
+      refreshButton.addEventListener("click", triggerRefresh);
       document.querySelectorAll("[data-preset]").forEach((button) => {
         button.addEventListener("click", () => applyPreset(button.dataset.preset));
       });

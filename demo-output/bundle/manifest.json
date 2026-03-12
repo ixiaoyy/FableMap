@@ -104,6 +104,8 @@
     "sprite_count": 3,
     "memory_anchor_count": 2,
     "historical_echo_count": 1,
-    "disturbance_level": 0.45
+    "disturbance_level": 0.45,
+    "city_myth_stage": "seeded",
+    "participation_mode_count": 3
   }
 }
