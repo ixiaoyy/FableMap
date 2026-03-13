@@ -152,6 +152,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(args.port, 8765)
         self.assertTrue(args.no_open)
 
+    def test_api_subcommand_delegates_to_api_runner(self) -> None:
+        with patch("fablemap.api.run_api", return_value=0) as run_api_mock:
+            exit_code = main(["api", "--port", "8951", "--no-open"])
+        self.assertEqual(exit_code, 0)
+        args = run_api_mock.call_args.args[0]
+        self.assertEqual(args.port, 8951)
+        self.assertTrue(args.no_open)
+
     def test_inspect_reads_world_file_and_prints_summary(self) -> None:
         stdout = io.StringIO()
         world = build_world(

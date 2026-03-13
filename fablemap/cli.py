@@ -68,6 +68,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_page_arguments(page_parser)
 
+    from .api import add_arguments as add_api_arguments
+
+    api_parser = subparsers.add_parser(
+        "api",
+        help="Start the separated backend API server.",
+    )
+    add_api_arguments(api_parser)
+
     inspect_parser = subparsers.add_parser("inspect", help="Inspect an existing world JSON.")
     inspect_parser.add_argument("--input", type=Path, required=True, help="Input world JSON file path")
     return parser
@@ -87,6 +95,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             from .page import run_page
 
             return run_page(args)
+        if args.command == "api":
+            from .api import run_api
+
+            return run_api(args)
         if args.command == "inspect":
             return _run_inspect(args)
     except WorldSchemaError as exc:
