@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from fablemap.api_service import build_health_payload, build_meta_payload, build_nearby_payload
 from fablemap.nearby import generate_nearby_preview
+from fablemap.writeback import WritebackEngine, WritebackStore
 
 from .config import ApiSettings
 
@@ -16,6 +17,7 @@ class WebService:
     def __init__(self, settings: ApiSettings):
         self.settings = settings.resolved()
         self.settings.output_root.mkdir(parents=True, exist_ok=True)
+        self.writeback = WritebackEngine(WritebackStore(self.settings.output_root / "writeback"))
 
     def health_payload(self) -> dict[str, Any]:
         return build_health_payload(
@@ -70,6 +72,14 @@ class WebService:
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    def writeback_event_payload(self, event: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return self.writeback.process_event(event)
         except HTTPException:
             raise
         except Exception as exc:

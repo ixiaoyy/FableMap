@@ -71,7 +71,7 @@ class ApiTests(unittest.TestCase):
 
         self.assertIn('type="module" src="/src/main.jsx"', html)
         self.assertIn("ReactDOM.createRoot", main_js)
-        self.assertIn("Full-stack engineered migration", app_js)
+        self.assertIn("World writeback MVP", app_js)
 
     def test_api_server_generates_fixture_preview(self) -> None:
         with TemporaryDirectory() as tmpdir:
@@ -106,6 +106,88 @@ class ApiTests(unittest.TestCase):
                 self.assertIn("Language / 语言", preview_html)
                 self.assertEqual(generated_output_dir.parent, output_root.resolve())
                 self.assertTrue((generated_output_dir / "bundle" / "index.html").exists())
+
+    def test_api_server_persists_writeback_event(self) -> None:
+        with TemporaryDirectory() as tmpdir:
+            output_root = Path(tmpdir) / ".fablemap-api"
+            app = create_app(
+                output_root=output_root,
+                fixture_file=FIXTURE_PATH,
+                frontend_root=FRONTEND_ROOT,
+            )
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/world/event",
+                    json={
+                        "event_type": "observe",
+                        "player_id": "player_local",
+                        "visibility": "private",
+                        "target": {
+                            "target_type": "poi",
+                            "target_id": "poi_clocktower_01",
+                            "slice_id": "slice_demo_shibuya",
+                        },
+                        "payload": {
+                            "intensity": 2,
+                            "note": "check atmosphere",
+                        },
+                        "source": {
+                            "client": "test",
+                            "surface": "api_test",
+                            "version": "v0.1",
+                        },
+                        "context": {
+                            "current_zone_id": "zone_shibuya_core",
+                            "nearest_poi_id": "poi_clocktower_01",
+                        },
+                    },
+                )
+                payload = response.json()
+                state_file = Path(payload["persistence"]["state_file"])
+                stored = json.loads(state_file.read_text(encoding="utf-8"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["event"]["event_type"], "observe")
+        self.assertEqual(payload["player_state"]["action_state"], "observing")
+        self.assertEqual(payload["player_state"]["attunement"], 2)
+        self.assertEqual(payload["player_state"]["poi_familiarity"]["poi_clocktower_01"], 1)
+        self.assertEqual(payload["place_state"]["familiarity"], 1)
+        self.assertEqual(payload["persistence"]["stored_event_count"], 1)
+        self.assertEqual(stored["events"][0]["event_type"], "observe")
+        self.assertIn("poi_clocktower_01", stored["slices"]["slice_demo_shibuya"]["familiarity"])
+
+    def test_api_server_rejects_invalid_mark_tag(self) -> None:
+        with TemporaryDirectory() as tmpdir:
+            output_root = Path(tmpdir) / ".fablemap-api"
+            app = create_app(
+                output_root=output_root,
+                fixture_file=FIXTURE_PATH,
+                frontend_root=FRONTEND_ROOT,
+            )
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/world/event",
+                    json={
+                        "event_type": "mark",
+                        "player_id": "player_local",
+                        "target": {
+                            "target_type": "poi",
+                            "target_id": "poi_clocktower_01",
+                            "slice_id": "slice_demo_shibuya",
+                        },
+                        "payload": {
+                            "tag": "forbidden_tag",
+                        },
+                    },
+                )
+                payload = response.json()
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            payload["error"],
+            "mark payload.tag must be one of safe, uncanny, warm_corner, return_again, rain_friendly",
+        )
 
 
 class WebServiceTests(unittest.TestCase):

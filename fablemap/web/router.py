@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Body, Form, Request
 from fastapi.responses import FileResponse
 
 from .service import WebService
@@ -36,6 +36,10 @@ def create_api_router(service: WebService) -> APIRouter:
             refresh=refresh,
             base_url=_request_base_url(request),
         )
+
+    @router.post("/api/world/event")
+    def post_world_event(event: dict = Body(...)) -> dict:
+        return service.writeback_event_payload(event)
 
     @router.get("/generated/{file_path:path}")
     def get_generated_file(file_path: str):

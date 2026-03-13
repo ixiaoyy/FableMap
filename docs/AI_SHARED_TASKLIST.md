@@ -36,8 +36,9 @@
 
 ### P. 协议与世界语法
 
-- `P3` · `planned` · 玩家写回权限与语义治理边界：定义 `private / local_public / global` 三层写回、AI 改写、可见性与 moderation 约束。
-- `P4` · `planned` · 历史深度 / 尘封之眼 / Time Folds 协议 v0.1：定义历史证据来源、可信度、旧地标回声、深层入口与跨时间任务生成边界。
+- `P3` · `planned` · 玩家写回权限与语义治理边界：定义 `private / local_public / global` 三层写回、AI 改写、可见性与 moderation 约束；建议在 [`docs/WORLD_WRITEBACK_PLAN.md`](docs/WORLD_WRITEBACK_PLAN.md) 的最小写回闭环跑通后立即跟进。
+- `P4` · `planned` · 历史深度 / 尘封之眼 / Time Folds 协议 v0.1：定义历史证据来源、可信度、旧地标回声、深层入口与跨时间任务生成边界；优先级位于统一写回协议与治理边界之后。
+- `P5` · `in_progress` · World Writeback Protocol v0.1：已新增 [`docs/WORLD_WRITEBACK_PROTOCOL.md`](docs/WORLD_WRITEBACK_PROTOCOL.md) 协议草案，统一 `event / target / effect / visibility` 结构，并以 `observe / dwell / mark` 作为首批最小写回行为；后续进入 API / 持久化最小闭环实现阶段，实施顺序见 [`docs/WORLD_WRITEBACK_PLAN.md`](docs/WORLD_WRITEBACK_PLAN.md)。
 
 ### A. 浏览器主舞台 / Web-2D
 
@@ -95,6 +96,7 @@
 - 会话中的 Web-2D 主舞台未完成项已对应到 `W2`、`W3`、`D1`、`D2`。
 - 会话中的视觉转义未完成项已对应到 `V1`、`V2`、`V3`。
 - 会话中的玩家参与 / 城市共创未完成项已对应到 `C1`、`C2`、`C3`、`D3`、`E1`、`E2`、`E3`、`E4`。
+- 会话中新增收束的“统一世界写回协议 + 最小写回闭环”已对应到 `P5`，分阶段实施计划见 [`docs/WORLD_WRITEBACK_PLAN.md`](docs/WORLD_WRITEBACK_PLAN.md)。
 - 会话中的规则治理、现实输入与长期世界事件未完成项已对应到 `F1`、`F2`、`F3`、`G1`、`G2`。
 
 ## 认领建议
