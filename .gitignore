@@ -1,4 +1,23 @@
 __pycache__/
 *.py[cod]
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Python
+.pytest_cache/
+
+# Generated outputs
+.fablemap-api/
+demo-output/
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
 .fablemap-page/
 .orchids/
