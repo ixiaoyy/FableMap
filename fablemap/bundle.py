@@ -600,9 +600,13 @@ def _render_map_observer_html(
         if len(projected_points) >= 2:
             kind = str(road.get("kind") or "")
             tier = _ROAD_TIER.get(kind, "street")
+            points_attr = " ".join(projected_points)
             road_shapes.append(
-                f'<polyline class="map-road map-road-{escape(tier)}" points="{" ".join(projected_points)}" '
-                f'data-road-kind="{escape(kind)}" />'
+                f'<g class="map-road-stack map-road-stack-{escape(tier)}" data-road-kind="{escape(kind)}">'
+                f'<polyline class="map-road-shadow map-road-shadow-{escape(tier)}" points="{points_attr}" />'
+                f'<polyline class="map-road map-road-{escape(tier)}" points="{points_attr}" />'
+                f'<polyline class="map-road-center map-road-center-{escape(tier)}" points="{points_attr}" />'
+                f'</g>'
             )
 
     _POI_ICON: dict[str, str] = {
@@ -727,18 +731,31 @@ def _render_map_observer_html(
         ftype = item.get("fantasy_type") or ""
         poi_status = (poi_states.get(item["id"]) or {}).get("status") or "idle"
         status_cls = _STATUS_CLASS.get(poi_status, "poi-status-idle")
-        badge_html = f'<circle cx="{x + 10}" cy="{y - 10}" r="4" class="poi-status-badge {status_cls}"></circle>'
+        badge_html = (
+            f'<rect x="{x + 6}" y="{y - 18}" width="8" height="8" rx="2" '
+            f'class="poi-status-badge {status_cls}"></rect>'
+        )
         if item["kind"] == "poi":
             icon_path = _POI_ICON.get(ftype, _POI_ICON.get("supply_outpost", ""))
             shape_html = (
-                f'<circle cx="{x}" cy="{y}" r="14" class="poi-bg"></circle>'
-                f'<path d="{icon_path}" transform="translate({x},{y})" class="poi-icon"></path>'
+                f'<g class="poi-plot">'
+                f'<ellipse cx="{x}" cy="{y + 11}" rx="18" ry="8" class="poi-shadow"></ellipse>'
+                f'<rect x="{x - 16}" y="{y - 10}" width="32" height="22" rx="6" class="poi-base"></rect>'
+                f'<path d="M{x - 19},{y - 10} L{x},{y - 20} L{x + 19},{y - 10} Z" class="poi-roof"></path>'
+                f'<rect x="{x - 4}" y="{y + 1}" width="8" height="11" rx="2" class="poi-door"></rect>'
+                f'<path d="{icon_path}" transform="translate({x},{y - 2}) scale(0.52)" class="poi-icon"></path>'
+                f'</g>'
                 + badge_html
             )
         else:
             shape_html = (
-                f'<circle cx="{x}" cy="{y}" r="14" class="landmark-bg"></circle>'
-                f'<path d="{_LANDMARK_ICON}" transform="translate({x},{y})" class="landmark-icon"></path>'
+                f'<g class="landmark-plot">'
+                f'<ellipse cx="{x}" cy="{y + 13}" rx="19" ry="8" class="landmark-shadow"></ellipse>'
+                f'<rect x="{x - 10}" y="{y - 2}" width="20" height="18" rx="4" class="landmark-base"></rect>'
+                f'<path d="M{x - 4},{y - 2} L{x},{y - 26} L{x + 4},{y - 2} Z" class="landmark-spire"></path>'
+                f'<path d="M{x - 12},{y + 4} L{x},{y - 10} L{x + 12},{y + 4} Z" class="landmark-roof"></path>'
+                f'<path d="{_LANDMARK_ICON}" transform="translate({x},{y - 6}) scale(0.42)" class="landmark-icon"></path>'
+                f'</g>'
                 + badge_html
             )
         type_class = f" map-ft-{escape(ftype)}" if ftype else ""
@@ -787,7 +804,19 @@ def _render_map_observer_html(
               <svg id=\"observer-map\" viewBox=\"0 0 {viewport['width']} {viewport['height']}\" data-zoom-tier=\"survey\" role=\"img\" aria-labelledby=\"observer-map-title observer-map-desc\">
                 <title id=\"observer-map-title\">{escape(str(showcase.get('title') or 'FableMap Observer'))}</title>
                 <desc id=\"observer-map-desc\">{escape(f'{len(roads)} roads, {len(pois)} POIs, {len(landmarks)} landmarks')}</desc>
+                <defs>
+                  <pattern id=\"floor-grid\" width=\"28\" height=\"28\" patternUnits=\"userSpaceOnUse\">
+                    <path d=\"M 28 0 L 0 0 0 28\" class=\"map-floor-grid\"></path>
+                  </pattern>
+                  <radialGradient id=\"map-backdrop-glow\" cx=\"50%\" cy=\"45%\" r=\"70%\">
+                    <stop offset=\"0%\" stop-color=\"rgba(96, 165, 250, 0.22)\"></stop>
+                    <stop offset=\"55%\" stop-color=\"rgba(30, 41, 59, 0.08)\"></stop>
+                    <stop offset=\"100%\" stop-color=\"rgba(15, 23, 42, 0)\"></stop>
+                  </radialGradient>
+                </defs>
                 <rect class=\"map-backdrop\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
+                <rect class=\"map-floor-tiles\" x=\"16\" y=\"16\" width=\"{viewport['width'] - 32}\" height=\"{viewport['height'] - 32}\" rx=\"18\" ry=\"18\"></rect>
+                <rect class=\"map-district-glow\" x=\"0\" y=\"0\" width=\"{viewport['width']}\" height=\"{viewport['height']}\" rx=\"22\" ry=\"22\"></rect>
                 {_comfort_aura_svg(region, viewport)}
                 {_disturbance_aura_svg(world_state, viewport)}
                 {''.join(road_shapes)}
@@ -795,10 +824,10 @@ def _render_map_observer_html(
                 {_echo_layer_svg(world, project)}
                 {_anchor_nodes_svg(world, project)}
                 {_capsule_marks_svg(world, project)}
-                  {_home_anchor_svg(world, project)}
-                  {_sprite_nodes_svg(world, world_state, project)}
-                  {_player_entity_svg(world, project)}
-                  {''.join(feature_nodes)}
+                {_home_anchor_svg(world, project)}
+                {_sprite_nodes_svg(world, world_state, project)}
+                {_player_entity_svg(world, project)}
+                {''.join(feature_nodes)}
               </svg>
             </div>
             <p class=\"map-note\" data-i18n=\"mapObserverNote\"></p>
@@ -1246,12 +1275,24 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       #observer-map {{ width: 100%; height: 100%; min-height: 520px; display: block; cursor: grab; user-select: none; -webkit-user-select: none; }}
       #observer-map.is-panning {{ cursor: grabbing; }}
       .map-backdrop {{ fill: #020617; stroke: #334155; stroke-width: 2; }}
-      .map-road {{ fill: none; stroke-opacity: 0.75; stroke-linecap: round; stroke-linejoin: round; }}
-      .map-road-arterial {{ stroke: #7dd3fc; stroke-width: 5; }}
-      .map-road-street {{ stroke: #67e8f9; stroke-width: 3; }}
-      .map-road-path {{ stroke: #a5f3fc; stroke-width: 1.5; stroke-dasharray: 6 4; }}
-      .map-feature {{ cursor: pointer; outline: none; transition: transform 0.15s ease; }}
-      .map-feature.is-active, .map-feature:focus-visible {{ transform: scale(1.12); transform-origin: center; transform-box: fill-box; }}
+      .map-floor-tiles {{ fill: url(#floor-grid); opacity: 0.22; pointer-events: none; }}
+      .map-floor-grid {{ fill: none; stroke: rgba(148, 163, 184, 0.18); stroke-width: 1; }}
+      .map-district-glow {{ fill: url(#map-backdrop-glow); opacity: 0.95; pointer-events: none; }}
+      .map-road, .map-road-shadow, .map-road-center {{ fill: none; stroke-linecap: round; stroke-linejoin: round; }}
+      .map-road-shadow {{ stroke: rgba(15, 23, 42, 0.92); }}
+      .map-road-center {{ stroke: rgba(255, 255, 255, 0.22); stroke-dasharray: 10 14; }}
+      .map-road {{ stroke-opacity: 0.92; }}
+      .map-road-shadow-arterial {{ stroke-width: 12; }}
+      .map-road-shadow-street {{ stroke-width: 8; }}
+      .map-road-shadow-path {{ stroke-width: 5; }}
+      .map-road-arterial {{ stroke: #60a5fa; stroke-width: 8; }}
+      .map-road-street {{ stroke: #334155; stroke-width: 5; }}
+      .map-road-path {{ stroke: #475569; stroke-width: 2.5; }}
+      .map-road-center-arterial {{ stroke-width: 1.6; }}
+      .map-road-center-street {{ stroke-width: 1.1; opacity: 0.5; }}
+      .map-road-center-path {{ stroke-width: 0.8; opacity: 0.18; stroke-dasharray: 4 10; }}
+      .map-feature {{ cursor: pointer; outline: none; transition: transform 0.15s ease, filter 0.15s ease; }}
+      .map-feature.is-active, .map-feature:focus-visible {{ transform: translateY(-2px) scale(1.06); transform-origin: center; transform-box: fill-box; filter: drop-shadow(0 10px 16px rgba(15, 23, 42, 0.42)); }}
       .map-tooltip {{ position: fixed; pointer-events: none; z-index: 100; padding: 6px 10px; background: rgba(15,23,42,0.95); border: 1px solid #475569; border-radius: 8px; font-size: 12px; color: #e2e8f0; white-space: nowrap; opacity: 0; transition: opacity 0.12s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }}
       .map-tooltip.is-visible {{ opacity: 1; }}
       .semantic-zoom-indicator {{ position: absolute; top: 12px; left: 12px; z-index: 2; display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid #334155; background: rgba(15, 23, 42, 0.88); color: #e2e8f0; box-shadow: 0 8px 24px rgba(2, 6, 23, 0.28); transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease; }}
@@ -1265,37 +1306,50 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .map-zoom-btn:hover {{ background: rgba(30,41,59,0.98); }}
       .world-map-canvas {{ flex: 1; min-height: 0; position: relative; }}
       .map-feature text {{ fill: #0f172a; font-size: 10px; font-weight: 700; pointer-events: none; opacity: 0.66; transition: opacity 0.15s ease, font-size 0.15s ease, letter-spacing 0.15s ease; }}
-      .poi-bg {{ fill: #1e3a5f; stroke: #38bdf8; stroke-width: 2; transform-box: fill-box; transform-origin: center; transition: stroke-width 0.15s ease, r 0.15s ease, transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease; }}
-      .poi-icon {{ fill: #7dd3fc; pointer-events: none; }}
-      .landmark-bg {{ fill: #3b2a0a; stroke: #fbbf24; stroke-width: 2; transform-box: fill-box; transform-origin: center; transition: stroke-width 0.15s ease, transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease; }}
-      .landmark-icon {{ fill: #fbbf24; pointer-events: none; }}
-      .map-ft-whispering_grove .poi-bg {{ fill: #14302a; stroke: #4ade80; }}
-      .map-ft-whispering_grove .poi-icon {{ fill: #86efac; }}
-      .map-ft-healing_sanctum .poi-bg {{ fill: #1e3040; stroke: #e0f2fe; }}
-      .map-ft-healing_sanctum .poi-icon {{ fill: #bae6fd; }}
-      .map-ft-supply_outpost .poi-bg {{ fill: #1f2937; stroke: #fb923c; }}
+      .poi-shadow, .landmark-shadow {{ fill: rgba(2, 6, 23, 0.4); pointer-events: none; }}
+      .poi-base {{ fill: #334155; stroke: rgba(148, 163, 184, 0.3); stroke-width: 1.2; }}
+      .poi-roof {{ fill: #475569; stroke: rgba(226, 232, 240, 0.26); stroke-width: 1; }}
+      .poi-door {{ fill: rgba(15, 23, 42, 0.78); }}
+      .poi-icon {{ fill: #e2e8f0; pointer-events: none; }}
+      .landmark-base {{ fill: #2d1b0e; stroke: rgba(251, 191, 36, 0.35); stroke-width: 1.2; }}
+      .landmark-roof {{ fill: #92400e; }}
+      .landmark-spire {{ fill: #fbbf24; filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.35)); }}
+      .landmark-icon {{ fill: #fde68a; pointer-events: none; }}
+      .map-ft-whispering_grove .poi-base {{ fill: #123129; }}
+      .map-ft-whispering_grove .poi-roof {{ fill: #166534; }}
+      .map-ft-whispering_grove .poi-icon {{ fill: #bbf7d0; }}
+      .map-ft-healing_sanctum .poi-base {{ fill: #1f3645; }}
+      .map-ft-healing_sanctum .poi-roof {{ fill: #155e75; }}
+      .map-ft-healing_sanctum .poi-icon {{ fill: #e0f2fe; }}
+      .map-ft-supply_outpost .poi-base {{ fill: #3f3f46; }}
+      .map-ft-supply_outpost .poi-roof {{ fill: #9a3412; }}
       .map-ft-supply_outpost .poi-icon {{ fill: #fdba74; }}
-      .map-ft-judgement_tower .poi-bg {{ fill: #1e1b2e; stroke: #a78bfa; }}
-      .map-ft-judgement_tower .poi-icon {{ fill: #c4b5fd; }}
-      .map-ft-ember_parlor .poi-bg {{ fill: #2d1a0e; stroke: #fb7185; }}
-      .map-ft-ember_parlor .poi-icon {{ fill: #fda4af; }}
-      .map-ft-lore_academy .poi-bg {{ fill: #1a1a2e; stroke: #facc15; }}
-      .map-ft-lore_academy .poi-icon {{ fill: #fde68a; }}
-      .map-feature.is-active .poi-bg, .map-feature:focus-visible .poi-bg {{ stroke-width: 4; }}
-      .map-feature.is-active .landmark-bg, .map-feature:focus-visible .landmark-bg {{ stroke-width: 4; }}
+      .map-ft-judgement_tower .poi-base {{ fill: #312e81; }}
+      .map-ft-judgement_tower .poi-roof {{ fill: #6d28d9; }}
+      .map-ft-judgement_tower .poi-icon {{ fill: #ddd6fe; }}
+      .map-ft-ember_parlor .poi-base {{ fill: #3b2414; }}
+      .map-ft-ember_parlor .poi-roof {{ fill: #be123c; }}
+      .map-ft-ember_parlor .poi-icon {{ fill: #fecdd3; }}
+      .map-ft-lore_academy .poi-base {{ fill: #27272a; }}
+      .map-ft-lore_academy .poi-roof {{ fill: #a16207; }}
+      .map-ft-lore_academy .poi-icon {{ fill: #fef08a; }}
+      .map-feature.is-active .poi-roof, .map-feature:focus-visible .poi-roof {{ filter: brightness(1.18); }}
+      .map-feature.is-active .poi-base, .map-feature:focus-visible .poi-base {{ stroke: rgba(125, 211, 252, 0.75); stroke-width: 2; }}
+      .map-feature.is-active .landmark-spire, .map-feature:focus-visible .landmark-spire {{ filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.62)); }}
+      .map-feature.is-active .landmark-base, .map-feature:focus-visible .landmark-base {{ stroke-width: 2; }}
       .world-map-viewport[data-zoom-tier="survey"] .map-feature text {{ opacity: 0.28; letter-spacing: 0.02em; }}
-      .world-map-viewport[data-zoom-tier="survey"] .poi-bg,
-      .world-map-viewport[data-zoom-tier="survey"] .landmark-bg {{ transform: scale(0.92); opacity: 0.9; }}
+      .world-map-viewport[data-zoom-tier="survey"] .poi-plot,
+      .world-map-viewport[data-zoom-tier="survey"] .landmark-plot {{ transform: scale(0.94); transform-origin: center; transform-box: fill-box; opacity: 0.92; }}
       .world-map-viewport[data-zoom-tier="survey"] .echo-node,
       .world-map-viewport[data-zoom-tier="survey"] .capsule-mark,
       .world-map-viewport[data-zoom-tier="survey"] .sprite-node,
       .world-map-viewport[data-zoom-tier="survey"] .home-anchor {{ opacity: 0.42; }}
       .world-map-viewport[data-zoom-tier="district"] .map-feature text {{ opacity: 0.74; }}
-      .world-map-viewport[data-zoom-tier="district"] .poi-bg,
-      .world-map-viewport[data-zoom-tier="district"] .landmark-bg {{ filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.22)); }}
+      .world-map-viewport[data-zoom-tier="district"] .poi-plot,
+      .world-map-viewport[data-zoom-tier="district"] .landmark-plot {{ filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.2)); }}
       .world-map-viewport[data-zoom-tier="intimate"] .map-feature text {{ opacity: 1; font-size: 11px; }}
-      .world-map-viewport[data-zoom-tier="intimate"] .poi-bg,
-      .world-map-viewport[data-zoom-tier="intimate"] .landmark-bg {{ transform: scale(1.08); stroke-width: 3; filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.35)); }}
+      .world-map-viewport[data-zoom-tier="intimate"] .poi-plot,
+      .world-map-viewport[data-zoom-tier="intimate"] .landmark-plot {{ transform: scale(1.08); transform-origin: center; transform-box: fill-box; filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.28)); }}
       .world-map-viewport[data-zoom-tier="intimate"] .echo-node,
       .world-map-viewport[data-zoom-tier="intimate"] .capsule-mark,
       .world-map-viewport[data-zoom-tier="intimate"] .sprite-node,
@@ -1353,7 +1407,7 @@ def _render_preview_html(world: dict[str, Any], showcase: dict[str, Any], manife
       .poi-status-active {{ fill: #4ade80; filter: drop-shadow(0 0 3px #4ade80); }}
       .poi-status-anomaly {{ fill: #f87171; filter: drop-shadow(0 0 4px #f87171); animation: anomaly-pulse 1.2s ease-in-out infinite; }}
       @keyframes anomaly-pulse {{ 0%,100% {{ opacity: 1; }} 50% {{ opacity: 0.35; }} }}
-      .disturbance-aura {{ pointer-events: none; }}
+      .disturbance-aura {{ pointer-events: none; mix-blend-mode: screen; }}
       .npc-agent-dot {{ pointer-events: none; }}
       .disturbance-panel {{ margin-top: 14px; border-top: 1px solid #1e293b; padding-top: 10px; }}
       .disturbance-panel-title {{ margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }}

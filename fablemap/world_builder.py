@@ -315,6 +315,24 @@ def build_world(
     memory_anchors = _build_memory_anchors(pois)
     sprites = _build_sprites(pois)
     historical_echoes = _build_historical_echoes(landmarks)
+    disturbance_metrics = _build_disturbance_metrics(
+        social_tension=region["social_tension"],
+        commerce_flux=commerce_flux,
+        anomaly_pressure=anomaly_pressure,
+        comfort_level=comfort_level,
+        control_score=control_score,
+        roads=roads,
+        pois=pois,
+    )
+    map2d = _build_map2d_layout(
+        world_id=world_id,
+        pois=pois,
+        roads=roads,
+        landmarks=landmarks,
+        sprites=sprites,
+        memory_anchors=memory_anchors,
+        vibe_profile=vibe_profile,
+    )
     co_creation = _build_co_creation_layer(
         world_id=world_id,
         dominant_faction=dominant_faction,
@@ -334,6 +352,7 @@ def build_world(
             "provider": provider,
         },
         "region": region,
+        "map2d": map2d,
         "pois": pois,
         "roads": roads,
         "landmarks": landmarks,
@@ -358,13 +377,20 @@ def build_world(
             "flags": [],
             "story_events": [],
             "faction_states": [{"faction_id": dominant_faction, "control_score": control_score}],
-            "economy_state": {"market_pressure": commerce_flux},
+            "economy_state": {
+                "market_pressure": commerce_flux,
+                "price_mood": "strained" if commerce_flux >= 0.45 else "steady",
+                "informal_trade_index": round(min(1.0, len([poi for poi in pois if poi["sprite_spawn_hint"]]) * 0.08), 2),
+            },
             "disturbance_level": anomaly_pressure,
             "signal_snapshot": {
                 "source_element_count": len(elements),
                 "mapped_poi_count": len(pois),
                 "road_count": len(roads),
+                "tile_columns": map2d["tile_grid"]["columns"],
+                "tile_rows": map2d["tile_grid"]["rows"],
             },
+            "disturbance_metrics": disturbance_metrics,
             "spawn_window": (
                 "rare" if anomaly_pressure >= 0.7
                 else "active" if anomaly_pressure >= 0.4
@@ -381,8 +407,21 @@ def build_world(
             ),
             "private_marks": _build_private_marks(pois),
             "reputation": {dominant_faction: 0},
-            "route_impact": {"road_count": len(roads)},
+            "route_impact": {
+                "road_count": len(roads),
+                "dominant_flow": roads[0]["fantasy_role"] if roads else "threshold_path",
+                "walkability_mood": "porous" if len(roads) <= 2 else "pressured",
+            },
+            "daily_cycle": {
+                "peak_phase": "dusk" if vibe_profile in {"amber_evening", "neon_nostalgia"} else "morning",
+                "curfew_pressure": round(min(1.0, control_score + region["social_tension"] * 0.3), 2),
+            },
             "resource_transfers": [],
+            "navigation_state": {
+                "spawn_node": map2d["navigation"]["spawn_node"],
+                "walkable_paths": len(map2d["navigation"]["walkable_paths"]),
+                "camera_zoom": map2d["camera"]["zoom"],
+            },
         },
     }
 
@@ -401,8 +440,9 @@ def _build_pois(elements: list[dict[str, Any]], fallback: dict[str, float]) -> l
         if mapping is None:
             continue
         poi_id = f"{element.get('type', 'item')}-{element.get('id', 'unknown')}"
-        real_name = tags.get("name")
+        real_name = _preferred_real_name(tags)
         real_type = _infer_osm_type(tags)
+        district_role = _district_role(mapping["fantasy_type"], real_type)
         pois.append(
             {
                 "id": poi_id,
@@ -421,11 +461,66 @@ def _build_pois(elements: list[dict[str, Any]], fallback: dict[str, float]) -> l
                 "satire_hook": mapping["satire"],
                 "faction_alignment": mapping["faction"],
                 "emotion_hook": mapping["emotion"],
+                "district_role": district_role,
+                "ritual_affordances": _ritual_affordances(mapping["fantasy_type"], mapping["secret_slot"], mapping["sprite_spawn_hint"]),
+                "rumor_hook": _rumor_hook(real_name, mapping["fantasy_type"], district_role),
+                "map_icon": _map_icon(mapping["fantasy_type"]),
+                "collision_radius": _collision_radius(mapping["fantasy_type"]),
                 "secret_slot": mapping["secret_slot"],
                 "sprite_spawn_hint": mapping["sprite_spawn_hint"],
             }
         )
     return sorted(pois, key=lambda item: item["id"])[:12]
+
+
+def _build_map2d_layout(
+    *,
+    world_id: str,
+    pois: list[dict[str, Any]],
+    roads: list[dict[str, Any]],
+    landmarks: list[dict[str, Any]],
+    sprites: list[dict[str, Any]],
+    memory_anchors: list[dict[str, Any]],
+    vibe_profile: str,
+) -> dict[str, Any]:
+    points = [poi["position"] for poi in pois] + [landmark["visual_hint"]["position"] for landmark in landmarks]
+    bounds = _geo_bounds(points)
+    tile_grid = _tile_grid(bounds, poi_count=len(pois), road_count=len(roads))
+    road_nodes = [_road_to_map_path(road, bounds, tile_grid) for road in roads]
+    poi_nodes = [_poi_to_map_node(index, poi, bounds, tile_grid) for index, poi in enumerate(pois)]
+    landmark_nodes = [_landmark_to_map_node(index, landmark, bounds, tile_grid) for index, landmark in enumerate(landmarks)]
+    spawn_node = poi_nodes[0]["id"] if poi_nodes else (landmark_nodes[0]["id"] if landmark_nodes else "spawn-origin")
+    return {
+        "map_id": f"map-{world_id[-8:]}",
+        "projection": "topdown_2d",
+        "theme_skin": _map_theme_skin(vibe_profile),
+        "tile_grid": tile_grid,
+        "bounds": bounds,
+        "camera": {
+            "mode": "follow_player",
+            "anchor": _camera_anchor(poi_nodes, landmark_nodes, tile_grid),
+            "zoom": 1.15 if tile_grid["columns"] <= 32 else 0.9,
+        },
+        "layers": [
+            {"id": "ground", "z_index": 0, "tile_role": "base_floor"},
+            {"id": "roads", "z_index": 1, "tile_role": "walkable_path"},
+            {"id": "structures", "z_index": 2, "tile_role": "poi_shell"},
+            {"id": "overlays", "z_index": 3, "tile_role": "effects_and_markers"},
+        ],
+        "navigation": {
+            "spawn_node": spawn_node,
+            "walkable_paths": road_nodes,
+            "poi_nodes": [node["id"] for node in poi_nodes],
+            "landmark_nodes": [node["id"] for node in landmark_nodes],
+        },
+        "encounter_zones": _encounter_zones(poi_nodes, landmark_nodes, sprites, memory_anchors),
+        "renderables": {
+            "pois": poi_nodes,
+            "landmarks": landmark_nodes,
+            "roads": road_nodes,
+        },
+    }
+
 
 
 def _build_roads(elements: list[dict[str, Any]], fallback: dict[str, float]) -> list[dict[str, Any]]:
@@ -435,12 +530,16 @@ def _build_roads(elements: list[dict[str, Any]], fallback: dict[str, float]) -> 
         highway = tags.get("highway")
         if not highway:
             continue
+        fantasy_role = ROAD_ROLES.get(highway, "threshold_path")
         roads.append(
             {
                 "id": f"{element.get('type', 'way')}-{element.get('id', 'unknown')}",
                 "kind": highway,
                 "points": _extract_points(element, fallback),
-                "fantasy_role": ROAD_ROLES.get(highway, "threshold_path"),
+                "fantasy_role": fantasy_role,
+                "flow_intensity": "high" if highway in {"motorway", "primary", "secondary"} else "medium" if highway in {"tertiary", "residential"} else "low",
+                "travel_mood": _road_travel_mood(fantasy_role),
+                "tile_stroke": _road_tile_stroke(fantasy_role),
             }
         )
     return sorted(roads, key=lambda item: item["id"])[:12]
@@ -455,7 +554,7 @@ def _build_landmarks(elements: list[dict[str, Any]], fallback: dict[str, float])
         landmarks.append(
             {
                 "id": f"landmark-{element.get('type', 'item')}-{element.get('id', 'unknown')}",
-                "name": tags.get("name") or "Unnamed Landmark",
+                "name": _preferred_real_name(tags) or "Unnamed Landmark",
                 "type": tags.get("tourism") or tags.get("historic"),
                 "description": "A place where the district's official story feels slightly unstable.",
                 "visual_hint": {
@@ -481,7 +580,13 @@ def _build_factions(faction_id: str, world_id: str, control_score: float) -> lis
             "influence": control_score,
             "resource_focus": ["attention", "movement"],
             "territories": [world_id],
-            "relations": [],
+            "relations": [
+                {
+                    "target": _counter_faction(faction_id),
+                    "status": "contested",
+                    "intensity": round(min(1.0, control_score + 0.15), 2),
+                }
+            ],
         }
     ]
 
@@ -499,6 +604,8 @@ def _build_memory_anchors(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "visibility": "private",
                 "linked_pois": [poi["id"]],
                 "unlock_conditions": ["visit_poi"],
+                "resonance": round(min(1.0, 0.45 + len(poi.get("ritual_affordances", [])) * 0.12), 2),
+                "prompt": f"What feeling does {poi['fantasy_name']} let you keep without explanation?",
             }
         )
     return anchors[:3]
@@ -517,6 +624,8 @@ def _build_sprites(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "spawn_conditions": ["visit_poi"],
                 "linked_poi": poi["id"],
                 "drop_tags": [poi["fantasy_type"]],
+                "temperament": "shy" if poi.get("secret_slot") else "curious",
+                "active_hours": "dusk" if poi["visual_hint"]["style"] in {"amber_evening", "neon_nostalgia"} else "all_day",
             }
         )
     return sprites[:3]
@@ -534,6 +643,7 @@ def _build_private_marks(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "emotion": poi.get("emotion_hook") or "A quiet moment lingers here.",
                 "capsule_type": "emotion",
                 "visibility": "private",
+                "stability": "fragile" if poi["faction_alignment"] == "trade_guild" else "settled",
             }
         )
     return marks[:3]
@@ -550,6 +660,8 @@ def _build_historical_echoes(landmarks: list[dict[str, Any]]) -> list[dict[str, 
                 "tone": "melancholic",
                 "fragment": "Something important happened here, though few remember exactly what.",
                 "visibility": "public",
+                "trigger_hint": "pause_and_observe",
+                "severity": "medium",
             }
         )
     return echoes[:3]
@@ -607,6 +719,7 @@ def _build_co_creation_layer(
             "retention_model": "layered_echo",
             "echo_sources": len(historical_echoes),
             "anchor_sources": len(memory_anchors),
+            "max_public_legends": min(3, max(1, len(pois))),
         },
         "open_threads": [
             {
@@ -672,11 +785,23 @@ def _pick_faction(theme: str, pois: list[dict[str, Any]]) -> str:
 
 
 def _pick_vibe(pois: list[dict[str, Any]]) -> str:
-    return pois[0]["visual_hint"]["style"] if pois else "quiet_rain"
+    if not pois:
+        return "quiet_rain"
+    counts: dict[str, int] = {}
+    for poi in pois:
+        v = poi["visual_hint"]["style"]
+        counts[v] = counts.get(v, 0) + 1
+    return max(counts, key=counts.get)
 
 
 def _pick_palette(pois: list[dict[str, Any]]) -> str:
-    return pois[0]["visual_hint"]["palette"] if pois else "paper_and_ink"
+    if not pois:
+        return "paper_and_ink"
+    counts: dict[str, int] = {}
+    for poi in pois:
+        p = poi["visual_hint"]["palette"]
+        counts[p] = counts.get(p, 0) + 1
+    return max(counts, key=counts.get)
 
 
 def _pick_satire(pois: list[dict[str, Any]]) -> str:
@@ -727,6 +852,14 @@ def _infer_osm_type(tags: dict[str, Any]) -> str:
     return "unknown"
 
 
+def _preferred_real_name(tags: dict[str, Any]) -> str | None:
+    for key in ("name:zh-Hans", "name:zh", "official_name:zh", "alt_name:zh", "name"):
+        value = tags.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
 def _fantasy_name(real_name: str | None, suffix: str, fantasy_type: str) -> str:
     base = real_name or fantasy_type.replace("_", " ").title()
     return base if base.endswith(suffix) else f"{base} {suffix}"
@@ -735,6 +868,150 @@ def _fantasy_name(real_name: str | None, suffix: str, fantasy_type: str) -> str:
 def _compact_tags(tags: dict[str, Any]) -> list[str]:
     keys = ("amenity", "shop", "leisure", "tourism", "historic", "highway", "landuse")
     return [f"{key}={tags[key]}" for key in keys if key in tags]
+
+
+def _geo_bounds(points: list[dict[str, float]]) -> dict[str, float]:
+    if not points:
+        return {
+            "min_lat": 0.0,
+            "max_lat": 1.0,
+            "min_lon": 0.0,
+            "max_lon": 1.0,
+        }
+    lats = [point["lat"] for point in points]
+    lons = [point["lon"] for point in points]
+    min_lat = min(lats)
+    max_lat = max(lats)
+    min_lon = min(lons)
+    max_lon = max(lons)
+    if min_lat == max_lat:
+        max_lat += 0.0001
+    if min_lon == max_lon:
+        max_lon += 0.0001
+    return {
+        "min_lat": min_lat,
+        "max_lat": max_lat,
+        "min_lon": min_lon,
+        "max_lon": max_lon,
+    }
+
+
+
+def _tile_grid(bounds: dict[str, float], poi_count: int, road_count: int) -> dict[str, Any]:
+    lat_span = bounds["max_lat"] - bounds["min_lat"]
+    lon_span = bounds["max_lon"] - bounds["min_lon"]
+    columns = max(24, min(48, 24 + poi_count * 2 + road_count * 2))
+    rows = max(18, min(40, int(round(columns * (lat_span / lon_span))) if lon_span else 18))
+    return {
+        "tile_size": 16,
+        "columns": columns,
+        "rows": max(18, rows),
+        "origin": {"x": 0, "y": 0},
+    }
+
+
+
+def _world_to_tile(position: dict[str, float], bounds: dict[str, float], tile_grid: dict[str, Any]) -> dict[str, int]:
+    lon_span = bounds["max_lon"] - bounds["min_lon"]
+    lat_span = bounds["max_lat"] - bounds["min_lat"]
+    x_ratio = (position["lon"] - bounds["min_lon"]) / lon_span if lon_span else 0.5
+    y_ratio = (bounds["max_lat"] - position["lat"]) / lat_span if lat_span else 0.5
+    return {
+        "x": max(0, min(tile_grid["columns"] - 1, int(round(x_ratio * (tile_grid["columns"] - 1))))),
+        "y": max(0, min(tile_grid["rows"] - 1, int(round(y_ratio * (tile_grid["rows"] - 1))))),
+    }
+
+
+
+def _camera_anchor(
+    poi_nodes: list[dict[str, Any]],
+    landmark_nodes: list[dict[str, Any]],
+    tile_grid: dict[str, Any],
+) -> dict[str, int]:
+    if poi_nodes:
+        return dict(poi_nodes[0]["tile_position"])
+    if landmark_nodes:
+        return dict(landmark_nodes[0]["tile_position"])
+    return {"x": tile_grid["columns"] // 2, "y": tile_grid["rows"] // 2}
+
+
+
+def _poi_to_map_node(index: int, poi: dict[str, Any], bounds: dict[str, float], tile_grid: dict[str, Any]) -> dict[str, Any]:
+    tile_position = _world_to_tile(poi["position"], bounds, tile_grid)
+    return {
+        "id": poi["id"],
+        "kind": "poi",
+        "label": poi["fantasy_name"],
+        "tile_position": tile_position,
+        "footprint": _poi_footprint(poi["fantasy_type"]),
+        "icon": poi.get("map_icon", "district_node"),
+        "layer": "structures",
+        "z_index": 20 + index,
+        "collision_radius": poi.get("collision_radius", 1),
+        "interact_radius": 2 if poi.get("secret_slot") else 1,
+        "biome_hint": poi["visual_hint"]["palette"],
+    }
+
+
+
+def _landmark_to_map_node(index: int, landmark: dict[str, Any], bounds: dict[str, float], tile_grid: dict[str, Any]) -> dict[str, Any]:
+    tile_position = _world_to_tile(landmark["visual_hint"]["position"], bounds, tile_grid)
+    return {
+        "id": landmark["id"],
+        "kind": "landmark",
+        "label": landmark["name"],
+        "tile_position": tile_position,
+        "footprint": {"w": 3, "h": 3},
+        "icon": "memory_spire",
+        "layer": "overlays",
+        "z_index": 40 + index,
+        "interact_radius": 3,
+    }
+
+
+
+def _road_to_map_path(road: dict[str, Any], bounds: dict[str, float], tile_grid: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": road["id"],
+        "kind": road["fantasy_role"],
+        "layer": "roads",
+        "stroke": road.get("tile_stroke", 1),
+        "flow_intensity": road["flow_intensity"],
+        "points": [_world_to_tile(point, bounds, tile_grid) for point in road["points"]],
+    }
+
+
+
+def _encounter_zones(
+    poi_nodes: list[dict[str, Any]],
+    landmark_nodes: list[dict[str, Any]],
+    sprites: list[dict[str, Any]],
+    memory_anchors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    zones = []
+    for node in poi_nodes[:6]:
+        zone_type = "memory" if any(anchor["linked_pois"][0] == node["id"] for anchor in memory_anchors) else "resource"
+        zones.append(
+            {
+                "id": f"zone-{node['id']}",
+                "center": node["tile_position"],
+                "radius": 3 if zone_type == "memory" else 2,
+                "encounter_type": zone_type,
+                "intensity": 0.7 if any(sprite["linked_poi"] == node["id"] for sprite in sprites) else 0.45,
+            }
+        )
+    for landmark in landmark_nodes[:2]:
+        zones.append(
+            {
+                "id": f"zone-{landmark['id']}",
+                "center": landmark["tile_position"],
+                "radius": 4,
+                "encounter_type": "landmark_echo",
+                "intensity": 0.85,
+            }
+        )
+    return zones
+
 
 
 def _extract_position(element: dict[str, Any], fallback: dict[str, float]) -> dict[str, float]:
@@ -754,6 +1031,159 @@ def _extract_points(element: dict[str, Any], fallback: dict[str, float]) -> list
         return [{"lat": point["lat"], "lon": point["lon"]} for point in geometry]
     position = _extract_position(element, fallback)
     return [position, position]
+
+
+def _district_role(fantasy_type: str, real_type: str) -> str:
+    role_map = {
+        "ember_parlor": "social_hearth",
+        "supply_outpost": "daily_supply_node",
+        "whispering_grove": "memory_shelter",
+        "healing_sanctum": "fragile_recovery_node",
+        "debt_cathedral": "debt_administration_hub",
+        "feast_hall": "public_desire_stage",
+        "memory_archive": "civic_recall_chamber",
+        "remedy_post": "micro_triage_counter",
+        "labor_forge": "discipline_theatre",
+        "contract_spire": "clerical_command_post",
+    }
+    return role_map.get(fantasy_type, f"{real_type}_node")
+
+
+
+def _ritual_affordances(fantasy_type: str, secret_slot: bool, sprite_spawn_hint: bool) -> list[str]:
+    affordances = ["observe"]
+    if secret_slot:
+        affordances.append("leave_memory")
+    if sprite_spawn_hint:
+        affordances.append("collect_trace")
+    if fantasy_type in {"healing_sanctum", "remedy_post", "spirit_sanctum"}:
+        affordances.append("seek_relief")
+    if fantasy_type in {"memory_archive", "ember_parlor", "lore_academy"}:
+        affordances.append("exchange_stories")
+    return affordances
+
+
+
+def _rumor_hook(real_name: str | None, fantasy_type: str, district_role: str) -> str:
+    subject = real_name or fantasy_type.replace("_", " ")
+    return f"People say {subject} quietly shapes the district whenever the {district_role} falls out of sync."
+
+
+
+def _map_icon(fantasy_type: str) -> str:
+    return {
+        "ember_parlor": "tea_house",
+        "supply_outpost": "supply_crate",
+        "whispering_grove": "grove_tree",
+        "healing_sanctum": "clinic_cross",
+        "judgement_tower": "watchtower",
+        "lore_academy": "open_book",
+        "debt_cathedral": "vault_gate",
+        "feast_hall": "market_bowl",
+        "refuel_station": "neon_burger",
+        "memory_archive": "archive_stack",
+        "spirit_sanctum": "shrine_gate",
+        "dormant_lot": "empty_plot",
+        "remedy_post": "small_phial",
+        "labor_forge": "forge_anvil",
+        "contract_spire": "office_block",
+    }.get(fantasy_type, "district_node")
+
+
+
+def _collision_radius(fantasy_type: str) -> int:
+    return {
+        "whispering_grove": 2,
+        "healing_sanctum": 2,
+        "judgement_tower": 2,
+        "debt_cathedral": 2,
+        "feast_hall": 2,
+        "memory_archive": 2,
+        "contract_spire": 2,
+    }.get(fantasy_type, 1)
+
+
+
+def _poi_footprint(fantasy_type: str) -> dict[str, int]:
+    return {
+        "whispering_grove": {"w": 3, "h": 3},
+        "healing_sanctum": {"w": 3, "h": 2},
+        "judgement_tower": {"w": 2, "h": 3},
+        "debt_cathedral": {"w": 3, "h": 3},
+        "feast_hall": {"w": 3, "h": 2},
+        "memory_archive": {"w": 3, "h": 2},
+        "contract_spire": {"w": 2, "h": 3},
+    }.get(fantasy_type, {"w": 2, "h": 2})
+
+
+
+def _road_tile_stroke(fantasy_role: str) -> int:
+    return {
+        "iron_lane": 3,
+        "trade_route": 3,
+        "market_street": 2,
+        "lantern_lane": 2,
+        "ritual_path": 1,
+    }.get(fantasy_role, 1)
+
+
+
+def _map_theme_skin(vibe_profile: str) -> str:
+    return {
+        "amber_evening": "lantern_evening",
+        "neon_nostalgia": "neon_market",
+        "quiet_rain": "mist_clinic",
+        "ghibli_town": "soft_verdant",
+        "chalk_dawn": "paper_dawn",
+        "iron_blue": "blue_steel",
+    }.get(vibe_profile, "quiet_city")
+
+
+
+def _road_travel_mood(fantasy_role: str) -> str:
+    return {
+        "iron_lane": "relentless",
+        "trade_route": "transactional",
+        "market_street": "negotiated",
+        "lantern_lane": "intimate",
+        "ritual_path": "reflective",
+    }.get(fantasy_role, "uncertain")
+
+
+
+def _counter_faction(faction_id: str) -> str:
+    return {
+        "trade_guild": "memory_collective",
+        "order_bureau": "night_bloom",
+        "clinic_circle": "trade_guild",
+        "memory_collective": "order_bureau",
+        "night_bloom": "order_bureau",
+    }.get(faction_id, "memory_collective")
+
+
+
+def _build_disturbance_metrics(
+    *,
+    social_tension: float,
+    commerce_flux: float,
+    anomaly_pressure: float,
+    comfort_level: float,
+    control_score: float,
+    roads: list[dict[str, Any]],
+    pois: list[dict[str, Any]],
+) -> dict[str, float]:
+    spawn_potential = round(min(1.0, anomaly_pressure * 0.55 + len([poi for poi in pois if poi.get("sprite_spawn_hint")]) * 0.08), 2)
+    comfort_drift = round(comfort_level - 0.5, 2)
+    vibe_amplitude = round(min(1.0, control_score * 0.35 + len(roads) * 0.08 + len({poi["visual_hint"]["style"] for poi in pois}) * 0.07), 2)
+    return {
+        "social_tension": social_tension,
+        "commerce_flux": commerce_flux,
+        "anomaly_pressure": anomaly_pressure,
+        "comfort_drift": comfort_drift,
+        "vibe_amplitude": vibe_amplitude,
+        "spawn_potential": spawn_potential,
+    }
+
 
 
 def _digest(*parts: Any) -> str:

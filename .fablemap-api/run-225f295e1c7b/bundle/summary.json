@@ -1,0 +1,19 @@
+{
+  "world_id": "world-c8b893ee6108",
+  "seed": "252b5004ed27",
+  "provider": "overpass",
+  "theme": "scholar_quarter",
+  "atmosphere": "charged",
+  "dominant_faction": "memory_collective",
+  "poi_count": 2,
+  "road_count": 12,
+  "landmark_count": 0,
+  "faction_count": 1,
+  "historical_echo_count": 0,
+  "memory_anchor_count": 1,
+  "sprite_count": 1,
+  "state_version": "0.1",
+  "disturbance_level": 0.1,
+  "active_lens": "chalk_dawn",
+  "input": "world.json"
+}

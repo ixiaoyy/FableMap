@@ -75,6 +75,45 @@ class WorldBuilderTests(unittest.TestCase):
         self.assertEqual(first["world_id"], second["world_id"])
         self.assertEqual(first["seed"], second["seed"])
 
+    def test_build_world_prefers_chinese_names_when_available(self) -> None:
+        world = build_world(
+            31.2304,
+            121.4737,
+            300,
+            source_data={
+                "elements": [
+                    {
+                        "type": "node",
+                        "id": 201,
+                        "lat": 31.2305,
+                        "lon": 121.4738,
+                        "tags": {
+                            "amenity": "cafe",
+                            "name": "Wander Compass",
+                            "name:zh": "漫游罗盘",
+                        },
+                    },
+                    {
+                        "type": "node",
+                        "id": 202,
+                        "lat": 31.2306,
+                        "lon": 121.4739,
+                        "tags": {
+                            "tourism": "attraction",
+                            "name": "Clock Gate",
+                            "name:zh-Hans": "钟门",
+                        },
+                    },
+                ]
+            },
+            provider="fixture",
+        )
+        cafe = next(poi for poi in world["pois"] if poi["id"] == "node-201")
+        self.assertEqual(cafe["real_name"], "漫游罗盘")
+        self.assertEqual(cafe["fantasy_name"], "漫游罗盘 Parlor")
+        self.assertEqual(world["region"]["name"], "Around 漫游罗盘")
+        self.assertEqual(world["landmarks"][0]["name"], "钟门")
+
 
 if __name__ == "__main__":
     unittest.main()

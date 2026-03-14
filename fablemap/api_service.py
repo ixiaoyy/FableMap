@@ -35,7 +35,10 @@ def build_meta_payload(*, base_url: str) -> dict[str, Any]:
 
 
 def build_nearby_payload(*, result: dict[str, Any], base_url: str, mode: str, run_id: str) -> dict[str, Any]:
+    import json as _json
     payload = dict(result)
+    world_path = Path(result["world"]) if result.get("world") else None
+    world_data = _json.loads(world_path.read_text(encoding="utf-8")) if world_path and world_path.exists() else None
     payload.update(
         {
             "mode": mode,
@@ -44,6 +47,7 @@ def build_nearby_payload(*, result: dict[str, Any], base_url: str, mode: str, ru
             "manifest_url": f"{base_url}/generated/{run_id}/bundle/manifest.json",
             "world_url": f"{base_url}/generated/{run_id}/world.json",
             "frontend_url": f"{base_url}/",
+            "world": world_data,
         }
     )
     return payload
