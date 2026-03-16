@@ -2,23 +2,25 @@
 
 ## Overview
 
-This script generates all 26 map assets for FableMap using the Replicate API (Stable Diffusion):
+This script generates all 26 map assets for FableMap with multiple providers:
+- **[`replicate`](scripts/generate_map_assets.py:116)** for hosted generation
+- **[`a1111`](scripts/generate_map_assets.py:117)** for local [`AUTOMATIC1111`](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+- **[`comfyui`](scripts/generate_map_assets.py:118)** for local [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI)
+
+Asset output remains the same for all providers:
 - **Pack A (Dream-Glade Night)**: 1 scene + 6 icons + 6 tiles
 - **Pack B (Pastoral Storybook)**: 1 scene + 6 icons + 6 tiles
 
 ## Setup
 
-### 1. Get Replicate API Token
-- Visit: https://replicate.com/account/api-tokens
-- Sign up for free (includes free credits)
-- Copy your API token
+### Option A: Replicate
 
-### 2. Install Dependencies
+#### 1. Install Dependencies
 ```bash
 pip install replicate requests
 ```
 
-### 3. Set Environment Variable
+#### 2. Set Environment Variable
 ```bash
 # macOS/Linux
 export REPLICATE_API_TOKEN=your-token-here
@@ -30,10 +32,99 @@ $env:REPLICATE_API_TOKEN="your-token-here"
 set REPLICATE_API_TOKEN=your-token-here
 ```
 
-### 4. Run the Script
+#### 3. Run the Script
 ```bash
-python scripts/generate_map_assets.py
+python scripts/generate_map_assets.py --provider replicate
 ```
+
+### Option B: Local ComfyUI
+
+#### 1. Start ComfyUI
+Recommended local stack on this machine:
+- install [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI)
+- use a Python 3 virtual environment
+- install PyTorch with CUDA support
+- launch the server on `http://127.0.0.1:8188`
+
+Current local install path used during development:
+- [`tools/ComfyUI`](tools/ComfyUI)
+- [`tools/ComfyUI/.venv`](tools/ComfyUI/.venv)
+
+#### 2. Put a checkpoint into the checkpoints folder
+Expected folder:
+- [`tools/ComfyUI/models/checkpoints/`](tools/ComfyUI/models/checkpoints/)
+
+Example model filename:
+- `v1-5-pruned-emaonly.safetensors`
+- or an SDXL checkpoint if VRAM allows
+
+#### 3. Run the script with the ComfyUI provider
+Use the same Python environment that has [`requests`](https://pypi.org/project/requests/) installed. On this machine the working command is:
+
+```bash
+tools/ComfyUI/.venv/Scripts/python.exe scripts/generate_map_assets.py --provider comfyui --base-url http://127.0.0.1:8188 --model v1-5-pruned-emaonly.safetensors
+```
+
+Dry run:
+
+```bash
+tools/ComfyUI/.venv/Scripts/python.exe scripts/generate_map_assets.py --provider comfyui --base-url http://127.0.0.1:8188 --model v1-5-pruned-emaonly.safetensors --dry-run
+```
+
+### Option C: Local AUTOMATIC1111
+
+#### 1. Start the A1111 WebUI API
+Make sure the API is enabled, typically with `--api`, and available at `http://127.0.0.1:7860`.
+
+#### 2. Run the script with the A1111 provider
+```bash
+python scripts/generate_map_assets.py --provider a1111 --base-url http://127.0.0.1:7860 --model your-checkpoint-name.safetensors
+```
+
+## Provider Parameters
+
+The script now supports these key flags:
+- [`--provider`](scripts/generate_map_assets.py:116)
+- [`--api-token`](scripts/generate_map_assets.py:122)
+- [`--base-url`](scripts/generate_map_assets.py:127)
+- [`--model`](scripts/generate_map_assets.py:136)
+- [`--negative-prompt`](scripts/generate_map_assets.py:145)
+- [`--steps-scene`](scripts/generate_map_assets.py:150)
+- [`--steps-asset`](scripts/generate_map_assets.py:156)
+- [`--cfg-scale`](scripts/generate_map_assets.py:162)
+- [`--sampler-name`](scripts/generate_map_assets.py:168)
+- [`--scheduler`](scripts/generate_map_assets.py:174)
+- [`--seed`](scripts/generate_map_assets.py:180)
+- [`--timeout`](scripts/generate_map_assets.py:186)
+- [`--poll-interval`](scripts/generate_map_assets.py:192)
+- [`--output-dir`](scripts/generate_map_assets.py:198)
+- [`--comfyui-workflow-api`](scripts/generate_map_assets.py:204)
+- [`--dry-run`](scripts/generate_map_assets.py:210)
+
+You can also configure the script with environment variables such as:
+- `FABLEMAP_IMAGE_PROVIDER`
+- `LOCAL_SD_BASE_URL`
+- `LOCAL_SD_MODEL`
+- `LOCAL_SD_NEGATIVE_PROMPT`
+- `LOCAL_SD_STEPS_SCENE`
+- `LOCAL_SD_STEPS_ASSET`
+- `LOCAL_SD_CFG_SCALE`
+- `LOCAL_SD_SAMPLER`
+- `LOCAL_SD_SCHEDULER`
+- `LOCAL_SD_SEED`
+- `LOCAL_SD_TIMEOUT`
+- `LOCAL_SD_POLL_INTERVAL`
+- `COMFYUI_WORKFLOW_API`
+- `FABLEMAP_ASSET_OUTPUT_DIR`
+
+## Current Local Machine Status
+
+Local provider selected for development: **[`ComfyUI`](https://github.com/comfyanonymous/ComfyUI)**.
+
+Current machine verification:
+- local [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI) server starts successfully on `http://127.0.0.1:8188`
+- [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py) dry run works with `--provider comfyui`
+- no checkpoint is installed yet in [`tools/ComfyUI/models/checkpoints/`](tools/ComfyUI/models/checkpoints/), so real asset generation cannot start until a model file is added
 
 ## Output Structure
 
@@ -93,24 +184,33 @@ new_map_assets/
 
 ## Timing
 
-- Each image takes ~30-60 seconds to generate
-- Total generation time: ~30-45 minutes for all 26 assets
-- The script polls Replicate API every 5 seconds for completion
+- Local generation speed depends on model size, VRAM, and provider backend
+- On local GPU, icons and tiles should usually be faster than scenes
+- The script polls [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI) using [`--poll-interval`](scripts/generate_map_assets.py:192)
+- Total time for all 26 assets can vary significantly depending on checkpoint and settings
 
 ## Troubleshooting
 
-### "REPLICATE_API_TOKEN not set"
-Make sure you've set the environment variable correctly and restarted your terminal.
+### `ModuleNotFoundError: No module named 'requests'`
+Run the script with a Python environment that has dependencies installed, for example [`tools/ComfyUI/.venv/Scripts/python.exe`](tools/ComfyUI/.venv/Scripts/python.exe).
 
-### "Generation timeout"
-- Check your internet connection
-- Verify your Replicate API token is valid
-- Try running again (may be temporary API issue)
+### `REPLICATE_API_TOKEN not set`
+Make sure the environment variable is set when using provider `replicate`.
 
-### "Generation failed"
-- Check the error message from Replicate
-- Try adjusting the prompt if specific elements aren't rendering well
-- Replicate may have rate limits on free tier
+### Local ComfyUI server is up but generation fails immediately
+- verify the base URL matches the running server, for example `http://127.0.0.1:8188`
+- verify a checkpoint exists in [`tools/ComfyUI/models/checkpoints/`](tools/ComfyUI/models/checkpoints/)
+- verify the model name passed to [`--model`](scripts/generate_map_assets.py:136) exactly matches the checkpoint filename
+
+### Generation timeout
+- local provider may still be loading models or waiting on VRAM
+- increase [`--timeout`](scripts/generate_map_assets.py:186)
+- for [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI), consider increasing [`--poll-interval`](scripts/generate_map_assets.py:192) slightly if the machine is under heavy load
+
+### Generation failed
+- check the server console output from [`tools/ComfyUI/main.py`](tools/ComfyUI/main.py)
+- try a lighter checkpoint first, such as SD 1.5 class models
+- lower image size or steps if VRAM is limited
 
 ## Customization
 
@@ -131,7 +231,8 @@ PACK_A_SPECS = {
 ## Next Steps
 
 After generation:
-1. Review generated assets in `fablemap/demo_assets/new_map_assets/`
+1. Review generated assets in [`fablemap/demo_assets/new_map_assets/`](fablemap/demo_assets/new_map_assets/)
 2. Verify consistency across both packs
 3. Commit assets to repository
-4. Integrate into frontend (WorldMap.jsx)
+4. Integrate into [`frontend/src/WorldMap.jsx`](frontend/src/WorldMap.jsx)
+5. If needed, refine local workflow parameters in [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py)
