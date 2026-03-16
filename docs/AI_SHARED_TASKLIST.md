@@ -47,6 +47,12 @@
 - `W2` · `done` · 浏览器内 2D 世界地图骨架 v0.1：已把 preview 重组为 `world-shell -> world-map-stage -> world-secondary-panels`，让地图舞台成为主入口，侧边详情与次级信息面板退为附属层，同时保留现有 SVG 空间渲染、i18n 与要素选中链路。
 - `W3` · `done` · 2D 世界地图交互层与侧边信息面板：已为地图本体补齐平移（鼠标拖拽 / 触摸）、缩放（滚轮 / 双指捏合 / 缩放按钮）、悬停 tooltip、选中态聚焦（easeInOut 相机动画）与侧边详情联动。
 
+### A2. 地图资源 / Map Assets
+
+- `M1` · `planned` · 双资源包地图资产主线收束：将 `docs/MAP_ASSETS_PLAN.md`、`docs/MAP_ASSETS_GENERATION_GUIDE.md` 与 `scripts/generate_map_assets.py` 收束为共享任务主线，明确 Pack A / Pack B 的 scene、icons、tiles 输出规范，并为后续资源生成、验收与前端接入建立统一入口。
+- `M2` · `planned` · 地图资源生成与落盘：按 Map Assets Plan 生成 Pack A（Dream-Glade Night）与 Pack B（Pastoral Storybook）两套资源包，输出到 `fablemap/demo_assets/new_map_assets/`，覆盖场景图、图标与 tile 资源。
+- `M3` · `planned` · 地图资源验收与前端接入基线：验证双资源包在尺寸、透明背景、图标语言、tile 可拼接性上的一致性，并为 `WorldMap` / bundle 预览页后续接入提供最小资源映射基线。
+
 ### B. 视觉转义 / 模式切换
 
 - `V1` · `done` · OSM -> 2D 建筑实体视觉转义规则库：已实现 15 种 fantasy_type 语义图标（公园 / 医院 / 补给站 / 权力塔 / 茶馆 / 学院 / 银行 / 餐厅 / 快餐 / 图书馆 / 礼拜场所 / 停车场 / 药店 / 健身房 / 写字楼）+ landmark 专属图标 + 道路三层级渲染（主干道 / 街道 / 步行路），图例同步更新。
@@ -98,6 +104,7 @@
 - 会话中的玩家参与 / 城市共创未完成项已对应到 `C1`、`C2`、`C3`、`D3`、`E1`、`E2`、`E3`、`E4`。
 - 会话中新增收束的“统一世界写回协议 + 最小写回闭环”已对应到 `P5`，分阶段实施计划见 [`docs/WORLD_WRITEBACK_PLAN.md`](docs/WORLD_WRITEBACK_PLAN.md)。
 - 会话中的规则治理、现实输入与长期世界事件未完成项已对应到 `F1`、`F2`、`F3`、`G1`、`G2`。
+- 新进入仓库的地图资源包规划、生成脚本与生成说明，已收束到 `M1`、`M2`、`M3`。
 
 ## 认领建议
 
