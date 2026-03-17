@@ -51,13 +51,40 @@ PACK_A_SPECS = {
         "echo": "2D RPG world map icon, glowing butterfly crystal emblem, pastel magical badge, cute fantasy UI token, clean outline, readable silhouette, no text, no realism",
         "event": "2D RPG world map icon, magic wand and sparkle badge, cute fantasy event marker, polished game asset style, clean outline, readable silhouette, no text",
     },
+    "buildings": {
+        "house_01": "2D isometric building sprite, cozy pastoral cottage with warm roof, tiny chimney, flower boxes, readable game asset, clean outline, transparent background, no text",
+        "house_02": "2D isometric building sprite, storybook village farmhouse with blue roof, stacked firewood, herb garden and small porch, readable fantasy map asset, transparent background, no text",
+        "tower_01": "2D isometric building sprite, whimsical fantasy watch tower with pale stone base, ivy, banner, readable top-down angled game asset, transparent background, no text",
+        "tower_02": "2D isometric building sprite, slim bell tower with pastel shingles, ivy-wrapped stone and hanging lantern, readable cozy fantasy structure asset, transparent background, no text",
+        "shop_01": "2D isometric building sprite, charming pastoral item shop with striped awning, wood stall details, flower pots, readable RPG map asset, transparent background, no text",
+        "shop_02": "2D isometric building sprite, baker shop with warm oven chimney, bread signboard, flower baskets and tidy window shutters, readable storybook town asset, transparent background, no text",
+        "sanctum_01": "2D isometric building sprite, gentle healing sanctum with round roof, glowing windows, soft garden details, cozy fantasy structure asset, transparent background, no text",
+        "sanctum_02": "2D isometric building sprite, moonwell chapel with pale stone arch, blue-glass windows, vine-wrapped columns and soft glow, readable healing landmark asset, transparent background, no text",
+    },
+    "decorations": {
+        "tree_01": "2D isometric decoration sprite, lush round village tree with layered leaves, soft shadow, readable fantasy map prop, transparent background, no text",
+        "tree_02": "2D isometric decoration sprite, flowering orchard tree with pink blossoms and curved trunk, cozy pastoral prop asset, transparent background, no text",
+        "lamp_01": "2D isometric decoration sprite, warm iron lantern post with tiny flowers around base, readable storybook village prop, transparent background, no text",
+        "fence_01": "2D isometric decoration sprite, short wooden fence segment with ivy and tiny flowers, clean modular fantasy map prop, transparent background, no text",
+        "rock_01": "2D isometric decoration sprite, mossy stone cluster with grass tufts, readable pastoral environment prop, transparent background, no text",
+        "bridge_01": "2D isometric decoration sprite, small wooden footbridge with flower rails, cozy village crossing prop, transparent background, no text",
+        "cart_01": "2D isometric decoration sprite, small market cart with fruit crates and cloth canopy, readable pastoral town prop, transparent background, no text",
+        "well_01": "2D isometric decoration sprite, circular village well with roof, bucket and stone rim, readable cozy landmark prop, transparent background, no text",
+    },
     "tiles": {
         "road_01": "seamless 2D game map tile, pale stone road with soft grass edge, cute pastoral fantasy world map style, hand-painted texture, readable from top down, no text",
         "road_02": "seamless 2D game map tile, light dirt path with small flowers, cozy fantasy overworld style, cute hand-painted mobile game texture, no text",
+        "road_straight_01": "seamless 2D game map road material tile, straight pale cobblestone strip with tidy grass borders, pastoral fantasy overworld sprite texture, top-down readable lane material, no text",
+        "road_corner_01": "seamless 2D game map road material tile, soft curved dirt-and-stone road corner with flower edge, cozy hand-painted fantasy route texture, no text",
+        "road_cross_01": "seamless 2D game map road material tile, four-way village crossing made of pale stone and packed earth, cute pastoral route texture, readable top-down, no text",
         "ground_01": "seamless 2D game map tile, lush green meadow grass with tiny flowers, whimsical pastoral fantasy style, bright readable top-down texture, no text",
         "ground_02": "seamless 2D game map tile, clover meadow and soft garden soil, cute world map texture, pastel fantasy palette, no text",
+        "ground_dirt_01": "seamless 2D game map ground material tile, warm brown village dirt with scattered petals and subtle footprints, cozy pastoral texture, no text",
+        "ground_stone_01": "seamless 2D game map ground material tile, sun-worn pale plaza stone with moss seams, storybook fantasy town texture, no text",
         "water_01": "seamless 2D game map tile, bright turquoise river water with simple ripples, cute overworld map style, readable hand-painted texture, no text",
+        "water_edge_01": "seamless 2D game map water edge material tile, shallow pond border blending turquoise water into grassy bank, cute pastoral fantasy texture, no text",
         "magic_01": "seamless 2D game map tile, soft glowing enchanted grass with sparkles, whimsical pastel fantasy texture, cute RPG world map style, no text",
+        "flowerbed_01": "seamless 2D game map decorative ground tile, dense pastel flowerbed patch with leaves and petals, cozy village embellishment texture, no text",
     },
 }
 
@@ -76,13 +103,40 @@ PACK_B_SPECS = {
         "echo": "2D RPG world map icon, glowing butterfly emblem, luminous spirit token, cute magical UI badge, clean outline, readable silhouette, no text",
         "event": "2D RPG world map icon, crystal wand badge, enchanted event marker, polished fantasy UI sticker, readable silhouette, no text",
     },
+    "buildings": {
+        "house_01": "2D isometric building sprite, enchanted mushroom cottage with glowing windows, moss roof, flower clusters, readable fantasy map asset, transparent background, no text",
+        "house_02": "2D isometric building sprite, root-woven forest lodge with teal windows, hanging herbs and glowing mushrooms, readable enchanted town asset, transparent background, no text",
+        "tower_01": "2D isometric building sprite, ancient crystal tower with roots and teal glow, enchanted forest landmark structure, readable game asset, transparent background, no text",
+        "tower_02": "2D isometric building sprite, moonlit druid tower with spiral roots, crystal lanterns and blue banners, readable magical forest structure, transparent background, no text",
+        "shop_01": "2D isometric building sprite, magical forest market hut with lanterns and herb bundles, cozy merchant building asset, transparent background, no text",
+        "shop_02": "2D isometric building sprite, potion apothecary with glowing bottles, curved wood roof and herb racks, readable enchanted merchant asset, transparent background, no text",
+        "sanctum_01": "2D isometric building sprite, luminous spirit shrine with crystal petals, soft blue windows, enchanted healing structure asset, transparent background, no text",
+        "sanctum_02": "2D isometric building sprite, forest moon shrine with rune stones, glowing pool and petal canopy, readable mystical healing landmark, transparent background, no text",
+    },
+    "decorations": {
+        "tree_01": "2D isometric decoration sprite, luminous crystal tree with teal leaves and glowing roots, readable enchanted forest prop, transparent background, no text",
+        "tree_02": "2D isometric decoration sprite, twisted moonwood tree with hanging lantern flowers and moss, readable magical woodland prop, transparent background, no text",
+        "lamp_01": "2D isometric decoration sprite, crystal lamp post with blue glow and vine-wrapped base, readable enchanted path prop, transparent background, no text",
+        "fence_01": "2D isometric decoration sprite, rune-carved wooden fence segment with moss and blue flowers, modular magical forest prop, transparent background, no text",
+        "rock_01": "2D isometric decoration sprite, crystal-touched moss boulder cluster with small glowing shards, readable enchanted environment prop, transparent background, no text",
+        "bridge_01": "2D isometric decoration sprite, root-and-crystal bridge with glowing rails, readable fantasy forest crossing prop, transparent background, no text",
+        "cart_01": "2D isometric decoration sprite, enchanted herb cart with glowing bottles, mushrooms and cloth canopy, readable forest market prop, transparent background, no text",
+        "well_01": "2D isometric decoration sprite, spirit well with crystal basin, rune rim and soft blue water glow, readable mystical village prop, transparent background, no text",
+    },
     "tiles": {
         "road_01": "seamless 2D game map tile, mossy stone road with glowing grass edge, enchanted forest world map texture, cute hand-painted style, no text",
         "road_02": "seamless 2D game map tile, forest path with pale stepping stones and flower edge, whimsical magical map texture, no text",
+        "road_straight_01": "seamless 2D game map road material tile, straight mossy flagstone lane with blue glow seams, enchanted forest route texture, no text",
+        "road_corner_01": "seamless 2D game map road material tile, curved magical forest trail corner with roots and soft luminescent flowers, cute readable route texture, no text",
+        "road_cross_01": "seamless 2D game map road material tile, four-way enchanted crossing with moss stone and glowing clover edge, magical overworld texture, no text",
         "ground_01": "seamless 2D game map tile, enchanted grass with moss and tiny flowers, cute magical forest top-down texture, no text",
         "ground_02": "seamless 2D game map tile, forest floor with clover, roots and soft blue flowers, readable cute RPG map texture, no text",
+        "ground_dirt_01": "seamless 2D game map ground material tile, soft woodland soil with roots, petals and dim teal sparkles, enchanted forest texture, no text",
+        "ground_stone_01": "seamless 2D game map ground material tile, moonlit ruin stone with moss cracks and faint crystal dust, magical forest plaza texture, no text",
         "water_01": "seamless 2D game map tile, luminous blue stream water, magical forest overworld texture, hand-painted game style, no text",
+        "water_edge_01": "seamless 2D game map water edge material tile, glowing brook shoreline with moss bank and tiny flowers, enchanted forest texture, no text",
         "garden_01": "seamless 2D game map tile, crystal flower garden patch, enchanted forest decorative terrain texture, cute pastel fantasy style, no text",
+        "ruins_01": "seamless 2D game map decorative ground tile, broken rune stones and moss circles, enchanted forest ruins texture, no text",
     },
 }
 
@@ -121,6 +175,8 @@ def ensure_output_dirs(base_path: str) -> tuple[Path, Path]:
     for pack_dir in [pack_a_dir, pack_b_dir]:
         (pack_dir / "icons").mkdir(parents=True, exist_ok=True)
         (pack_dir / "tiles").mkdir(parents=True, exist_ok=True)
+        (pack_dir / "buildings").mkdir(parents=True, exist_ok=True)
+        (pack_dir / "decorations").mkdir(parents=True, exist_ok=True)
 
     return pack_a_dir, pack_b_dir
 
@@ -602,6 +658,24 @@ def generate_pack(
         if save_image(tile_data, tile_path):
             success_count += 1
 
+    buildings = pack_specs.get("buildings", {})
+    if buildings:
+        print(f"\n[Buildings] {len(buildings)} assets")
+        for building_name, building_prompt in buildings.items():
+            building_path = output_dir / "buildings" / f"{building_name}.png"
+            building_data = generate_image(config, building_prompt, "512x512")
+            if save_image(building_data, building_path):
+                success_count += 1
+
+    decorations = pack_specs.get("decorations", {})
+    if decorations:
+        print(f"\n[Decorations] {len(decorations)} assets")
+        for decoration_name, decoration_prompt in decorations.items():
+            decoration_path = output_dir / "decorations" / f"{decoration_name}.png"
+            decoration_data = generate_image(config, decoration_prompt, "512x512")
+            if save_image(decoration_data, decoration_path):
+                success_count += 1
+
     return success_count
 
 
@@ -626,6 +700,10 @@ def print_dry_run(config: ProviderConfig, output_base: Path) -> None:
             print(f"  {pack_key}/icons/{icon_name}.png")
         for tile_name in pack_specs["tiles"]:
             print(f"  {pack_key}/tiles/{tile_name}.png")
+        for building_name in pack_specs.get("buildings", {}):
+            print(f"  {pack_key}/buildings/{building_name}.png")
+        for decoration_name in pack_specs.get("decorations", {}):
+            print(f"  {pack_key}/decorations/{decoration_name}.png")
 
 
 def main() -> int:
@@ -662,7 +740,18 @@ def main() -> int:
     total_success += generate_pack(config, "Pack A", PACK_A_SPECS, pack_a_dir)
     total_success += generate_pack(config, "Pack B", PACK_B_SPECS, pack_b_dir)
 
-    total_assets = 2 + 6 + 6 + 2 + 6 + 6
+    total_assets = (
+        1
+        + len(PACK_A_SPECS["icons"])
+        + len(PACK_A_SPECS["tiles"])
+        + len(PACK_A_SPECS.get("buildings", {}))
+        + len(PACK_A_SPECS.get("decorations", {}))
+        + 1
+        + len(PACK_B_SPECS["icons"])
+        + len(PACK_B_SPECS["tiles"])
+        + len(PACK_B_SPECS.get("buildings", {}))
+        + len(PACK_B_SPECS.get("decorations", {}))
+    )
     print(f"\n{'=' * 60}")
     print("Generation Complete")
     print(f"{'=' * 60}")
