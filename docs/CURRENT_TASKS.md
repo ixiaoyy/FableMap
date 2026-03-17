@@ -40,22 +40,45 @@
 
 ## 二、本周待做
 
+### P0：主线补位
+
+#### Map Assets 主线补位（M1）
+
+1. 将 [`docs/MAP_ASSETS_PLAN.md`](docs/MAP_ASSETS_PLAN.md)、[`docs/MAP_ASSETS_GENERATION_GUIDE.md`](docs/MAP_ASSETS_GENERATION_GUIDE.md) 与 [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py) 收束为统一主线入口
+2. 明确 Pack A / Pack B 的 scene、icons、tiles 输出规范与命名约定
+3. 为后续 [`M2`](docs/AI_SHARED_TASKLIST.md:53) 资源生成与 [`M3`](docs/AI_SHARED_TASKLIST.md:54) 验收 / 前端接入建立任务边界，避免协作重叠
+
+#### Map Assets 资源生成与落盘（M2）
+
+1. 以 [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py) 为批量生成入口，校准 Pack A / Pack B 的 prompts、输出路径与命名一致性
+2. 对齐 [`docs/MAP_ASSETS_GENERATION_GUIDE.md`](docs/MAP_ASSETS_GENERATION_GUIDE.md) 与 [`docs/LOCAL_GPU_MAP_ASSETS_GUIDE.md`](docs/LOCAL_GPU_MAP_ASSETS_GUIDE.md) 的执行说明，明确 API 路径与本地 GPU 路径
+3. 将生成结果稳定落盘到 [`fablemap/demo_assets/new_map_assets/`](fablemap/demo_assets/new_map_assets/)，为后续 [`M3`](docs/AI_SHARED_TASKLIST.md:54) 验收与前端接入提供可检查资产
+
 ### P0：必须优先完成
 
-1. 完成 `WORLD_WRITEBACK_PROTOCOL.md` 的收束与确认
-2. 定义 `observe / dwell / mark` 的统一事件结构
-3. 实现最小事件接口：`POST /api/world/event`
-4. 实现最小文件级持久化，至少保存：
+#### 技术方向监控（新增）
+
+1. **AI 技术实况跟踪**：定期了解最新 AI 研究进展（Genie 3、Sora、世界模型等）
+2. **各大厂 AI 方向分析**：跟踪 Google DeepMind、OpenAI、Anthropic 等的研究方向
+3. **技术路线验证**：确保 FableMap 的技术选型不会被快速替代，及时调整架构方向
+4. **竞品与趋势分析**：识别可能影响项目价值的技术突破，提前规划应对策略
+
+#### 世界写回协议闭环
+
+5. 完成 `WORLD_WRITEBACK_PROTOCOL.md` 的收束与确认
+6. 定义 `observe / dwell / mark` 的统一事件结构
+7. 实现最小事件接口：`POST /api/world/event`
+8. 实现最小文件级持久化，至少保存：
    - player state
    - slice state
    - place marks
    - recent echoes
-5. 前端接入三种动作：
+9. 前端接入三种动作：
    - observe
    - dwell
    - mark
-6. 在 UI 中显示状态变化结果，而不只是一次性提示
-7. 验证“重新进入同一 slice 后写回结果仍存在”
+10. 在 UI 中显示状态变化结果，而不只是一次性提示
+11. 验证”重新进入同一 slice 后写回结果仍存在”
 
 ### P0.5：紧跟其后
 

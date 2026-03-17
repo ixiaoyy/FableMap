@@ -34,6 +34,12 @@
 
 ## P0：当前优先认领任务
 
+### T. 技术方向监控与验证
+
+- `T1` · `planned` · AI 技术实况跟踪与分析：定期跟踪 AI 领域最新进展（世界模型、生成式 AI、游戏 AI 等），分析对 FableMap 技术路线的影响，确保项目不会使用可被快速替代的技术栈。
+- `T2` · `planned` · 各大厂 AI 研究方向监控：跟踪 Google DeepMind（Genie 系列）、OpenAI（Sora、GPT）、Anthropic（Claude）等的研究方向与产品发布，识别潜在竞品与技术趋势。
+- `T3` · `planned` · 技术架构演进规划：基于 AI 技术发展趋势，定期评估 FableMap 的"OSM 数据 + AI 叙事"混合架构是否需要调整，规划未来 AI 能力集成路径。
+
 ### P. 协议与世界语法
 
 - `P3` · `done` · 玩家写回权限与语义治理边界：已完成 [`docs/WORLD_WRITEBACK_GOVERNANCE.md`](docs/WORLD_WRITEBACK_GOVERNANCE.md) 协议文档，定义 `private / local_public / global` 三层写回完整语义、AI 改写边界、moderation 审核机制、生命周期管理与系统衔接规则。
@@ -49,8 +55,8 @@
 
 ### A2. 地图资源 / Map Assets
 
-- `M1` · `planned` · 双资源包地图资产主线收束：将 `docs/MAP_ASSETS_PLAN.md`、`docs/MAP_ASSETS_GENERATION_GUIDE.md` 与 `scripts/generate_map_assets.py` 收束为共享任务主线，明确 Pack A / Pack B 的 scene、icons、tiles 输出规范，并为后续资源生成、验收与前端接入建立统一入口。
-- `M2` · `planned` · 地图资源生成与落盘：按 Map Assets Plan 生成 Pack A（Dream-Glade Night）与 Pack B（Pastoral Storybook）两套资源包，输出到 `fablemap/demo_assets/new_map_assets/`，覆盖场景图、图标与 tile 资源。
+- `M1` · `in_progress` · 双资源包地图资产主线收束：已新增 [`docs/claims/2026-03-16-map-assets-mainline-consolidation.md`](docs/claims/2026-03-16-map-assets-mainline-consolidation.md) 作为主线认领入口，围绕 [`docs/MAP_ASSETS_PLAN.md`](docs/MAP_ASSETS_PLAN.md)、[`docs/MAP_ASSETS_GENERATION_GUIDE.md`](docs/MAP_ASSETS_GENERATION_GUIDE.md) 与 [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py) 收束 Pack A / Pack B 的 scene、icons、tiles 输出规范，并明确后续资源生成、验收、前端接入的拆分边界。
+- `M2` · `in_progress` · 地图资源生成与落盘：已新增 [`docs/claims/2026-03-16-map-assets-generation-pack-a-b.md`](docs/claims/2026-03-16-map-assets-generation-pack-a-b.md) 作为执行入口，围绕 [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py)、[`docs/MAP_ASSETS_GENERATION_GUIDE.md`](docs/MAP_ASSETS_GENERATION_GUIDE.md) 与 [`docs/LOCAL_GPU_MAP_ASSETS_GUIDE.md`](docs/LOCAL_GPU_MAP_ASSETS_GUIDE.md) 推进 Pack A（Dream-Glade Night）与 Pack B（Pastoral Storybook）的 scene、icons、tiles 生成与落盘，并保留本地 GPU / API 双路径执行边界。
 - `M3` · `planned` · 地图资源验收与前端接入基线：验证双资源包在尺寸、透明背景、图标语言、tile 可拼接性上的一致性，并为 `WorldMap` / bundle 预览页后续接入提供最小资源映射基线。
 
 ### B. 视觉转义 / 模式切换
