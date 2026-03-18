@@ -60,6 +60,8 @@ PACK_A_SPECS = {
         "shop_02": "2D isometric building sprite, baker shop with warm oven chimney, bread signboard, flower baskets and tidy window shutters, readable storybook town asset, transparent background, no text",
         "sanctum_01": "2D isometric building sprite, gentle healing sanctum with round roof, glowing windows, soft garden details, cozy fantasy structure asset, transparent background, no text",
         "sanctum_02": "2D isometric building sprite, moonwell chapel with pale stone arch, blue-glass windows, vine-wrapped columns and soft glow, readable healing landmark asset, transparent background, no text",
+        "guildhall_01": "2D isometric building sprite, bright pastoral guild hall with golden crest, broad steps, timber frame and festival ribbons, readable town center asset, transparent background, no text",
+        "inn_01": "2D isometric building sprite, cozy roadside inn with warm lantern windows, hanging sign frame, tiled roof and flower boxes, readable storybook RPG asset, transparent background, no text",
     },
     "decorations": {
         "tree_01": "2D isometric decoration sprite, lush round village tree with layered leaves, soft shadow, readable fantasy map prop, transparent background, no text",
@@ -70,6 +72,8 @@ PACK_A_SPECS = {
         "bridge_01": "2D isometric decoration sprite, small wooden footbridge with flower rails, cozy village crossing prop, transparent background, no text",
         "cart_01": "2D isometric decoration sprite, small market cart with fruit crates and cloth canopy, readable pastoral town prop, transparent background, no text",
         "well_01": "2D isometric decoration sprite, circular village well with roof, bucket and stone rim, readable cozy landmark prop, transparent background, no text",
+        "banner_01": "2D isometric decoration sprite, festive village banner arch with ribbons, pennants and flower garlands, readable pastoral celebration prop, transparent background, no text",
+        "crate_01": "2D isometric decoration sprite, stacked supply crates with cloth roll and tiny flowers, readable cozy market prop, transparent background, no text",
     },
     "tiles": {
         "road_01": "seamless 2D game map tile, pale stone road with soft grass edge, cute pastoral fantasy world map style, hand-painted texture, readable from top down, no text",
@@ -85,6 +89,8 @@ PACK_A_SPECS = {
         "water_edge_01": "seamless 2D game map water edge material tile, shallow pond border blending turquoise water into grassy bank, cute pastoral fantasy texture, no text",
         "magic_01": "seamless 2D game map tile, soft glowing enchanted grass with sparkles, whimsical pastel fantasy texture, cute RPG world map style, no text",
         "flowerbed_01": "seamless 2D game map decorative ground tile, dense pastel flowerbed patch with leaves and petals, cozy village embellishment texture, no text",
+        "plaza_01": "seamless 2D game map plaza tile, warm cream festival stone with petal confetti and soft chalk motifs, readable pastoral town center texture, no text",
+        "path_glow_01": "seamless 2D game map decorative path tile, tiny lantern reflections and soft golden sparkles over packed earth, cozy fantasy travel texture, no text",
     },
 }
 
@@ -112,6 +118,8 @@ PACK_B_SPECS = {
         "shop_02": "2D isometric building sprite, potion apothecary with glowing bottles, curved wood roof and herb racks, readable enchanted merchant asset, transparent background, no text",
         "sanctum_01": "2D isometric building sprite, luminous spirit shrine with crystal petals, soft blue windows, enchanted healing structure asset, transparent background, no text",
         "sanctum_02": "2D isometric building sprite, forest moon shrine with rune stones, glowing pool and petal canopy, readable mystical healing landmark, transparent background, no text",
+        "archive_01": "2D isometric building sprite, rune archive hall grown from roots and crystal shelves, moonlit windows and teal sigils, readable enchanted civic asset, transparent background, no text",
+        "forge_01": "2D isometric building sprite, crystal forge pavilion with blue fire basin, twisted roots and glowing anvils, readable magical industry asset, transparent background, no text",
     },
     "decorations": {
         "tree_01": "2D isometric decoration sprite, luminous crystal tree with teal leaves and glowing roots, readable enchanted forest prop, transparent background, no text",
@@ -122,6 +130,8 @@ PACK_B_SPECS = {
         "bridge_01": "2D isometric decoration sprite, root-and-crystal bridge with glowing rails, readable fantasy forest crossing prop, transparent background, no text",
         "cart_01": "2D isometric decoration sprite, enchanted herb cart with glowing bottles, mushrooms and cloth canopy, readable forest market prop, transparent background, no text",
         "well_01": "2D isometric decoration sprite, spirit well with crystal basin, rune rim and soft blue water glow, readable mystical village prop, transparent background, no text",
+        "crystal_cluster_01": "2D isometric decoration sprite, luminous crystal cluster with teal shards, mossy base and floating sparkle motes, readable enchanted prop, transparent background, no text",
+        "portal_gate_01": "2D isometric decoration sprite, moonlit rune gate with hanging lantern flowers and soft cyan portal haze, readable magical landmark prop, transparent background, no text",
     },
     "tiles": {
         "road_01": "seamless 2D game map tile, mossy stone road with glowing grass edge, enchanted forest world map texture, cute hand-painted style, no text",
@@ -137,6 +147,8 @@ PACK_B_SPECS = {
         "water_edge_01": "seamless 2D game map water edge material tile, glowing brook shoreline with moss bank and tiny flowers, enchanted forest texture, no text",
         "garden_01": "seamless 2D game map tile, crystal flower garden patch, enchanted forest decorative terrain texture, cute pastel fantasy style, no text",
         "ruins_01": "seamless 2D game map decorative ground tile, broken rune stones and moss circles, enchanted forest ruins texture, no text",
+        "river_glow_01": "seamless 2D game map water material tile, moonlit river current with cyan sparkle veins and soft magical foam, enchanted forest texture, no text",
+        "sigil_floor_01": "seamless 2D game map magical floor tile, circular rune sigils carved into moss stone with soft blue radiance, readable fantasy ritual texture, no text",
     },
 }
 

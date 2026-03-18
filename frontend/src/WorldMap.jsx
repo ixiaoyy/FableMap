@@ -160,6 +160,40 @@ function formatTag(value) {
   return value ? value.replace(/_/g, ' ') : 'unclassified'
 }
 
+function drawFloatingMotes(ctx, palette, W, H, tick) {
+  const moteCount = 24
+  for (let index = 0; index < moteCount; index += 1) {
+    const seed = index * 19.37
+    const drift = tick * (0.12 + (index % 5) * 0.025)
+    const x = ((Math.sin(seed * 2.1 + drift) + 1) * 0.5) * W
+    const y = (((index * 37) % H) + drift * 38) % (H + 40) - 20
+    const radius = 1.2 + (index % 3) * 0.75
+    const alpha = 0.06 + ((Math.sin(seed + tick * 0.8) + 1) * 0.5) * 0.14
+
+    ctx.beginPath()
+    ctx.arc(x, y, radius, 0, Math.PI * 2)
+    ctx.fillStyle = `${palette.glow}${Math.round(alpha * 255)
+      .toString(16)
+      .padStart(2, '0')}`
+    ctx.fill()
+  }
+}
+
+function drawNodeBeacon(ctx, x, y, color, tick, scale = 1) {
+  for (let ring = 0; ring < 2; ring += 1) {
+    const phase = (tick * 0.9 + ring * 0.5) % 1
+    const radius = (18 + phase * 26) * scale
+    const alpha = (1 - phase) * 0.24
+    ctx.beginPath()
+    ctx.arc(x, y, radius, 0, Math.PI * 2)
+    ctx.strokeStyle = `${color}${Math.round(alpha * 255)
+      .toString(16)
+      .padStart(2, '0')}`
+    ctx.lineWidth = 1.2
+    ctx.stroke()
+  }
+}
+
 function buildRoadOccupancy(roadNodes) {
   const occupied = new Set()
   roadNodes.forEach((road) => {
@@ -245,6 +279,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       const cellW = W / tileGrid.columns
       const cellH = H / tileGrid.rows
       const roadOccupancy = buildRoadOccupancy(roadNodes)
+      const tick = Date.now() / 1000
 
       const sceneImage = await loadImage(assetPack.scene).catch(() => null)
       const iconEntries = await Promise.all(
@@ -284,6 +319,8 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       vignette.addColorStop(1, 'rgba(11,16,24,0.42)')
       ctx.fillStyle = vignette
       ctx.fillRect(0, 0, W, H)
+
+      drawFloatingMotes(ctx, palette, W, H, tick)
 
     ctx.strokeStyle = palette.grid
     ctx.lineWidth = 1
@@ -350,6 +387,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
       ctx.fillStyle = halo
       ctx.fill()
+      drawNodeBeacon(ctx, pos.x, pos.y - 4, palette.glow, tick, 1.08)
     }
 
     roadNodes.forEach((road) => {
@@ -401,10 +439,19 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       ctx.globalAlpha = 1
     })
 
-    landmarkNodes.forEach((node) => {
+    landmarkNodes.forEach((node, index) => {
       const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
+      const bob = Math.sin(tick * 1.8 + index * 0.9) * 4
       ctx.save()
-      ctx.translate(pos.x, pos.y)
+      ctx.translate(pos.x, pos.y + bob)
+
+      const beaconGlow = ctx.createRadialGradient(0, -8, 2, 0, -8, 26)
+      beaconGlow.addColorStop(0, `${palette.glow}aa`)
+      beaconGlow.addColorStop(1, 'transparent')
+      ctx.fillStyle = beaconGlow
+      ctx.beginPath()
+      ctx.arc(0, -8, 26, 0, Math.PI * 2)
+      ctx.fill()
 
       ctx.fillStyle = 'rgba(33, 15, 68, 0.24)'
       ctx.beginPath()
@@ -423,6 +470,14 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       ctx.strokeStyle = '#e0f2fe'
       ctx.lineWidth = 2
       ctx.stroke()
+
+      ctx.beginPath()
+      ctx.moveTo(0, -30)
+      ctx.lineTo(8, -16)
+      ctx.lineTo(0, -10)
+      ctx.closePath()
+      ctx.fillStyle = `${palette.glow}dd`
+      ctx.fill()
       ctx.restore()
     })
 
@@ -448,6 +503,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
         ctx.arc(pos.x, pos.y - 6, isActive ? 54 : 38, 0, Math.PI * 2)
         ctx.fillStyle = glow
         ctx.fill()
+        drawNodeBeacon(ctx, pos.x, pos.y - 4, glowColor, tick + (isHovered ? 0.18 : 0), isActive ? 1 : 0.82)
       }
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.22)'
@@ -532,6 +588,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
     })
 
     const now = Date.now()
+
     ripples.forEach((ripple) => {
       const age = (now - ripple.born) / 900
       const radius = age * 46
@@ -707,6 +764,13 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
           <div>
             <strong>{landmarkNodes.length}</strong>
             <span>Landmarks</span>
+          </div>
+        </div>
+        <div className="map-dock-item map-dock-item-emphasis">
+          <span className="map-dock-icon">✨</span>
+          <div>
+            <strong>{presentFactions.length}</strong>
+            <span>Factions</span>
           </div>
         </div>
       </div>
