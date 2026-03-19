@@ -1,0 +1,49 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\phpxi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe
+cachedir: .pytest_cache
+rootdir: d:\work\ai-
+plugins: anyio-4.12.1
+collecting ... collected 40 items
+
+tests/test_lens_engine.py::test_drift_lens_lonely_night PASSED           [  2%]
+tests/test_lens_engine.py::test_chronicle_lens_historic PASSED           [  5%]
+tests/test_lens_engine.py::test_surge_lens_high_density PASSED           [  7%]
+tests/test_lens_engine.py::test_veil_lens_night_industrial PASSED        [ 10%]
+tests/test_lens_engine.py::test_hearth_lens_park PASSED                  [ 12%]
+tests/test_lens_engine.py::test_oracle_lens_high_attunement PASSED       [ 15%]
+tests/test_lens_engine.py::test_fallback_unknown_district PASSED         [ 17%]
+tests/test_lens_engine.py::test_build_vibe_profile_helper PASSED         [ 20%]
+tests/test_lens_engine.py::test_lens_output_has_trigger_reason PASSED    [ 22%]
+tests/test_lens_engine.py::test_orchestrator_includes_lens_output PASSED [ 25%]
+tests/test_orchestrator.py::test_observer_effect_calculation PASSED      [ 27%]
+tests/test_orchestrator.py::test_high_density_triggers_events PASSED     [ 30%]
+tests/test_orchestrator.py::test_district_type_affects_broadcasts PASSED [ 32%]
+tests/test_orchestrator.py::test_night_edge_rift_anomaly PASSED          [ 35%]
+tests/test_orchestrator.py::test_lens_output_present PASSED              [ 37%]
+tests/test_orchestrator.py::test_high_attunement_triggers_oracle_lens PASSED [ 40%]
+tests/test_orchestrator.py::test_surge_lens_high_observer_count PASSED   [ 42%]
+tests/test_orchestrator.py::test_scene_capsule_generated_from_behavior_and_revisit_signals PASSED [ 45%]
+tests/test_orchestrator.py::test_scene_capsule_can_generate_without_persona_when_events_exist PASSED [ 47%]
+tests/test_orchestrator.py::test_scene_capsule_suppressed_when_no_signals PASSED [ 50%]
+tests/test_scene_capsule.py::test_no_signal_no_trigger PASSED            [ 52%]
+tests/test_scene_capsule.py::test_dwell_triggers PASSED                  [ 55%]
+tests/test_scene_capsule.py::test_revisit_triggers PASSED                [ 57%]
+tests/test_scene_capsule.py::test_writeback_triggers PASSED              [ 60%]
+tests/test_scene_capsule.py::test_high_trust_triggers PASSED             [ 62%]
+tests/test_scene_capsule.py::test_drift_first_visit_no_trigger PASSED    [ 65%]
+tests/test_scene_capsule.py::test_mystery_bias_gives_vision PASSED       [ 67%]
+tests/test_scene_capsule.py::test_story_bias_gives_echo PASSED           [ 70%]
+tests/test_scene_capsule.py::test_repair_bias_gives_ritual PASSED        [ 72%]
+tests/test_scene_capsule.py::test_solitude_bias_gives_whisper PASSED     [ 75%]
+tests/test_scene_capsule.py::test_resonance_bias_gives_rift PASSED       [ 77%]
+tests/test_scene_capsule.py::test_lens_asset_hint_propagated PASSED      [ 80%]
+tests/test_scene_capsule.py::test_no_lens_empty_asset_hint PASSED        [ 82%]
+tests/test_scene_capsule.py::test_output_fields_complete PASSED          [ 85%]
+tests/test_scene_capsule.py::test_no_trigger_returns_null_capsule PASSED [ 87%]
+tests/test_scene_capsule.py::test_output_contains_protocol_fields PASSED [ 90%]
+tests/test_scene_capsule.py::test_safety_flags_force_deterministic_fallback PASSED [ 92%]
+tests/test_scene_capsule.py::test_persona_address_can_be_redacted PASSED [ 95%]
+tests/test_scene_capsule.py::test_mutual_exclusion_suppresses_conflicting_capsule PASSED [ 97%]
+tests/test_scene_capsule.py::test_ambient_capsule_uses_extended_cooldown PASSED [100%]
+
+============================= 40 passed in 0.06s ==============================
