@@ -109,31 +109,31 @@ def test_drift_first_visit_no_trigger():
 # 胶囊类型映射
 # ---------------------------------------------------------------------------
 
-def test_mystery_bias_gives_vision(gen):
+def test_mystery_bias_gives_anomaly_glimpse(gen):
     out = gen.generate(_inp("explorer", trust=0.7, dwell=10.0))
-    assert out.capsule_type == "vision"
+    assert out.capsule_type == "anomaly_glimpse"
     assert out.narrative != ""
 
 
-def test_story_bias_gives_echo(gen):
+def test_story_bias_gives_legend_fragment(gen):
     out = gen.generate(_inp("chronicler", trust=0.7, dwell=10.0))
-    assert out.capsule_type == "echo"
+    assert out.capsule_type == "legend_fragment"
 
 
-def test_repair_bias_gives_ritual(gen):
+def test_repair_bias_gives_dwell_aura(gen):
     out = gen.generate(_inp("restorer", trust=0.7, dwell=10.0))
-    assert out.capsule_type == "ritual"
+    assert out.capsule_type == "dwell_aura"
 
 
-def test_solitude_bias_gives_whisper(gen):
+def test_solitude_bias_gives_persona_whisper(gen):
     out = gen.generate(_inp("recluse", trust=0.7, dwell=10.0))
-    assert out.capsule_type == "whisper"
+    assert out.capsule_type == "persona_whisper"
     assert out.visibility == "private"
 
 
-def test_resonance_bias_gives_rift(gen):
+def test_resonance_bias_gives_broadcast_echo(gen):
     out = gen.generate(_inp("resonant", trust=0.7, dwell=10.0))
-    assert out.capsule_type == "rift"
+    assert out.capsule_type == "broadcast_echo"
     assert out.visibility == "global"
 
 
@@ -179,7 +179,7 @@ def test_output_contains_protocol_fields(gen):
     out = gen.generate(_inp("chronicler", trust=0.7, dwell=10.0, with_lens=True, slice_id="slice_alpha"))
     assert out.ui_filter_hint == "sepia"
     assert out.cooldown_seconds == 90
-    assert out.cache_key == "scene_capsule:p1:slice_alpha:poi_test:echo:chronicle:local_public"
+    assert out.cache_key == "scene_capsule:p1:slice_alpha:poi_test:legend_fragment:chronicle:local_public"
     assert len(out.sound_hints) == 1
     assert out.sound_hints[0].hint_type == "crowd"
 
@@ -231,6 +231,42 @@ def test_mutual_exclusion_suppresses_conflicting_capsule(gen):
 
 def test_ambient_capsule_uses_extended_cooldown(gen):
     out = gen.generate(_inp("restorer", trust=0.7, dwell=10.0))
-    assert out.capsule_type == "ritual"
+    assert out.capsule_type == "dwell_aura"
     assert out.cooldown_seconds == 180
     assert out.sound_hints[0].loop is True
+
+
+def test_private_input_does_not_upgrade_to_more_public_visibility(gen):
+    out = gen.generate(
+        _inp(
+            "chronicler",
+            trust=0.7,
+            dwell=10.0,
+            visibility="private",
+        )
+    )
+    assert out.capsule_type == "legend_fragment"
+    assert out.visibility == "local_public"
+
+
+@pytest.mark.parametrize(
+    ("dominant", "requested_visibility", "expected_type", "expected_visibility"),
+    [
+        ("chronicler", "private", "legend_fragment", "local_public"),
+        ("chronicler", "global", "legend_fragment", "global"),
+        ("explorer", "global", "anomaly_glimpse", "local_public"),
+        ("recluse", "local_public", "persona_whisper", "private"),
+        ("resonant", "private", "broadcast_echo", "global"),
+    ],
+)
+def test_capsule_visibility_follows_protocol_caps(dominant, requested_visibility, expected_type, expected_visibility, gen):
+    out = gen.generate(
+        _inp(
+            dominant,
+            trust=0.7,
+            dwell=10.0,
+            visibility=requested_visibility,
+        )
+    )
+    assert out.capsule_type == expected_type
+    assert out.visibility == expected_visibility

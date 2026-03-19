@@ -25,6 +25,8 @@ import packBTileGround01 from '../assets/map-packs/pack_b/tiles/ground_01.png'
 import packBTileGround02 from '../assets/map-packs/pack_b/tiles/ground_02.png'
 import packBTileWater01 from '../assets/map-packs/pack_b/tiles/water_01.png'
 import packBTileGarden01 from '../assets/map-packs/pack_b/tiles/garden_01.png'
+import { getAssetIconKey } from './iconMapping.js'
+import { getAssetPackKey } from './packSelector.js'
 
 export const MAP_ASSET_PACKS = {
   pack_a: {
@@ -67,44 +69,10 @@ export const MAP_ASSET_PACKS = {
   },
 }
 
-export const VIBE_TO_ASSET_PACK = {
-  quiet_rain: 'pack_a',
-  neon_nostalgia: 'pack_a',
-  iron_blue: 'pack_a',
-  ghibli_town: 'pack_b',
-  amber_evening: 'pack_b',
-  chalk_dawn: 'pack_b',
-}
-
-export const FANTASY_TYPE_TO_ICON = {
-  whispering_grove: 'echo',
-  healing_sanctum: 'home',
-  supply_outpost: 'shop',
-  judgement_tower: 'boss',
-  ember_parlor: 'shop',
-  lore_academy: 'quest',
-  debt_cathedral: 'boss',
-  feast_hall: 'shop',
-  refuel_station: 'event',
-  memory_archive: 'echo',
-  spirit_sanctum: 'echo',
-  dormant_lot: 'event',
-  remedy_post: 'home',
-  labor_forge: 'boss',
-  contract_spire: 'boss',
-}
-
-export function getAssetPackKey(vibeProfile) {
-  return VIBE_TO_ASSET_PACK[vibeProfile] || 'pack_b'
-}
 
 export function getAssetPack(vibeProfile) {
   const packKey = getAssetPackKey(vibeProfile)
   return MAP_ASSET_PACKS[packKey] || MAP_ASSET_PACKS.pack_b
-}
-
-export function getAssetIconKey(fantasyType) {
-  return FANTASY_TYPE_TO_ICON[fantasyType] || null
 }
 
 export function getAssetIconSrc(vibeProfile, fantasyType) {

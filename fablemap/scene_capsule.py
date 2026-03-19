@@ -32,8 +32,9 @@ class CapsuleInput:
     echo_count: int = 0
     event_types: List[str] = field(default_factory=list)
     visibility: str = "private"
-    slice_id: str = ""
-    safety_flags: Dict[str, Any] = field(default_factory=dict)
+    slice_id: str = "default"
+    target_type: str = "poi"
+    safety_flags: Dict[str, bool] = field(default_factory=dict)
     deterministic_fallbacks: List[str] = field(default_factory=list)
     active_capsule_types: List[str] = field(default_factory=list)
 
@@ -62,8 +63,8 @@ class CapsuleInteraction:
 @dataclass
 class CapsuleSoundHint:
     hint_type: str
+    intensity: float
     loop: bool = False
-    intensity: float = 0.5
 
 
 @dataclass
@@ -87,7 +88,7 @@ class CapsuleOutput:
     fallback_reason: str = ""
     trigger_reason: str = ""
     ui_filter_hint: str = ""
-    cooldown_seconds: int = 90
+    cooldown_seconds: int = 0
     cache_key: str = ""
     sound_hints: List["CapsuleSoundHint"] = field(default_factory=list)
     text_blocks: List[CapsuleTextBlock] = field(default_factory=list)
@@ -372,6 +373,7 @@ class SceneCapsuleGenerator:
         capsule_type = self._resolve_capsule_type(inp, trigger)
         canonical_capsule_type = self._canonicalize_capsule_type(capsule_type)
         config = _CAPSULE_CONFIGS.get(canonical_capsule_type, _CAPSULE_CONFIGS["memory_reveal"])
+        output_capsule_type = canonical_capsule_type
         address = inp.persona.address if inp.persona else "过路人"
 
         try:
@@ -407,7 +409,7 @@ class SceneCapsuleGenerator:
         ]
         interaction_hooks = [
             CapsuleInteraction(
-                action_id=self._resolve_interaction(capsule_type),
+                action_id=self._resolve_interaction(output_capsule_type),
                 label=config.interaction_label,
                 target_ref=inp.poi_id,
             )
@@ -416,7 +418,7 @@ class SceneCapsuleGenerator:
         ui_filter_hint = _LENS_TO_VISUAL.get(inp.lens.lens_id, "") if inp.lens else ""
         lens_id_str = inp.lens.lens_id if inp.lens else ""
         cooldown = 180 if config.render_mode == "ambient" else 90
-        cache_key = f"scene_capsule:{inp.player_id}:{inp.slice_id}:{inp.poi_id}:{capsule_type}:{lens_id_str}:{visibility}"
+        cache_key = f"scene_capsule:{inp.player_id}:{inp.slice_id}:{inp.poi_id}:{output_capsule_type}:{lens_id_str}:{visibility}"
         sound_hints: List[CapsuleSoundHint] = []
         if lens_id_str == "chronicle":
             sound_hints.append(CapsuleSoundHint(hint_type="crowd", loop=False, intensity=0.5))
@@ -431,7 +433,7 @@ class SceneCapsuleGenerator:
         return CapsuleOutput(
             player_id=inp.player_id,
             poi_id=inp.poi_id,
-            capsule_type=capsule_type,
+            capsule_type=output_capsule_type,
             title=title,
             narrative=narrative,
             summary=summary,
@@ -503,15 +505,29 @@ class SceneCapsuleGenerator:
         }.get(capsule_type, capsule_type)
 
     def _resolve_visibility(self, inp: CapsuleInput, capsule_type: str, default_visibility: str) -> str:
-        # broadcast_echo and rift are always global
-        if capsule_type in {"broadcast_echo", "rift"}:
-            return "global"
         order = {"private": 0, "local_public": 1, "global": 2}
         input_visibility = inp.visibility if inp.visibility in order else "private"
-        # Return whichever is higher (more permissive)
-        if order.get(input_visibility, 0) > order.get(default_visibility, 0):
-            return input_visibility
-        return default_visibility
+        allowed_visibility = {
+            "memory_reveal": {"private"},
+            "dwell_aura": {"private", "local_public"},
+            "anomaly_glimpse": {"private", "local_public"},
+            "persona_whisper": {"private"},
+            "legend_fragment": {"local_public", "global"},
+            "broadcast_echo": {"global"},
+        }
+        allowed = allowed_visibility.get(capsule_type, {default_visibility})
+
+        candidates = [
+            visibility
+            for visibility in allowed
+            if order.get(visibility, 0) <= order.get(input_visibility, 0)
+        ]
+        if candidates:
+            return max(candidates, key=lambda visibility: order[visibility])
+
+        if default_visibility in allowed:
+            return default_visibility
+        return min(allowed, key=lambda visibility: order[visibility])
 
     def _resolve_visual_hint(self, inp: CapsuleInput, capsule_type: str, default_hint: str) -> str:
         if capsule_type == "broadcast_echo":

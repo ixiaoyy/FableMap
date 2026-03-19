@@ -55,6 +55,9 @@ class MeaningVector:
     # 共鸣倾向：高 attunement 行为 + oracle/hearth 镜头下的停留
     resonant_score: float = 0.0
 
+    # 漂泊倾向：无明显归属地的随机移动
+    wanderer_score: float = 0.0
+
     # 主导含义标签（由编译器从上面五个 score 中择优选出）
     dominant_meaning: str = "wanderer"  # wanderer / chronicler / restorer / recluse / resonant
 

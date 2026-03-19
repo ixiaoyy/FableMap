@@ -10,49 +10,10 @@ tests/test_e4_player_home.py::TestPlayerHome::test_set_home_same_target_increase
 tests/test_e4_player_home.py::TestPlayerHome::test_set_home_new_target_replaces_old PASSED [ 30%]
 tests/test_e4_player_home.py::TestPlayerHome::test_get_home_returns_none_when_not_set PASSED [ 40%]
 tests/test_e4_player_home.py::TestPlayerHome::test_get_home_returns_existing_relation PASSED [ 50%]
-tests/test_e4_player_home.py::TestGhostTrace::test_record_ghost_trace_stores_trace FAILED [ 60%]
-tests/test_e4_player_home.py::TestGhostTrace::test_get_ghost_traces_for_player FAILED [ 70%]
-tests/test_e4_player_home.py::TestCityIdentityEvolution::test_home_dweller_persona_has_home_tag FAILED [ 80%]
-tests/test_e4_player_home.py::TestCityIdentityEvolution::test_evolve_with_home_boosts_trust FAILED [ 90%]
-tests/test_e4_player_home.py::TestCityIdentityEvolution::test_merge_updates_existing_persona FAILED [100%]
+tests/test_e4_player_home.py::TestGhostTrace::test_record_ghost_trace_stores_trace PASSED [ 60%]
+tests/test_e4_player_home.py::TestGhostTrace::test_get_ghost_traces_for_player PASSED [ 70%]
+tests/test_e4_player_home.py::TestCityIdentityEvolution::test_home_dweller_persona_has_home_tag PASSED [ 80%]
+tests/test_e4_player_home.py::TestCityIdentityEvolution::test_evolve_with_home_boosts_trust PASSED [ 90%]
+tests/test_e4_player_home.py::TestCityIdentityEvolution::test_merge_updates_existing_persona PASSED [100%]
 
-================================== FAILURES ===================================
-_____________ TestGhostTrace.test_record_ghost_trace_stores_trace _____________
-tests\test_e4_player_home.py:57: in test_record_ghost_trace_stores_trace
-    trace = graph.record_ghost_trace(
-E   TypeError: WorldMemoryGraph.record_ghost_trace() got an unexpected keyword argument 'started_at'
-_______________ TestGhostTrace.test_get_ghost_traces_for_player _______________
-tests\test_e4_player_home.py:73: in test_get_ghost_traces_for_player
-    graph.record_ghost_trace("p1", waypoints, "2025-01-01T10:00:00", "2025-01-01T10:01:00", ["neutral"])
-E   TypeError: WorldMemoryGraph.record_ghost_trace() takes from 4 to 5 positional arguments but 6 were given
-______ TestCityIdentityEvolution.test_home_dweller_persona_has_home_tag _______
-tests\test_e4_player_home.py:99: in test_home_dweller_persona_has_home_tag
-    meaning = self._make_meaning("resonant", resonant_score=0.8)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-tests\test_e4_player_home.py:95: in _make_meaning
-    return MeaningVector(**defaults)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-E   TypeError: MeaningVector.__init__() got an unexpected keyword argument 'wanderer_score'
-________ TestCityIdentityEvolution.test_evolve_with_home_boosts_trust _________
-tests\test_e4_player_home.py:107: in test_evolve_with_home_boosts_trust
-    meaning = self._make_meaning("resonant", resonant_score=0.8)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-tests\test_e4_player_home.py:95: in _make_meaning
-    return MeaningVector(**defaults)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-E   TypeError: MeaningVector.__init__() got an unexpected keyword argument 'wanderer_score'
-________ TestCityIdentityEvolution.test_merge_updates_existing_persona ________
-tests\test_e4_player_home.py:115: in test_merge_updates_existing_persona
-    m1 = self._make_meaning("explorer", explorer_score=0.7)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-tests\test_e4_player_home.py:95: in _make_meaning
-    return MeaningVector(**defaults)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-E   TypeError: MeaningVector.__init__() got an unexpected keyword argument 'wanderer_score'
-=========================== short test summary info ===========================
-FAILED tests/test_e4_player_home.py::TestGhostTrace::test_record_ghost_trace_stores_trace
-FAILED tests/test_e4_player_home.py::TestGhostTrace::test_get_ghost_traces_for_player
-FAILED tests/test_e4_player_home.py::TestCityIdentityEvolution::test_home_dweller_persona_has_home_tag
-FAILED tests/test_e4_player_home.py::TestCityIdentityEvolution::test_evolve_with_home_boosts_trust
-FAILED tests/test_e4_player_home.py::TestCityIdentityEvolution::test_merge_updates_existing_persona
-========================= 5 failed, 5 passed in 0.13s =========================
+============================= 10 passed in 0.03s ==============================
