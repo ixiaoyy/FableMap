@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAssetIconSrc, getAssetPack } from './mapAssets/manifest.js'
+import { loadImage } from './mapAssets/loadImage.js'
 
 const ICON_MAP = {
   whispering_grove: '🌿',
@@ -139,18 +140,6 @@ function getIcon(fantasyType) {
   return ICON_MAP[fantasyType] || '◆'
 }
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    if (!src) {
-      resolve(null)
-      return
-    }
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = reject
-    image.src = src
-  })
-}
 
 function getFactionColors(faction) {
   return FACTION_COLORS[faction] || null
@@ -223,7 +212,7 @@ function hasRoadNearby(occupied, x, y, radius = 1) {
   return false
 }
 
-export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMap, originLabel }) {
+export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMap, originLabel, ghostTraces = [] }) {
   const canvasRef = useRef(null)
   const [hovered, setHovered] = useState(null)
   const [ripples, setRipples] = useState([])

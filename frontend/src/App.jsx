@@ -59,6 +59,18 @@ function createApiClient(getBaseUrl) {
       })
       return readJson(response)
     },
+    async postGhostTrace(payload) {
+      const response = await fetch(`${getBaseUrl()}/api/ghost/trace`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      return readJson(response)
+    },
+    async getGhostTraces(playerId) {
+      const response = await fetch(`${getBaseUrl()}/api/ghost/traces/${encodeURIComponent(playerId)}`, { cache: 'no-store' })
+      return readJson(response)
+    },
   }
 }
 
@@ -249,6 +261,42 @@ function formatVisibilityLabel(value) {
     return VISIBILITY_LABELS_ZH.private
   }
   return VISIBILITY_LABELS_ZH[value] || value
+}
+
+function normalizeSearchText(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function getPoiTypeLabel(poi) {
+  return formatTagLabel(poi?.fantasy_type || poi?.real_type || '', '未分类地点')
+}
+
+function getPoiFactionLabel(poi) {
+  return formatTagLabel(poi?.faction || poi?.district || poi?.alignment || '', '未知势力')
+}
+
+function matchesPoiSearch(poi, query) {
+  if (!query) {
+    return true
+  }
+
+  const searchableText = [
+    poi?.id,
+    poi?.real_name,
+    poi?.fantasy_name,
+    poi?.real_type,
+    poi?.fantasy_type,
+    poi?.satire_hook,
+    poi?.emotion_hook,
+    poi?.faction,
+    poi?.district,
+    poi?.alignment,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return searchableText.includes(query)
 }
 
 function clampObserveIntensity(value) {
@@ -590,13 +638,40 @@ export default function App() {
   const [behaviorInsights, setBehaviorInsights] = useState(null)
   const [adminOpen, setAdminOpen] = useState(false)
   const [activePoiId, setActivePoiId] = useState(restoredWritebackSession?.activePoiId || null)
+  const [ghostTraces, setGhostTraces] = useState([])
   const [activePoi, setActivePoi] = useState(restoredWritebackSession?.activePoi || null)
   const [familiarityMap, setFamiliarityMap] = useState(restoredWritebackSession?.familiarityMap || {})
+  const [poiSearch, setPoiSearch] = useState('')
+  const [poiTypeFilter, setPoiTypeFilter] = useState('all')
+  const [poiFactionFilter, setPoiFactionFilter] = useState('all')
+  const [poiOnlyFamiliar, setPoiOnlyFamiliar] = useState(false)
 
   const api = useMemo(() => createApiClient(() => apiBase.replace(/\/$/, '')), [apiBase])
   const presetMeta = pickPresetMeta(form)
   const previewUrl = result?.preview_url || ''
   const worldPois = result?.world?.pois || []
+  const normalizedPoiSearch = normalizeSearchText(poiSearch)
+  const poiTypeOptions = useMemo(
+    () => Array.from(new Set(worldPois.map((poi) => getPoiTypeLabel(poi)).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    [worldPois]
+  )
+  const poiFactionOptions = useMemo(
+    () => Array.from(new Set(worldPois.map((poi) => getPoiFactionLabel(poi)).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    [worldPois]
+  )
+  const filteredWorldPois = useMemo(() => {
+    return worldPois.filter((poi) => {
+      const matchesQuery = matchesPoiSearch(poi, normalizedPoiSearch)
+      const matchesType = poiTypeFilter === 'all' || getPoiTypeLabel(poi) === poiTypeFilter
+      const matchesFaction = poiFactionFilter === 'all' || getPoiFactionLabel(poi) === poiFactionFilter
+      const familiarity = familiarityMap?.[poi.id] ?? 0
+      const matchesFamiliarity = !poiOnlyFamiliar || familiarity > 0
+      return matchesQuery && matchesType && matchesFaction && matchesFamiliarity
+    })
+  }, [familiarityMap, normalizedPoiSearch, poiFactionFilter, poiOnlyFamiliar, poiTypeFilter, worldPois])
+  const poiSearchSummary = result
+    ? `当前匹配 ${filteredWorldPois.length} / ${worldPois.length} 个 POI`
+    : '生成切片后可按名称、势力与类型筛选 POI'
   const recentEchoes = writebackResult?.place_state?.recent_echoes || []
   const recentMarks = writebackResult?.place_state?.marks || []
   const playerState = writebackResult?.player_state || null
@@ -747,6 +822,10 @@ export default function App() {
         refresh: refresh ? 'true' : 'false',
       })
       const nextSliceId = payload.world_id || ''
+      const fallbackPrimaryPoiId = payload.world?.pois?.[0]?.id || ''
+      const fallbackPrimaryZoneId = payload.world?.map2d?.encounter_zones?.[0]?.id || ''
+      const primaryPoiId = payload.primary_poi_id || fallbackPrimaryPoiId
+      const primaryZoneId = payload.primary_zone_id || fallbackPrimaryZoneId
       const canReuseWriteback = Boolean(
         restoredWritebackSession?.sliceId &&
           nextSliceId &&
@@ -758,7 +837,7 @@ export default function App() {
       setErrorText('')
 
       if (canReuseWriteback) {
-        setActivePoiId(restoredWritebackSession?.activePoiId || null)
+        setActivePoiId(restoredWritebackSession?.activePoiId || primaryPoiId || null)
         setActivePoi(restoredWritebackSession?.activePoi || null)
         setFamiliarityMap(restoredWritebackSession?.familiarityMap || {})
         setWritebackResult(restoredWritebackSession?.writebackResult || null)
@@ -768,23 +847,23 @@ export default function App() {
           sliceId: nextSliceId || current.sliceId,
           targetId:
             restoredWritebackSession?.writebackForm?.targetId ||
-            payload.primary_poi_id ||
+            primaryPoiId ||
             current.targetId,
           zoneId:
             restoredWritebackSession?.writebackForm?.zoneId ||
-            payload.primary_zone_id ||
+            primaryZoneId ||
             current.zoneId,
         }))
       } else {
-        setActivePoiId(null)
+        setActivePoiId(primaryPoiId || null)
         setActivePoi(null)
         setFamiliarityMap({})
         setWritebackResult(null)
         setWritebackForm((current) => ({
           ...current,
           sliceId: nextSliceId || current.sliceId,
-          targetId: payload.primary_poi_id || current.targetId,
-          zoneId: payload.primary_zone_id || current.zoneId,
+          targetId: primaryPoiId || current.targetId,
+          zoneId: primaryZoneId || current.zoneId,
         }))
       }
     } catch (error) {
@@ -1185,6 +1264,7 @@ export default function App() {
               activePoiId={activePoiId}
               familiarityMap={familiarityMap}
               originLabel={originLabel}
+              ghostTraces={ghostTraces}
             />
           </div>
 
@@ -1275,6 +1355,116 @@ export default function App() {
                     <p>{selectedVisibilityMeta.title} · {selectedVisibilityMeta.hint}</p>
                   </div>
                 </article>
+              </div>
+
+              <div className="storyboard-lane poi-filter-lane">
+                <div className="storyboard-lane-header">
+                  <span className="storyboard-category-label">POI 搜索与筛选</span>
+                  <span className="storyboard-lane-meta">不必在地图上逐个试点，可以先缩小候选节点范围</span>
+                </div>
+
+                <div className="poi-filter-toolbar">
+                  <label className="poi-filter-field poi-filter-field--search">
+                    <span>搜索词</span>
+                    <input
+                      type="text"
+                      value={poiSearch}
+                      onChange={(event) => setPoiSearch(event.target.value)}
+                      placeholder="输入地点名、钩子、势力或 POI ID"
+                    />
+                  </label>
+
+                  <label className="poi-filter-field">
+                    <span>地点类型</span>
+                    <select value={poiTypeFilter} onChange={(event) => setPoiTypeFilter(event.target.value)}>
+                      <option value="all">全部类型</option>
+                      {poiTypeOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="poi-filter-field">
+                    <span>所属势力</span>
+                    <select value={poiFactionFilter} onChange={(event) => setPoiFactionFilter(event.target.value)}>
+                      <option value="all">全部势力</option>
+                      {poiFactionOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="poi-filter-toggle">
+                    <input
+                      type="checkbox"
+                      checked={poiOnlyFamiliar}
+                      onChange={(event) => setPoiOnlyFamiliar(event.target.checked)}
+                    />
+                    <span>只看已积累熟悉度的节点</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    className="secondary poi-filter-reset"
+                    onClick={() => {
+                      setPoiSearch('')
+                      setPoiTypeFilter('all')
+                      setPoiFactionFilter('all')
+                      setPoiOnlyFamiliar(false)
+                    }}
+                    disabled={!poiSearch && poiTypeFilter === 'all' && poiFactionFilter === 'all' && !poiOnlyFamiliar}
+                  >
+                    清空筛选
+                  </button>
+                </div>
+
+                <div className="poi-filter-summary-row">
+                  <span className="poi-filter-summary">{poiSearchSummary}</span>
+                  {resolvedActivePoi ? (
+                    <span className="poi-filter-summary poi-filter-summary--active">
+                      当前主据点：{resolvedActivePoi.fantasy_name}
+                    </span>
+                  ) : null}
+                </div>
+
+                {result ? (
+                  filteredWorldPois.length ? (
+                    <div className="poi-filter-results">
+                      {filteredWorldPois.slice(0, 12).map((poi) => {
+                        const isActive = poi.id === resolvedActivePoi?.id
+                        const familiarity = familiarityMap?.[poi.id] ?? 0
+                        return (
+                          <button
+                            key={poi.id}
+                            type="button"
+                            className={`poi-filter-card${isActive ? ' is-active' : ''}`}
+                            onClick={() => handlePoiClick(poi.id, poi)}
+                          >
+                            <div className="poi-filter-card-top">
+                              <strong>{poi.fantasy_name || poi.real_name || poi.id}</strong>
+                              <span>{getPoiTypeLabel(poi)}</span>
+                            </div>
+                            <p>{poi.satire_hook || poi.emotion_hook || '这个节点暂时还没有公开钩子。'}</p>
+                            <div className="poi-filter-card-meta">
+                              <span>{getPoiFactionLabel(poi)}</span>
+                              <span>familiarity · {familiarity}</span>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="storyboard-placeholder-card poi-filter-empty">
+                      <strong>没有符合条件的 POI</strong>
+                      <p>当前搜索词或筛选条件没有匹配到节点。可以先放宽类型、势力或熟悉度限制。</p>
+                    </div>
+                  )
+                ) : (
+                  <div className="storyboard-placeholder-card poi-filter-empty">
+                    <strong>等待世界切片生成</strong>
+                    <p>生成当前切片后，这里会出现可搜索、可筛选、可快速选中的 POI 列表。</p>
+                  </div>
+                )}
               </div>
 
               {orchestrationEvents.length ? (

@@ -73,7 +73,7 @@ class ApiTests(unittest.TestCase):
 
         self.assertIn('type="module" src="/src/main.jsx"', html)
         self.assertIn("ReactDOM.createRoot", main_js)
-        self.assertIn("Submit writeback event", app_js)
+        self.assertIn("submitWorldEvent", app_js)
 
     def test_api_server_generates_fixture_preview(self) -> None:
         with TemporaryDirectory() as tmpdir:
@@ -106,6 +106,8 @@ class ApiTests(unittest.TestCase):
                 self.assertEqual(result["world_url"], f"http://testserver/generated/{result['run_id']}/world.json")
                 self.assertIn(f"/generated/{result['run_id']}/bundle/index.html", result["preview_url"])
                 self.assertIn("Language / 语言", preview_html)
+                self.assertEqual(result["primary_poi_id"], result["world"]["pois"][0]["id"])
+                self.assertEqual(result["primary_zone_id"], result["world"]["map2d"]["encounter_zones"][0]["id"])
                 self.assertEqual(generated_output_dir.parent, output_root.resolve())
                 self.assertTrue((generated_output_dir / "bundle" / "index.html").exists())
 
@@ -382,6 +384,63 @@ class ApiServiceTests(unittest.TestCase):
         self.assertEqual(payload["world_url"], "http://127.0.0.1:8950/generated/run-demo123/world.json")
         self.assertEqual(payload["frontend_url"], "http://127.0.0.1:8950/")
         self.assertEqual(result, {"provider": "fixture", "region_name": "Test Region"})
+
+
+class GhostTraceApiTests(unittest.TestCase):
+    def setUp(self):
+        with TemporaryDirectory() as tmpdir:
+            self._tmpdir = tmpdir
+        self._tmpdir_ctx = TemporaryDirectory()
+        tmpdir = self._tmpdir_ctx.__enter__()
+        output_root = Path(tmpdir) / ".fablemap-api"
+        app = create_app(
+            output_root=output_root,
+            fixture_file=FIXTURE_PATH,
+            frontend_root=FRONTEND_ROOT,
+        )
+        self.client = TestClient(app)
+        self.client.__enter__()
+
+    def tearDown(self):
+        self.client.__exit__(None, None, None)
+        self._tmpdir_ctx.__exit__(None, None, None)
+
+    def test_post_ghost_trace_returns_trace_id(self):
+        payload = {
+            "player_id": "player_001",
+            "waypoints": [
+                {"poi_id": "poi_a", "timestamp": "2024-01-01T10:00:00", "action_state": "explore"},
+                {"poi_id": "poi_b", "timestamp": "2024-01-01T10:30:00", "action_state": "mark"},
+            ],
+            "mood_arc": ["curious", "calm"],
+            "visibility": "local_public",
+        }
+        resp = self.client.post("/api/ghost/trace", json=payload)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("trace_id", data)
+        self.assertEqual(data["player_id"], "player_001")
+        self.assertEqual(data["mood_arc"], ["curious", "calm"])
+        self.assertEqual(len(data["waypoints"]), 2)
+
+    def test_get_ghost_traces_returns_recorded_traces(self):
+        # Record a trace first
+        payload = {
+            "player_id": "player_002",
+            "waypoints": [
+                {"poi_id": "poi_x", "timestamp": "2024-01-02T09:00:00", "action_state": "visit"},
+            ],
+            "mood_arc": ["melancholic"],
+            "visibility": "local_public",
+        }
+        self.client.post("/api/ghost/trace", json=payload)
+
+        resp = self.client.get("/api/ghost/traces/player_002")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["player_id"], "player_002")
+        self.assertEqual(len(data["traces"]), 1)
+        self.assertEqual(data["traces"][0]["mood_arc"], ["melancholic"])
 
 
 if __name__ == "__main__":

@@ -320,6 +320,41 @@ class WebService:
             return fallback
         return None
 
+    def record_ghost_trace_payload(self, player_id: str, waypoints: list, mood_arc: list, visibility: str = "local_public") -> dict[str, Any]:
+        try:
+            trace = self.memory_graph.record_ghost_trace(player_id, waypoints, mood_arc, visibility)
+            return {
+                "trace_id": trace.trace_id,
+                "player_id": trace.player_id,
+                "waypoints": trace.waypoints,
+                "started_at": trace.started_at,
+                "ended_at": trace.ended_at,
+                "mood_arc": trace.mood_arc,
+                "visibility": trace.visibility,
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    def get_ghost_traces_payload(self, player_id: str) -> dict[str, Any]:
+        try:
+            traces = self.memory_graph.get_ghost_traces(player_id)
+            return {
+                "player_id": player_id,
+                "traces": [
+                    {
+                        "trace_id": t.trace_id,
+                        "waypoints": t.waypoints,
+                        "started_at": t.started_at,
+                        "ended_at": t.ended_at,
+                        "mood_arc": t.mood_arc,
+                        "visibility": t.visibility,
+                    }
+                    for t in traces
+                ],
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
 
 
 def _is_within_root(candidate: Path, root: Path) -> bool:

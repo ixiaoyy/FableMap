@@ -50,6 +50,19 @@ def create_api_router(service: WebService) -> APIRouter:
     ) -> dict:
         return service.orchestrate_world(slice_id, player_id, lat, lon)
 
+    @router.post("/api/ghost/trace")
+    def post_ghost_trace(
+        player_id: str = Body(...),
+        waypoints: list = Body(...),
+        mood_arc: list = Body(...),
+        visibility: str = Body("local_public"),
+    ) -> dict:
+        return service.record_ghost_trace_payload(player_id, waypoints, mood_arc, visibility)
+
+    @router.get("/api/ghost/traces/{player_id}")
+    def get_ghost_traces(player_id: str) -> dict:
+        return service.get_ghost_traces_payload(player_id)
+
     @router.get("/generated/{file_path:path}")
     def get_generated_file(file_path: str):
         return FileResponse(service.generated_file_path(file_path))
