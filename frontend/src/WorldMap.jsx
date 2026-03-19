@@ -2,6 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAssetIconSrc, getAssetPack } from './mapAssets/manifest.js'
 import { loadImage } from './mapAssets/loadImage.js'
 
+const DEFAULT_MAP_LAYERS = {
+  roads: true,
+  pois: true,
+  landmarks: true,
+  factionZones: true,
+  labels: true,
+  legend: true,
+  ghostTraces: true,
+}
+
 const ICON_MAP = {
   whispering_grove: '🌿',
   healing_sanctum: '✚',
@@ -212,7 +222,15 @@ function hasRoadNearby(occupied, x, y, radius = 1) {
   return false
 }
 
-export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMap, originLabel, ghostTraces = [] }) {
+export default function WorldMap({
+  world,
+  onPoiClick,
+  activePoiId,
+  familiarityMap,
+  originLabel,
+  ghostTraces = [],
+  visibleLayers = DEFAULT_MAP_LAYERS,
+}) {
   const canvasRef = useRef(null)
   const [hovered, setHovered] = useState(null)
   const [ripples, setRipples] = useState([])
@@ -224,6 +242,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
   const palette = getPalette(vibe)
   const assetPack = useMemo(() => getAssetPack(vibe), [vibe])
   const fam = familiarityMap || {}
+  const layers = { ...DEFAULT_MAP_LAYERS, ...(visibleLayers || {}) }
 
   const tileGrid = map2d?.tile_grid || { columns: 32, rows: 24, tile_size: 16 }
   const poiNodes = map2d?.renderables?.pois || []
@@ -352,21 +371,23 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       }
     }
 
-    poiNodes.forEach((node) => {
-      const poi = poiMap.get(node.id)
-      const faction = getFactionColors(poi?.faction_alignment)
-      if (!faction) return
-      const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
-      const radius = Math.max(W, H) * 0.12
-      const haze = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, radius)
-      haze.addColorStop(0, `${faction.zone}44`)
-      haze.addColorStop(0.45, `${faction.zone}18`)
-      haze.addColorStop(1, 'transparent')
-      ctx.beginPath()
-      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
-      ctx.fillStyle = haze
-      ctx.fill()
-    })
+    if (layers.factionZones) {
+      poiNodes.forEach((node) => {
+        const poi = poiMap.get(node.id)
+        const faction = getFactionColors(poi?.faction_alignment)
+        if (!faction) return
+        const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
+        const radius = Math.max(W, H) * 0.12
+        const haze = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, radius)
+        haze.addColorStop(0, `${faction.zone}44`)
+        haze.addColorStop(0.45, `${faction.zone}18`)
+        haze.addColorStop(1, 'transparent')
+        ctx.beginPath()
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
+        ctx.fillStyle = haze
+        ctx.fill()
+      })
+    }
 
     const spawnNode = poiNodes.find((node) => node.id === spawnId) || rankedNodes[0]
     if (spawnNode) {
@@ -381,184 +402,212 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       ctx.fill()
     }
 
-    roadNodes.forEach((road) => {
-      const points = road.points || []
-      if (points.length < 2) return
-      const style = ROAD_STYLE[road.kind] || ROAD_STYLE.threshold_path
+    if (layers.roads) {
+      roadNodes.forEach((road) => {
+        const points = road.points || []
+        if (points.length < 2) return
+        const style = ROAD_STYLE[road.kind] || ROAD_STYLE.threshold_path
 
-      ctx.beginPath()
-      const start = tileToCanvas(points[0].x, points[0].y, W, H)
-      ctx.moveTo(start.x, start.y)
-      for (let i = 1; i < points.length; i += 1) {
-        const point = tileToCanvas(points[i].x, points[i].y, W, H)
-        ctx.lineTo(point.x, point.y)
-      }
-      if (style.glow) {
-        ctx.strokeStyle = `${palette.glow}20`
-        ctx.lineWidth = style.width + style.glow
+        ctx.beginPath()
+        const start = tileToCanvas(points[0].x, points[0].y, W, H)
+        ctx.moveTo(start.x, start.y)
+        for (let i = 1; i < points.length; i += 1) {
+          const point = tileToCanvas(points[i].x, points[i].y, W, H)
+          ctx.lineTo(point.x, point.y)
+        }
+        if (style.glow) {
+          ctx.strokeStyle = `${palette.glow}20`
+          ctx.lineWidth = style.width + style.glow
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.stroke()
+        }
+
+        ctx.beginPath()
+        ctx.moveTo(start.x, start.y)
+        for (let i = 1; i < points.length; i += 1) {
+          const point = tileToCanvas(points[i].x, points[i].y, W, H)
+          ctx.lineTo(point.x, point.y)
+        }
+        ctx.strokeStyle = 'rgba(70, 45, 20, 0.28)'
+        ctx.lineWidth = style.width + 2.8
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.stroke()
-      }
 
-      ctx.beginPath()
-      ctx.moveTo(start.x, start.y)
-      for (let i = 1; i < points.length; i += 1) {
-        const point = tileToCanvas(points[i].x, points[i].y, W, H)
-        ctx.lineTo(point.x, point.y)
-      }
-      ctx.strokeStyle = 'rgba(70, 45, 20, 0.28)'
-      ctx.lineWidth = style.width + 2.8
-      ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
-      ctx.stroke()
-
-      ctx.beginPath()
-      ctx.moveTo(start.x, start.y)
-      for (let i = 1; i < points.length; i += 1) {
-        const point = tileToCanvas(points[i].x, points[i].y, W, H)
-        ctx.lineTo(point.x, point.y)
-      }
-      ctx.strokeStyle = style.width >= 4 ? '#f5deb3' : '#dcc08c'
-      ctx.globalAlpha = Math.min(style.alpha + 0.12, 1)
-      ctx.lineWidth = style.width + 0.9
-      ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
-      ctx.setLineDash(style.dash)
-      ctx.stroke()
-      ctx.setLineDash([])
-      ctx.globalAlpha = 1
-    })
-
-    landmarkNodes.forEach((node) => {
-      const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
-      ctx.save()
-      ctx.translate(pos.x, pos.y)
-
-      ctx.fillStyle = 'rgba(33, 15, 68, 0.24)'
-      ctx.beginPath()
-      ctx.ellipse(0, 15, 18, 7, 0, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.fillStyle = '#6ee7f9'
-      ctx.beginPath()
-      ctx.moveTo(0, -16)
-      ctx.lineTo(10, 0)
-      ctx.lineTo(0, 12)
-      ctx.lineTo(-10, 0)
-      ctx.closePath()
-      ctx.fill()
-
-      ctx.strokeStyle = '#e0f2fe'
-      ctx.lineWidth = 2
-      ctx.stroke()
-      ctx.restore()
-    })
-
-    poiNodes.forEach((node) => {
-      const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
-      const poi = poiMap.get(node.id)
-      const faction = getFactionColors(poi?.faction_alignment)
-      const fillColor = faction?.fill || palette.node
-      const glowColor = faction?.glow || palette.glow
-      const isActive = node.id === activePoiId
-      const isHovered = node.id === hovered
-      const hasSecret = Boolean(poi?.secret_slot)
-      const familiarity = Math.min((fam[node.id] || 0) * 0.08, 0.45)
-      const cardWidth = isActive ? 34 : 28
-      const cardHeight = isActive ? 28 : 24
-      const roofHeight = isActive ? 11 : 9
-
-      if (isActive || isHovered) {
-        const glow = ctx.createRadialGradient(pos.x, pos.y - 6, 8, pos.x, pos.y - 6, isActive ? 54 : 38)
-        glow.addColorStop(0, `${glowColor}aa`)
-        glow.addColorStop(1, 'transparent')
         ctx.beginPath()
-        ctx.arc(pos.x, pos.y - 6, isActive ? 54 : 38, 0, Math.PI * 2)
-        ctx.fillStyle = glow
-        ctx.fill()
-      }
-
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.22)'
-      ctx.beginPath()
-      ctx.ellipse(pos.x, pos.y + 16, isActive ? 22 : 18, isActive ? 8 : 6, 0, 0, Math.PI * 2)
-      ctx.fill()
-
-      if (hasSecret) {
-        ctx.beginPath()
-        ctx.arc(pos.x, pos.y - 4, isActive ? 26 : 21, 0, Math.PI * 2)
-        ctx.strokeStyle = `${glowColor}77`
-        ctx.lineWidth = 1.2
-        ctx.setLineDash([4, 4])
+        ctx.moveTo(start.x, start.y)
+        for (let i = 1; i < points.length; i += 1) {
+          const point = tileToCanvas(points[i].x, points[i].y, W, H)
+          ctx.lineTo(point.x, point.y)
+        }
+        ctx.strokeStyle = style.width >= 4 ? '#f5deb3' : '#dcc08c'
+        ctx.globalAlpha = Math.min(style.alpha + 0.12, 1)
+        ctx.lineWidth = style.width + 0.9
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.setLineDash(style.dash)
         ctx.stroke()
         ctx.setLineDash([])
-      }
-
-      if (faction) {
-        ctx.beginPath()
-        ctx.arc(pos.x, pos.y - 4, isActive ? 22 : 18, 0, Math.PI * 2)
-        ctx.strokeStyle = `${faction.fill}aa`
-        ctx.lineWidth = 1.4
-        ctx.globalAlpha = 0.55 + familiarity
-        ctx.stroke()
         ctx.globalAlpha = 1
-      }
+      })
+    }
 
-      ctx.fillStyle = '#fff5df'
-      ctx.beginPath()
-      ctx.roundRect(pos.x - cardWidth / 2, pos.y - cardHeight / 2, cardWidth, cardHeight, 7)
-      ctx.fill()
+    if (layers.landmarks) {
+      landmarkNodes.forEach((node) => {
+        const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
+        ctx.save()
+        ctx.translate(pos.x, pos.y)
 
-      ctx.fillStyle = isActive ? glowColor : fillColor
-      ctx.beginPath()
-      ctx.moveTo(pos.x, pos.y - cardHeight / 2 - roofHeight)
-      ctx.lineTo(pos.x + cardWidth / 2 - 1, pos.y - cardHeight / 2 + 2)
-      ctx.lineTo(pos.x - cardWidth / 2 + 1, pos.y - cardHeight / 2 + 2)
-      ctx.closePath()
-      ctx.fill()
+        ctx.fillStyle = 'rgba(33, 15, 68, 0.24)'
+        ctx.beginPath()
+        ctx.ellipse(0, 15, 18, 7, 0, 0, Math.PI * 2)
+        ctx.fill()
 
-      ctx.strokeStyle = 'rgba(101, 67, 33, 0.32)'
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.roundRect(pos.x - cardWidth / 2, pos.y - cardHeight / 2, cardWidth, cardHeight, 7)
-      ctx.stroke()
+        ctx.fillStyle = '#6ee7f9'
+        ctx.beginPath()
+        ctx.moveTo(0, -16)
+        ctx.lineTo(10, 0)
+        ctx.lineTo(0, 12)
+        ctx.lineTo(-10, 0)
+        ctx.closePath()
+        ctx.fill()
 
-      const iconImage = assetIcons.get(poi?.fantasy_type)
-      if (iconImage) {
-        const iconSize = isActive ? 22 : 18
-        ctx.drawImage(iconImage, pos.x - iconSize / 2, pos.y - iconSize / 2 - 1, iconSize, iconSize)
-      } else {
-        ctx.font = isActive ? '16px serif' : '14px serif'
+        ctx.strokeStyle = '#e0f2fe'
+        ctx.lineWidth = 2
+        ctx.stroke()
+        ctx.restore()
+      })
+    }
+
+    if (layers.pois) {
+      poiNodes.forEach((node) => {
+        const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
+        const poi = poiMap.get(node.id)
+        const faction = getFactionColors(poi?.faction_alignment)
+        const fillColor = faction?.fill || palette.node
+        const glowColor = faction?.glow || palette.glow
+        const isActive = node.id === activePoiId
+        const isHovered = node.id === hovered
+        const hasSecret = Boolean(poi?.secret_slot)
+        const familiarity = Math.min((fam[node.id] || 0) * 0.08, 0.45)
+        const cardWidth = isActive ? 34 : 28
+        const cardHeight = isActive ? 28 : 24
+        const roofHeight = isActive ? 11 : 9
+
+        if (isActive || isHovered) {
+          const glow = ctx.createRadialGradient(pos.x, pos.y - 6, 8, pos.x, pos.y - 6, isActive ? 54 : 38)
+          glow.addColorStop(0, `${glowColor}aa`)
+          glow.addColorStop(1, 'transparent')
+          ctx.beginPath()
+          ctx.arc(pos.x, pos.y - 6, isActive ? 54 : 38, 0, Math.PI * 2)
+          ctx.fillStyle = glow
+          ctx.fill()
+        }
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.22)'
+        ctx.beginPath()
+        ctx.ellipse(pos.x, pos.y + 16, isActive ? 22 : 18, isActive ? 8 : 6, 0, 0, Math.PI * 2)
+        ctx.fill()
+
+        if (hasSecret) {
+          ctx.beginPath()
+          ctx.arc(pos.x, pos.y - 4, isActive ? 26 : 21, 0, Math.PI * 2)
+          ctx.strokeStyle = `${glowColor}77`
+          ctx.lineWidth = 1.2
+          ctx.setLineDash([4, 4])
+          ctx.stroke()
+          ctx.setLineDash([])
+        }
+
+        if (faction) {
+          ctx.beginPath()
+          ctx.arc(pos.x, pos.y - 4, isActive ? 22 : 18, 0, Math.PI * 2)
+          ctx.strokeStyle = `${faction.fill}aa`
+          ctx.lineWidth = 1.4
+          ctx.globalAlpha = 0.55 + familiarity
+          ctx.stroke()
+          ctx.globalAlpha = 1
+        }
+
+        ctx.fillStyle = '#fff5df'
+        ctx.beginPath()
+        ctx.roundRect(pos.x - cardWidth / 2, pos.y - cardHeight / 2, cardWidth, cardHeight, 7)
+        ctx.fill()
+
+        ctx.fillStyle = isActive ? glowColor : fillColor
+        ctx.beginPath()
+        ctx.moveTo(pos.x, pos.y - cardHeight / 2 - roofHeight)
+        ctx.lineTo(pos.x + cardWidth / 2 - 1, pos.y - cardHeight / 2 + 2)
+        ctx.lineTo(pos.x - cardWidth / 2 + 1, pos.y - cardHeight / 2 + 2)
+        ctx.closePath()
+        ctx.fill()
+
+        ctx.strokeStyle = 'rgba(101, 67, 33, 0.32)'
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.roundRect(pos.x - cardWidth / 2, pos.y - cardHeight / 2, cardWidth, cardHeight, 7)
+        ctx.stroke()
+
+        const iconImage = assetIcons.get(poi?.fantasy_type)
+        if (iconImage) {
+          const iconSize = isActive ? 22 : 18
+          ctx.drawImage(iconImage, pos.x - iconSize / 2, pos.y - iconSize / 2 - 1, iconSize, iconSize)
+        } else {
+          ctx.font = isActive ? '16px serif' : '14px serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillStyle = palette.bg
+          ctx.fillText(getIcon(poi?.fantasy_type), pos.x, pos.y - 1)
+        }
+      })
+    }
+
+    if (layers.labels) {
+      rankedNodes.slice(0, 6).forEach((node) => {
+        const poi = poiMap.get(node.id)
+        if (!poi) return
+        const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
+        const label = poi.real_name || poi.fantasy_name || 'unknown place'
+        const isActive = node.id === activePoiId
+        const baseY = pos.y - (isActive ? 24 : 20)
+        ctx.font = isActive ? '600 13px sans-serif' : '500 12px sans-serif'
+        const width = Math.min(Math.max(ctx.measureText(label).width + 16, 80), 180)
+        const x = Math.max(12, Math.min(pos.x - width / 2, W - width - 12))
+        const y = Math.max(12, baseY - 10)
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.78)'
+        ctx.strokeStyle = isActive ? `${palette.glow}99` : 'rgba(255,255,255,0.1)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.roundRect(x, y, width, 22, 8)
+        ctx.fill()
+        ctx.stroke()
+        ctx.fillStyle = isActive ? palette.ink : palette.label
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillStyle = palette.bg
-        ctx.fillText(getIcon(poi?.fantasy_type), pos.x, pos.y - 1)
-      }
-    })
+        ctx.fillText(label, x + width / 2, y + 11)
+      })
+    }
 
-    rankedNodes.slice(0, 6).forEach((node) => {
-      const poi = poiMap.get(node.id)
-      if (!poi) return
-      const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
-      const label = poi.real_name || poi.fantasy_name || 'unknown place'
-      const isActive = node.id === activePoiId
-      const baseY = pos.y - (isActive ? 24 : 20)
-      ctx.font = isActive ? '600 13px sans-serif' : '500 12px sans-serif'
-      const width = Math.min(Math.max(ctx.measureText(label).width + 16, 80), 180)
-      const x = Math.max(12, Math.min(pos.x - width / 2, W - width - 12))
-      const y = Math.max(12, baseY - 10)
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.78)'
-      ctx.strokeStyle = isActive ? `${palette.glow}99` : 'rgba(255,255,255,0.1)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.roundRect(x, y, width, 22, 8)
-      ctx.fill()
-      ctx.stroke()
-      ctx.fillStyle = isActive ? palette.ink : palette.label
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(label, x + width / 2, y + 11)
-    })
+    if (layers.ghostTraces && ghostTraces.length > 0) {
+      ghostTraces.forEach((trace, index) => {
+        const tx = Number(trace?.x)
+        const ty = Number(trace?.y)
+        if (!Number.isFinite(tx) || !Number.isFinite(ty)) return
+        const pos = tileToCanvas(tx, ty, W, H)
+        const radius = 8 + (index % 3) * 3
+        ctx.save()
+        ctx.globalAlpha = 0.5
+        ctx.strokeStyle = `${palette.glow}aa`
+        ctx.fillStyle = `${palette.glow}44`
+        ctx.lineWidth = 1.2
+        ctx.beginPath()
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+        ctx.restore()
+      })
+    }
 
     const now = Date.now()
     ripples.forEach((ripple) => {
@@ -571,13 +620,13 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       ctx.lineWidth = 1.5
       ctx.stroke()
     })
-    }
+  }
 
     drawWorld()
     return () => {
       disposed = true
     }
-  }, [map2d, tileGrid, roadNodes, poiNodes, rankedNodes, spawnId, palette, hovered, activePoiId, ripples, poiMap, fam, landmarkNodes, assetPack, vibe])
+  }, [map2d, tileGrid, roadNodes, poiNodes, rankedNodes, spawnId, palette, hovered, activePoiId, ripples, poiMap, fam, landmarkNodes, assetPack, vibe, layers, ghostTraces])
 
   useEffect(() => {
     if (ripples.length === 0) return
@@ -586,6 +635,10 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
   }, [ripples])
 
   function getPoiAtPoint(mx, my, W, H) {
+    if (!layers.pois) {
+      return null
+    }
+
     return poiNodes.find((node) => {
       const pos = tileToCanvas(node.tile_position.x, node.tile_position.y, W, H)
       const dx = pos.x - mx
@@ -647,8 +700,9 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
         </div>
         <div className="map-chip-row">
           <div className="map-chip">{formatTag(vibe)}</div>
-          <div className="map-chip">{formatCount(roadNodes.length, '条道路')}</div>
-          <div className="map-chip">{formatCount(poiNodes.length, '个地点')}</div>
+          {layers.roads ? <div className="map-chip">{formatCount(roadNodes.length, '条道路')}</div> : null}
+          {layers.pois ? <div className="map-chip">{formatCount(poiNodes.length, '个地点')}</div> : null}
+          {layers.landmarks ? <div className="map-chip">{formatCount(landmarkNodes.length, '个地标')}</div> : null}
         </div>
       </div>
 
@@ -662,7 +716,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
         onClick={handleClick}
       />
 
-      {hoveredPoi ? (
+      {layers.pois && hoveredPoi ? (
         <div className="map-tooltip">
           <span className="map-tooltip-icon">{getIcon(hoveredPoi.fantasy_type)}</span>
           <div>
@@ -677,7 +731,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
         </div>
       ) : null}
 
-      {featuredPoi ? (
+      {layers.pois && featuredPoi ? (
         <div className="map-sidecar">
           <div className="map-sidecar-kicker">{activePoi ? '当前关注点' : '建议进入点'}</div>
           <div className="map-sidecar-title-row">
@@ -704,43 +758,51 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
         </div>
       ) : null}
 
-      <div className="map-legend">
-        {presentFactions.map((faction) => {
-          const colors = getFactionColors(faction)
-          return colors ? (
-            <span key={faction} className="map-legend-faction">
-              <span className="map-legend-swatch" style={{ background: colors.fill }} />
-              {formatTag(faction)}
-            </span>
-          ) : null
-        })}
-      </div>
+      {layers.legend ? (
+        <div className="map-legend">
+          {presentFactions.map((faction) => {
+            const colors = getFactionColors(faction)
+            return colors ? (
+              <span key={faction} className="map-legend-faction">
+                <span className="map-legend-swatch" style={{ background: colors.fill }} />
+                {formatTag(faction)}
+              </span>
+            ) : null
+          })}
+        </div>
+      ) : null}
 
       <div className="map-bottom-dock">
-        <div className="map-dock-item">
-          <span className="map-dock-icon">🗺️</span>
-          <div>
-            <strong>{roadNodes.length}</strong>
-            <span>道路</span>
+        {layers.roads ? (
+          <div className="map-dock-item">
+            <span className="map-dock-icon">🗺️</span>
+            <div>
+              <strong>{roadNodes.length}</strong>
+              <span>道路</span>
+            </div>
           </div>
-        </div>
-        <div className="map-dock-item">
-          <span className="map-dock-icon">🏠</span>
-          <div>
-            <strong>{poiNodes.length}</strong>
-            <span>地点</span>
+        ) : null}
+        {layers.pois ? (
+          <div className="map-dock-item">
+            <span className="map-dock-icon">🏠</span>
+            <div>
+              <strong>{poiNodes.length}</strong>
+              <span>地点</span>
+            </div>
           </div>
-        </div>
-        <div className="map-dock-item">
-          <span className="map-dock-icon">💎</span>
-          <div>
-            <strong>{landmarkNodes.length}</strong>
-            <span>地标</span>
+        ) : null}
+        {layers.landmarks ? (
+          <div className="map-dock-item">
+            <span className="map-dock-icon">💎</span>
+            <div>
+              <strong>{landmarkNodes.length}</strong>
+              <span>地标</span>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
-      {labeledNodeIds.size > 0 ? <div className="map-caption">二维世界切片 · 点击任一地点可将其设为当前舞台卡片。</div> : null}
+      {layers.labels && labeledNodeIds.size > 0 ? <div className="map-caption">二维世界切片 · 点击任一地点可将其设为当前舞台卡片。</div> : null}
     </div>
   )
 }

@@ -456,6 +456,71 @@ function buildWritebackRevisitSummary(result, writebackResult, familiarityMap, w
   }
 }
 
+const DEFAULT_VISIBLE_MAP_LAYERS = {
+  roads: true,
+  pois: true,
+  landmarks: true,
+  factionZones: true,
+  labels: true,
+  legend: true,
+  ghostTraces: true,
+}
+
+const MAP_LAYER_OPTIONS = [
+  { key: 'roads', label: '道路', hint: '显示路径骨架与道路发光' },
+  { key: 'pois', label: 'POI', hint: '显示可点击节点与据点交互' },
+  { key: 'landmarks', label: '地标', hint: '显示大型地标与装饰图标' },
+  { key: 'factionZones', label: '阵营影响区', hint: '显示势力扩散光晕' },
+  { key: 'labels', label: '标签', hint: '显示地点名与地图说明' },
+  { key: 'legend', label: '图例', hint: '显示右下角图例与阵营色板' },
+  { key: 'ghostTraces', label: 'Ghost traces', hint: '显示玩家残影与回访痕迹' },
+]
+
+const MAP_LAYER_PRESETS = [
+  {
+    key: 'explore',
+    label: '探索',
+    hint: '保留完整世界信息，适合第一次进入切片',
+    layers: {
+      roads: true,
+      pois: true,
+      landmarks: true,
+      factionZones: true,
+      labels: true,
+      legend: true,
+      ghostTraces: true,
+    },
+  },
+  {
+    key: 'navigation',
+    label: '导航',
+    hint: '突出路径、地标与路标，减少干扰信息',
+    layers: {
+      roads: true,
+      pois: true,
+      landmarks: true,
+      factionZones: false,
+      labels: true,
+      legend: false,
+      ghostTraces: false,
+    },
+  },
+  {
+    key: 'narrative',
+    label: '叙事',
+    hint: '保留阵营、标签与残影，强调世界气氛',
+    layers: {
+      roads: false,
+      pois: true,
+      landmarks: true,
+      factionZones: true,
+      labels: true,
+      legend: true,
+      ghostTraces: true,
+    },
+  },
+]
+
 const LAST_WORLD_STORAGE_KEY = 'fablemap:last-world-session'
 const LAST_WRITEBACK_STORAGE_KEY = 'fablemap:last-writeback-session'
 
@@ -489,6 +554,11 @@ function loadPersistedWorldSession() {
       result: isPersistedResultUsable(restoredResult) ? restoredResult : null,
       originLabel: typeof payload.originLabel === 'string' ? payload.originLabel : '',
       originHint: typeof payload.originHint === 'string' ? payload.originHint : '',
+      visibleLayers:
+        payload.visibleLayers && typeof payload.visibleLayers === 'object'
+          ? { ...DEFAULT_VISIBLE_MAP_LAYERS, ...payload.visibleLayers }
+          : DEFAULT_VISIBLE_MAP_LAYERS,
+      mapLayerPanelOpen: typeof payload.mapLayerPanelOpen === 'boolean' ? payload.mapLayerPanelOpen : true,
       lastUpdatedAt: typeof payload.lastUpdatedAt === 'string' ? payload.lastUpdatedAt : '',
     }
   } catch {
@@ -638,6 +708,10 @@ export default function App() {
   const [behaviorInsights, setBehaviorInsights] = useState(null)
   const [adminOpen, setAdminOpen] = useState(false)
   const [activePoiId, setActivePoiId] = useState(restoredWritebackSession?.activePoiId || null)
+  const [visibleMapLayers, setVisibleMapLayers] = useState(restoredSession?.visibleLayers || DEFAULT_VISIBLE_MAP_LAYERS)
+  const [mapLayerPanelOpen, setMapLayerPanelOpen] = useState(
+    typeof restoredSession?.mapLayerPanelOpen === 'boolean' ? restoredSession.mapLayerPanelOpen : true
+  )
   const [ghostTraces, setGhostTraces] = useState([])
   const [activePoi, setActivePoi] = useState(restoredWritebackSession?.activePoi || null)
   const [familiarityMap, setFamiliarityMap] = useState(restoredWritebackSession?.familiarityMap || {})
@@ -710,6 +784,34 @@ export default function App() {
 
   function updateWritebackForm(key, value) {
     setWritebackForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function toggleMapLayer(layerKey) {
+    setVisibleMapLayers((current) => ({
+      ...current,
+      [layerKey]: !current[layerKey],
+    }))
+  }
+
+  function setAllMapLayers(nextValue) {
+    setVisibleMapLayers(
+      MAP_LAYER_OPTIONS.reduce((acc, layer) => {
+        acc[layer.key] = nextValue
+        return acc
+      }, {})
+    )
+  }
+
+  function resetMapLayers() {
+    setVisibleMapLayers({ ...DEFAULT_VISIBLE_MAP_LAYERS })
+  }
+
+  function applyMapLayerPreset(presetKey) {
+    const preset = MAP_LAYER_PRESETS.find((item) => item.key === presetKey)
+    if (!preset) {
+      return
+    }
+    setVisibleMapLayers({ ...preset.layers })
   }
 
   function applyOrigin(nextForm, nextLabel, nextHint) {
@@ -1003,8 +1105,10 @@ export default function App() {
       result,
       originLabel,
       originHint,
+      visibleLayers: visibleMapLayers,
+      mapLayerPanelOpen,
     })
-  }, [form, result, originLabel, originHint])
+  }, [form, result, originLabel, originHint, visibleMapLayers, mapLayerPanelOpen])
 
   useEffect(() => {
     persistWritebackSession({
@@ -1258,6 +1362,72 @@ export default function App() {
           </div>
 
           <div className="storyboard-map-frame">
+            <div
+              className={`map-layer-toolbar${mapLayerPanelOpen ? '' : ' is-collapsed'}`}
+              role="group"
+              aria-label="地图图层控制器"
+            >
+              <div className="map-layer-toolbar__header">
+                <div>
+                  <span className="storyboard-category-label">图层控制器</span>
+                  <p className="map-layer-toolbar__copy">按需折叠世界骨架、标签与残影，同时保留地图主舞台。</p>
+                </div>
+                <div className="map-layer-toolbar__header-actions">
+                  <span className="map-layer-toolbar__summary">
+                    已开启 {Object.values(visibleMapLayers).filter(Boolean).length} / {MAP_LAYER_OPTIONS.length} 层
+                  </span>
+                  <button
+                    type="button"
+                    className="map-layer-toolbar__toggle"
+                    onClick={() => setMapLayerPanelOpen((current) => !current)}
+                    aria-expanded={mapLayerPanelOpen}
+                    aria-controls="map-layer-toolbar-panel"
+                  >
+                    {mapLayerPanelOpen ? '收起控制器' : '展开控制器'}
+                  </button>
+                </div>
+              </div>
+              {mapLayerPanelOpen ? (
+                <div id="map-layer-toolbar-panel" className="map-layer-toolbar__panel">
+                  <div className="map-layer-preset-row" role="toolbar" aria-label="地图图层预设">
+                    {MAP_LAYER_PRESETS.map((preset) => {
+                      const active = MAP_LAYER_OPTIONS.every((layer) => Boolean(visibleMapLayers[layer.key]) === Boolean(preset.layers[layer.key]))
+                      return (
+                        <button
+                          key={preset.key}
+                          type="button"
+                          className={`map-layer-preset${active ? ' is-active' : ''}`}
+                          onClick={() => applyMapLayerPreset(preset.key)}
+                        >
+                          <strong>{preset.label}</strong>
+                          <span>{preset.hint}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="map-layer-toolbar__actions" role="toolbar" aria-label="图层快捷操作">
+                    <button type="button" className="map-layer-action" onClick={() => setAllMapLayers(true)}>全开</button>
+                    <button type="button" className="map-layer-action" onClick={() => setAllMapLayers(false)}>全关</button>
+                    <button type="button" className="map-layer-action" onClick={resetMapLayers}>重置默认</button>
+                  </div>
+                  <div className="map-layer-toolbar__grid">
+                    {MAP_LAYER_OPTIONS.map((layer) => (
+                      <label key={layer.key} className={`map-layer-toggle${visibleMapLayers[layer.key] ? ' is-active' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(visibleMapLayers[layer.key])}
+                          onChange={() => toggleMapLayer(layer.key)}
+                        />
+                        <span className="map-layer-toggle__text">
+                          <strong>{layer.label}</strong>
+                          <span>{layer.hint}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <WorldMap
               world={result?.world}
               onPoiClick={handlePoiClick}
@@ -1265,6 +1435,7 @@ export default function App() {
               familiarityMap={familiarityMap}
               originLabel={originLabel}
               ghostTraces={ghostTraces}
+              visibleLayers={visibleMapLayers}
             />
           </div>
 

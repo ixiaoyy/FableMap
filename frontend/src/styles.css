@@ -658,6 +658,226 @@ button:disabled {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
 }
 
+.map-layer-toolbar {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(148, 110, 76, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(244, 232, 209, 0.92)),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.72), transparent 48%);
+}
+
+.map-layer-toolbar.is-collapsed {
+  gap: 0;
+}
+
+.map-layer-toolbar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.map-layer-toolbar__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.map-layer-toolbar__copy {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #7b5a39;
+}
+
+.map-layer-toolbar__summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 110, 76, 0.16);
+  background: rgba(255, 251, 244, 0.88);
+  color: #7a5736;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.map-layer-toolbar__toggle {
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 110, 76, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 236, 217, 0.94));
+  color: #6d4c2f;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.map-layer-toolbar__toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 110, 76, 0.3);
+  box-shadow: 0 10px 22px rgba(120, 84, 46, 0.08);
+}
+
+.map-layer-toolbar__toggle:focus-visible {
+  outline: 2px solid rgba(83, 116, 153, 0.42);
+  outline-offset: 2px;
+}
+
+.map-layer-toolbar__panel {
+  display: grid;
+  gap: 14px;
+}
+
+.map-layer-preset-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.map-layer-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  text-align: left;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 110, 76, 0.16);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(245, 234, 214, 0.94));
+  color: #6f4d31;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.map-layer-preset:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 110, 76, 0.28);
+  box-shadow: 0 10px 22px rgba(120, 84, 46, 0.08);
+}
+
+.map-layer-preset.is-active {
+  border-color: rgba(85, 118, 153, 0.36);
+  background: linear-gradient(180deg, rgba(241, 247, 255, 0.98), rgba(221, 235, 248, 0.94));
+  box-shadow: 0 12px 24px rgba(83, 116, 153, 0.12);
+}
+
+.map-layer-preset strong {
+  font-size: 14px;
+  color: #5a4029;
+}
+
+.map-layer-preset span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #836449;
+}
+
+.map-layer-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.map-layer-action {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 110, 76, 0.18);
+  background: rgba(255, 251, 244, 0.92);
+  color: #6d4c2f;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.map-layer-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 110, 76, 0.28);
+  background: rgba(255, 247, 233, 0.98);
+  box-shadow: 0 10px 20px rgba(120, 84, 46, 0.08);
+}
+
+.map-layer-toolbar__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.map-layer-toggle {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 110, 76, 0.16);
+  background: rgba(255, 251, 244, 0.72);
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.map-layer-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(148, 110, 76, 0.28);
+  box-shadow: 0 10px 22px rgba(120, 84, 46, 0.08);
+}
+
+.map-layer-toggle.is-active {
+  border-color: rgba(113, 151, 95, 0.38);
+  background: linear-gradient(180deg, rgba(247, 252, 244, 0.98), rgba(230, 241, 220, 0.94));
+  box-shadow: 0 12px 24px rgba(90, 122, 72, 0.12);
+}
+
+.map-layer-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #7b5536;
+  flex-shrink: 0;
+}
+
+.map-layer-toggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.map-layer-toggle__text strong {
+  font-size: 14px;
+  color: #6c4a2e;
+}
+
+.map-layer-toggle__text span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #866646;
+}
+
 .shared-task-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2058,6 +2278,32 @@ iframe {
 }
 
 @media (max-width: 960px) {
+  .map-layer-toolbar__header {
+    flex-direction: column;
+  }
+
+  .map-layer-toolbar__header-actions {
+    justify-content: flex-start;
+  }
+
+  .map-layer-toolbar__actions {
+    justify-content: flex-start;
+  }
+
+  .map-layer-preset-row,
+  .map-layer-toolbar__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map-layer-toolbar__summary {
+    white-space: normal;
+    align-self: flex-start;
+  }
+
+  .map-layer-toolbar__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .map-overlay-top {
     flex-direction: column;
     align-items: stretch;
@@ -2143,6 +2389,47 @@ iframe {
 }
 
 @media (max-width: 760px) {
+  .map-layer-toolbar {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .map-layer-toolbar__header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .map-layer-toolbar__summary,
+  .map-layer-toolbar__toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .map-layer-toolbar__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .map-layer-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .map-layer-preset-row,
+  .map-layer-toolbar__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-layer-toolbar__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-layer-toggle {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
   .world-map-wrap,
   .world-canvas {
     border-radius: 22px;
