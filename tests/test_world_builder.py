@@ -214,5 +214,31 @@ class WorldBuilderTests(unittest.TestCase):
         self.assertEqual(bank["fantasy_name"], "海友酒店堂")
 
 
+    def test_build_world_replaces_japanese_named_pois_with_generic_chinese_name_in_china(self) -> None:
+        world = build_world(
+            31.2304,
+            121.4737,
+            300,
+            source_data={
+                "elements": [
+                    {
+                        "type": "node",
+                        "id": 601,
+                        "lat": 31.2305,
+                        "lon": 121.4738,
+                        "tags": {
+                            "amenity": "restaurant",
+                            "name": "つるとんたん UDON NOODLE Brasserie 渋谷店",
+                        },
+                    }
+                ]
+            },
+            provider="fixture",
+        )
+        restaurant = next(poi for poi in world["pois"] if poi["id"] == "node-601")
+        self.assertEqual(restaurant["real_name"], "餐厅")
+        self.assertEqual(restaurant["fantasy_name"], "餐厅")
+
+
 if __name__ == "__main__":
     unittest.main()

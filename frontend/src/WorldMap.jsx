@@ -156,8 +156,48 @@ function getFactionColors(faction) {
   return FACTION_COLORS[faction] || null
 }
 
+const TAG_LABELS_ZH = {
+  verdant_district: '绿意城区',
+  healing_quarter: '疗愈街区',
+  market_quarter: '市集街区',
+  bureau_district: '秩序街区',
+  scholar_quarter: '学识街区',
+  threshold_district: '边界地带',
+  trade_guild: '贸易行会',
+  order_bureau: '秩序局',
+  clinic_circle: '诊疗环',
+  memory_collective: '记忆共社',
+  night_bloom: '夜绽社',
+  ghibli_town: '绿野町',
+  quiet_rain: '静雨',
+  neon_nostalgia: '霓虹怀旧',
+  amber_evening: '琥珀夜色',
+  iron_blue: '铁蓝',
+  chalk_dawn: '粉笔黎明',
+  whispering_grove: '低语林苑',
+  healing_sanctum: '疗愈圣所',
+  supply_outpost: '补给站',
+  judgement_tower: '裁定塔',
+  ember_parlor: '余烬馆',
+  lore_academy: '学识堂',
+  debt_cathedral: '债务堂',
+  feast_hall: '宴飨厅',
+  refuel_station: '补能站',
+  memory_archive: '记忆档案馆',
+  spirit_sanctum: '灵息圣所',
+  dormant_lot: '静置空场',
+  remedy_post: '疗护铺',
+  labor_forge: '劳作工坊',
+  contract_spire: '契约尖塔',
+}
+
 function formatTag(value) {
-  return value ? value.replace(/_/g, ' ') : 'unclassified'
+  if (!value) return '未分类'
+  return TAG_LABELS_ZH[value] || value.replace(/_/g, ' ')
+}
+
+function formatCount(count, unit) {
+  return `${count} ${unit}`
 }
 
 function buildRoadOccupancy(roadNodes) {
@@ -594,7 +634,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
   if (!map2d) {
     return (
       <div className="map-empty">
-        <p>Generate a world slice to see the map.</p>
+        <p>生成世界切片后，这里会显示地图。</p>
       </div>
     )
   }
@@ -612,14 +652,14 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
       <div className="map-sky-glow" />
       <div className="map-overlay map-overlay-top">
         <div className="map-biome-banner">
-          <span className="map-biome-kicker">FableMap World</span>
-          <strong>{region?.theme || formatTag(vibe)}</strong>
-          <span>{originLabel || 'Nearby slice'} · {poiNodes.length} places · {landmarkNodes.length} landmarks</span>
+          <span className="map-biome-kicker">FableMap 世界切片</span>
+          <strong>{formatTag(region?.theme || vibe)}</strong>
+          <span>{originLabel || '附近切片'} · {formatCount(poiNodes.length, '个地点')} · {formatCount(landmarkNodes.length, '个地标')}</span>
         </div>
         <div className="map-chip-row">
           <div className="map-chip">{formatTag(vibe)}</div>
-          <div className="map-chip">{roadNodes.length} roads</div>
-          <div className="map-chip">{poiNodes.length} places</div>
+          <div className="map-chip">{formatCount(roadNodes.length, '条道路')}</div>
+          <div className="map-chip">{formatCount(poiNodes.length, '个地点')}</div>
         </div>
       </div>
 
@@ -650,7 +690,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
 
       {featuredPoi ? (
         <div className="map-sidecar">
-          <div className="map-sidecar-kicker">{activePoi ? 'Current focus' : 'Suggested entry point'}</div>
+          <div className="map-sidecar-kicker">{activePoi ? '当前关注点' : '建议进入点'}</div>
           <div className="map-sidecar-title-row">
             <span className="map-sidecar-icon">{getIcon(featuredPoi.fantasy_type)}</span>
             <div>
@@ -666,7 +706,7 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
                 {formatTag(featuredPoi.faction_alignment)}
               </span>
             ) : null}
-            {featuredPoi.secret_slot ? <span className="map-sidecar-chip">hidden slot</span> : null}
+            {featuredPoi.secret_slot ? <span className="map-sidecar-chip">隐藏槽位</span> : null}
           </div>
 
           <p className="map-sidecar-copy">{featuredPoi.satire_hook}</p>
@@ -692,26 +732,26 @@ export default function WorldMap({ world, onPoiClick, activePoiId, familiarityMa
           <span className="map-dock-icon">🗺️</span>
           <div>
             <strong>{roadNodes.length}</strong>
-            <span>Roads</span>
+            <span>道路</span>
           </div>
         </div>
         <div className="map-dock-item">
           <span className="map-dock-icon">🏠</span>
           <div>
             <strong>{poiNodes.length}</strong>
-            <span>Settlements</span>
+            <span>地点</span>
           </div>
         </div>
         <div className="map-dock-item">
           <span className="map-dock-icon">💎</span>
           <div>
             <strong>{landmarkNodes.length}</strong>
-            <span>Landmarks</span>
+            <span>地标</span>
           </div>
         </div>
       </div>
 
-      {labeledNodeIds.size > 0 ? <div className="map-caption">2D world slice · click a settlement to turn it into your current stage card.</div> : null}
+      {labeledNodeIds.size > 0 ? <div className="map-caption">二维世界切片 · 点击任一地点可将其设为当前舞台卡片。</div> : null}
     </div>
   )
 }

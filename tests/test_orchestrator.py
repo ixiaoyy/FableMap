@@ -1,6 +1,11 @@
 """Tests for orchestrator"""
+import json
+
 import pytest
+
+from fablemap.orchestrator.ai_engine import AIOrchestrator
 from fablemap.orchestrator.rule_engine import RuleBasedOrchestrator
+
 
 def test_observer_effect_calculation():
     orchestrator = RuleBasedOrchestrator()
@@ -193,3 +198,64 @@ def test_scene_capsule_suppressed_when_no_signals():
     assert result.scene_capsule.capsule_type == "null"
     assert result.scene_capsule.metadata["suppressed"] is True
     assert result.fallback_triggered is False
+
+
+class StubLLM:
+    def __init__(self, response: str):
+        self.response = response
+
+    def generate(self, prompt: str, temperature: float, max_tokens: int) -> str:
+        return self.response
+
+
+def test_ai_orchestrator_parses_structured_llm_output():
+    llm_response = json.dumps(
+        {
+            "event_suggestions": [
+                {
+                    "type": "special_event",
+                    "target": "global",
+                    "priority": 9,
+                    "visibility": "local_public",
+                }
+            ],
+            "poi_ranking": [{"poi_id": "poi_1", "rank": 0}],
+            "broadcast_suggestions": [{"text": "LLM broadcast", "mood": "mysterious"}],
+            "observer_effect": {
+                "poi_id": "poi_1",
+                "observer_count": 12,
+                "world_density": 0.8,
+                "rarity_level": "legendary",
+                "density_change": 0.2,
+            },
+            "confidence_score": 0.93,
+            "warnings": ["model_synthesized"],
+        }
+    )
+    orchestrator = AIOrchestrator(llm_client=StubLLM(llm_response))
+
+    result = orchestrator.orchestrate(
+        {"slice_id": "test", "observer_count": 12, "pois": [{"id": "poi_1"}]},
+        {"player_id": "p1", "lat": 0.0, "lon": 0.0},
+    )
+
+    assert result.fallback_triggered is False
+    assert result.confidence_score == 0.93
+    assert result.event_suggestions[0].type == "special_event"
+    assert result.observer_effect is not None
+    assert result.observer_effect.rarity_level == "legendary"
+    assert result.broadcast_suggestions[0]["text"] == "LLM broadcast"
+    assert result.warnings == ["model_synthesized"]
+
+
+def test_ai_orchestrator_falls_back_on_invalid_json_response():
+    orchestrator = AIOrchestrator(llm_client=StubLLM("not-json"))
+
+    result = orchestrator.orchestrate(
+        {"slice_id": "fallback_slice", "observer_count": 1, "pois": []},
+        {"player_id": "p1"},
+    )
+
+    assert result.fallback_triggered is True
+    assert result.observer_effect is not None
+    assert result.observer_effect.world_density == 0.2

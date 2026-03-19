@@ -470,12 +470,12 @@ def _build_pois(
                     "palette": mapping["palette"],
                 },
                 "state_ref": poi_id,
-                "satire_hook": mapping["satire"],
+                "satire_hook": _localized_satire(mapping["fantasy_type"], mapping["satire"], prefer_zh=prefer_zh),
                 "faction_alignment": mapping["faction"],
-                "emotion_hook": mapping["emotion"],
+                "emotion_hook": _localized_emotion(mapping["fantasy_type"], mapping["emotion"], prefer_zh=prefer_zh),
                 "district_role": district_role,
                 "ritual_affordances": _ritual_affordances(mapping["fantasy_type"], mapping["secret_slot"], mapping["sprite_spawn_hint"]),
-                "rumor_hook": _rumor_hook(real_name, mapping["fantasy_type"], district_role),
+                "rumor_hook": _rumor_hook(real_name, mapping["fantasy_type"], district_role, prefer_zh=prefer_zh),
                 "map_icon": _map_icon(mapping["fantasy_type"]),
                 "collision_radius": _collision_radius(mapping["fantasy_type"]),
                 "secret_slot": mapping["secret_slot"],
@@ -918,6 +918,9 @@ def _should_prefer_simplified_chinese(*, lat: float, lon: float, elements: list[
 
 
 def _translate_name_to_simplified_chinese(name: str) -> str | None:
+    if _contains_japanese_kana(name):
+        return None
+
     if _contains_cjk(name):
         return _to_simplified_chinese(name)
 
@@ -1064,9 +1067,14 @@ def _generic_real_name_zh(tags: dict[str, Any]) -> str | None:
         "office": "办公楼",
     }.get(_infer_osm_type(tags))
 
-
 def _contains_cjk(value: str) -> bool:
     return any("CJK" in unicodedata.name(char, "") for char in value)
+
+
+
+def _contains_japanese_kana(value: str) -> bool:
+    return any("HIRAGANA" in unicodedata.name(char, "") or "KATAKANA" in unicodedata.name(char, "") for char in value)
+
 
 
 def _to_simplified_chinese(value: str) -> str:
@@ -1339,8 +1347,61 @@ def _ritual_affordances(fantasy_type: str, secret_slot: bool, sprite_spawn_hint:
 
 
 
-def _rumor_hook(real_name: str | None, fantasy_type: str, district_role: str) -> str:
-    subject = real_name or fantasy_type.replace("_", " ")
+_SATIRE_HOOKS_ZH = {
+    "whispering_grove": "绿色喘息仍旧夹在通勤压力之间。",
+    "healing_sanctum": "照护像圣事一样被陈列，但可获得性依旧被配给。",
+    "supply_outpost": "货物总能买到，只是不是每个人都买得起。",
+    "judgement_tower": "秩序无处不在，舒适却少得多。",
+    "ember_parlor": "谈话很温暖，但时间始终明码标价。",
+    "lore_academy": "知识承诺流动性，也复制着层级。",
+    "debt_cathedral": "财富在这里被膜拜，体现在廊柱与队列里。",
+    "feast_hall": "快乐始终供应，只为出得起价的人开放。",
+    "refuel_station": "速度与便利掩盖了交易里真正流失的东西。",
+    "memory_archive": "公共记忆被保存在这里，等着仍愿意在意它的人。",
+    "spirit_sanctum": "即使会众减少，神圣感也没有真正退场。",
+    "dormant_lot": "空间先分配给机器，人才被排到后面。",
+    "remedy_post": "缓解可以买到，但身体会继续替价格埋单。",
+    "labor_forge": "身体像生产单元一样被优化与展示。",
+    "contract_spire": "层级通过楼层数和工牌颜色被表达出来。",
+}
+
+_EMOTION_HOOKS_ZH = {
+    "whispering_grove": "这里像一块安静的夹层，能容纳私人记忆慢慢沉下去。",
+    "healing_sanctum": "门口附近悬着一种焦虑却不肯熄灭的希望。",
+    "supply_outpost": "细小的日常让这片地带勉强维持着可生活感。",
+    "judgement_tower": "你会先被注视，然后才被允许靠近。",
+    "ember_parlor": "暖意、闲谈和等待在这里悄悄重叠。",
+    "lore_academy": "抱负与疲惫共用着同一条走廊。",
+    "debt_cathedral": "一种关于义务的低鸣始终悬着，不会真正散去。",
+    "feast_hall": "饥饿与庆祝被摆在同一张桌上。",
+    "refuel_station": "效率开始殖民每一次停顿。",
+    "memory_archive": "这里安静、克制，像积年照料留下的微尘。",
+    "spirit_sanctum": "有些比城市更古老的东西，正从这里看着你。",
+    "dormant_lot": "这里的空缺，本身就像一种被安排好的期待。",
+    "remedy_post": "小小的急迫感，与漫长的耐受并排存在。",
+    "labor_forge": "用力和疲惫都被公开表演出来。",
+    "contract_spire": "野心沿着冷白灯的走廊持续循环。",
+}
+
+
+def _localized_satire(fantasy_type: str, fallback: str, *, prefer_zh: bool = False) -> str:
+    if prefer_zh:
+        return _SATIRE_HOOKS_ZH.get(fantasy_type, fallback)
+    return fallback
+
+
+
+def _localized_emotion(fantasy_type: str, fallback: str, *, prefer_zh: bool = False) -> str:
+    if prefer_zh:
+        return _EMOTION_HOOKS_ZH.get(fantasy_type, fallback)
+    return fallback
+
+
+
+def _rumor_hook(real_name: str | None, fantasy_type: str, district_role: str, *, prefer_zh: bool = False) -> str:
+    subject = real_name or (fantasy_type.replace("_", " ") if not prefer_zh else _localized_emotion(fantasy_type, fantasy_type, prefer_zh=True))
+    if prefer_zh:
+        return f"人们说，{subject} 会在 {district_role} 失衡时，悄悄改变这片街区的走向。"
     return f"People say {subject} quietly shapes the district whenever the {district_role} falls out of sync."
 
 

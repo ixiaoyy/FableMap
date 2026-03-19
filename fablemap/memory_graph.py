@@ -56,6 +56,26 @@ class PlayerFactionRelation:
     interaction_count: int
     last_interaction: datetime
 
+@dataclass
+class PlayerHomeRelation:
+    player_id: str
+    target_id: str           # poi_id or zone_id
+    target_type: str         # "poi" | "zone"
+    established_at: str      # ISO timestamp
+    visit_count: int = 0
+    comfort_score: float = 0.0   # 0.0-1.0, accumulates with dwell
+    home_tags: List[str] = field(default_factory=list)  # "quiet"/"familiar"/"safe"
+
+@dataclass
+class GhostTrace:
+    trace_id: str
+    player_id: str
+    waypoints: List[dict]    # [{poi_id, timestamp, action_state}, ...]
+    started_at: str
+    ended_at: str
+    mood_arc: List[str]      # ["curious", "calm", "melancholic"]
+    visibility: str = "local_public"
+
 class WorldMemoryGraph:
     def __init__(self):
         self.player_poi_relations: Dict[str, PlayerPOIRelation] = {}
@@ -64,6 +84,8 @@ class WorldMemoryGraph:
         self.player_routes: Dict[str, List[PlayerRouteMemory]] = {}
         self.echoes: Dict[str, EchoMemory] = {}
         self.player_faction_relations: Dict[str, PlayerFactionRelation] = {}
+        self.home_relations: Dict[str, PlayerHomeRelation] = {}  # key: player_id
+        self.ghost_traces: List[GhostTrace] = []
 
     def record_observation(self, player_id: str, poi_id: str):
         """Record a player observing a POI"""
@@ -240,3 +262,52 @@ class WorldMemoryGraph:
         key = f"{player_id}:{faction_id}"
         relation = self.player_faction_relations.get(key)
         return relation.reputation if relation else 0.0
+
+    def set_home(self, player_id: str, target_id: str, target_type: str) -> PlayerHomeRelation:
+        """Set or update a player's home location"""
+        now = datetime.now().isoformat()
+        existing = self.home_relations.get(player_id)
+        if existing and existing.target_id == target_id:
+            existing.visit_count += 1
+            existing.comfort_score = min(1.0, existing.comfort_score + 0.05)
+            return existing
+        relation = PlayerHomeRelation(
+            player_id=player_id,
+            target_id=target_id,
+            target_type=target_type,
+            established_at=now,
+            visit_count=1,
+            comfort_score=0.1,
+            home_tags=["familiar"],
+        )
+        self.home_relations[player_id] = relation
+        return relation
+
+    def get_home(self, player_id: str) -> Optional[PlayerHomeRelation]:
+        """Get player's home relation, or None if not set"""
+        return self.home_relations.get(player_id)
+
+    def record_ghost_trace(
+        self,
+        player_id: str,
+        waypoints: List[dict],
+        mood_arc: List[str],
+        visibility: str = "local_public",
+    ) -> GhostTrace:
+        """Record a ghost trace for a player's journey"""
+        import uuid
+        trace = GhostTrace(
+            trace_id=str(uuid.uuid4()),
+            player_id=player_id,
+            waypoints=waypoints,
+            started_at=waypoints[0]["timestamp"] if waypoints else datetime.now().isoformat(),
+            ended_at=waypoints[-1]["timestamp"] if waypoints else datetime.now().isoformat(),
+            mood_arc=mood_arc,
+            visibility=visibility,
+        )
+        self.ghost_traces.append(trace)
+        return trace
+
+    def get_ghost_traces(self, player_id: str) -> List[GhostTrace]:
+        """Get all ghost traces for a player"""
+        return [t for t in self.ghost_traces if t.player_id == player_id]

@@ -42,6 +42,8 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(meta["frontend_mode"], "separated-shell")
         self.assertEqual(meta["api_base"], "http://testserver")
         self.assertEqual(meta["default_preview_base"], "http://testserver/generated")
+        self.assertEqual(meta["default_coordinates"]["lat"], 31.2304)
+        self.assertEqual(meta["default_coordinates"]["lon"], 121.4737)
         self.assertEqual(meta["default_mode"], "live")
         self.assertEqual(meta["endpoints"]["meta"], "/api/meta")
         self.assertIn("fixture", meta["supported_modes"])

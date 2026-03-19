@@ -36,6 +36,10 @@ class OrchestratorOutput:
     city_persona: Optional[CityPersona] = None
     scene_capsule: Optional[CapsuleOutput] = None
 
+    # E4: Player home & ghost replay
+    home_state: Optional[dict] = None      # {target_id, target_type, comfort_score, home_tags}
+    ghost_traces: Optional[List[dict]] = None  # [{trace_id, waypoints, mood_arc, visibility}]
+
     # Task metadata (waoowaoo-inspired)
     stage: str = "orchestrate"
     status: str = "completed"

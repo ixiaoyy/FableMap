@@ -20,8 +20,8 @@ def build_meta_payload(*, base_url: str) -> dict[str, Any]:
         "api_base": base_url,
         "default_preview_base": f"{base_url}/generated",
         "default_coordinates": {
-            "lat": 35.6580,
-            "lon": 139.7016,
+            "lat": 31.2304,
+            "lon": 121.4737,
             "radius": 300,
         },
         "supported_modes": ["live", "fixture"],
