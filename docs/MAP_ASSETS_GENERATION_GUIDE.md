@@ -1,253 +1,136 @@
-# Map Assets Generation Guide
+# Map Assets Generation Guide（历史参考）
 
-## Overview
+## 文档定位
 
-This script generates all 26 map assets for FableMap with multiple providers:
-- **[`replicate`](scripts/generate_map_assets.py:116)** for hosted generation
-- **[`a1111`](scripts/generate_map_assets.py:117)** for local [`AUTOMATIC1111`](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
-- **[`comfyui`](scripts/generate_map_assets.py:118)** for local [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI)
+This document describes an older workflow for generating map scenes, icon packs, and tile packs for the deprecated self-rendered map pipeline.
 
-Asset output remains the same for all providers:
-- **Pack A (Dream-Glade Night)**: 1 scene + 6 icons + 6 tiles
-- **Pack B (Pastoral Storybook)**: 1 scene + 6 icons + 6 tiles
+That workflow is **no longer a current product priority**.
 
-## Setup
+FableMap’s active direction has shifted to:
 
-### Option A: Replicate
+> **real base map + place selection + character encounter / place event + chat narrative + writeback / memory**
 
-#### 1. Install Dependencies
-```bash
-pip install replicate requests
-```
+So this file is preserved only as historical reference for earlier visual asset experimentation.
 
-#### 2. Set Environment Variable
-```bash
-# macOS/Linux
-export REPLICATE_API_TOKEN=your-token-here
+For current direction, read:
 
-# Windows (PowerShell)
-$env:REPLICATE_API_TOKEN="your-token-here"
+- [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)
+- [`docs/INDEX.md`](INDEX.md)
 
-# Windows (Command Prompt)
-set REPLICATE_API_TOKEN=your-token-here
-```
+---
 
-#### 3. Run the Script
-```bash
-python scripts/generate_map_assets.py --provider replicate
-```
+## What this document originally covered
 
-### Option B: Local ComfyUI
+This guide was originally written to support a map-first visual production path:
 
-#### 1. Start ComfyUI
-Recommended local stack on this machine:
-- install [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI)
-- use a Python 3 virtual environment
-- install PyTorch with CUDA support
-- launch the server on `http://127.0.0.1:8188`
+- generate scene backgrounds for the browser map stage
+- generate POI icon sets
+- generate reusable road / ground / water tiles
+- connect generated art into the old map asset pipeline
 
-Current local install path used during development:
-- [`tools/ComfyUI`](tools/ComfyUI)
-- [`tools/ComfyUI/.venv`](tools/ComfyUI/.venv)
+At that time, the assumption was that stronger generated map assets would help the product feel more immersive.
 
-#### 2. Put a checkpoint into the checkpoints folder
-Expected folder:
-- [`tools/ComfyUI/models/checkpoints/`](tools/ComfyUI/models/checkpoints/)
+---
 
-Example model filename:
-- `v1-5-pruned-emaonly.safetensors`
-- or an SDXL checkpoint if VRAM allows
+## Why it is no longer a mainline execution document
 
-#### 3. Run the script with the ComfyUI provider
-Use the same Python environment that has [`requests`](https://pypi.org/project/requests/) installed. On this machine the working command is:
+This generation workflow has been downgraded for product and engineering reasons.
 
-```bash
-tools/ComfyUI/.venv/Scripts/python.exe scripts/generate_map_assets.py --provider comfyui --base-url http://127.0.0.1:8188 --model v1-5-pruned-emaonly.safetensors
-```
+### 1. Generated map art is not the core experience
 
-Dry run:
+The product no longer centers on rendering a custom fantasy map.
 
-```bash
-tools/ComfyUI/.venv/Scripts/python.exe scripts/generate_map_assets.py --provider comfyui --base-url http://127.0.0.1:8188 --model v1-5-pruned-emaonly.safetensors --dry-run
-```
+The core experience is now:
 
-### Option C: Local AUTOMATIC1111
+- selecting a real place on a real base map
+- entering a place-driven narrative context
+- triggering character encounters and place events
+- continuing the experience through chat, writeback, and memory
 
-#### 1. Start the A1111 WebUI API
-Make sure the API is enabled, typically with `--api`, and available at `http://127.0.0.1:7860`.
+### 2. Asset generation adds cost without solving the main problem
 
-#### 2. Run the script with the A1111 provider
-```bash
-python scripts/generate_map_assets.py --provider a1111 --base-url http://127.0.0.1:7860 --model your-checkpoint-name.safetensors
-```
+Even if scene packs, icons, and tiles improve visually, they do not directly provide:
 
-## Provider Parameters
+- stronger place interaction loops
+- character presence
+- event density
+- revisitable memory structure
+- chat-first storytelling flow
 
-The script now supports these key flags:
-- [`--provider`](scripts/generate_map_assets.py:116)
-- [`--api-token`](scripts/generate_map_assets.py:122)
-- [`--base-url`](scripts/generate_map_assets.py:127)
-- [`--model`](scripts/generate_map_assets.py:136)
-- [`--negative-prompt`](scripts/generate_map_assets.py:145)
-- [`--steps-scene`](scripts/generate_map_assets.py:150)
-- [`--steps-asset`](scripts/generate_map_assets.py:156)
-- [`--cfg-scale`](scripts/generate_map_assets.py:162)
-- [`--sampler-name`](scripts/generate_map_assets.py:168)
-- [`--scheduler`](scripts/generate_map_assets.py:174)
-- [`--seed`](scripts/generate_map_assets.py:180)
-- [`--timeout`](scripts/generate_map_assets.py:186)
-- [`--poll-interval`](scripts/generate_map_assets.py:192)
-- [`--output-dir`](scripts/generate_map_assets.py:198)
-- [`--comfyui-workflow-api`](scripts/generate_map_assets.py:204)
-- [`--dry-run`](scripts/generate_map_assets.py:210)
+### 3. The old map asset path has been frozen
 
-You can also configure the script with environment variables such as:
-- `FABLEMAP_IMAGE_PROVIDER`
-- `LOCAL_SD_BASE_URL`
-- `LOCAL_SD_MODEL`
-- `LOCAL_SD_NEGATIVE_PROMPT`
-- `LOCAL_SD_STEPS_SCENE`
-- `LOCAL_SD_STEPS_ASSET`
-- `LOCAL_SD_CFG_SCALE`
-- `LOCAL_SD_SAMPLER`
-- `LOCAL_SD_SCHEDULER`
-- `LOCAL_SD_SEED`
-- `LOCAL_SD_TIMEOUT`
-- `LOCAL_SD_POLL_INTERVAL`
-- `COMFYUI_WORKFLOW_API`
-- `FABLEMAP_ASSET_OUTPUT_DIR`
+This guide mainly supported a historical chain around:
 
-## Current Local Machine Status
+- [`scripts/generate_map_assets.py`](../scripts/generate_map_assets.py:1)
+- [`frontend/src/mapAssets/manifest.js`](../frontend/src/mapAssets/manifest.js:1)
+- [`frontend/src/mapAssets/iconMapping.js`](../frontend/src/mapAssets/iconMapping.js:1)
+- [`frontend/src/WorldMap.jsx`](../frontend/src/WorldMap.jsx:1)
 
-Local provider selected for development: **[`ComfyUI`](https://github.com/comfyanonymous/ComfyUI)**.
+That chain is now reference-only, not the main implementation focus.
 
-Current machine verification:
-- local [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI) server starts successfully on `http://127.0.0.1:8188`
-- [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py) dry run works with `--provider comfyui`
-- no checkpoint is installed yet in [`tools/ComfyUI/models/checkpoints/`](tools/ComfyUI/models/checkpoints/), so real asset generation cannot start until a model file is added
+### 4. AI-generated visuals are too unstable to be the foundation
 
-## Output Structure
+Map-art generation remains useful for inspiration, but it is not reliable enough to anchor long-term product progress.
 
-Assets will be generated in `fablemap/demo_assets/new_map_assets/`:
+The main system value now comes from:
 
-```
-new_map_assets/
-├── pack_a/
-│   ├── scene_01.png (1024×1024)
-│   ├── icons/
-│   │   ├── quest.png
-│   │   ├── shop.png
-│   │   ├── boss.png
-│   │   ├── home.png
-│   │   ├── echo.png
-│   │   └── event.png
-│   └── tiles/
-│       ├── road_01.png
-│       ├── road_02.png
-│       ├── ground_01.png
-│       ├── ground_02.png
-│       ├── water_01.png
-│       └── magic_01.png
-└── pack_b/
-    ├── scene_01.png (1024×1024)
-    ├── icons/
-    │   ├── quest.png
-    │   ├── shop.png
-    │   ├── boss.png
-    │   ├── home.png
-    │   ├── echo.png
-    │   └── event.png
-    └── tiles/
-        ├── road_01.png
-        ├── road_02.png
-        ├── ground_01.png
-        ├── ground_02.png
-        ├── water_01.png
-        └── garden_01.png
-```
+- real place anchoring
+- structured state
+- eventful encounters
+- conversational narrative
+- durable memory
 
-## Generation Details
+---
 
-### Pack A: Dream-Glade Night
-- **Palette**: Deep violet/indigo, cyan/magenta glow, warm gold, soft blue
-- **Style**: Nocturne synth-fantasy, painterly vector hybrid
-- **Scene**: Isometric night city with glowing river, grid roads, POI rings
-- **Icons**: Cyan-magenta neon halos on dark background
-- **Tiles**: Seamless nocturne textures with glow edges
+## What can still be reused from this guide
 
-### Pack B: Pastoral Storybook
-- **Palette**: Soft mint/teal, warm terracotta, cream parchment, high-chroma accents
-- **Style**: Pastel storybook, painterly vector hybrid
-- **Scene**: Isometric sunny village with meadows, bridges, cottages
-- **Icons**: Warm orange-gold rims on transparent background
-- **Tiles**: Seamless pastel textures with soft appearance
+Although it is no longer a mainline guide, some limited reuse is still reasonable.
 
-## Timing
+### 1. Optional illustration workflows
 
-- Local generation speed depends on model size, VRAM, and provider backend
-- On local GPU, icons and tiles should usually be faster than scenes
-- The script polls [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI) using [`--poll-interval`](scripts/generate_map_assets.py:192)
-- Total time for all 26 assets can vary significantly depending on checkpoint and settings
+The generation workflow may still be useful if the team later wants optional assets for:
 
-## Troubleshooting
+- place cards
+- event cards
+- character portraits
+- scene capsules
+- shareable story visuals
 
-### `ModuleNotFoundError: No module named 'requests'`
-Run the script with a Python environment that has dependencies installed, for example [`tools/ComfyUI/.venv/Scripts/python.exe`](tools/ComfyUI/.venv/Scripts/python.exe).
+### 2. Prompt organization reference
 
-### `REPLICATE_API_TOKEN not set`
-Make sure the environment variable is set when using provider `replicate`.
+The pack structure and naming logic may still help organize exploratory art prompts for non-core enhancements.
 
-### Local ComfyUI server is up but generation fails immediately
-- verify the base URL matches the running server, for example `http://127.0.0.1:8188`
-- verify a checkpoint exists in [`tools/ComfyUI/models/checkpoints/`](tools/ComfyUI/models/checkpoints/)
-- verify the model name passed to [`--model`](scripts/generate_map_assets.py:136) exactly matches the checkpoint filename
+### 3. Internal tooling reference
 
-### Generation timeout
-- local provider may still be loading models or waiting on VRAM
-- increase [`--timeout`](scripts/generate_map_assets.py:186)
-- for [`ComfyUI`](https://github.com/comfyanonymous/ComfyUI), consider increasing [`--poll-interval`](scripts/generate_map_assets.py:192) slightly if the machine is under heavy load
+If the repository keeps [`scripts/generate_map_assets.py`](../scripts/generate_map_assets.py:1) for archival or occasional experiments, this document can still explain its historical purpose.
 
-### Generation failed
-- check the server console output from [`tools/ComfyUI/main.py`](tools/ComfyUI/main.py)
-- try a lighter checkpoint first, such as SD 1.5 class models
-- lower image size or steps if VRAM is limited
-### "Generation timeout"
-- Check your internet connection
-- Verify your Replicate API token is valid
-- Try running again (may be temporary API issue)
+---
 
-### "Generation failed"
-- Check the error message from Replicate
-- Try adjusting the prompt if specific elements aren't rendering well
-- Replicate may have rate limits on free tier
-- Failed generations are no longer written as placeholder `.png` files; re-run the script after fixing the issue
+## Current handling rule
 
-### Output directory exists but images seem invalid
-- Existing filenames alone do **not** guarantee successful image generation
-- Verify file sizes and confirm the files can be opened as real PNG images
-- If earlier runs created placeholder text files, delete the invalid files before re-running generation
+When this document is referenced in the future, apply the following rule:
 
-## Customization
+- acceptable use: optional visual exploration, illustration experiments, archival understanding
+- not acceptable use: making generated map assets a prerequisite for current roadmap progress
+- not acceptable use: reopening self-rendered map polish as a core engineering track
 
-To modify prompts, edit the `PACK_A_SPECS` and `PACK_B_SPECS` dictionaries in the script:
+---
 
-```python
-PACK_A_SPECS = {
-    "scene": {
-        "prompt": "your custom prompt here..."
-    },
-    "icons": {
-        "quest": "custom icon prompt..."
-    },
-    ...
-}
-```
+## Historical workflow summary
 
-## Next Steps
+This guide previously documented:
 
-After generation:
-1. Review generated assets in [`fablemap/demo_assets/new_map_assets/`](fablemap/demo_assets/new_map_assets/)
-2. Verify consistency across both packs
-3. Commit assets to repository
-4. Integrate into [`frontend/src/WorldMap.jsx`](frontend/src/WorldMap.jsx)
-5. If needed, refine local workflow parameters in [`scripts/generate_map_assets.py`](scripts/generate_map_assets.py)
+- hosted image generation via external providers
+- local generation via ComfyUI or AUTOMATIC1111
+- output of scene, icon, and tile packs
+- file organization for old map pack usage
+
+That workflow is preserved only as background context for the older map-assets phase.
+
+---
+
+## One-line conclusion
+
+[`docs/MAP_ASSETS_GENERATION_GUIDE.md`](MAP_ASSETS_GENERATION_GUIDE.md) is now a historical guide for deprecated map-asset generation experiments, not a current execution document.

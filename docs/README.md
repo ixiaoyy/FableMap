@@ -1,169 +1,157 @@
 # FableMap 文档总览
 
-## 文档整理原则
+## 文档定位
 
-当前仓库文档按以下原则重新编排：
+这份文档用于说明当前仓库里各类文档的阅读顺序、信任层级与维护口径。
 
-1. **先看当前主线，再看专题协议**
-2. **优先信任仍与当前代码状态一致的文档**
-3. **历史变更、认领说明、阶段性判断与已过时草案，不再作为主入口**
-4. **存在冲突时，以当前总览、当前任务、当前协议文档为准**
+当前文档体系已经从“自绘地图 / Web-2D 主舞台优先”切换为：
+
+> **真实底图 + 地点选择 + 角色遭遇 / 地点事件 + 聊天叙事 + writeback / memory**
+
+因此阅读文档时应遵循以下原则：
+
+1. **先看当前主线文档，再看协议文档**
+2. **主线以当前产品方向与当前工程收束结果为准**
+3. **旧地图渲染、地图资产包、Godot-first 方案只作为历史参考**
+4. **若文档之间冲突，以当前主线文档优先**
 
 ---
 
-## 先读这些（当前有效主入口）
+## 当前主线入口（优先阅读）
 
-### 1. 项目总览
+### 1. 产品与架构
 
 - [`README.md`](../README.md)
-- [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
-- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
-- [`docs/TECH_STACK.md`](TECH_STACK.md)
+- [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`INDEX.md`](INDEX.md)
 
-### 2. 当前方向与任务
+### 2. 当前任务与协作入口
 
-- [`docs/EVOLUTION_DIRECTION.md`](EVOLUTION_DIRECTION.md)
-- [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)
-- [`docs/AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)
-- [`docs/AI_NATIVE_WORLD_ORCHESTRATION.md`](AI_NATIVE_WORLD_ORCHESTRATION.md)
-- [`docs/AIO1_WORLD_ORCHESTRATOR_PLAN.md`](AIO1_WORLD_ORCHESTRATOR_PLAN.md)
+- [`CURRENT_TASKS.md`](CURRENT_TASKS.md)
+- [`AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)
+- [`AI参与开发协议.md`](AI参与开发协议.md)
 
 ### 3. 当前核心协议
 
-- [`docs/WORLD_SCHEMA.md`](WORLD_SCHEMA.md)
-- [`docs/PLAYER_STATE.md`](PLAYER_STATE.md)
-- [`docs/WORLD_WRITEBACK_PROTOCOL.md`](WORLD_WRITEBACK_PROTOCOL.md)
-- [`docs/WORLD_WRITEBACK_GOVERNANCE.md`](WORLD_WRITEBACK_GOVERNANCE.md)
-- [`docs/TIME_FOLDS_PROTOCOL.md`](TIME_FOLDS_PROTOCOL.md)
+- [`WORLD_SCHEMA.md`](WORLD_SCHEMA.md)
+- [`WORLD_WRITEBACK_PROTOCOL.md`](WORLD_WRITEBACK_PROTOCOL.md)
+- [`WORLD_WRITEBACK_GOVERNANCE.md`](WORLD_WRITEBACK_GOVERNANCE.md)
+- [`TIME_FOLDS_PROTOCOL.md`](TIME_FOLDS_PROTOCOL.md)
+- [`PLAYER_STATE.md`](PLAYER_STATE.md)
+- [`WORLD_ORCHESTRATOR_PROTOCOL.md`](WORLD_ORCHESTRATOR_PROTOCOL.md)
 
 ---
 
 ## 按主题阅读
 
-### 一、产品与架构
+### 一、当前主线文档
 
-- [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)：项目定位与长期体验方向
-- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)：系统结构与模块关系
-- [`docs/ARCHITECTURE_PRINCIPLES.md`](ARCHITECTURE_PRINCIPLES.md)：当前高优先级架构原则与边界
-- [`docs/WHAT_NOT_TO_BUILD.md`](WHAT_NOT_TO_BUILD.md)：明确不做的方向
-- [`docs/TECH_STACK.md`](TECH_STACK.md)：技术栈与当前工程实现边界
+这些文档定义“项目现在是什么、接下来做什么”。
 
-### 路演与对外表达
+- [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)：产品定义、目标体验、优先级取舍
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)：主链路、系统分层、模块边界
+- [`CURRENT_TASKS.md`](CURRENT_TASKS.md)：当前执行主线
+- [`AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)：协作认领入口
+- [`WHAT_NOT_TO_BUILD.md`](WHAT_NOT_TO_BUILD.md)：明确不做的方向
+- [`INDEX.md`](INDEX.md)：文档导航索引
 
-- [`docs/EXTERNAL_SWOT_AND_NEXT_STAGE_PRIORITIES.md`](EXTERNAL_SWOT_AND_NEXT_STAGE_PRIORITIES.md)：对外 SWOT、风险拆解与下一阶段优先级建议
-- [`docs/STRATEGIC_ANALYSIS.md`](STRATEGIC_ANALYSIS.md)：内部战略分析与阶段优先级调整
+### 二、核心协议文档
 
-### 二、当前执行与协作
+这些文档描述当前仍然有效的世界结构、玩家状态、写回与编排协议。
 
-- [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)：当前项目管理视角下的主线任务
-- [`docs/AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)：共享任务认领入口
-- [`docs/AI参与开发协议.md`](AI参与开发协议.md)：协作约定
-- [`docs/changes/`](changes/)：变更记录
-- [`docs/claims/`](claims/)：认领记录
+- [`WORLD_SCHEMA.md`](WORLD_SCHEMA.md)
+- [`WORLD_WRITEBACK_PROTOCOL.md`](WORLD_WRITEBACK_PROTOCOL.md)
+- [`WORLD_WRITEBACK_GOVERNANCE.md`](WORLD_WRITEBACK_GOVERNANCE.md)
+- [`TIME_FOLDS_PROTOCOL.md`](TIME_FOLDS_PROTOCOL.md)
+- [`PLAYER_STATE.md`](PLAYER_STATE.md)
+- [`WORLD_ORCHESTRATOR_PROTOCOL.md`](WORLD_ORCHESTRATOR_PROTOCOL.md)
+- [`UNIVERSAL_TRANSMUTATION_PROTOCOL.md`](UNIVERSAL_TRANSMUTATION_PROTOCOL.md)
 
-### 三、世界协议与状态层
+### 三、仍有参考价值的设计 / 演进文档
 
-- [`docs/WORLD_SCHEMA.md`](WORLD_SCHEMA.md)
-- [`docs/PLAYER_STATE.md`](PLAYER_STATE.md)
-- [`docs/WORLD_WRITEBACK_PROTOCOL.md`](WORLD_WRITEBACK_PROTOCOL.md)
-- [`docs/WORLD_WRITEBACK_GOVERNANCE.md`](WORLD_WRITEBACK_GOVERNANCE.md)
-- [`docs/WORLD_WRITEBACK_PLAN.md`](WORLD_WRITEBACK_PLAN.md)
-- [`docs/TIME_FOLDS_PROTOCOL.md`](TIME_FOLDS_PROTOCOL.md)
+这些文档仍可用于理解演进逻辑，但不应覆盖当前主线文档。
 
-### 四、AI-native 演进主线
+- [`AI_NATIVE_WORLD_ORCHESTRATION.md`](AI_NATIVE_WORLD_ORCHESTRATION.md)：AI-native 演进判断
+- [`AIO1_WORLD_ORCHESTRATOR_PLAN.md`](AIO1_WORLD_ORCHESTRATOR_PLAN.md)：世界编排器实施计划
+- [`ARCHITECTURE_PRINCIPLES.md`](ARCHITECTURE_PRINCIPLES.md)：架构决策过滤器
+- [`EVOLUTION_DIRECTION.md`](EVOLUTION_DIRECTION.md)：历史阶段与路线收束说明
+- [`DISTURBANCE_INTERFACE_ALIGNMENT.md`](DISTURBANCE_INTERFACE_ALIGNMENT.md)
+- [`DISTURBANCE_MODEL.md`](DISTURBANCE_MODEL.md)
 
-- [`docs/AI_NATIVE_WORLD_ORCHESTRATION.md`](AI_NATIVE_WORLD_ORCHESTRATION.md)
-- [`docs/AIO1_WORLD_ORCHESTRATOR_PLAN.md`](AIO1_WORLD_ORCHESTRATOR_PLAN.md)
-- [`docs/ARCHITECTURE_PRINCIPLES.md`](ARCHITECTURE_PRINCIPLES.md)
-- [`docs/WHAT_NOT_TO_BUILD.md`](WHAT_NOT_TO_BUILD.md)
+### 四、历史参考文档
 
-### 五、地图主舞台与体验层设计
+以下文档保留历史价值，但**不再代表当前产品主线**：
 
-- [`docs/WEB_2D_SPIRIT_VIEW.md`](WEB_2D_SPIRIT_VIEW.md)
-- [`docs/MAP_ABSTRACTION_RULES_V0_1.md`](MAP_ABSTRACTION_RULES_V0_1.md)：原型阶段地图抽象尺度、区域聚合与对象转译规则
-- [`docs/DISTURBANCE_INTERFACE_ALIGNMENT.md`](DISTURBANCE_INTERFACE_ALIGNMENT.md)
-- [`docs/DISTURBANCE_MODEL.md`](DISTURBANCE_MODEL.md)
-- [`docs/DUAL_TRACK_MAPPING.md`](DUAL_TRACK_MAPPING.md)
-- [`docs/FACTION_SYSTEM.md`](FACTION_SYSTEM.md)
-- [`docs/CAUSAL_RIPPLE_ALGORITHM.md`](CAUSAL_RIPPLE_ALGORITHM.md)
-- [`docs/CULTURAL_INTERPRETATION.md`](CULTURAL_INTERPRETATION.md)
-- [`docs/STYLE_VIBES_MANIFESTO.md`](STYLE_VIBES_MANIFESTO.md)
-- [`docs/AESTHETIC_EMOTION_SYSTEMS.md`](AESTHETIC_EMOTION_SYSTEMS.md)
-- [`docs/LONG_TERM_EXPERIENCE.md`](LONG_TERM_EXPERIENCE.md)
+- [`WEB_2D_SPIRIT_VIEW.md`](WEB_2D_SPIRIT_VIEW.md)
+- [`MAP_ABSTRACTION_RULES_V0_1.md`](MAP_ABSTRACTION_RULES_V0_1.md)
+- [`MAP_ASSETS_PLAN.md`](MAP_ASSETS_PLAN.md)
+- [`MAP_ASSETS_GENERATION_GUIDE.md`](MAP_ASSETS_GENERATION_GUIDE.md)
+- [`MAP_ASSETS_FRONTEND_BASELINE.md`](MAP_ASSETS_FRONTEND_BASELINE.md)
+- [`LOCAL_GPU_MAP_ASSETS_GUIDE.md`](LOCAL_GPU_MAP_ASSETS_GUIDE.md)
+- [`GODOT_INTEGRATION.md`](GODOT_INTEGRATION.md)
+- [`LONG_TERM_EXPERIENCE.md`](LONG_TERM_EXPERIENCE.md)
+- [`AESTHETIC_EMOTION_SYSTEMS.md`](AESTHETIC_EMOTION_SYSTEMS.md)
+- [`FACTION_SYSTEM.md`](FACTION_SYSTEM.md)
+- [`CAUSAL_RIPPLE_ALGORITHM.md`](CAUSAL_RIPPLE_ALGORITHM.md)
 
-### 六、地图资源与前端资产
+### 五、历史记录与协作留痕
 
-- [`docs/MAP_ASSETS_PLAN.md`](MAP_ASSETS_PLAN.md)
-- [`docs/MAP_ASSETS_GENERATION_GUIDE.md`](MAP_ASSETS_GENERATION_GUIDE.md)
-- [`docs/LOCAL_GPU_MAP_ASSETS_GUIDE.md`](LOCAL_GPU_MAP_ASSETS_GUIDE.md)
-- [`docs/MAP_ASSETS_FRONTEND_BASELINE.md`](MAP_ASSETS_FRONTEND_BASELINE.md)
+这些内容保留，但不作为主线设计入口：
 
----
-
-## 已删除的过时文档
-
-以下文档已从主目录移除，不再作为当前协作入口：
-
-- `AI_SHARED_TASKLIST_V2.md`
-- `NEXT_PHASE_TECH_PRIORITY.md`
-- `NEXT_PHASE_PROTOCOL_FOCUS.md`
-- `ROADMAP.md`
-- `PRD_V0.1.md`
-- `ENGINEERING_PLAN_V0.1.md`
-- `PLAN_2D_GAME_MAP_UPGRADE.md`
-- `WEB_MVP_INTERACTION_LOOP_AI.md`
-
-这些文档的问题主要包括：
-
-- 与当前任务表或当前工程状态冲突
-- 仍停留在早期原型 / Godot-first / 阶段性判断口径
-- 已被当前协议、当前任务表与演进方向文档吸收
-- 会增加协作者判断成本
+- [`changes/`](changes/)
+- [`claims/`](claims/)
 
 ---
 
 ## 当前推荐阅读顺序
 
-### 如果你要做对外路演 / 对外说明
-
-1. [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
-2. [`docs/EXTERNAL_SWOT_AND_NEXT_STAGE_PRIORITIES.md`](EXTERNAL_SWOT_AND_NEXT_STAGE_PRIORITIES.md)
-3. [`docs/STRATEGIC_ANALYSIS.md`](STRATEGIC_ANALYSIS.md)
-4. [`docs/EVOLUTION_DIRECTION.md`](EVOLUTION_DIRECTION.md)
-
-
 ### 如果你第一次进入仓库
 
 1. [`README.md`](../README.md)
-2. [`docs/README.md`](README.md)
-3. [`docs/EVOLUTION_DIRECTION.md`](EVOLUTION_DIRECTION.md)
-4. [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
-5. [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
-6. [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)
+2. [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+3. [`ARCHITECTURE.md`](ARCHITECTURE.md)
+4. [`CURRENT_TASKS.md`](CURRENT_TASKS.md)
+5. [`AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)
+6. [`INDEX.md`](INDEX.md)
 
-### 如果你要参与当前协议 / 任务
+### 如果你要参与产品 / 架构判断
 
-1. [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)
-2. [`docs/AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)
-3. [`docs/WORLD_WRITEBACK_PROTOCOL.md`](WORLD_WRITEBACK_PROTOCOL.md)
-4. [`docs/WORLD_WRITEBACK_GOVERNANCE.md`](WORLD_WRITEBACK_GOVERNANCE.md)
-5. [`docs/TIME_FOLDS_PROTOCOL.md`](TIME_FOLDS_PROTOCOL.md)
-6. [`docs/AI_NATIVE_WORLD_ORCHESTRATION.md`](AI_NATIVE_WORLD_ORCHESTRATION.md)
+1. [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+2. [`ARCHITECTURE.md`](ARCHITECTURE.md)
+3. [`WHAT_NOT_TO_BUILD.md`](WHAT_NOT_TO_BUILD.md)
+4. [`ARCHITECTURE_PRINCIPLES.md`](ARCHITECTURE_PRINCIPLES.md)
+5. [`AI_NATIVE_WORLD_ORCHESTRATION.md`](AI_NATIVE_WORLD_ORCHESTRATION.md)
 
-### 如果你要参与前端 / 地图主舞台
+### 如果你要参与协议与后端实现
 
-1. [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
-2. [`docs/WEB_2D_SPIRIT_VIEW.md`](WEB_2D_SPIRIT_VIEW.md)
-3. [`docs/MAP_ABSTRACTION_RULES_V0_1.md`](MAP_ABSTRACTION_RULES_V0_1.md)
-4. [`docs/MAP_ASSETS_PLAN.md`](MAP_ASSETS_PLAN.md)
-5. [`docs/MAP_ASSETS_FRONTEND_BASELINE.md`](MAP_ASSETS_FRONTEND_BASELINE.md)
-6. [`docs/AI_SHARED_TASKLIST.md`](AI_SHARED_TASKLIST.md)
+1. [`WORLD_SCHEMA.md`](WORLD_SCHEMA.md)
+2. [`WORLD_WRITEBACK_PROTOCOL.md`](WORLD_WRITEBACK_PROTOCOL.md)
+3. [`WORLD_WRITEBACK_GOVERNANCE.md`](WORLD_WRITEBACK_GOVERNANCE.md)
+4. [`PLAYER_STATE.md`](PLAYER_STATE.md)
+5. [`WORLD_ORCHESTRATOR_PROTOCOL.md`](WORLD_ORCHESTRATOR_PROTOCOL.md)
+
+### 如果你要理解旧地图链路为什么被降级
+
+1. [`ARCHITECTURE.md`](ARCHITECTURE.md)
+2. [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+3. [`WEB_2D_SPIRIT_VIEW.md`](WEB_2D_SPIRIT_VIEW.md)
+4. [`MAP_ABSTRACTION_RULES_V0_1.md`](MAP_ABSTRACTION_RULES_V0_1.md)
+5. [`MAP_ASSETS_PLAN.md`](MAP_ASSETS_PLAN.md)
+6. [`GODOT_INTEGRATION.md`](GODOT_INTEGRATION.md)
 
 ---
 
 ## 维护规则
 
-1. 新文档进入主入口前，必须明确它属于：产品 / 架构 / 协议 / 当前任务 / 变更记录 / 历史参考中的哪一类
-2. 阶段性判断文档若已被正式协议或当前任务吸收，应降级为历史参考，不再并列作为主入口
-3. 同类文档只保留一个当前有效入口，避免 `v1` / `v2` 并存且同时指导开发
-4. 若某文档结论与代码现状冲突，应优先更新或降级该文档，而不是继续引用
+1. 新文档必须先标明自己属于：主线文档 / 协议文档 / 参考设计 / 历史参考 / 历史记录 中的哪一类
+2. 若某文档继续使用“自绘地图主舞台”“地图资产包优先”“Godot 近期主承载体”等旧口径，应降级或重写
+3. 同一主题只保留一个当前有效主入口，避免多个版本同时指导开发
+4. 若某文档结论与当前 [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) 或 [`ARCHITECTURE.md`](ARCHITECTURE.md) 冲突，应优先更新该文档
+5. 历史参考文档可以保留，但必须明确“仅供参考，不代表当前主线”
+
+---
+
+## 一句话说明
+
+当前 FableMap 文档主线已经切换为：**真实底图承载现实地点，角色与事件驱动体验，聊天叙事与 writeback / memory 构成长期世界关系。**

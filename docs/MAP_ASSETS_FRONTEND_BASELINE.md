@@ -1,337 +1,158 @@
-# Map Assets Frontend Baseline
+# Map Assets Frontend Baseline（历史参考）
 
-## 背景
+## 文档定位
 
-当前 FableMap 前端地图主舞台主要由 [`frontend/src/WorldMap.jsx`](frontend/src/WorldMap.jsx) 使用 Canvas 进行程序绘制。
+这份文档记录的是一个已经降级的前端方向：
 
-现状特点：
+> 在保留浏览器自绘地图壳的前提下，逐步把地图图标、tile、scene pack 接入 [`frontend/src/WorldMap.jsx`](../frontend/src/WorldMap.jsx:1) 的旧地图主舞台。
 
-- 地图底板、道路、节点、光晕、标签主要由代码直接生成
-- `vibe_profile` 已经影响配色，但尚未进入正式 sprite 资源切换
-- 前端目录下当前还没有稳定的 `assets/isometric` 资源结构
-- 地图资源生成脚本与资源规划文档已经出现，但尚未形成明确前端接入基线
+当前这条路线**不再是主线实现方向**。
 
-因此，地图资源主线的下一步不应直接“大改 WorldMap”，而应先定义：
+当前产品主线已经切换为：
 
-1. 资源放在哪里
-2. 资源如何命名
-3. `WorldMap` 应该从哪里接入资源
-4. 如何渐进替换当前程序绘制层
+> **真实底图 + 地点选择 + 角色遭遇 / 地点事件 + 聊天叙事 + writeback / memory**
 
----
+因此，本文档保留的意义主要是：
 
-## 目标
+- 解释旧地图资源化思路为什么出现过
+- 说明旧前端地图链路为什么有 [`frontend/src/mapAssets/manifest.js`](../frontend/src/mapAssets/manifest.js:1) 与 [`frontend/src/mapAssets/iconMapping.js`](../frontend/src/mapAssets/iconMapping.js:1) 这类模块
+- 为未来极少量的非主线视觉增强提供参考
 
-为 `M3` 建立最小前端接入基线，让后续协作者可以在不推翻当前地图交互层的前提下，把 Pack A / Pack B 资源逐步接入浏览器地图主舞台。
+如需当前方向，请优先阅读：
 
----
-
-## 当前前端状态判断
-
-根据当前 `frontend/src/WorldMap.jsx`：
-
-### 已有能力
-
-- 有稳定的 `vibe_profile -> palette` 映射
-- 有道路、POI、landmark、hover、active、涟漪、发光、标签等程序绘制能力
-- 有 `map2d.renderables` 作为主要渲染输入
-- 有当前地图交互逻辑与 Canvas 生命周期
-
-### 尚未具备的资源化能力
-
-- 没有统一 sprite 资源目录
-- 没有资源清单或 manifest
-- 没有 `fantasy_type -> asset key` 的正式映射表
-- 没有 `vibe_profile -> asset pack` 的正式选择器
-- 没有图片预加载与失败降级机制
-
-结论：
-
-当前最合理的路径是 **“保留现有 Canvas 交互壳，逐层资源化替换绘制内容”**，而不是直接重写为另一套渲染系统。
+- [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)
+- [`docs/INDEX.md`](INDEX.md)
 
 ---
 
-## 建议目录结构
+## 它当时试图解决什么
 
-建议在前端新增稳定资源目录：
+在旧地图主舞台阶段，前端已经具备：
 
-```text
-frontend/src/assets/map-packs/
-├── pack_a/
-│   ├── scene/
-│   │   └── scene_01.png
-│   ├── icons/
-│   │   ├── quest.png
-│   │   ├── shop.png
-│   │   ├── boss.png
-│   │   ├── home.png
-│   │   ├── echo.png
-│   │   └── event.png
-│   └── tiles/
-│       ├── road_01.png
-│       ├── road_02.png
-│       ├── ground_01.png
-│       ├── ground_02.png
-│       ├── water_01.png
-│       └── magic_01.png
-└── pack_b/
-    ├── scene/
-    │   └── scene_01.png
-    ├── icons/
-    │   ├── quest.png
-    │   ├── shop.png
-    │   ├── boss.png
-    │   ├── home.png
-    │   ├── echo.png
-    │   └── event.png
-    └── tiles/
-        ├── road_01.png
-        ├── road_02.png
-        ├── ground_01.png
-        ├── ground_02.png
-        ├── water_01.png
-        └── garden_01.png
-```
+- 程序绘制道路、POI、landmark、hover、active 态
+- 基于 vibe 的配色变化
+- [`map2d.renderables`](../frontend/src/WorldMap.jsx:1) 作为输入的地图渲染链路
 
-说明：
+因此当时的判断是：
 
-- 资源目录应对齐 `docs/MAP_ASSETS_PLAN.md` 的 pack 结构
-- 场景图单独放在 `scene/`
-- 图标与 tile 分层放置，避免后续引入更多类型时继续混放
-- 未来若引入第 3 套资源包，可继续按 pack 维度平行扩展
+1. 不立刻推翻旧 Canvas 地图交互壳
+2. 先建立资源目录、manifest、图标映射
+3. 再用资源逐步替换程序绘制
+4. 最终让地图看起来更完整、更有风格一致性
+
+这在“继续做地图体验”作为主线时是合理的。
 
 ---
 
-## 建议清单文件
+## 它为什么被降级
 
-建议同时新增一个资源清单模块，例如：
+后来这份基线不再成立，原因主要有四个：
 
-- `frontend/src/mapAssets/manifest.js`
-- 或 `frontend/src/mapAssets/manifest.ts`
+### 1. 旧地图渲染链路不再值得继续扩张
 
-最小结构建议：
+[`frontend/src/WorldMap.jsx`](../frontend/src/WorldMap.jsx:1) 已经承担了过多职责：
 
-```js
-export const MAP_ASSET_PACKS = {
-  pack_a: {
-    scene: 'pack_a/scene/scene_01.png',
-    icons: {
-      quest: 'pack_a/icons/quest.png',
-      shop: 'pack_a/icons/shop.png',
-      boss: 'pack_a/icons/boss.png',
-      home: 'pack_a/icons/home.png',
-      echo: 'pack_a/icons/echo.png',
-      event: 'pack_a/icons/event.png',
-    },
-    tiles: {
-      road_01: 'pack_a/tiles/road_01.png',
-      road_02: 'pack_a/tiles/road_02.png',
-      ground_01: 'pack_a/tiles/ground_01.png',
-      ground_02: 'pack_a/tiles/ground_02.png',
-      water_01: 'pack_a/tiles/water_01.png',
-      magic_01: 'pack_a/tiles/magic_01.png',
-    },
-  },
-  pack_b: {
-    scene: 'pack_b/scene/scene_01.png',
-    icons: { ... },
-    tiles: { ... },
-  },
-}
-```
+- 布局推导
+- 几何换算
+- 资源预载
+- 命中与交互
+- Canvas 绘制
 
-目标不是先把逻辑做复杂，而是先建立 **稳定文件寻址层**。
+继续在这条链路上叠加资源化，只会让旧系统更重。
 
----
+### 2. 资源化不能解决核心产品问题
 
-## `vibe_profile -> pack` 映射建议
+即使地图图标更精致、tile 更统一，也不能自动带来：
 
-当前 `WorldMap` 已有多种 `vibe_profile`：
+- 地点驱动叙事
+- 角色遭遇系统
+- 地点事件系统
+- 聊天主舞台
+- writeback / memory 闭环
 
-- `ghibli_town`
-- `quiet_rain`
-- `neon_nostalgia`
-- `amber_evening`
-- `iron_blue`
-- `chalk_dawn`
+而这些才是当前真正需要的主线能力。
 
-建议第一阶段不要为每个 vibe 都做独立 pack，而是先建立 **一对多映射**：
+### 3. 地图已经从“主体验”降级为“地点入口容器”
 
-```js
-const VIBE_TO_ASSET_PACK = {
-  quiet_rain: 'pack_a',
-  neon_nostalgia: 'pack_a',
-  iron_blue: 'pack_a',
-  ghibli_town: 'pack_b',
-  amber_evening: 'pack_b',
-  chalk_dawn: 'pack_b',
-}
-```
+当前产品不再追求“把自绘地图做得更像异世界主舞台”，而是：
 
-解释：
+- 用真实底图承载现实空间
+- 用地点面板进入场景
+- 用角色 / 事件 / 聊天生成体验密度
 
-- `pack_a` 更适合夜景、霓虹、蓝紫、梦境类 vibe
-- `pack_b` 更适合温暖、白天、故事书、治愈类 vibe
+因此旧地图资源接线不再是优先工程工作。
 
-这样可以先把资源包用于“风格分流”，后续再细化到 vibe 专属资源。
+### 4. AI 地图资产生成不适合作为近期核心依赖
+
+资源包生成、图标生产、场景包维护会持续放大：
+
+- 视觉一致性问题
+- 资源维护成本
+- 渲染接线复杂度
+- 非核心工作量
+
+这与当前“收束到角色、事件、聊天与记忆”的方向冲突。
 
 ---
 
-## `fantasy_type -> icon asset` 映射建议
+## 这份文档现在还能提供什么价值
 
-当前 `WorldMap` 仍以内建 emoji 表达 `fantasy_type`。建议先建立一层图标 key 映射，而不是直接把业务字段和文件名绑死：
+虽然不再指导主线开发，但仍有三类有限参考价值。
 
-```js
-const FANTASY_TYPE_TO_ICON = {
-  whispering_grove: 'echo',
-  healing_sanctum: 'home',
-  supply_outpost: 'shop',
-  judgement_tower: 'boss',
-  ember_parlor: 'shop',
-  lore_academy: 'quest',
-  debt_cathedral: 'boss',
-  feast_hall: 'shop',
-  refuel_station: 'event',
-  memory_archive: 'echo',
-  spirit_sanctum: 'echo',
-  dormant_lot: 'event',
-  remedy_post: 'home',
-  labor_forge: 'boss',
-  contract_spire: 'boss',
-}
-```
+### 1. 历史前端结构参考
 
-第一阶段只要求：
+它说明了旧前端为什么会出现以下模块：
 
-- 图标语义稳定
-- 可以覆盖现有 fantasy_type
-- 找不到资源时可回退到 emoji
+- [`frontend/src/mapAssets/manifest.js`](../frontend/src/mapAssets/manifest.js:1)
+- [`frontend/src/mapAssets/iconMapping.js`](../frontend/src/mapAssets/iconMapping.js:1)
+- [`frontend/src/worldMap/renderers.js`](../frontend/src/worldMap/renderers.js:1)
 
----
+### 2. 非主线视觉增强参考
 
-## 渐进接入顺序
+如果未来要为以下内容增加可选视觉包装，可借用其部分命名或组织思路：
 
-### Phase 1：图标资源化
+- 地点卡片插图
+- 事件卡片图标
+- 聊天场景氛围包
+- scene capsule 的辅助视觉资源
 
-优先级最高，风险最低。
+### 3. 冻结边界参考
 
-做法：
+它能帮助团队明确：
 
-- 保留现有 Canvas 绘制
-- 只把 POI/landmark 的中心 icon 从 emoji 替换为 pack icon
-- 保留当前发光、hover、active、选中逻辑
-- 图片加载失败时回退到 emoji
-
-意义：
-
-- 最快让地图资源“真的出现”
-- 不会破坏道路、底板、交互与摄像机逻辑
-
-### Phase 2：场景底图接入
-
-做法：
-
-- 在当前程序绘制前，先绘制 pack scene 背景
-- 把现有底色、渐变、发光视为前景氛围层或覆盖层
-- 不要求 scene 与所有 tile 精确对齐，先作为整体风格底板
-
-意义：
-
-- 快速拉高第一眼质感
-- 风险远低于直接做 tile 拼接
-
-### Phase 3：tile 局部替换
-
-做法：
-
-- 先从局部层替换开始，例如：
-  - 背景 ground 区块
-  - 水域
-  - 某些主路径 road 样式
-- 只替换最容易对齐的图层
-- 不一次性把全部道路和地表程序绘制删掉
-
-意义：
-
-- 降低 tile 拼接与坐标对齐风险
-- 保持现有地图可用性
-
-### Phase 4：正式资源驱动渲染
-
-当 Phase 1~3 稳定后，再考虑：
-
-- tile 规则铺装
-- 更完整的 POI 建筑化
-- 前景 / 中景 / 背景分层 sprite 化
+- 哪些地图资源模块属于历史链路
+- 哪些内容不要再变成当前任务中心
+- 哪些前端工作只应做最小维护，而不应继续扩张
 
 ---
 
-## 最小技术接口建议
+## 当前处理口径
 
-建议在前端新增：
+### 可保留的部分
 
-- `frontend/src/mapAssets/manifest.js`
-- `frontend/src/mapAssets/packSelector.js`
-- `frontend/src/mapAssets/iconMapping.js`
-- `frontend/src/mapAssets/loadImage.js`
+- 文件寻址与资源清单的组织思路
+- 图标语义映射的方法
+- “增强层可失败、主体验不依赖它”的思想
 
-职责建议：
+### 不再作为主线推进的部分
 
-### `manifest.js`
-负责管理 pack 资源路径。
-
-### `packSelector.js`
-负责：
-- 输入 `vibe_profile`
-- 输出 `pack_a` 或 `pack_b`
-
-### `iconMapping.js`
-负责：
-- 输入 `fantasy_type`
-- 输出 icon key
-
-### `loadImage.js`
-负责：
-- 图片预加载
-- 缓存已加载图片
-- 失败时返回 `null` 供上层回退
+- 旧 Canvas 地图的资源化替换工程
+- pack 驱动的地图视觉升级
+- 以地图风格资源作为前端重构主目标
+- 围绕旧 [`WorldMap`](../frontend/src/WorldMap.jsx:1) 的继续深化接线
 
 ---
 
-## 降级策略（必须有）
+## 与当前文档体系的关系
 
-资源接入第一版必须保留降级能力：
-
-1. 资源不存在 -> 回退到当前程序绘制
-2. icon 加载失败 -> 回退到 emoji
-3. scene 加载失败 -> 保留当前渐变背景
-4. tile 加载失败 -> 继续使用当前 grid / block / road 绘制
-
-原则：
-
-> 资源化是增强，不是把当前地图一次性推翻。
+- 本文档属于历史参考
+- 当前实现不应以本文档作为主需求来源
+- 如果与 [`ARCHITECTURE.md`](ARCHITECTURE.md) 或 [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) 冲突，以当前主线文档为准
 
 ---
 
-## 验收标准
+## 一句话结论
 
-`M3` 第一阶段建议以“文档 + 接口基线”验收，而不是直接要求所有资源都渲染出来。
-
-最小验收标准：
-
-- 已定义稳定资源目录结构
-- 已定义 `vibe_profile -> pack` 映射思路
-- 已定义 `fantasy_type -> icon` 映射思路
-- 已定义前端最小模块拆分建议
-- 已定义明确降级路径
-- 已明确渐进接入顺序
-
----
-
-## 结论
-
-当前 FableMap 前端最合理的资源接入策略不是“重写地图”，而是：
-
-**保留现有 Canvas 世界地图壳 -> 先资源化图标 -> 再接入场景底板 -> 再局部 tile 替换 -> 最后再走完整资源驱动渲染。**
-
-这条路径能最大程度降低风险，并把 Map Assets 主线真正接到现有前端上。 
+[`docs/MAP_ASSETS_FRONTEND_BASELINE.md`](MAP_ASSETS_FRONTEND_BASELINE.md) 记录的是旧地图资源化接线思路，而不是当前“真实底图上的地点、角色、事件、聊天与记忆体验”主线。

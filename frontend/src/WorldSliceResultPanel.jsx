@@ -7,52 +7,65 @@ export default function WorldSliceResultPanel({
   sliceHighlights,
 }) {
   return (
-    <section className="panel secondary-panel">
-      <div className="section-heading">
+    <section className="panel secondary-panel world-result-panel">
+      <div className="section-heading world-result-panel__heading">
         <div>
           <p className="mini-label">步骤 2</p>
-          <h2>当前切片结果</h2>
+          <h2>{result ? '世界已准备好，下一步直接点地图' : '当前切片结果'}</h2>
         </div>
-        <p className="note muted">生成成功后，这里先给出世界摘要，再进入地图和文字观察窗。</p>
+        <p className="note muted">
+          {result
+            ? '这里不再承担主操作入口，而是用最短摘要告诉你：世界已经生成，继续往下点地图即可开始探索。'
+            : '生成成功后，这里会先给你最短世界摘要，然后把注意力交给下方地图舞台。'}
+        </p>
       </div>
 
       {result ? (
-        <div className="result-stack">
-          <div className="result-card emphasis-card story-card">
-            <p className="mini-label">世界快照</p>
+        <div className="result-stack world-result-panel__stack">
+          <div className="result-card emphasis-card story-card world-result-panel__hero-card">
+            <p className="mini-label">已生成切片</p>
             <h3 className="story-card-title">{formatTagLabel(result.region_theme, '未命名切片')}</h3>
             <p className="note story-card-copy">{worldAtmosphere}</p>
-            <div className="story-chip-row">
+            <div className="story-chip-row world-result-panel__chips">
               <span>势力 · {formatTagLabel(result.dominant_faction, '-')}</span>
               <span>地点 · {result.poi_count ?? '-'}</span>
               <span>道路 · {result.road_count ?? '-'}</span>
               <span>地标 · {result.landmark_count ?? '-'}</span>
             </div>
+            <div className="world-result-panel__next-action" aria-live="polite">
+              <span className="mini-label">现在就做</span>
+              <strong>直接去下方地图，点击一个节点，把它设为这次进入世界的当前据点。</strong>
+              <p>悬停先读名字和钩子，点击后首页会立刻显示当前据点反馈，不需要先打开预览文件。</p>
+            </div>
           </div>
 
-          <div className="result-grid">
-            <div className="result-card">
-              <p className="mini-label">你将进入什么</p>
-              <div className="story-bullets">
+          <div className="result-grid world-result-panel__grid">
+            <div className="result-card world-result-panel__card">
+              <p className="mini-label">进入前 3 个线索</p>
+              <div className="story-bullets world-result-panel__bullets">
                 {sliceHighlights.map((item) => (
                   <div key={item} className="story-bullet">{item}</div>
                 ))}
               </div>
             </div>
-            <div className="result-card">
-              <p className="mini-label">下一步</p>
-              <div className="story-bullets">
-                <div className="story-bullet">先打开下方地图，悬停节点查看地点名字与讽刺钩子。</div>
-                <div className="story-bullet">点击一个节点，页面会把它提升为当前观察目标。</div>
-                <div className="story-bullet">如果要看更完整的文本世界，再打开文字预览。</div>
+            <div className="result-card world-result-panel__card world-result-panel__card--guide">
+              <p className="mini-label">地图优先路径</p>
+              <div className="story-bullets world-result-panel__bullets">
+                <div className="story-bullet">先看下方地图里最密集或最显眼的节点分布。</div>
+                <div className="story-bullet">再点击一个地点，把它提升为当前观察目标。</div>
+                <div className="story-bullet">资源文件保留在下方，只作为补充入口，不打断首屏探索。</div>
               </div>
             </div>
           </div>
 
-          <div className="link-row action-links">
-            <a className="button-link" href={result.preview_url} target="_blank" rel="noreferrer">打开预览</a>
-            <a href={result.world_url} target="_blank" rel="noreferrer">世界数据 world.json</a>
-            <a href={result.manifest_url} target="_blank" rel="noreferrer">资源清单 manifest.json</a>
+          <div className="result-card world-result-panel__resources">
+            <p className="mini-label">补充资源</p>
+            <p className="note muted">这些链接仍可用于深入查看原始文本与资源，但它们已经降级为次级入口。</p>
+            <div className="link-row action-links world-result-panel__resource-links">
+              <a className="button-link" href={result.preview_url} target="_blank" rel="noreferrer">文字预览</a>
+              <a href={result.world_url} target="_blank" rel="noreferrer">world.json</a>
+              <a href={result.manifest_url} target="_blank" rel="noreferrer">manifest.json</a>
+            </div>
           </div>
         </div>
       ) : (

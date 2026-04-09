@@ -17,9 +17,30 @@ export default function WorldEntryPanel({
   setAdvancedOpen,
   updateForm,
   errorText,
+  result,
 }) {
+  const primaryActionText = autoEntering
+    ? '正在自动进入附近世界...'
+    : submitting
+      ? '正在生成附近世界...'
+      : '立即进入附近世界'
+
+  const primaryActionHint = autoEntering
+    ? '系统正在根据当前位置自动生成切片，请稍候。'
+    : submitting
+      ? '正在刷新当前入口对应的世界切片，完成后会直接更新下方地图。'
+      : result
+        ? '最近一次生成已经完成；页面会自动带到下方地图舞台，画布出现后可直接点击节点。'
+        : '点击主按钮后会按当前入口与半径生成世界切片，并把你带到下方地图舞台。'
+
+  const actionStatusChip = autoEntering || submitting
+    ? '生成中'
+    : result
+      ? '已生成'
+      : '待开始'
+
   return (
-    <section className="panel primary-panel">
+    <section className="panel primary-panel world-entry-panel">
       <div className="section-heading">
         <div>
           <p className="mini-label">自动世界入口</p>
@@ -42,6 +63,15 @@ export default function WorldEntryPanel({
         </div>
       </div>
 
+      <div className={`world-entry-panel__action-brief${autoEntering || submitting ? ' is-pending' : result ? ' is-ready' : ''}`} aria-live="polite">
+        <div className="world-entry-panel__action-brief-header">
+          <span className="mini-label">当前进入动作</span>
+          <span className="world-entry-panel__status-chip">{actionStatusChip}</span>
+        </div>
+        <strong>{primaryActionText}</strong>
+        <p className="note muted">{primaryActionHint}</p>
+      </div>
+
       <div className="preset-grid">
         {locationPresets.map((preset) => {
           const active = preset.id === presetMeta?.id
@@ -60,16 +90,18 @@ export default function WorldEntryPanel({
         })}
       </div>
 
-      <div className="actions origin-actions">
-        <button type="button" className="secondary" disabled={locating || autoEntering} onClick={() => useCurrentLocation()}>
-          {locating || autoEntering ? '定位中...' : '重新获取我的位置'}
+      <div className="origin-actions origin-actions--primary-first">
+        <button type="button" className="origin-actions__primary" disabled={submitting || autoEntering} onClick={() => submitNearby(false)}>
+          {primaryActionText}
         </button>
-        <button type="button" disabled={submitting || autoEntering} onClick={() => submitNearby(false)}>
-          {submitting ? '生成中...' : '重新生成附近世界'}
-        </button>
-        <button type="button" className="secondary" disabled={submitting || autoEntering} onClick={() => submitNearby(true)}>
-          刷新实时地图
-        </button>
+        <div className="actions origin-actions__secondary-row">
+          <button type="button" className="secondary" disabled={locating || autoEntering} onClick={() => useCurrentLocation()}>
+            {locating || autoEntering ? '定位中...' : '重新定位'}
+          </button>
+          <button type="button" className="secondary" disabled={submitting || autoEntering} onClick={() => submitNearby(true)}>
+            强制刷新地图数据
+          </button>
+        </div>
       </div>
 
       <button

@@ -1,88 +1,125 @@
-# Map Assets Plan (Two Packs)
+# Map Assets Plan（历史参考）
 
-## Scope
-Produce two cohesive asset packs with consistent scale, icon language, and glow treatment. Each pack includes:
-- **Scene** (1024×1024)
-- **Icons** (6 pcs, 256×256, transparent background)
-- **Tiles** (6 pcs, 256×256, seamless or near-seamless)
+## 文档定位
 
-Reference cues: dreamy night-map overlays and soft storybook day scenes. See existing references under [参考图片/ChatGPT Image 2026年3月14日 20_13_44.png](参考图片/ChatGPT Image 2026年3月14日 20_13_44.png), [参考图片/ChatGPT Image 2026年3月14日 21_20_09.png](参考图片/ChatGPT Image 2026年3月14日 21_20_09.png), [参考图片/ChatGPT Image 2026年3月14日 21_24_26.png](参考图片/ChatGPT Image 2026年3月14日 21_24_26.png), [参考图片/ChatGPT Image 2026年3月14日 21_26_48.png](参考图片/ChatGPT Image 2026年3月14日 21_26_48.png).
+This document records an older exploration path where FableMap tried to improve the product primarily through generated map asset packs, scene textures, icon systems, and tile consistency.
 
----
+That direction is **no longer part of the current product mainline**.
 
-## Pack A — Dream-Glade Night (Nocturne Synth-Fantasy)
-**Palette**: deep violet/indigo base, cyan/magenta glow, warm gold highlights, soft blue river.
+Current priority has shifted to:
 
-### A1) Scene (1024×1024)
-**Filename**: `pack_a/scene_01.png`
-**Prompt** (English):
-> isometric fantasy night city map, deep violet and indigo atmosphere, glowing river ribbon, grid-like roads, soft star particles, floating luminous POI rings, small cozy buildings and trees, dreamy magical glow, painterly vector hybrid, soft linework, high detail, no text
+> **real base map + place selection + character encounter / place event + chat narrative + writeback / memory**
 
-### A2) Icons (256×256, transparent)
-**Naming**: `pack_a/icons/quest.png`, `shop.png`, `boss.png`, `home.png`, `echo.png`, `event.png`
-**Prompt template** (apply per icon):
-> glowing circular UI icon token, {icon_symbol}, neon cyan-magenta halo, soft bloom, subtle sparkles, dark transparent background, painterly vector hybrid, crisp silhouette, no text
-**Symbols**:
-- quest: scroll or exclamation star
-- shop: small house/storefront
-- boss: horned mask
-- home: cozy house
-- echo: crystal or droplet
-- event: lantern or flame
+So this file is kept only as a historical reference for prior visual experiments around the old self-rendered map pipeline.
 
-### A3) Tiles (256×256, seamless)
-**Naming**: `pack_a/tiles/road_01.png`, `road_02.png`, `ground_01.png`, `ground_02.png`, `water_01.png`, `magic_01.png`
-**Prompt template**:
-> seamless tile, {tile_subject}, nocturne palette, subtle glow edges, painterly vector hybrid, soft texture, no text
-**Subjects**:
-- road_01: dark cobblestone with faint cyan seams
-- road_02: smooth slate path with violet edge glow
-- ground_01: dark grass with small flowers/sparks
-- ground_02: forest floor with scattered leaves
-- water_01: deep blue river with shimmering particles
-- magic_01: circular magic sigil tile with faint runes
+For current direction, read:
+
+- [`docs/PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md)
+- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`docs/CURRENT_TASKS.md`](CURRENT_TASKS.md)
+- [`docs/INDEX.md`](INDEX.md)
 
 ---
 
-## Pack B — Pastoral Storybook (Daylight Cozy)
-**Palette**: soft mint/teal water, warm terracotta roofs, cream parchment UI, high-chroma accents.
+## What this document originally tried to solve
 
-### B1) Scene (1024×1024)
-**Filename**: `pack_b/scene_01.png`
-**Prompt** (English):
-> isometric pastel storybook village map, sunny meadow with winding paths, bright river, stone bridges, cozy cottages with red roofs, flowers and bushes, warm ambient light, floating POI bubbles, painterly vector hybrid, soft linework, high detail, no text
+Earlier, the project attempted to make the browser map stage feel more coherent by introducing themed visual packs:
 
-### B2) Icons (256×256, transparent)
-**Naming**: `pack_b/icons/quest.png`, `shop.png`, `boss.png`, `home.png`, `echo.png`, `event.png`
-**Prompt template**:
-> glowing circular UI icon token, {icon_symbol}, warm orange-gold rim, soft pastel glow, subtle sparkles, transparent background, painterly vector hybrid, crisp silhouette, no text
-**Symbols**:
-- quest: book or letter
-- shop: market stall
-- boss: crown or shield
-- home: cottage
-- echo: water droplet
-- event: speech bubble or bell
+- scene backgrounds
+- POI icon sets
+- road / ground / water tiles
+- vibe-aligned palettes
 
-### B3) Tiles (256×256, seamless)
-**Naming**: `pack_b/tiles/road_01.png`, `road_02.png`, `ground_01.png`, `ground_02.png`, `water_01.png`, `garden_01.png`
-**Prompt template**:
-> seamless tile, {tile_subject}, pastel storybook palette, soft texture, painterly vector hybrid, no text
-**Subjects**:
-- road_01: warm stone path
-- road_02: light brick path with flower edges
-- ground_01: lush green grass with tiny flowers
-- ground_02: meadow soil with pebbles
-- water_01: turquoise river with soft highlights
-- garden_01: patterned flower bed patch
+At that stage, the assumption was that improving the map’s visual language could strengthen immersion.
 
 ---
 
-## Notes
-- Keep icon ring thickness consistent (~8% of icon diameter) across both packs.
-- Maintain consistent scale between scene assets and icons (icons should read at 64–96 px).
-- Use subtle particle overlays to unify the magic theme across both packs.
+## Why it is no longer a mainline document
 
-Planned output path (if/when generating assets):
-- `fablemap/demo_assets/new_map_assets/pack_a/...`
-- `fablemap/demo_assets/new_map_assets/pack_b/...`
+This plan was deprioritized for structural reasons:
+
+1. **Map rendering is no longer the product center**
+   - The main experience is no longer “look at a fantasy-translated map.”
+   - The main experience is entering a place, meeting characters, triggering events, and continuing story memory.
+
+2. **Asset production does not solve the core product problem**
+   - Better icons and tiles do not create stronger character systems, place events, or revisitable narrative loops.
+   - Visual polish without place-driven experience only increases implementation cost.
+
+3. **The old rendering path has been frozen as reference**
+   - [`frontend/src/WorldMap.jsx`](../frontend/src/WorldMap.jsx:1)
+   - [`frontend/src/worldMap/renderers.js`](../frontend/src/worldMap/renderers.js:1)
+   - [`frontend/src/worldMap/geometry.js`](../frontend/src/worldMap/geometry.js:1)
+   - [`frontend/src/mapAssets/manifest.js`](../frontend/src/mapAssets/manifest.js:1)
+   - [`frontend/src/mapAssets/iconMapping.js`](../frontend/src/mapAssets/iconMapping.js:1)
+
+4. **AI-generated map visuals are not a reliable product foundation**
+   - They are difficult to stabilize.
+   - They do not provide durable world memory.
+   - They do not improve the chat-first, story-first experience enough to justify the complexity.
+
+---
+
+## What can still be reused from this document
+
+This document may still provide reference value for limited enhancement work.
+
+### 1. Mood references
+
+The pack mood definitions may still inspire:
+
+- place detail card illustration styles
+- event card moods
+- character encounter visual tone
+- shareable story card palettes
+
+### 2. Naming conventions for non-core art experiments
+
+If the team later generates optional art for:
+
+- scene capsules
+- story cards
+- place thumbnails
+- event illustrations
+
+then the old pack naming logic can still be reused as an internal organization aid.
+
+### 3. Fallback enhancement layer ideas
+
+These assets may remain useful only as optional, non-blocking enhancement materials, never as the core runtime dependency.
+
+---
+
+## Historical pack definitions
+
+The following pack ideas are preserved only for archival reference.
+
+### Pack A — Dream-Glade Night
+
+- Palette: deep violet / indigo base, cyan-magenta glow, warm gold highlights, soft blue water accents
+- Intended feeling: nocturne synth-fantasy, dreamy city-night overlay
+- Previously imagined usage: self-rendered night map scenes, POI icons, seamless tiles
+
+### Pack B — Pastoral Storybook
+
+- Palette: soft mint / teal water, warm terracotta roofs, cream paper UI, higher warmth
+- Intended feeling: daylight cozy storybook village
+- Previously imagined usage: self-rendered healing-mode map scenes, POI icons, seamless tiles
+
+These are no longer implementation targets for the current roadmap.
+
+---
+
+## Current handling rule
+
+If this file is referenced in future work, apply the following rule:
+
+- acceptable use: optional art reference, inspiration board, historical context
+- not acceptable use: reopening map-pack production as a main engineering milestone
+- not acceptable use: making generated tiles / icons / scenes a prerequisite for product progress
+
+---
+
+## One-line conclusion
+
+[`docs/MAP_ASSETS_PLAN.md`](MAP_ASSETS_PLAN.md) is now a historical note about old map-asset thinking, not a current execution document.

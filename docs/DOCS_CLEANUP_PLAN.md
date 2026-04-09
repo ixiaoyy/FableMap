@@ -1,155 +1,210 @@
-# FableMap 文档清理计划
+# FableMap 文档清理计划（v2）
 
-## 清理目标
+## 文档目的
 
-基于新的架构原则（ARCHITECTURE_PRINCIPLES.md）和四层模型，清理过时、冗余、与当前方向不符的文档。
+这份文档不再用于清理“旧版四层模型遗留物”，而是用于在当前主线下统一整个文档体系的口径、分类与维护规则。
 
----
+当前主线已经明确为：
 
-## 文档分类
+> 真实底图 + 地点选择 + 角色遭遇 / 地点事件 + 聊天叙事 + writeback / memory
 
-### ✅ 核心架构文档（保留）
+因此，文档清理的核心目标不是“尽量删掉旧文档”，而是：
 
-**新增的核心文档**：
-- `ARCHITECTURE_PRINCIPLES.md` - 架构原则与边界（最高优先级）
-- `WHAT_NOT_TO_BUILD.md` - 明确不做清单
-- `AI_SHARED_TASKLIST_V2.md` - 按四层模型重构的任务列表
-- `AIO1_WORLD_ORCHESTRATOR_PLAN.md` - 世界编排器实施计划
-- `AI_NATIVE_WORLD_ORCHESTRATION.md` - AI-native 架构完整设计
-
-**现有核心文档**：
-- `WORLD_SCHEMA.md` - 世界数据结构
-- `UNIVERSAL_TRANSMUTATION_PROTOCOL.md` - 万物转义协议
-- `DUAL_TRACK_MAPPING.md` - 双轨映射规则
-- `AI参与开发协议.md` - AI 协作规范
-- `WORLD_WRITEBACK_GOVERNANCE.md` - 写回治理（P3）
-- `TIME_FOLDS_PROTOCOL.md` - 时间褶皱协议（P4）
-- `PLAYER_STATE.md` - 玩家状态设计
+1. 保留当前主线必需的产品与架构文档
+2. 保留协议类文档作为稳定接口说明
+3. 将旧“自绘地图 / Web-2D 主舞台 / 地图资产包 / Godot-first”文档降级为历史参考
+4. 明确哪些文档仍有价值、哪些文档需要继续重写、哪些文档只应作为留痕
 
 ---
 
-### ⚠️ 需要更新的文档
+## 一、当前分类原则
 
-**1. AI_SHARED_TASKLIST.md（旧版）**
-- **问题**: 未按四层模型组织，M1-M3 任务未标记废弃
-- **处理**: 添加废弃声明，指向 AI_SHARED_TASKLIST_V2.md
+### P0 - 当前主线文档（必读）
 
-**2. CURRENT_TASKS.md**
-- **问题**: 与 AI_SHARED_TASKLIST_V2.md 重复
-- **处理**: 简化为指向 AI_SHARED_TASKLIST_V2.md 的索引
+这些文档描述当前项目的产品定义、系统主链路与执行口径，任何新协作者都应先读。
 
-**3. README.md（根目录）**
-- **问题**: 可能未反映新的架构原则
-- **处理**: 需要检查并更新
-
-**4. ARCHITECTURE.md**
-- **问题**: 可能与 ARCHITECTURE_PRINCIPLES.md 冲突
-- **处理**: 合并或废弃
-
----
-
-### ❌ 可以废弃的文档
-
-**1. 过时的设计文档**：
-- `GODOT_INTEGRATION.md` - Godot 集成（已不在技术栈中）
-- `CAUSAL_RIPPLE_ALGORITHM.md` - 因果涟漪算法（已被世界编排器替代）
-- `AESTHETIC_EMOTION_SYSTEMS.md` - 审美情感系统（过于早期，未实施）
-- `FACTION_SYSTEM.md` - 阵营系统（长期项，暂不优先）
-
-**2. 过时的技术文档**：
-- `CLI_SPEC.md` - CLI 规范（已实现，细节在代码中）
-- `TECH_STACK.md` - 技术栈（可能过时）
-
-**3. 过于早期的设计**：
-- `LONG_TERM_EXPERIENCE.md` - 长期体验设计（过于宏大，未落地）
-- `PRODUCT_BRIEF.md` - 产品简介（可能过时）
-
----
-
-### 📁 Claims 和 Changes 文件夹
-
-**保留策略**：
-- 保留所有 `claims/` 和 `changes/` 文件（历史记录）
-- 不主动清理，但可以归档到 `docs/archive/` 子文件夹
-
----
-
-## 清理步骤
-
-### Step 1: 废弃旧版任务列表
-
-在 `AI_SHARED_TASKLIST.md` 顶部添加废弃声明。
-
-### Step 2: 简化 CURRENT_TASKS.md
-
-将其改为指向 AI_SHARED_TASKLIST_V2.md 的索引。
-
-### Step 3: 移动过时文档到 archive
-
-创建 `docs/archive/` 文件夹，移动以下文档：
-- GODOT_INTEGRATION.md
-- CAUSAL_RIPPLE_ALGORITHM.md
-- AESTHETIC_EMOTION_SYSTEMS.md
-- FACTION_SYSTEM.md
-- LONG_TERM_EXPERIENCE.md
-
-### Step 4: 检查并更新 README.md
-
-确保 README.md 反映新的架构原则。
-
-### Step 5: 处理 ARCHITECTURE.md
-
-检查是否与 ARCHITECTURE_PRINCIPLES.md 冲突，决定合并或废弃。
-
-### Step 6: 创建文档索引
-
-创建 `docs/INDEX.md`，按优先级列出所有有效文档。
-
----
-
-## 文档优先级
-
-### P0 - 必读文档（架构决策）
-1. ARCHITECTURE_PRINCIPLES.md
-2. WHAT_NOT_TO_BUILD.md
-3. AI_SHARED_TASKLIST_V2.md
-4. AI_NATIVE_WORLD_ORCHESTRATION.md
+- `README.md`
+- `docs/PRODUCT_BRIEF.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CURRENT_TASKS.md`
+- `docs/AI_SHARED_TASKLIST.md`
+- `docs/WHAT_NOT_TO_BUILD.md`
+- `docs/INDEX.md`
 
 ### P1 - 核心协议文档
-5. WORLD_SCHEMA.md
-6. UNIVERSAL_TRANSMUTATION_PROTOCOL.md
-7. WORLD_WRITEBACK_GOVERNANCE.md
-8. TIME_FOLDS_PROTOCOL.md
-9. DUAL_TRACK_MAPPING.md
 
-### P2 - 实施计划文档
-10. AIO1_WORLD_ORCHESTRATOR_PLAN.md
-11. PLAYER_STATE.md
+这些文档描述当前实现或近期实现会直接消费的协议、状态结构与治理边界。
 
-### P3 - 设计参考文档
-12. WEB_2D_SPIRIT_VIEW.md
-13. CULTURAL_INTERPRETATION.md
-14. STYLE_VIBES_MANIFESTO.md
-15. STREET_AS_A_SENTENCE.md
-16. DISTURBANCE_MODEL.md
+- `docs/WORLD_WRITEBACK_PROTOCOL.md`
+- `docs/WORLD_WRITEBACK_GOVERNANCE.md`
+- `docs/PLAYER_STATE.md`
+- `docs/WORLD_ORCHESTRATOR_PROTOCOL.md`
+- `docs/WORLD_SCHEMA.md`
+- `docs/TIME_FOLDS_PROTOCOL.md`
 
-### P4 - 协作规范
-17. AI参与开发协议.md
-18. claims/README.md
+### P2 - 当前仍有价值的实施 / 设计文档
+
+这些文档不一定是主线入口，但仍对实现、建模或未来扩展有现实参考价值。
+
+- `docs/AIO1_WORLD_ORCHESTRATOR_PLAN.md`
+- `docs/AI_NATIVE_WORLD_ORCHESTRATION.md`
+- `docs/UNIVERSAL_TRANSMUTATION_PROTOCOL.md`
+- `docs/DUAL_TRACK_MAPPING.md`
+- `docs/DISTURBANCE_MODEL.md`
+- `docs/DISTURBANCE_INTERFACE_ALIGNMENT.md`
+- `docs/ARCHITECTURE_PRINCIPLES.md`
+- `docs/LONG_TERM_EXPERIENCE.md`（需按新主线重写后保留）
+
+### P3 - 历史参考文档
+
+这些文档可以保留，但必须明确标注：它们不再代表当前最高优先产品方向。
+
+- `docs/WEB_2D_SPIRIT_VIEW.md`
+- `docs/MAP_ASSETS_PLAN.md`
+- `docs/MAP_ASSETS_FRONTEND_BASELINE.md`
+- `docs/MAP_ASSETS_GENERATION_GUIDE.md`
+- `docs/MAP_ABSTRACTION_RULES_V0_1.md`
+- `docs/GODOT_INTEGRATION.md`
+- 其他明显服务旧地图主舞台或旧渲染路线的文档
+
+### P4 - 协作记录与历史留痕
+
+这些文档不应被当作当前产品定义，但应保留为协作与变更历史。
+
+- `docs/changes/`
+- `docs/claims/`（若存在）
+- 各类阶段性记录、变更说明、试验结论
 
 ---
 
-## 执行时间线
+## 二、本轮清理中已经明确的问题
 
-- **立即执行**: Step 1, 2（废弃声明）
-- **本周内**: Step 3, 4, 5（移动文档，更新 README）
-- **下周**: Step 6（创建索引）
+### 1. 旧主线口径残留
+
+以下表达不应再被写成当前主线：
+
+- “自绘地图 / Web-2D 主舞台”
+- “先做地图，再承载体验”
+- “地图资产包是当前第一优先级”
+- “Godot-first 可探索 Demo 是当前落地方向”
+
+如果这些内容仍然存在于文档中，应改写为：
+
+- 历史阶段判断
+- 灵感来源
+- 降级边界说明
+- 非当前主线的实验记录
+
+### 2. 旧计划文档误导新协作者
+
+本文件旧版本存在以下问题：
+
+- 引用了不存在或已废弃的 `AI_SHARED_TASKLIST_V2.md`
+- 将 `docs/CURRENT_TASKS.md` 误判为应简化成跳转页
+- 将 `docs/PRODUCT_BRIEF.md` 误判为“可能过时”
+- 将 `docs/ARCHITECTURE.md` 误判为待合并或废弃对象
+- 将若干仍有价值的设计文档直接列入废弃清单
+
+这些判断已经不再成立，现已废止。
+
+### 3. 索引与分类未完全同步
+
+虽然 `docs/README.md`、`docs/INDEX.md` 已经完成过一轮更新，但仍需要继续同步：
+
+- 哪些协议文档已经按新主线重写
+- 哪些长期设计文档仍带旧地图主舞台语义
+- 哪些文件只是历史参考而非当前执行文档
 
 ---
 
-## 成功标准
+## 三、当前处理策略
 
-- [ ] 所有开发者能快速找到核心架构文档
-- [ ] 过时文档不会误导新协作者
-- [ ] 文档优先级清晰
-- [ ] 减少文档冗余和混乱
+### 1. 不大规模物理移动文件
+
+当前阶段不优先创建大规模 `archive/` 迁移动作。
+
+原因：
+
+- 旧文档仍有历史价值
+- 当前更需要的是“分类清晰”，而不是“目录大搬家”
+- 频繁移动文件会增加引用失效与认知成本
+
+因此，优先策略是：
+
+- 保留原文件路径
+- 在文档内部重写定位说明
+- 在 `docs/INDEX.md` 与 `docs/README.md` 中标明类别
+
+### 2. 优先重写高误导性文档
+
+优先处理会直接误导新协作者的文档，而不是先处理所有细节文档。
+
+当前高优先级对象包括：
+
+- `docs/LONG_TERM_EXPERIENCE.md`
+- `docs/AI_NATIVE_WORLD_ORCHESTRATION.md`
+- `docs/EVOLUTION_DIRECTION.md`
+- `docs/WHAT_NOT_TO_BUILD.md`（词汇级对齐）
+- `docs/ARCHITECTURE_PRINCIPLES.md`（词汇级对齐）
+- `docs/GODOT_INTEGRATION.md`
+
+### 3. 协议优先于表现层描述
+
+只要协议类文档与当前主线冲突，就必须优先改写。表现层灵感、视觉语言和长期愿景可以延后整理。
+
+当前已经优先重写的对象包括：
+
+- `docs/PLAYER_STATE.md`
+- `docs/WORLD_WRITEBACK_PROTOCOL.md`
+- `docs/WORLD_ORCHESTRATOR_PROTOCOL.md`
+
+---
+
+## 四、执行清单
+
+### 已完成
+
+- [x] 统一根 `README.md` 的项目口径
+- [x] 重写 `docs/README.md` 的文档分类说明
+- [x] 重写 `docs/PLAYER_STATE.md`
+- [x] 重写 `docs/WORLD_WRITEBACK_PROTOCOL.md`
+- [x] 重写 `docs/WORLD_ORCHESTRATOR_PROTOCOL.md`
+- [x] 将 `docs/WEB_2D_SPIRIT_VIEW.md` 降级为历史参考
+- [x] 将 `docs/MAP_ASSETS_PLAN.md` 降级为历史参考
+- [x] 将 `docs/MAP_ASSETS_FRONTEND_BASELINE.md` 降级为历史参考
+- [x] 将 `docs/MAP_ASSETS_GENERATION_GUIDE.md` 降级为历史参考
+- [x] 将 `docs/MAP_ABSTRACTION_RULES_V0_1.md` 降级为历史参考
+
+### 进行中
+
+- [ ] 重写 `docs/LONG_TERM_EXPERIENCE.md`，移除 Web-2D 主舞台 / Godot-first 旧落地口径
+- [ ] 复查 `docs/AI_NATIVE_WORLD_ORCHESTRATION.md` 的 map-centric 残留表达
+- [ ] 复查 `docs/EVOLUTION_DIRECTION.md` 的阶段结论是否仍停留在旧主线
+- [ ] 复查 `docs/WHAT_NOT_TO_BUILD.md` 的旧渲染主语
+- [ ] 复查 `docs/ARCHITECTURE_PRINCIPLES.md` 的旧渲染主语
+- [ ] 为 `docs/GODOT_INTEGRATION.md` 增加明确的历史参考定位
+
+### 收口动作
+
+- [ ] 统一更新 `docs/INDEX.md`
+- [ ] 确认 `docs/README.md` 与 `docs/INDEX.md` 的分类完全一致
+- [ ] 搜索全仓库残留“Web-2D 主舞台 / map assets / Godot demo”旧口径
+- [ ] 为仍保留的历史文档补充“历史参考”说明
+
+---
+
+## 五、成功标准
+
+完成本轮清理后，应满足以下条件：
+
+- 新协作者阅读 `README.md`、`docs/PRODUCT_BRIEF.md`、`docs/ARCHITECTURE.md`、`docs/INDEX.md` 后，不会误以为当前主线仍是自绘地图工程
+- 协议类文档都以 place / character / event / chat / memory 为主消费口径
+- 旧地图资产、旧 Web-2D 主舞台、Godot-first 文档都被明确降级
+- 文档索引能区分“当前主线 / 核心协议 / 有价值参考 / 历史参考 / 留痕记录”
+- 不需要依赖隐含记忆，新协作者仅靠文档就能理解当前方向
+
+---
+
+## 六、一句话结论
+
+当前文档清理的目标，不是删除历史，而是把历史、主线、协议与参考边界重新标清，确保整个项目记忆稳定收敛到“真实底图 + 地点体验 + 角色事件 + 聊天叙事 + writeback / memory”。

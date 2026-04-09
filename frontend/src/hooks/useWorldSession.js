@@ -5,15 +5,7 @@ import { useNearbySession } from './useNearbySession'
 import { usePoiFilters } from './usePoiFilters'
 import { useWritebackSession } from './useWritebackSession'
 import { createApiClient, getDefaultApiBase } from '../services/apiClient'
-import {
-  buildSliceHighlights,
-  buildWorldAtmosphere,
-  buildWritebackResidue,
-  buildWritebackRevisitSummary,
-  buildWritebackTimeline,
-  getWritebackTargetSummary,
-  pickPresetMeta,
-} from '../services/appDisplay'
+import { buildWorldSessionViewState } from '../services/worldSessionViewState'
 import {
   loadPersistedWorldSession,
   loadPersistedWritebackSession,
@@ -75,9 +67,38 @@ export function useWorldSession({
     mapLayerPresets,
     restoredSession,
   })
-  const presetMeta = pickPresetMeta(form, locationPresets)
-  const previewUrl = result?.preview_url || ''
-  const worldPois = result?.world?.pois || []
+  const {
+    feedback,
+    honorBoard,
+    lastWritebackPoiId,
+    placeLegend,
+    playerState,
+    presetMeta,
+    previewUrl,
+    recentEchoes,
+    recentMarks,
+    resolvedActivePoi,
+    revisitSummary,
+    selectedActionMeta,
+    selectedVisibilityMeta,
+    sliceHighlights,
+    worldAtmosphere,
+    worldPois,
+    writebackResidues,
+    writebackTargetSummary,
+    writebackTimeline,
+  } = buildWorldSessionViewState({
+    activePoi,
+    activePoiId,
+    familiarityMap,
+    form,
+    locationPresets,
+    result,
+    visibilityOptions,
+    writebackActions,
+    writebackForm,
+    writebackResult,
+  })
   const {
     filteredWorldPois,
     poiFactionFilter,
@@ -95,39 +116,6 @@ export function useWorldSession({
     worldPois,
     familiarityMap,
   })
-  const recentEchoes = writebackResult?.place_state?.recent_echoes || []
-  const recentMarks = writebackResult?.place_state?.marks || []
-  const placeLegend = writebackResult?.place_state?.place_legend || null
-  const honorBoard = writebackResult?.place_state?.honor_board || []
-  const playerState = writebackResult?.player_state || null
-  const feedback = writebackResult?.world_feedback || null
-  const writebackTimeline = buildWritebackTimeline(writebackResult)
-  const writebackResidues = buildWritebackResidue(writebackResult?.place_state)
-  const selectedActionMeta = writebackActions.find((item) => item.eventType === writebackForm.eventType) || writebackActions[0]
-  const selectedVisibilityMeta = visibilityOptions.find((item) => item.value === writebackForm.visibility) || visibilityOptions[0]
-  const lastWritebackPoiId =
-    writebackResult?.event?.target?.target_type === 'poi'
-      ? writebackResult?.event?.target?.target_id || null
-      : null
-  const resolvedActivePoi = useMemo(() => {
-    if (!worldPois.length) {
-      return activePoi
-    }
-
-    const candidateIds = [activePoiId, activePoi?.id, lastWritebackPoiId, writebackForm.targetId].filter(Boolean)
-    for (const candidateId of candidateIds) {
-      const matchedPoi = worldPois.find((poi) => poi.id === candidateId)
-      if (matchedPoi) {
-        return matchedPoi
-      }
-    }
-
-    return activePoi
-  }, [activePoi, activePoiId, lastWritebackPoiId, worldPois, writebackForm.targetId])
-  const writebackTargetSummary = getWritebackTargetSummary(resolvedActivePoi, writebackForm)
-  const revisitSummary = buildWritebackRevisitSummary(result, writebackResult, familiarityMap, writebackForm)
-  const sliceHighlights = buildSliceHighlights(result)
-  const worldAtmosphere = buildWorldAtmosphere(result)
 
   function updateForm(key, value) {
     setForm((current) => ({ ...current, [key]: value }))

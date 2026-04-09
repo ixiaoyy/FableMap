@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import AdminDebugPanel from './AdminDebugPanel'
 import WorldEntryPanel from './WorldEntryPanel'
 import WorldSliceResultPanel from './WorldSliceResultPanel'
@@ -13,8 +14,12 @@ import {
   WRITEBACK_ACTIONS,
 } from './appShellConfig'
 import { useWorldSession } from './hooks/useWorldSession'
+import { buildAppPanelProps } from './services/appPanelProps'
+import { buildEntryStatusText, buildHeroMetrics } from './services/appShellViewModel'
 
 export default function App() {
+  const stageRef = useRef(null)
+  const previousResultIdRef = useRef(null)
   const {
     activePoiId,
     adminOpen,
@@ -109,118 +114,207 @@ export default function App() {
     visibilityOptions: VISIBILITY_OPTIONS,
   })
 
-  const visibleLayerCount = Object.values(visibleMapLayers).filter(Boolean).length
-  const entryStatusText = autoEntering
-    ? '正在自动进入附近世界'
+  const entryStatusText = buildEntryStatusText({
+    autoEntering,
+    submitting,
+    result,
+  })
+  const heroMetrics = buildHeroMetrics({
+    entryStatusText,
+    form,
+    mapLayerOptions: MAP_LAYER_OPTIONS,
+    result,
+    visibleMapLayers,
+    originLabel,
+  })
+
+  const {
+    adminPanelProps,
+    entryPanelProps,
+    mapStageProps,
+    resultPanelProps,
+  } = buildAppPanelProps({
+    advancedOpen,
+    adminOpen,
+    apiBase,
+    autoEntering,
+    checking,
+    checkBackend,
+    errorText,
+    familiarityMap,
+    feedback,
+    filteredWorldPois,
+    focusWritebackTarget,
+    form,
+    ghostTraces,
+    handleOrchestrationEvent,
+    handlePoiClick,
+    honorBoard,
+    lastSessionAt,
+    lastWritebackPoiId,
+    locating,
+    mapLayerPanelOpen,
+    orchestrationEvents,
+    originHint,
+    originLabel,
+    placeLegend,
+    playerState,
+    poiFactionFilter,
+    poiFactionOptions,
+    poiOnlyFamiliar,
+    poiSearch,
+    poiSearchSummary,
+    poiTypeFilter,
+    poiTypeOptions,
+    presetMeta,
+    recentEchoes,
+    recentMarks,
+    resolvedActivePoi,
+    result,
+    setAdminOpen,
+    setAdvancedOpen,
+    setApiBase,
+    setAllMapLayers,
+    setMapLayerPanelOpen,
+    statusDetail,
+    statusOk,
+    statusText,
+    submitNearby,
+    submitWriteback,
+    submitting,
+    updateForm,
+    updateWritebackForm,
+    useCurrentLocation,
+    usePreset,
+    visibleMapLayers,
+    worldAtmosphere,
+    writebackError,
+    writebackForm,
+    writebackResidues,
+    writebackResult,
+    writebackSubmitting,
+    writebackTargetSummary,
+    writebackTimeline,
+    revisitSummary,
+    selectedActionMeta,
+    selectedVisibilityMeta,
+    disturbanceForm,
+    setDisturbanceForm,
+    disturbanceSubmitting,
+    submitDisturbance,
+    disturbanceActive,
+    clearDisturbance,
+    visibilityOptions: VISIBILITY_OPTIONS,
+    activePoiId,
+    applyMapLayerPreset,
+    applyWritebackAction,
+    resetMapLayers,
+    toggleMapLayer,
+    locationPresets: LOCATION_PRESETS,
+    mapLayerOptions: MAP_LAYER_OPTIONS,
+    mapLayerPresets: MAP_LAYER_PRESETS,
+    writebackActions: WRITEBACK_ACTIONS,
+    sliceHighlights,
+  })
+
+  useEffect(() => {
+    previousResultIdRef.current = result?.slice_id ?? null
+  }, [])
+
+  useEffect(() => {
+    const currentResultId = result?.slice_id ?? null
+    const previousResultId = previousResultIdRef.current
+
+    if (currentResultId && currentResultId !== previousResultId) {
+      let cancelled = false
+      let attempt = 0
+      let timerId = null
+
+      const scrollToMapViewport = () => {
+        if (cancelled) return
+
+        const mapViewport = stageRef.current?.querySelector('.world-map-wrap, .map-empty')
+
+        if (mapViewport || attempt >= 8) {
+          ;(mapViewport || stageRef.current)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
+          return
+        }
+
+        attempt += 1
+        timerId = window.setTimeout(scrollToMapViewport, 80)
+      }
+
+      timerId = window.setTimeout(scrollToMapViewport, 0)
+
+      return () => {
+        cancelled = true
+        if (timerId) {
+          window.clearTimeout(timerId)
+        }
+      }
+    }
+
+    previousResultIdRef.current = currentResultId
+  }, [result])
+
+  const stageStatusLabel = autoEntering || submitting
+    ? '地图生成中'
+    : result
+      ? '地图已生成'
+      : '等待生成地图'
+
+  const stageStatusTitle = autoEntering
+    ? '系统正在根据当前位置生成附近世界，地图舞台会在完成后自动带到这里。'
     : submitting
-      ? '正在刷新当前切片'
+      ? '正在准备画布与节点，请稍候，生成成功后页面会自动滚动到这里。'
       : result
-        ? '当前切片已就绪'
-        : '等待生成附近切片'
+        ? '画布已经出现在这个舞台区域，向下即可直接点地图上的节点。'
+        : '点击上方主按钮后，生成出的画布会出现在这里。'
 
   return (
     <div className="wrap app-shell page-enter map-first-app-shell world-app-shell">
       <header className="world-app-shell__hero panel">
         <div className="world-app-shell__hero-copy">
           <p className="mini-label">World shell</p>
-          <h1>{result ? '世界入口已连通，继续向地图推进' : '先选入口，再进入你附近的世界切片'}</h1>
+          <h1>{result ? '世界入口已连通，直接开始看地图' : '先选入口，马上进入你附近的世界切片'}</h1>
           <p className="note muted world-app-shell__hero-note">
-            顶部保留入口与结果摘要，中段直接放地图主舞台，后台工具继续折叠在底部，减少首页来回滚动与信息跳转。
+            首页先只保留入口、结果摘要和地图舞台，优先让你立即进入、立即看图、立即点节点。
           </p>
         </div>
-        <div className="world-app-shell__hero-metrics">
-          <div className="world-shell-metric-card">
-            <span className="world-shell-metric-card__label">入口状态</span>
-            <strong>{entryStatusText}</strong>
-            <span>{originLabel}</span>
-          </div>
-          <div className="world-shell-metric-card">
-            <span className="world-shell-metric-card__label">地图图层</span>
-            <strong>{visibleLayerCount} / {MAP_LAYER_OPTIONS.length}</strong>
-            <span>{form.radius}m 半径 · {form.mode === 'fixture' ? '离线样例' : '实时地图'}</span>
-          </div>
-          <div className="world-shell-metric-card">
-            <span className="world-shell-metric-card__label">世界节点</span>
-            <strong>{result?.poi_count ?? 0}</strong>
-            <span>{result ? `${result.landmark_count ?? 0} 个地标 · ${result.road_count ?? 0} 条路径` : '生成后可直接点击节点进入观察'}</span>
-          </div>
+        <div className="world-app-shell__hero-metrics" aria-label="当前动作提示">
+          {heroMetrics.cards.map((card) => (
+            <article key={card.id} className="world-shell-metric-card">
+              <span className="world-shell-metric-card__label">{card.label}</span>
+              <strong>{card.value}</strong>
+              <p>{card.detail}</p>
+            </article>
+          ))}
         </div>
       </header>
 
       <section className="world-app-shell__top-grid" aria-label="世界入口与切片摘要">
-        <WorldEntryPanel
-          lastSessionAt={lastSessionAt}
-          originLabel={originLabel}
-          originHint={originHint}
-          form={form}
-          locationPresets={LOCATION_PRESETS}
-          presetMeta={presetMeta}
-          usePreset={usePreset}
-          locating={locating}
-          autoEntering={autoEntering}
-          useCurrentLocation={useCurrentLocation}
-          submitting={submitting}
-          submitNearby={submitNearby}
-          advancedOpen={advancedOpen}
-          setAdvancedOpen={setAdvancedOpen}
-          updateForm={updateForm}
-          errorText={errorText}
-        />
+        <WorldEntryPanel {...entryPanelProps} />
 
-        <WorldSliceResultPanel
-          result={result}
-          statusOk={statusOk}
-          worldAtmosphere={worldAtmosphere}
-          sliceHighlights={sliceHighlights}
-        />
+        <WorldSliceResultPanel {...resultPanelProps} />
       </section>
 
-      <div className="world-app-shell__stage">
-        <WorldStagePanel
-          result={result}
-          originLabel={originLabel}
-          form={form}
-          mapLayerPanelOpen={mapLayerPanelOpen}
-          setMapLayerPanelOpen={setMapLayerPanelOpen}
-          visibleMapLayers={visibleMapLayers}
-          mapLayerOptions={MAP_LAYER_OPTIONS}
-          mapLayerPresets={MAP_LAYER_PRESETS}
-          applyMapLayerPreset={applyMapLayerPreset}
-          setAllMapLayers={setAllMapLayers}
-          resetMapLayers={resetMapLayers}
-          activePoiId={activePoiId}
-          familiarityMap={familiarityMap}
-          ghostTraces={ghostTraces}
-          handlePoiClick={handlePoiClick}
-          mapOnly
-        />
+      <div ref={stageRef} className="world-app-shell__stage">
+        <div className={`world-app-shell__stage-status${autoEntering || submitting ? ' is-pending' : result ? ' is-ready' : ''}`} aria-live="polite">
+          <span className="mini-label">地图舞台</span>
+          <strong>{stageStatusLabel}</strong>
+          <p>{stageStatusTitle}</p>
+        </div>
+        <WorldStagePanel {...mapStageProps} />
       </div>
 
-      <div className="world-app-shell__admin">
-        <AdminDebugPanel
-          adminOpen={adminOpen}
-          setAdminOpen={setAdminOpen}
-          apiBase={apiBase}
-          setApiBase={setApiBase}
-          checking={checking}
-          checkBackend={checkBackend}
-          statusOk={statusOk}
-          statusText={statusText}
-          statusDetail={statusDetail}
-          writebackForm={writebackForm}
-          updateWritebackForm={updateWritebackForm}
-          writebackSubmitting={writebackSubmitting}
-          submitWriteback={submitWriteback}
-          writebackError={writebackError}
-          writebackResult={writebackResult}
-          playerState={playerState}
-          feedback={feedback}
-          recentEchoes={recentEchoes}
-          recentMarks={recentMarks}
-          placeLegend={placeLegend}
-          honorBoard={honorBoard}
-        />
-      </div>
+      {adminOpen ? (
+        <div className="world-app-shell__admin">
+          <AdminDebugPanel {...adminPanelProps} />
+        </div>
+      ) : null}
     </div>
   )
 }
