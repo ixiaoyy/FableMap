@@ -1046,6 +1046,68 @@ button:disabled {
   font-size: 12px;
 }
 
+/* ── Place Stats (WorldSliceResultPanel) ── */
+.world-result-panel__card--place-stats {
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.1), transparent 36%),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(11, 18, 32, 0.98));
+}
+
+.place-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.place-stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.place-stats-section-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.place-stats-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.place-stats-chip {
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.7);
+  color: #94a3b8;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ── POI State (WorldStageActivePoiPanel) ── */
+.poi-state-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.poi-state-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.75);
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 .link-row {
   display: flex;
   flex-wrap: wrap;

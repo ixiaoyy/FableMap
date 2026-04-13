@@ -1,9 +1,58 @@
 import { formatTagLabel } from './services/appDisplay'
 import WorldStageWritebackActionPanel from './WorldStageWritebackActionPanel'
 import WorldStageWritebackInsightsPanel from './WorldStageWritebackInsightsPanel'
+import {
+  formatFamiliarity,
+  formatDwellTime,
+  getRelationshipStageLabel,
+  getRelationshipColor,
+} from './services/placeProtocol'
+
+function PlaceStateSection({ poi, writebackResult, familiarityMap }) {
+  if (!poi) return null
+
+  const placeState = writebackResult?.place_state || {}
+  const playerState = writebackResult?.player_state || {}
+  const familiarity = familiarityMap?.[poi.id] ?? placeState.familiarity ?? 0
+  const visitCount = placeState.visit_count ?? 0
+  const dwellSeconds = playerState.total_dwell_seconds ?? 0
+  const markCount = (placeState.marks || []).length
+
+  let stage = 'unexplored'
+  if (visitCount > 0) stage = 'observed'
+  if (dwellSeconds > 0) stage = 'dwelling'
+  if (markCount > 0) stage = 'marked'
+  if (familiarity >= 0.5) stage = 'familiar'
+  if (familiarity >= 0.8) stage = 'home'
+
+  return (
+    <div className="poi-state-bar">
+      <div className="poi-state-chip" style={{ color: getRelationshipColor(familiarity) }}>
+        {getRelationshipStageLabel(stage)}
+      </div>
+      <div className="poi-state-chip">
+        熟悉度 {formatFamiliarity(familiarity)}
+      </div>
+      <div className="poi-state-chip">
+        {visitCount}次访问
+      </div>
+      {dwellSeconds > 0 ? (
+        <div className="poi-state-chip">
+          驻足{formatDwellTime(dwellSeconds)}
+        </div>
+      ) : null}
+      {markCount > 0 ? (
+        <div className="poi-state-chip">
+          {markCount}条痕迹
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 export default function WorldStageActivePoiPanel({
   resolvedActivePoi,
+  familiarityMap,
   writebackTargetSummary,
   writebackActions,
   writebackForm,
@@ -37,6 +86,12 @@ export default function WorldStageActivePoiPanel({
             <span className="poi-detail-satire">{resolvedActivePoi.satire_hook}</span>
             <span className="poi-detail-emotion muted">{resolvedActivePoi.emotion_hook}</span>
           </div>
+
+          <PlaceStateSection
+            poi={resolvedActivePoi}
+            writebackResult={writebackResult}
+            familiarityMap={familiarityMap}
+          />
 
           <WorldStageWritebackActionPanel
             writebackTargetSummary={writebackTargetSummary}

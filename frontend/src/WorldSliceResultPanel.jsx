@@ -1,4 +1,46 @@
 import { formatTagLabel } from './services/appDisplay'
+import { computePlaceStats, getPlaceTypeEmoji } from './services/placeProtocol'
+
+function PlaceStatsSection({ poiStates, pois }) {
+  if (!poiStates) return null
+
+  const stats = computePlaceStats(pois || [])
+
+  const topTypes = Object.entries(stats.by_type)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+  const topFactions = Object.entries(stats.by_faction)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+
+  return (
+    <div className="result-card world-result-panel__card world-result-panel__card--place-stats">
+      <p className="mini-label">地点统计</p>
+      <div className="place-stats-grid">
+        <div className="place-stats-section">
+          <p className="place-stats-section-label">按类型</p>
+          <div className="place-stats-chips">
+            {topTypes.map(([type, count]) => (
+              <span key={type} className="place-stats-chip">
+                {getPlaceTypeEmoji(type)} {formatTagLabel(type, type)} · {count}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="place-stats-section">
+          <p className="place-stats-section-label">按势力</p>
+          <div className="place-stats-chips">
+            {topFactions.map(([faction, count]) => (
+              <span key={faction} className="place-stats-chip">
+                {formatTagLabel(faction, '游离')} · {count}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function WorldSliceResultPanel({
   result,
@@ -6,6 +48,9 @@ export default function WorldSliceResultPanel({
   sliceAtmosphere,
   sliceHighlights,
 }) {
+  const poiStates = result?.poi_states
+  const pois = result?.world?.pois || []
+
   return (
     <section className="panel secondary-panel world-result-panel">
       <div className="section-heading world-result-panel__heading">
@@ -40,6 +85,8 @@ export default function WorldSliceResultPanel({
           </div>
 
           <div className="result-grid world-result-panel__grid">
+            <PlaceStatsSection poiStates={poiStates} pois={pois} />
+
             <div className="result-card world-result-panel__card">
               <p className="mini-label">进入前 3 个线索</p>
               <div className="story-bullets world-result-panel__bullets">

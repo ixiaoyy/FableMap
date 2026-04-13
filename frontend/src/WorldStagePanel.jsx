@@ -313,6 +313,7 @@ export default function WorldStagePanel({
 
           <WorldStageActivePoiPanel
             resolvedActivePoi={resolvedActivePoi}
+            familiarityMap={familiarityMap}
             writebackTargetSummary={writebackTargetSummary}
             writebackActions={writebackActions}
             writebackForm={writebackForm}
