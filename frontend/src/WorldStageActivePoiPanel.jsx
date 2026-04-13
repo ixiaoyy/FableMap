@@ -50,8 +50,82 @@ function PlaceStateSection({ poi, writebackResult, familiarityMap }) {
   )
 }
 
+function PlaceDetailSection({ poi, world }) {
+  if (!poi || !world) return null
+
+  const factions = world.factions || []
+  const historicalEchoes = world.historical_echoes || []
+  const memoryAnchors = world.memory_anchors || []
+  const sprites = world.sprites || []
+
+  const linkedEchoes = historicalEchoes.filter(
+    (e) => (e.linked_pois || []).includes(poi.id)
+  )
+  const linkedAnchors = memoryAnchors.filter(
+    (a) => (a.linked_pois || []).includes(poi.id)
+  )
+  const linkedSprites = sprites.filter(
+    (s) => (s.linked_poi || s.linked_pois || []).includes(poi.id)
+  )
+  const faction = factions.find((f) => f.id === poi.faction_alignment)
+
+  const hasContent =
+    faction || linkedEchoes.length || linkedAnchors.length || linkedSprites.length
+
+  if (!hasContent) return null
+
+  return (
+    <div className="poi-detail-section">
+      {faction && (
+        <div className="poi-detail-row">
+          <span className="poi-detail-label">势力</span>
+          <span className="poi-detail-value faction-tag">{faction.name}</span>
+          <span className="poi-detail-note muted">{faction.doctrine}</span>
+        </div>
+      )}
+      {linkedEchoes.length > 0 && (
+        <div className="poi-detail-row">
+          <span className="poi-detail-label">历史回声</span>
+          <div className="poi-detail-list">
+            {linkedEchoes.map((echo) => (
+              <span key={echo.id} className="poi-detail-chip echo-chip">
+                {echo.summary}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {linkedAnchors.length > 0 && (
+        <div className="poi-detail-row">
+          <span className="poi-detail-label">记忆锚点</span>
+          <div className="poi-detail-list">
+            {linkedAnchors.map((anchor) => (
+              <span key={anchor.id} className="poi-detail-chip anchor-chip">
+                {anchor.tone}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {linkedSprites.length > 0 && (
+        <div className="poi-detail-row">
+          <span className="poi-detail-label">精灵</span>
+          <div className="poi-detail-list">
+            {linkedSprites.map((sprite) => (
+              <span key={sprite.id} className="poi-detail-chip sprite-chip">
+                {sprite.species}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function WorldStageActivePoiPanel({
   resolvedActivePoi,
+  world,
   familiarityMap,
   writebackTargetSummary,
   writebackActions,
@@ -91,6 +165,11 @@ export default function WorldStageActivePoiPanel({
             poi={resolvedActivePoi}
             writebackResult={writebackResult}
             familiarityMap={familiarityMap}
+          />
+
+          <PlaceDetailSection
+            poi={resolvedActivePoi}
+            world={world}
           />
 
           <WorldStageWritebackActionPanel
