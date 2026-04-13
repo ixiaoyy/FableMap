@@ -300,4 +300,9 @@ export class AMapAdapter extends MapAdapter {
       this._map = null
     }
   }
+
+  /** Expose the underlying map instance for event listening (e.g., 'complete'). */
+  _getMap() {
+    return this._map
+  }
 }

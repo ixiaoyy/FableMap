@@ -71,6 +71,7 @@ export default function WorldMap({
   const containerRef = useRef(null)
   const adapterRef = useRef(null)
   const snapshotId = useMemo(() => getSnapshotId(world), [world])
+  const autoSaveTriggeredRef = useRef(false)
   const [sdkReady, setSdkReady] = useState(false)
   const [sdkError, setSdkError] = useState('')
   const [selectedPoi, setSelectedPoi] = useState(null)
@@ -109,7 +110,7 @@ export default function WorldMap({
       })
   }, [])
 
-  // Load snapshot manifest
+  // Load snapshot manifest and auto-prefer if it exists
   useEffect(() => {
     let cancelled = false
 
@@ -121,12 +122,17 @@ export default function WorldMap({
         }
         const manifest = await response.json()
         if (cancelled) return
+
         setSnapshotManifest(manifest)
         setSnapshotStatus(`已加载本地快照 · ${manifest.tiles?.length || 0} 张瓦片`)
+        // Auto-prefer cached snapshot to skip AMap tile requests
+        setPreferSnapshot(true)
       } catch {
         if (cancelled) return
         setSnapshotManifest(null)
         setSnapshotStatus('未发现本地快照')
+        // Ensure we show the live map when no snapshot exists
+        setPreferSnapshot(false)
       }
     }
 
@@ -146,9 +152,12 @@ export default function WorldMap({
     }
   }, [preferSnapshot])
 
-  // Create/destroy map when SDK and center are ready
+  // Create/destroy map when SDK and center are ready.
+  // Skip creating the live map if we already have a cached snapshot —
+  // this avoids unnecessary AMap tile requests on return visits.
   useEffect(() => {
     if (!sdkReady || !containerRef.current || !center) return
+    if (preferSnapshot && snapshotManifest) return // Use cached snapshot instead
 
     const adapter = adapterRef.current
     if (!adapter) return
@@ -167,7 +176,59 @@ export default function WorldMap({
     return () => {
       adapter.destroy()
     }
-  }, [sdkReady, center])
+  }, [sdkReady, center, preferSnapshot, snapshotManifest])
+
+  // Auto-save snapshot after map tiles have loaded.
+  // Only triggers once per snapshotId when there is no existing snapshot.
+  useEffect(() => {
+    if (preferSnapshot && snapshotManifest) return // Already have a snapshot
+    if (autoSaveTriggeredRef.current) return // Already triggered for this snapshot
+    if (snapshotBusy) return // Save already in progress
+    if (!sdkReady) return
+
+    const adapter = adapterRef.current
+    if (!adapter || !containerRef.current) return
+
+    // Get the underlying AMap map instance to listen for 'complete'
+    const mapInstance = adapter._getMap()
+    if (!mapInstance) return
+
+    autoSaveTriggeredRef.current = true
+    setSnapshotBusy(true)
+    setSnapshotStatus('正在保存快照…')
+
+    const doCapture = () => {
+      captureSnapshot()
+      setSnapshotBusy(false)
+    }
+
+    // Wait for AMap tiles to finish loading before capturing
+    if (typeof mapInstance.on === 'function') {
+      const handler = () => {
+        mapInstance.off('complete', handler)
+        setTimeout(doCapture, 800)
+      }
+      mapInstance.on('complete', handler)
+      // Fallback: if 'complete' never fires, save anyway after 5s
+      const fallback = setTimeout(() => {
+        mapInstance.off('complete', handler)
+        doCapture()
+      }, 5000)
+      return () => {
+        mapInstance.off('complete', handler)
+        clearTimeout(fallback)
+        setSnapshotBusy(false)
+        autoSaveTriggeredRef.current = false
+      }
+    } else {
+      setTimeout(doCapture, 2000)
+    }
+
+    return () => {
+      setSnapshotBusy(false)
+      autoSaveTriggeredRef.current = false
+    }
+  }, [sdkReady, preferSnapshot, snapshotManifest, snapshotId])
 
   // Update center when it changes
   useEffect(() => {
