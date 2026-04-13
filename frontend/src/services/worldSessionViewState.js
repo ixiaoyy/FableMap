@@ -1,6 +1,6 @@
 import {
   buildSliceHighlights,
-  buildWorldAtmosphere,
+  buildSliceAtmosphere,
   buildWritebackResidue,
   buildWritebackRevisitSummary,
   buildWritebackTimeline,
@@ -69,7 +69,7 @@ export function buildWorldSessionViewState({
   const writebackTargetSummary = getWritebackTargetSummary(resolvedActivePoi, writebackForm)
   const revisitSummary = buildWritebackRevisitSummary(result, writebackResult, familiarityMap, writebackForm)
   const sliceHighlights = buildSliceHighlights(result)
-  const worldAtmosphere = buildWorldAtmosphere(result)
+  const sliceAtmosphere = buildSliceAtmosphere(result)
 
   return {
     feedback,
@@ -85,8 +85,8 @@ export function buildWorldSessionViewState({
     revisitSummary,
     selectedActionMeta,
     selectedVisibilityMeta,
+    sliceAtmosphere,
     sliceHighlights,
-    worldAtmosphere,
     worldPois,
     writebackResidues,
     writebackTargetSummary,

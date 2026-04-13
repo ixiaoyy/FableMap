@@ -119,20 +119,20 @@ export const DEFAULT_VISIBLE_MAP_LAYERS = {
 }
 
 export const MAP_LAYER_OPTIONS = [
-  { key: 'roads', label: '道路', hint: '显示路径骨架与道路发光' },
-  { key: 'pois', label: 'POI', hint: '显示可点击节点与据点交互' },
-  { key: 'landmarks', label: '地标', hint: '显示大型地标与装饰图标' },
-  { key: 'factionZones', label: '阵营影响区', hint: '显示势力扩散光晕' },
-  { key: 'labels', label: '标签', hint: '显示地点名与地图说明' },
+  { key: 'roads', label: '路径', hint: '显示地点之间的路径骨架与道路发光' },
+  { key: 'pois', label: '地点', hint: '显示可点击的候选地点与进入入口' },
+  { key: 'landmarks', label: '地标', hint: '显示大型地标与地点装饰图标' },
+  { key: 'factionZones', label: '阵营影响区', hint: '显示势力在地点周边的扩散光晕' },
+  { key: 'labels', label: '地点标签', hint: '显示地点名与空间说明' },
   { key: 'legend', label: '图例', hint: '显示右下角图例与阵营色板' },
-  { key: 'ghostTraces', label: 'Ghost traces', hint: '显示玩家残影与回访痕迹' },
+  { key: 'ghostTraces', label: '回访痕迹', hint: '显示玩家残影与回访痕迹' },
 ]
 
 export const MAP_LAYER_PRESETS = [
   {
     key: 'explore',
     label: '探索',
-    hint: '保留完整世界信息，适合第一次进入切片',
+    hint: '保留完整地点信息，适合第一次进入切片',
     layers: {
       roads: true,
       pois: true,
@@ -160,7 +160,7 @@ export const MAP_LAYER_PRESETS = [
   {
     key: 'narrative',
     label: '叙事',
-    hint: '保留阵营、标签与残影，强调世界气氛',
+    hint: '保留阵营、标签与残影，强调地点气氛',
     layers: {
       roads: false,
       pois: true,

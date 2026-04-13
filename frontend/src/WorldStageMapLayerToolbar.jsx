@@ -9,14 +9,14 @@ export default function WorldStageMapLayerToolbar({
   resetMapLayers,
   toggleMapLayer,
   label = '图层控制器',
-  copy = '按需折叠世界骨架、标签与残影，同时保留地图主舞台。',
+  copy = '按需折叠地点骨架、标签与残影，同时保留当前地点视图。',
   className = 'map-layer-toolbar',
 }) {
   return (
     <div
       className={`${className}${mapLayerPanelOpen ? '' : ' is-collapsed'}`}
       role="group"
-      aria-label="地图图层控制器"
+      aria-label="地点图层控制器"
     >
       <div className="map-layer-toolbar__header">
         <div>
@@ -40,7 +40,7 @@ export default function WorldStageMapLayerToolbar({
       </div>
       {mapLayerPanelOpen ? (
         <div id="map-layer-toolbar-panel" className="map-layer-toolbar__panel">
-          <div className="map-layer-preset-row" role="toolbar" aria-label="地图图层预设">
+          <div className="map-layer-preset-row" role="toolbar" aria-label="地点图层预设">
             {mapLayerPresets.map((preset) => {
               const active = mapLayerOptions.every((layer) => Boolean(visibleMapLayers[layer.key]) === Boolean(preset.layers[layer.key]))
               return (

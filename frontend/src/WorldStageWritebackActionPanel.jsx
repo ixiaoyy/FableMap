@@ -18,7 +18,7 @@ export default function WorldStageWritebackActionPanel({
       <div className="writeback-action-header">
         <div>
           <p className="mini-label">P6 · 写回动作</p>
-          <h3>在主舞台直接触发观察 / 驻足 / 标记</h3>
+          <h3>在当前地点直接触发观察 / 驻足 / 标记</h3>
         </div>
         <span className="writeback-action-target">{writebackTargetSummary}</span>
       </div>

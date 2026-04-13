@@ -26,8 +26,8 @@ export default function WorldStageActivePoiPanel({
   return (
     <div className="storyboard-lane">
       <div className="storyboard-lane-header">
-        <span className="storyboard-category-label">当前舞台卡</span>
-        <span className="storyboard-lane-meta">把选中的地点当成 RPG 世界节点来看</span>
+        <span className="storyboard-category-label">当前地点卡</span>
+        <span className="storyboard-lane-meta">把选中的地点当成当前叙事入口来查看</span>
       </div>
       {resolvedActivePoi ? (
         <div className="storyboard-stage-stack">
@@ -62,8 +62,8 @@ export default function WorldStageActivePoiPanel({
         </div>
       ) : (
         <div className="storyboard-placeholder-card">
-          <strong>等待你选中第一块地图据点</strong>
-          <p>这张地图应该像 2D 游戏世界入口，而不是静态平面图。先点一个地点，右侧信息就会变成你的当前舞台卡。</p>
+          <strong>等待你选中第一个地点</strong>
+          <p>这里现在是地点入口，而不是静态平面图。先点一个地点，右侧信息就会变成你的当前地点卡。</p>
           {writebackResult && lastWritebackPoiId ? (
             <button type="button" className="storyboard-inline-btn" onClick={focusWritebackTarget}>
               回到上次写回目标

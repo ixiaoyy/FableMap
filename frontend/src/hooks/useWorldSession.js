@@ -82,7 +82,7 @@ export function useWorldSession({
     selectedActionMeta,
     selectedVisibilityMeta,
     sliceHighlights,
-    worldAtmosphere,
+    sliceAtmosphere,
     worldPois,
     writebackResidues,
     writebackTargetSummary,
@@ -216,13 +216,13 @@ export function useWorldSession({
   function focusWritebackTarget() {
     const targetId = lastWritebackPoiId || writebackForm.targetId
     if (!targetId) {
-      setWritebackError('当前没有可回焦的 POI 写回目标。')
+      setWritebackError('当前没有可回焦的地点写回目标。')
       return
     }
 
     const matchedPoi = worldPois.find((poi) => poi.id === targetId)
     if (!matchedPoi) {
-      setWritebackError(`未能在当前切片中找到 ${targetId}，请先重新选择一个据点。`)
+      setWritebackError(`未能在当前切片中找到 ${targetId}，请先重新选择一个地点。`)
       return
     }
 
@@ -384,7 +384,7 @@ export function useWorldSession({
     useCurrentLocation,
     usePreset,
     visibleMapLayers,
-    worldAtmosphere,
+    sliceAtmosphere,
     writebackError,
     writebackForm,
     writebackResult,

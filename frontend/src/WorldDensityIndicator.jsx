@@ -27,7 +27,7 @@ export default function WorldDensityIndicator({ sliceId, playerId, lat, lon, onE
   return (
     <section className="world-intel-panel">
       <div className="world-intel-block">
-        <div className="world-intel-kicker">世界浓度</div>
+        <div className="world-intel-kicker">切片热度</div>
         <div className="world-intel-level" style={{ color: density.color }}>
           {(density.level * 100).toFixed(0)}%
         </div>
@@ -63,7 +63,7 @@ export default function WorldDensityIndicator({ sliceId, playerId, lat, lon, onE
             ))}
           </div>
         ) : (
-          <p className="world-intel-empty">当前没有新的公共广播，世界仍在低声组织自己。</p>
+          <p className="world-intel-empty">当前没有新的公共广播，地点切片仍在低声组织自己。</p>
         )}
       </div>
     </section>

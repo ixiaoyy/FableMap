@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 from fastapi import HTTPException
 
@@ -82,6 +86,70 @@ class WebService:
             raise
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    def map_snapshot_payload(self, snapshot_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        normalized_snapshot_id = _sanitize_snapshot_id(snapshot_id)
+        if not normalized_snapshot_id:
+            raise HTTPException(status_code=400, detail="snapshot id is required")
+
+        frontend_public = self.settings.frontend_public
+        if frontend_public is None:
+            raise HTTPException(status_code=500, detail="frontend public directory is unavailable")
+
+        tiles = payload.get("tiles") or []
+        if not isinstance(tiles, list) or not tiles:
+            raise HTTPException(status_code=400, detail="tiles payload is required")
+
+        snapshot_dir = (frontend_public / "map-snapshots" / normalized_snapshot_id).resolve()
+        if not _is_within_root(snapshot_dir, frontend_public.resolve()):
+            raise HTTPException(status_code=400, detail="invalid snapshot path")
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+
+        stored_tiles: list[dict[str, Any]] = []
+        for index, tile in enumerate(tiles):
+            if not isinstance(tile, dict):
+                continue
+            src = str(tile.get("src") or "").strip()
+            if not src.startswith(("http://", "https://")):
+                continue
+
+            extension = _guess_tile_extension(src)
+            digest = hashlib.sha1(src.encode("utf-8")).hexdigest()[:12]
+            filename = f"tile-{index:03d}-{digest}{extension}"
+            target_path = snapshot_dir / filename
+            _download_remote_file(src, target_path)
+
+            stored_tiles.append(
+                {
+                    "left": int(tile.get("left") or 0),
+                    "top": int(tile.get("top") or 0),
+                    "width": int(tile.get("width") or 0),
+                    "height": int(tile.get("height") or 0),
+                    "file": f"/map-snapshots/{normalized_snapshot_id}/{filename}",
+                    "source": src,
+                }
+            )
+
+        if not stored_tiles:
+            raise HTTPException(status_code=400, detail="no downloadable tiles found in payload")
+
+        manifest = {
+            "snapshot_id": normalized_snapshot_id,
+            "provider": "amap-static-snapshot",
+            "captured_from": payload.get("captured_from") or "amap-dom",
+            "world_id": payload.get("world_id") or normalized_snapshot_id,
+            "origin_label": payload.get("origin_label") or "",
+            "center": payload.get("center") or {},
+            "zoom": payload.get("zoom"),
+            "captured_at": payload.get("captured_at"),
+            "viewport": {
+                "width": int(payload.get("width") or 0),
+                "height": int(payload.get("height") or 0),
+            },
+            "tiles": stored_tiles,
+        }
+        (snapshot_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        return manifest
 
     def writeback_event_payload(self, event: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -217,6 +285,33 @@ class WebService:
 
     def get_disturbance_payload(self, slice_id: str) -> dict[str, Any]:
         return {"slice_id": slice_id, "active": get_disturbance(slice_id)}
+
+
+def _sanitize_snapshot_id(value: str) -> str:
+    allowed = [ch.lower() if ch.isalnum() else "-" for ch in (value or "").strip()]
+    normalized = "".join(allowed).strip("-")
+    while "--" in normalized:
+        normalized = normalized.replace("--", "-")
+    return normalized[:80]
+
+
+def _guess_tile_extension(url: str) -> str:
+    suffix = Path(urlparse(url).path).suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".webp"}:
+        return suffix
+    return ".png"
+
+
+def _download_remote_file(url: str, target_path: Path) -> None:
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "FableMapSnapshot/1.0",
+            "Referer": "https://webapi.amap.com/",
+        },
+    )
+    with urlopen(request, timeout=20) as response:
+        target_path.write_bytes(response.read())
 
 
 def _is_within_root(candidate: Path, root: Path) -> bool:

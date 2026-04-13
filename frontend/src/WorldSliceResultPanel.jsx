@@ -3,7 +3,7 @@ import { formatTagLabel } from './services/appDisplay'
 export default function WorldSliceResultPanel({
   result,
   statusOk,
-  worldAtmosphere,
+  sliceAtmosphere,
   sliceHighlights,
 }) {
   return (
@@ -11,12 +11,12 @@ export default function WorldSliceResultPanel({
       <div className="section-heading world-result-panel__heading">
         <div>
           <p className="mini-label">步骤 2</p>
-          <h2>{result ? '世界已准备好，下一步直接点地图' : '当前切片结果'}</h2>
+          <h2>{result ? '地点切片已准备好，下一步直接选地点' : '当前切片结果'}</h2>
         </div>
         <p className="note muted">
           {result
-            ? '这里不再承担主操作入口，而是用最短摘要告诉你：世界已经生成，继续往下点地图即可开始探索。'
-            : '生成成功后，这里会先给你最短世界摘要，然后把注意力交给下方地图舞台。'}
+            ? '这里不再承担主操作入口，而是用最短摘要告诉你：地点切片已经生成，继续往下选地点即可开始探索。'
+            : '生成成功后，这里会先给你最短切片摘要，然后把注意力交给下方地点舞台。'}
         </p>
       </div>
 
@@ -25,7 +25,7 @@ export default function WorldSliceResultPanel({
           <div className="result-card emphasis-card story-card world-result-panel__hero-card">
             <p className="mini-label">已生成切片</p>
             <h3 className="story-card-title">{formatTagLabel(result.region_theme, '未命名切片')}</h3>
-            <p className="note story-card-copy">{worldAtmosphere}</p>
+            <p className="note story-card-copy">{sliceAtmosphere}</p>
             <div className="story-chip-row world-result-panel__chips">
               <span>势力 · {formatTagLabel(result.dominant_faction, '-')}</span>
               <span>地点 · {result.poi_count ?? '-'}</span>
@@ -34,8 +34,8 @@ export default function WorldSliceResultPanel({
             </div>
             <div className="world-result-panel__next-action" aria-live="polite">
               <span className="mini-label">现在就做</span>
-              <strong>直接去下方地图，点击一个节点，把它设为这次进入世界的当前据点。</strong>
-              <p>悬停先读名字和钩子，点击后首页会立刻显示当前据点反馈，不需要先打开预览文件。</p>
+              <strong>直接去下方地点舞台，点击一个地点，把它设为这次进入的当前地点。</strong>
+              <p>先读名字和钩子，点击后首页会立刻显示当前地点反馈，不需要先打开预览文件。</p>
             </div>
           </div>
 
@@ -49,9 +49,9 @@ export default function WorldSliceResultPanel({
               </div>
             </div>
             <div className="result-card world-result-panel__card world-result-panel__card--guide">
-              <p className="mini-label">地图优先路径</p>
+              <p className="mini-label">地点优先路径</p>
               <div className="story-bullets world-result-panel__bullets">
-                <div className="story-bullet">先看下方地图里最密集或最显眼的节点分布。</div>
+                <div className="story-bullet">先看下方地点舞台里最值得进入的候选地点。</div>
                 <div className="story-bullet">再点击一个地点，把它提升为当前观察目标。</div>
                 <div className="story-bullet">资源文件保留在下方，只作为补充入口，不打断首屏探索。</div>
               </div>
@@ -71,12 +71,12 @@ export default function WorldSliceResultPanel({
       ) : (
         <div className="empty-state story-empty-state">
           <div>
-            <p className="empty-title">还没有打开任何世界切片</p>
+            <p className="empty-title">还没有生成任何地点切片</p>
             <p className="note muted">先选一个入口：可以用预设地点，也可以直接用浏览器定位。</p>
             <div className="empty-chips">
               <span>{statusOk ? '服务已就绪' : '先确认服务'}</span>
-              <span>推荐先试演示样例世界</span>
-              <span>生成后可直接点地图节点</span>
+              <span>推荐先试离线演示样例</span>
+              <span>生成后可直接选择地点</span>
             </div>
           </div>
         </div>

@@ -37,6 +37,10 @@ def create_api_router(service: WebService) -> APIRouter:
             base_url=_request_base_url(request),
         )
 
+    @router.post("/api/map/snapshot/{snapshot_id}")
+    def post_map_snapshot(snapshot_id: str, payload: dict = Body(...)) -> dict:
+        return service.map_snapshot_payload(snapshot_id, payload)
+
     @router.post("/api/world/event")
     def post_world_event(event: dict = Body(...)) -> dict:
         return service.writeback_event_payload(event)

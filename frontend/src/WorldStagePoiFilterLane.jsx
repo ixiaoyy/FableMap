@@ -33,8 +33,8 @@ export default function WorldStagePoiFilterLane({
   return (
     <div className="storyboard-lane poi-filter-lane">
       <div className="storyboard-lane-header">
-        <span className="storyboard-category-label">POI 搜索与筛选</span>
-        <span className="storyboard-lane-meta">不必在地图上逐个试点，可以先缩小候选节点范围</span>
+        <span className="storyboard-category-label">地点搜索与筛选</span>
+        <span className="storyboard-lane-meta">不必在地点列表里逐个试点，可以先缩小候选地点范围</span>
       </div>
 
       <div className="poi-filter-toolbar">
@@ -44,7 +44,7 @@ export default function WorldStagePoiFilterLane({
             type="text"
             value={poiSearch}
             onChange={(event) => setPoiSearch(event.target.value)}
-            placeholder="输入地点名、钩子、势力或 POI ID"
+            placeholder="输入地点名、钩子、势力或地点 ID"
           />
         </label>
 
@@ -74,7 +74,7 @@ export default function WorldStagePoiFilterLane({
             checked={poiOnlyFamiliar}
             onChange={(event) => setPoiOnlyFamiliar(event.target.checked)}
           />
-          <span>只看已积累熟悉度的节点</span>
+          <span>只看已积累熟悉度的地点</span>
         </label>
 
         <button
@@ -91,7 +91,7 @@ export default function WorldStagePoiFilterLane({
         <span className="poi-filter-summary">{poiSearchSummary}</span>
         {resolvedActivePoi ? (
           <span className="poi-filter-summary poi-filter-summary--active">
-            当前主据点：{resolvedActivePoi.fantasy_name}
+            当前地点：{resolvedActivePoi.fantasy_name}
           </span>
         ) : null}
       </div>
@@ -113,10 +113,10 @@ export default function WorldStagePoiFilterLane({
                     <strong>{poi.fantasy_name || poi.real_name || poi.id}</strong>
                     <span>{getPoiTypeLabel(poi)}</span>
                   </div>
-                  <p>{poi.satire_hook || poi.emotion_hook || '这个节点暂时还没有公开钩子。'}</p>
+                  <p>{poi.satire_hook || poi.emotion_hook || '这个地点暂时还没有公开钩子。'}</p>
                   <div className="poi-filter-card-meta">
                     <span>{getPoiFactionLabel(poi)}</span>
-                    <span>familiarity · {familiarity}</span>
+                    <span>熟悉度 · {familiarity}</span>
                   </div>
                 </button>
               )
@@ -124,14 +124,14 @@ export default function WorldStagePoiFilterLane({
           </div>
         ) : (
           <div className="storyboard-placeholder-card poi-filter-empty">
-            <strong>没有符合条件的 POI</strong>
-            <p>当前搜索词或筛选条件没有匹配到节点。可以先放宽类型、势力或熟悉度限制。</p>
+            <strong>没有符合条件的地点</strong>
+            <p>当前搜索词或筛选条件没有匹配到地点。可以先放宽类型、势力或熟悉度限制。</p>
           </div>
         )
       ) : (
         <div className="storyboard-placeholder-card poi-filter-empty">
-          <strong>等待世界切片生成</strong>
-          <p>生成当前切片后，这里会出现可搜索、可筛选、可快速选中的 POI 列表。</p>
+          <strong>等待地点切片生成</strong>
+          <p>生成当前地点切片后，这里会出现可搜索、可筛选、可快速选中的地点列表。</p>
         </div>
       )}
     </div>

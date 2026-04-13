@@ -22,7 +22,7 @@ export function useNearbySession({
     const requestForm = overrideForm || form
     const { keepAdvancedState = false } = options
     setSubmitting(true)
-    setErrorText(refresh ? '正在刷新附近世界...' : '正在生成附近世界...')
+    setErrorText(refresh ? '正在刷新附近地点切片...' : '正在生成附近地点切片...')
 
     try {
       const payload = await api.createNearbyPreview({
@@ -138,7 +138,7 @@ export function useNearbySession({
       applyOrigin(
         nextForm,
         '我的当前位置',
-        autoSubmit ? '已根据你的浏览器定位自动生成附近世界。' : '已抓取浏览器定位，可直接生成你附近的世界切片。'
+        autoSubmit ? '已根据你的浏览器定位自动生成附近地点切片。' : '已抓取浏览器定位，可直接生成你附近的地点切片。'
       )
       setAdvancedOpen(openAdvanced)
       if (autoSubmit) {
@@ -153,7 +153,7 @@ export function useNearbySession({
         applyOrigin(
           form,
           '上海默认切片',
-          '定位失败，已回退到默认入口并自动生成附近世界。'
+          '定位失败，已回退到默认入口并自动生成附近地点切片。'
         )
         await submitNearby(refresh, null, { keepAdvancedState: !openAdvanced })
       }

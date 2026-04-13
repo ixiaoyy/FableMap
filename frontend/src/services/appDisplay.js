@@ -184,9 +184,9 @@ export function buildWritebackTimeline(payload) {
   })
 
   steps.push({
-    id: 'world',
-    title: '世界反馈',
-    text: worldFeedback.summary || '世界暂时保持沉默。',
+    id: 'slice-feedback',
+    title: '切片反馈',
+    text: worldFeedback.summary || '地点切片暂时保持沉默。',
   })
 
   if ((worldFeedback.broadcast_hints || []).length) {
@@ -312,20 +312,20 @@ export function buildSliceHighlights(result) {
   }
 
   return [
-    result.region_theme ? `这片区域当前被“${formatTagLabel(result.region_theme, '未命名切片')}”主导。` : '世界主题仍在等待生成。',
+    result.region_theme ? `这片区域当前被“${formatTagLabel(result.region_theme, '未命名切片')}”主导。` : '地点主题仍在等待生成。',
     result.dominant_faction ? `主导势力是 ${formatTagLabel(result.dominant_faction, '未显形势力')}。` : '主导势力尚未显形。',
     result.poi_count
-      ? `附近浮现 ${result.poi_count} 个可观察节点，可直接点入。`
-      : '这次切片还没有稳定的观察节点。',
+      ? `附近浮现 ${result.poi_count} 个可进入地点，可直接点选。`
+      : '这次切片还没有稳定的可进入地点。',
   ]
 }
 
-export function buildWorldAtmosphere(result) {
+export function buildSliceAtmosphere(result) {
   if (!result) {
-    return '先选择一个入口，世界才会开始组织自己的语气。'
+    return '先选择一个入口，地点切片才会开始组织自己的语气。'
   }
 
   const sourceText = formatProviderLabel(result.provider)
   const cacheText = formatCacheStatusLabel(result.cache_status)
-  return `现实骨架来自 ${sourceText}，当前缓存状态为 ${cacheText}。你现在看到的不是表单结果，而是一段可进入的局部世界。`
+  return `现实骨架来自 ${sourceText}，当前缓存状态为 ${cacheText}。你现在看到的不是表单结果，而是一段可进入的地点切片。`
 }

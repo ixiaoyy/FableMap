@@ -36,8 +36,8 @@ export function usePoiFilters({ worldPois, familiarityMap }) {
   }, [familiarityMap, normalizedPoiSearch, poiFactionFilter, poiOnlyFamiliar, poiTypeFilter, worldPois])
 
   const poiSearchSummary = worldPois.length
-    ? `当前匹配 ${filteredWorldPois.length} / ${worldPois.length} 个 POI`
-    : '生成切片后可按名称、势力与类型筛选 POI'
+    ? `当前匹配 ${filteredWorldPois.length} / ${worldPois.length} 个地点`
+    : '生成切片后可按名称、势力与类型筛选地点'
 
   return {
     filteredWorldPois,

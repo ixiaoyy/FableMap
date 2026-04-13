@@ -55,7 +55,7 @@ export default function AdminDebugPanel({
 
             <section className="panel inner-panel">
               <h3>写回事件</h3>
-              <p className="note">使用同一切片提交最小事件，验证玩家状态、地点痕迹与世界反馈是否会被后端持久化。</p>
+              <p className="note">使用同一切片提交最小事件，验证玩家状态、地点痕迹与切片反馈是否会被后端持续写入。</p>
               <div className="row-3">
                 <div>
                   <label htmlFor="player-id">玩家 ID</label>
@@ -88,7 +88,7 @@ export default function AdminDebugPanel({
                     <option value="route">路径</option>
                     <option value="landmark">地标</option>
                     <option value="home">家园</option>
-                    <option value="world">世界</option>
+                    <option value="world">切片</option>
                   </select>
                 </div>
                 <div>
@@ -155,7 +155,7 @@ export default function AdminDebugPanel({
                 <div><strong>已存事件：</strong> {writebackResult.persistence?.stored_event_count ?? '-'}</div>
               </div>
               <div className="result-card">
-                <h3>世界反馈</h3>
+                <h3>切片反馈</h3>
                 <div><strong>摘要：</strong> {feedback?.summary || '-'}</div>
                 <div><strong>广播提示：</strong> {(feedback?.broadcast_hints || []).join(' · ') || '-'}</div>
                 <div><strong>显现字段：</strong> {(feedback?.revealed_fields || []).join(' · ') || '-'}</div>

@@ -20,18 +20,18 @@ export default function WorldEntryPanel({
   result,
 }) {
   const primaryActionText = autoEntering
-    ? '正在自动进入附近世界...'
+    ? '正在自动进入附近地点...'
     : submitting
-      ? '正在生成附近世界...'
-      : '立即进入附近世界'
+      ? '正在生成附近地点切片...'
+      : '立即进入附近地点'
 
   const primaryActionHint = autoEntering
-    ? '系统正在根据当前位置自动生成切片，请稍候。'
+    ? '系统正在根据当前位置自动生成地点切片，请稍候。'
     : submitting
-      ? '正在刷新当前入口对应的世界切片，完成后会直接更新下方地图。'
+      ? '正在刷新当前入口对应的地点切片，完成后会直接更新下方地点舞台。'
       : result
-        ? '最近一次生成已经完成；页面会自动带到下方地图舞台，画布出现后可直接点击节点。'
-        : '点击主按钮后会按当前入口与半径生成世界切片，并把你带到下方地图舞台。'
+        ? '最近一次生成已经完成；页面会自动带到下方地点舞台，出现候选地点后可直接选择。'
+        : '点击主按钮后会按当前入口与半径生成地点切片，并把你带到下方地点舞台。'
 
   const actionStatusChip = autoEntering || submitting
     ? '生成中'
@@ -43,11 +43,11 @@ export default function WorldEntryPanel({
     <section className="panel primary-panel world-entry-panel">
       <div className="section-heading">
         <div>
-          <p className="mini-label">自动世界入口</p>
-          <h2>{autoEntering ? '正在根据定位进入世界' : '已经为你准备好附近世界'}</h2>
+          <p className="mini-label">自动地点入口</p>
+          <h2>{autoEntering ? '正在根据定位进入地点切片' : '已经为你准备好附近地点'}</h2>
         </div>
         <p className="note muted">
-          首次进入会优先尝试浏览器定位并自动生成附近切片；下方控制保留给你重新定位、切换入口和微调参数。
+          首次进入会优先尝试浏览器定位并自动生成附近地点切片；下方控制保留给你重新定位、切换入口和微调参数。
           {lastSessionAt ? ` 已恢复上次记录：${new Date(lastSessionAt).toLocaleString()}` : ''}
         </p>
       </div>
@@ -84,7 +84,7 @@ export default function WorldEntryPanel({
             >
               <span className="preset-title">{preset.title}</span>
               <span className="preset-subtitle">{preset.subtitle}</span>
-              <span className="preset-meta">{preset.mode === 'fixture' ? '离线稳定' : '实时地图'} · {preset.radius}m</span>
+              <span className="preset-meta">{preset.mode === 'fixture' ? '离线稳定' : '实时切片'} · {preset.radius}m</span>
             </button>
           )
         })}
@@ -99,7 +99,7 @@ export default function WorldEntryPanel({
             {locating || autoEntering ? '定位中...' : '重新定位'}
           </button>
           <button type="button" className="secondary" disabled={submitting || autoEntering} onClick={() => submitNearby(true)}>
-            强制刷新地图数据
+            强制刷新地点切片
           </button>
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function WorldEntryPanel({
 
           <div className="row-2">
             <div>
-              <label htmlFor="mode">世界来源</label>
+              <label htmlFor="mode">地点来源</label>
               <select id="mode" value={form.mode} onChange={(event) => updateForm('mode', event.target.value)}>
                 <option value="live">实时 OSM</option>
                 <option value="fixture">离线演示样例</option>

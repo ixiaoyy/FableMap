@@ -10,7 +10,7 @@ export default function WorldStageDisturbancePanel({
     <div className="storyboard-lane">
       <div className="storyboard-lane-header">
         <span className="storyboard-category-label">人为扰动注入</span>
-        <span className="storyboard-lane-meta">向当前切片注入天气、人流等外部信号，影响编排器输出</span>
+        <span className="storyboard-lane-meta">向当前地点切片注入天气、人流等外部信号，影响编排器输出</span>
       </div>
       <div className="writeback-form-grid">
         <div>

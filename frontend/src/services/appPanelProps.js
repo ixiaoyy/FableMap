@@ -54,7 +54,7 @@ export function buildAppPanelProps({
   useCurrentLocation,
   usePreset,
   visibleMapLayers,
-  worldAtmosphere,
+  sliceAtmosphere,
   behaviorInsights,
   writebackError,
   writebackForm,
@@ -109,7 +109,7 @@ export function buildAppPanelProps({
     resultPanelProps: {
       result,
       statusOk,
-      worldAtmosphere,
+      sliceAtmosphere,
       sliceHighlights,
     },
     mapStageProps: {

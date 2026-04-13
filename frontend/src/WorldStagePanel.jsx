@@ -87,26 +87,26 @@ export default function WorldStagePanel({
           familiarityMap={familiarityMap}
           originLabel={originLabel}
           ghostTraces={ghostTraces}
-          toolbarLabel="地图"
-          toolbarCopy={result ? `${originLabel} · ${form.radius}m · ${result?.poi_count ?? 0} 个节点` : '正在准备附近地图'}
+          toolbarLabel="地点视图"
+          toolbarCopy={result ? `${originLabel} · ${form.radius}m · ${result?.poi_count ?? 0} 个候选地点` : '正在准备附近地点切片'}
           toolbarClassName="map-layer-toolbar map-only-stage__toolbar"
         />
         <div className="map-only-stage__feedback" aria-live="polite">
           <div>
-            <span className="storyboard-category-label">当前据点</span>
-            <strong>{resolvedActivePoi ? resolvedActivePoi.fantasy_name : '点击地图上的一个地点'}</strong>
+            <span className="storyboard-category-label">当前地点</span>
+            <strong>{resolvedActivePoi ? resolvedActivePoi.fantasy_name : '点击地点视图中的一个地点'}</strong>
             <p>
               {resolvedActivePoi
-                ? resolvedActivePoi.satire_hook || '该地点已选中，可继续悬停或切换图层观察周边结构。'
+                ? resolvedActivePoi.satire_hook || '该地点已选中，可继续悬停或切换图层观察周边地点结构。'
                 : result
-                  ? '先点一个节点，立即查看它的名字、阵营与世界钩子。'
-                  : '生成世界切片后，即可点击地图节点开始探索。'}
+                  ? '先选一个地点，立即查看它的名字、阵营与地点钩子。'
+                  : '生成地点切片后，即可选择地点开始探索。'}
             </p>
           </div>
           <div className="map-only-stage__feedback-meta">
             <span>{resolvedActivePoi?.faction_alignment ? formatTagLabel(resolvedActivePoi.faction_alignment, '游离势力') : '等待选择阵营'}</span>
             <span>{resolvedActivePoi?.fantasy_type ? formatTagLabel(resolvedActivePoi.fantasy_type, '未知地点') : '等待选择地点类型'}</span>
-            <span>{activePoiId ? '已设为当前据点' : '尚未选中据点'}</span>
+            <span>{activePoiId ? '已设为当前地点' : '尚未选中地点'}</span>
           </div>
         </div>
       </section>
@@ -118,17 +118,17 @@ export default function WorldStagePanel({
       <div className="section-heading storyboard-heading">
         <div>
           <p className="mini-label">步骤 3</p>
-          <h2>进入 2D 世界地图</h2>
+          <h2>进入地点舞台</h2>
         </div>
         <div className="storyboard-heading-copy">
-          <p className="note muted">这里不再是平面预览区，而是你附近切片被转译成 2D 游戏世界地图的主舞台。</p>
+          <p className="note muted">这里先作为地点选择与进入舞台，而不是继续扩写旧 2D 切片视图主舞台。</p>
         </div>
       </div>
 
       <div className="storyboard-shell">
         <div className="storyboard-shell-top">
           <div className="storyboard-category">
-            <span className="storyboard-category-label">世界气候层</span>
+            <span className="storyboard-category-label">地点气候层</span>
             <div className="storyboard-chip-row">
               <span className={`storyboard-chip${result ? '' : ' storyboard-chip--empty'}`}>
                 {result ? '切片已就绪' : '待生成'}
@@ -171,7 +171,7 @@ export default function WorldStagePanel({
           <div className="storyboard-lane">
             <div className="storyboard-lane-header">
               <span className="storyboard-category-label">探索引导</span>
-              <span className="storyboard-lane-meta">按 2D 世界地图的方式进入，而不是读表单</span>
+              <span className="storyboard-lane-meta">按“入口 / 地点 / 动作 / 写回”的顺序进入，而不是继续阅读旧舞台术语</span>
             </div>
             {result?.world_id ? (
               <WorldDensityIndicator
@@ -186,11 +186,11 @@ export default function WorldStagePanel({
               <article className={`shared-task-card shared-task-card--gen${result ? ' is-done' : submitting ? ' is-loading' : ''}`}>
                 <span className="shared-task-index">00</span>
                 <div className="shared-task-gen-body">
-                  <h3>{result ? formatTagLabel(result.region_theme, '世界已生成') : '生成当前切片'}</h3>
+                  <h3>{result ? formatTagLabel(result.region_theme, '地点切片已生成') : '生成当前地点切片'}</h3>
                   <p className="shared-task-gen-meta">
                     {result
-                      ? `${result.poi_count ?? 0} 个节点 · ${result.road_count ?? 0} 条路径 · ${formatTagLabel(result.dominant_faction, '未知势力')}`
-                      : `${originLabel} · ${form.radius}m · ${form.mode === 'fixture' ? '离线样例' : '实时地图'}`
+                      ? `${result.poi_count ?? 0} 个候选地点 · ${result.road_count ?? 0} 条路径 · ${formatTagLabel(result.dominant_faction, '未知势力')}`
+                      : `${originLabel} · ${form.radius}m · ${form.mode === 'fixture' ? '离线样例' : '实时切片'}`
                     }
                   </p>
                   {!result ? (
@@ -201,7 +201,7 @@ export default function WorldStagePanel({
                         disabled={submitting}
                         onClick={() => submitNearby(false)}
                       >
-                        {submitting ? '生成中...' : '生成世界'}
+                        {submitting ? '生成中...' : '生成地点切片'}
                       </button>
                       <button
                         type="button"
@@ -229,15 +229,15 @@ export default function WorldStagePanel({
               <article className={`shared-task-card${resolvedActivePoi ? ' is-active' : ''}`}>
                 <span className="shared-task-index">01</span>
                 <div>
-                  <h3>选一个据点</h3>
-                  <p>{resolvedActivePoi ? `${resolvedActivePoi.fantasy_name} 已成为当前主据点。` : '先在地图上点击一个节点，把它变成你这次进入世界的主据点。'}</p>
+                  <h3>选一个地点</h3>
+                  <p>{resolvedActivePoi ? `${resolvedActivePoi.fantasy_name} 已成为当前进入地点。` : '先在地点视图中点击一个地点，把它变成你这次进入叙事的当前地点。'}</p>
                 </div>
               </article>
               <article className="shared-task-card">
                 <span className="shared-task-index">02</span>
                 <div>
-                  <h3>读地图气氛</h3>
-                  <p>{resolvedActivePoi?.satire_hook || '悬停节点先读名字、阵营、钩子，再决定往哪一块世界深入。'}</p>
+                  <h3>读地点气氛</h3>
+                  <p>{resolvedActivePoi?.satire_hook || '先读地点名字、阵营与钩子，再决定是否把这里作为后续事件入口。'}</p>
                 </div>
               </article>
               <article className="shared-task-card">
@@ -279,7 +279,7 @@ export default function WorldStagePanel({
               <div className="storyboard-lane orchestration-lane">
                 <div className="storyboard-lane-header">
                   <span className="storyboard-category-label">编排事件</span>
-                  <span className="storyboard-lane-meta">世界编排器正在根据当前切片与你的位置发出信号</span>
+                  <span className="storyboard-lane-meta">切片编排器正在根据当前地点切片与你的位置发出信号</span>
                 </div>
                 <div className="orchestration-event-grid">
                   {orchestrationEvents.map((event, index) => (

@@ -14,22 +14,22 @@ export default function WorldStageWritebackInsightsPanel({
               <p className="mini-label">结构化状态变化</p>
               <h3>本次写回已经产生可验证的状态链路</h3>
             </div>
-            <span className="writeback-persistence-badge">{writebackResult?.persistence?.stored_event_count ?? 0} stored events</span>
+            <span className="writeback-persistence-badge">已存事件 {writebackResult?.persistence?.stored_event_count ?? 0}</span>
           </div>
 
           <div className={`writeback-revisit-banner${revisitSummary.sameSlice ? ' is-valid' : ''}`}>
             <div>
-              <strong>{revisitSummary.sameSlice ? '回访验证成功' : '等待同一 slice 回访验证'}</strong>
+              <strong>{revisitSummary.sameSlice ? '回访验证成功' : '等待同一切片回访验证'}</strong>
               <p>
                 {revisitSummary.sameSlice
                   ? `当前切片 ${revisitSummary.currentSliceId} 与最近一次写回目标一致，说明这次进入仍然挂着你上次留下的痕迹。`
-                  : `最近写回记录来自 ${revisitSummary.persistedSliceId || '未知 slice'}，当前切片为 ${revisitSummary.currentSliceId || '尚未生成'}。重新进入同一 slice 时，这里会继续显示残留痕迹。`}
+                  : `最近写回记录来自 ${revisitSummary.persistedSliceId || '未知切片'}，当前切片为 ${revisitSummary.currentSliceId || '尚未生成'}。重新进入同一切片时，这里会继续显示残留痕迹。`}
               </p>
             </div>
             <div className="writeback-revisit-stats">
-              <span>last_event={revisitSummary.lastEventType}</span>
-              <span>familiarity={revisitSummary.familiarity}</span>
-              <span>stored_events={revisitSummary.storedEvents}</span>
+              <span>最近事件={revisitSummary.lastEventType}</span>
+              <span>熟悉度={revisitSummary.familiarity}</span>
+              <span>已存事件={revisitSummary.storedEvents}</span>
             </div>
           </div>
 
@@ -59,8 +59,8 @@ export default function WorldStageWritebackInsightsPanel({
         </div>
       ) : (
         <div className="storyboard-placeholder-card writeback-placeholder-card">
-          <strong>等待第一次主舞台写回</strong>
-          <p>先在上方选择 observe、dwell 或 mark，然后直接把动作提交到 /api/world/event。这里会显示玩家状态、地点状态、世界反馈与持久化结果。</p>
+          <strong>等待第一次地点写回</strong>
+          <p>先在上方选择 observe、dwell 或 mark，然后直接把动作提交到 /api/world/event。这里会显示玩家状态、地点状态、切片反馈与持续写入结果。</p>
         </div>
       )}
 
@@ -70,12 +70,12 @@ export default function WorldStageWritebackInsightsPanel({
             <p className="mini-label">AIO4 · 行为到意义</p>
             <h3>这段行动正在形成怎样的玩家含义</h3>
           </div>
-          <span className="writeback-persistence-badge">{behaviorInsights?.dominant_meaning || 'waiting_trace'}</span>
+          <span className="writeback-persistence-badge">{behaviorInsights?.dominant_meaning || '等待轨迹生成'}</span>
         </div>
         {behaviorInsights ? (
           <>
             <p className="writeback-visibility-summary">
-              myth entry · {behaviorInsights.myth_entry || 'unnamed_drifter'} · dominant district · {behaviorInsights.dominant_district || 'unknown'}
+              神话入口 · {behaviorInsights.myth_entry || '未命名漂流者'} · 主导城区 · {behaviorInsights.dominant_district || '未知'}
             </p>
             <div className="behavior-score-grid">
               <article className="behavior-score-card">
@@ -169,7 +169,7 @@ export default function WorldStageWritebackInsightsPanel({
           )}
           <div className="d3-entry-pills">
             <span className="d3-entry-pill">资源提示 · {behaviorInsights.scene_capsule.asset_pack_hint || behaviorInsights.scene_capsule.asset_hint || '-'}</span>
-            <span className="d3-entry-pill">渲染方式 · {behaviorInsights.scene_capsule.render_mode || 'toast'}</span>
+            <span className="d3-entry-pill">渲染方式 · {behaviorInsights.scene_capsule.render_mode || '默认浮层'}</span>
             <span className="d3-entry-pill">持续时间 · {behaviorInsights.scene_capsule.ttl_seconds ?? behaviorInsights.scene_capsule.decay_turns ?? '-'}</span>
             {behaviorInsights.scene_capsule.is_fallback && (
               <span className="d3-entry-pill muted">回退内容</span>
