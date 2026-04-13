@@ -125,6 +125,7 @@ function PlaceDetailSection({ poi, world }) {
 
 export default function WorldStageActivePoiPanel({
   resolvedActivePoi,
+  panelRef,
   world,
   familiarityMap,
   writebackTargetSummary,
@@ -147,7 +148,7 @@ export default function WorldStageActivePoiPanel({
   focusWritebackTarget,
 }) {
   return (
-    <div className="storyboard-lane">
+    <div className="storyboard-lane" ref={panelRef}>
       <div className="storyboard-lane-header">
         <span className="storyboard-category-label">当前地点卡</span>
         <span className="storyboard-lane-meta">把选中的地点当成当前叙事入口来查看</span>

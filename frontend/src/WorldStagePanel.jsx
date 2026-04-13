@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import WorldDensityIndicator from './WorldDensityIndicator'
 import WorldStageActivePoiPanel from './WorldStageActivePoiPanel'
 import WorldStageDisturbancePanel from './WorldStageDisturbancePanel'
@@ -67,6 +68,15 @@ export default function WorldStagePanel({
   lastWritebackPoiId,
   mapOnly = false,
 }) {
+  const activePoiPanelRef = useRef(null)
+
+  // Auto-scroll to active POI panel when a POI is selected
+  useEffect(() => {
+    if (activePoiId && activePoiPanelRef.current) {
+      activePoiPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [activePoiId])
+
   if (mapOnly) {
     return (
       <section className="panel preview-panel player-preview-panel storyboard-panel map-only-stage">
@@ -312,6 +322,7 @@ export default function WorldStagePanel({
           </div>
 
           <WorldStageActivePoiPanel
+            panelRef={activePoiPanelRef}
             resolvedActivePoi={resolvedActivePoi}
             world={result?.world}
             familiarityMap={familiarityMap}

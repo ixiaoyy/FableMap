@@ -1113,6 +1113,27 @@ button:disabled {
   border-top: 1px solid rgba(148, 163, 184, 0.1);
 }
 
+/* Place card activation animation */
+@keyframes placeCardActivate {
+  0% {
+    opacity: 0.7;
+    transform: translateX(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.storyboard-stage-stack > * {
+  animation: none;
+  transition: opacity 0.2s ease;
+}
+
+.storyboard-stage-stack > *:first-child {
+  animation: placeCardActivate 0.25s ease-out;
+}
+
 .poi-detail-row {
   display: flex;
   flex-wrap: wrap;
