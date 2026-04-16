@@ -98,9 +98,10 @@ export const DEFAULT_BASE_URLS = {
  *   value      — { backend, model, api_key, base_url, temperature, max_tokens, top_p }
  *   onChange   — (config) => void
  *   compact    — 是否使用紧凑布局
- *   tavernId   — 可选，用于测试连接
+ *   tavernId   — 可选，用于测试连接（基于 /api/taverns/{id}/test-llm）
+ *   testDirect — 可选，直接测试配置的函数 (config) => Promise<{ok, message}>（用于创建酒馆时）
  */
-export default function LLMConfigForm({ value = {}, onChange, compact = false, tavernId = null }) {
+export default function LLMConfigForm({ value = {}, onChange, compact = false, tavernId = null, testDirect = null }) {
   const config = {
     backend:    value.backend    || 'openai',
     model:      value.model      || DEFAULT_MODELS['openai'],
@@ -125,16 +126,23 @@ export default function LLMConfigForm({ value = {}, onChange, compact = false, t
   }
 
   async function handleTest() {
-    if (!tavernId) {
-      setTestResult({ ok: false, message: '需要先保存酒馆才能测试连接' })
-      return
-    }
     setTesting(true)
     setTestResult(null)
     try {
-      const service = getDefaultTavernService()
-      await service.testLlmConfig(tavernId, config)
-      setTestResult({ ok: true, message: '连接成功！AI 配置正常' })
+      let result
+      if (testDirect) {
+        result = await testDirect(config)
+      } else if (tavernId) {
+        const service = getDefaultTavernService()
+        result = await service.testLlmConfig(tavernId, config)
+      } else {
+        setTestResult({ ok: false, message: '无法测试连接：缺少酒馆 ID' })
+        setTesting(false)
+        return
+      }
+      setTestResult(result.ok
+        ? { ok: true, message: `连接成功${result.model ? `（${result.model}）` : ''}` }
+        : { ok: false, message: result.message || '连接失败' })
     } catch (err) {
       setTestResult({ ok: false, message: `连接失败：${err.message}` })
     } finally {
@@ -275,7 +283,7 @@ export default function LLMConfigForm({ value = {}, onChange, compact = false, t
       )}
 
       {/* Test connection */}
-      {tavernId && (
+      {(tavernId || testDirect) && (
         <div className="test-connection">
           <button
             type="button"

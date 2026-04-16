@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { getDefaultTavernService, getTavernAccessIcon } from './services/tavernService'
+import { useState, useEffect, useRef } from 'react'
+import { getDefaultTavernService } from './services/tavernService'
 
 /**
  * TavernChatRoom — SillyTavern 风格的聊天房间
@@ -29,6 +29,9 @@ function formatMessageText(text) {
  */
 function formatTime(timestamp) {
   const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return '刚刚'
+  }
   const now = new Date()
   const isToday = date.toDateString() === now.toDateString()
   if (isToday) {
@@ -38,11 +41,84 @@ function formatTime(timestamp) {
     ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
+const DEFAULT_EXPRESSION = 'neutral'
+
+const EXPRESSION_LABELS = {
+  admiration: '赞赏',
+  amusement: '好笑',
+  anger: '愤怒',
+  annoyance: '烦躁',
+  approval: '认可',
+  caring: '关切',
+  confusion: '困惑',
+  curiosity: '好奇',
+  desire: '渴望',
+  disappointment: '失望',
+  disapproval: '不赞同',
+  disgust: '厌恶',
+  embarrassment: '尴尬',
+  excitement: '兴奋',
+  fear: '害怕',
+  gratitude: '感谢',
+  grief: '悲伤',
+  joy: '开心',
+  love: '喜爱',
+  nervousness: '紧张',
+  optimism: '乐观',
+  pride: '骄傲',
+  realization: '恍然',
+  relief: '安心',
+  remorse: '懊悔',
+  sadness: '难过',
+  surprise: '惊讶',
+  neutral: '平静',
+}
+
+const EXPRESSION_SOURCE_LABELS = {
+  default: '默认表情',
+  fallback: '降级回应',
+  keyword: '关键词推断',
+  llm: 'AI 推断',
+  manual: '手动选择',
+}
+
+function getExpressionLabel(expression) {
+  return EXPRESSION_LABELS[expression] || expression || EXPRESSION_LABELS.neutral
+}
+
+function getExpressionSourceLabel(source) {
+  return EXPRESSION_SOURCE_LABELS[source] || source || EXPRESSION_SOURCE_LABELS.default
+}
+
+function normalizeSprites(rawSprites) {
+  if (!rawSprites || typeof rawSprites !== 'object') return {}
+  return Object.fromEntries(
+    Object.entries(rawSprites).filter(([, url]) => typeof url === 'string' && url.trim())
+  )
+}
+
+function getSpriteExpressionList(rawSprites, availableExpressions = []) {
+  const sprites = normalizeSprites(rawSprites)
+  const configured = Object.keys(sprites)
+  const ordered = availableExpressions.filter((expression) => sprites[expression])
+  const extras = configured.filter((expression) => !ordered.includes(expression)).sort()
+  return [...ordered, ...extras]
+}
+
+function normalizeChatTimestamp(timestamp) {
+  if (!timestamp) return Date.now()
+  if (typeof timestamp === 'number') {
+    return timestamp > 1e12 ? timestamp : timestamp * 1000
+  }
+  const parsed = Date.parse(timestamp)
+  return Number.isNaN(parsed) ? Date.now() : parsed
+}
+
 // ─────────────────────────────────────────
 // Character Avatar Component
 // ─────────────────────────────────────────
 
-function CharacterAvatar({ character, size = 'normal', isActive, onClick, expression = 'neutral' }) {
+function CharacterAvatar({ character, size = 'normal', isActive, onClick, expression = DEFAULT_EXPRESSION, spritesOverride = null }) {
   const sizeMap = {
     small: '40px',
     normal: '56px',
@@ -52,15 +128,17 @@ function CharacterAvatar({ character, size = 'normal', isActive, onClick, expres
 
   // 获取立绘 URL（支持表情精灵图）
   // 优先级：1. 指定表情的立绘 2. avatar 字段 3. sprites.neutral 4. image_url
-  const sprites = character?.sprites || {}
-  const avatarUrl = sprites[expression] || character?.avatar || sprites.neutral || character?.image_url || null
+  const sprites = normalizeSprites(spritesOverride || character?.sprites)
+  const resolvedExpression = expression || DEFAULT_EXPRESSION
+  const avatarUrl = sprites[resolvedExpression] || character?.avatar || sprites.neutral || character?.image_url || null
+  const expressionClass = String(resolvedExpression).replace(/[^a-z0-9_-]/gi, '') || DEFAULT_EXPRESSION
 
   return (
     <div
-      className={`char-avatar ${isActive ? 'active' : ''} ${onClick ? 'clickable' : ''}`}
+      className={`char-avatar char-avatar--${expressionClass} ${isActive ? 'active' : ''} ${onClick ? 'clickable' : ''}`}
       style={{ width: px, height: px, flexShrink: 0 }}
       onClick={onClick}
-      title={character?.name ? `${character.name} [${expression}]` : character?.name}
+      title={character?.name ? `${character.name} · ${getExpressionLabel(resolvedExpression)}` : character?.name}
     >
       {avatarUrl ? (
         <img src={avatarUrl} alt={character?.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
@@ -142,9 +220,10 @@ function CharacterSidebar({ characters, selectedChar, onSelectChar }) {
 // Chat Message
 // ─────────────────────────────────────────
 
-function ChatMessage({ message, character }) {
+function ChatMessage({ message, character, sprites, visitorNickname }) {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
+  const expression = message.expression || DEFAULT_EXPRESSION
 
   if (isSystem) {
     return (
@@ -159,10 +238,20 @@ function ChatMessage({ message, character }) {
       <CharacterAvatar
         character={isUser ? null : character}
         size="small"
+        expression={isUser ? DEFAULT_EXPRESSION : expression}
+        spritesOverride={isUser ? null : sprites}
       />
       <div className="message-bubble">
         {!isUser && character && (
-          <div className="message-sender">{character.name}</div>
+          <div className="message-sender">
+            <span>{character.name}</span>
+            <span className="message-expression">{getExpressionLabel(expression)}</span>
+          </div>
+        )}
+        {isUser && visitorNickname && (
+          <div className="message-sender visitor-sender">
+            <span>{visitorNickname}</span>
+          </div>
         )}
         <div
           className="message-content"
@@ -299,10 +388,17 @@ function CharacterDetail({ character, onClose }) {
 // ─────────────────────────────────────────
 
 function ExpressionSelector({ sprites = {}, availableExpressions = [], currentExpression, onChange }) {
-  const exprList = availableExpressions.filter(expr => sprites[expr])
+  const exprList = getSpriteExpressionList(sprites, availableExpressions)
+  const options = exprList.includes(currentExpression)
+    ? exprList
+    : [currentExpression || DEFAULT_EXPRESSION, ...exprList].filter(Boolean)
 
   if (exprList.length === 0) {
-    return null
+    return (
+      <span className="expression-selector-empty" title="当前角色还没有配置表情立绘">
+        {getExpressionLabel(currentExpression)}
+      </span>
+    )
   }
 
   return (
@@ -312,8 +408,8 @@ function ExpressionSelector({ sprites = {}, availableExpressions = [], currentEx
       onChange={(e) => onChange(e.target.value)}
       title="选择角色表情"
     >
-      {exprList.map((expr) => (
-        <option key={expr} value={expr}>{expr}</option>
+      {options.map((expr) => (
+        <option key={expr} value={expr}>{getExpressionLabel(expr)}</option>
       ))}
     </select>
   )
@@ -331,9 +427,8 @@ function ExpressionSelector({ sprites = {}, availableExpressions = [], currentEx
  * @param {string} props.roomName - 房间名称（显示在标题）
  * @param {string} props.roomDescription - 房间描述
  * @param {Array} props.characters - 角色列表
- * @param {object} props.scenePrompt - 场景提示词
  * @param {string} props.visitorId - 访客 ID
- * @param {string} props.apiBase - API 基础 URL（可选，默认使用 tavernService）
+ * @param {string} props.visitorNickname - 访客昵称（显示在用户消息旁）
  * @param {function} props.onCharacterSwitch - 角色切换回调
  */
 export default function TavernChatRoom({
@@ -341,9 +436,8 @@ export default function TavernChatRoom({
   roomName = '未知地点',
   roomDescription = '',
   characters = [],
-  scenePrompt = '',
   visitorId = 'visitor',
-  apiBase = '',
+  visitorNickname = '',
   onCharacterSwitch,
 }) {
   const [selectedChar, setSelectedChar] = useState(characters[0] || null)
@@ -351,8 +445,10 @@ export default function TavernChatRoom({
   const [sending, setSending] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [chatId, setChatId] = useState(null)
-  const [currentExpression, setCurrentExpression] = useState('neutral')
+  const [currentExpression, setCurrentExpression] = useState(DEFAULT_EXPRESSION)
+  const [expressionSource, setExpressionSource] = useState('default')
+  const [expressionBusy, setExpressionBusy] = useState(false)
+  const [degradationNotice, setDegradationNotice] = useState(null)
   const [sprites, setSprites] = useState({})
   const [availableExpressions, setAvailableExpressions] = useState([])
   const messagesEndRef = useRef(null)
@@ -386,6 +482,8 @@ export default function TavernChatRoom({
         content: selectedChar.first_mes,
         timestamp: Date.now(),
         character: selectedChar,
+        expression: DEFAULT_EXPRESSION,
+        expressionSource: 'default',
       }])
     }
   }, [selectedChar?.id])
@@ -398,6 +496,7 @@ export default function TavernChatRoom({
 
   async function loadSprites() {
     if (!roomId || !selectedChar) return
+    const fallbackSprites = normalizeSprites(selectedChar.sprites)
     try {
       // Load available expressions
       const exprResult = await tavernService.getExpressions()
@@ -405,25 +504,87 @@ export default function TavernChatRoom({
 
       // Load character sprites
       const spriteResult = await tavernService.getCharacterSprites(roomId, selectedChar.id)
-      if (spriteResult.sprites) {
-        setSprites(spriteResult.sprites)
-        setCurrentExpression(spriteResult.default_expression || 'neutral')
-      }
+      const loadedSprites = normalizeSprites(spriteResult.sprites || fallbackSprites)
+      setSprites(loadedSprites)
+      setCurrentExpression(spriteResult.default_expression || (loadedSprites.neutral ? DEFAULT_EXPRESSION : currentExpression))
+      setExpressionSource('default')
     } catch (err) {
       console.error('Load sprites error:', err)
+      setSprites(fallbackSprites)
+      setCurrentExpression(fallbackSprites.neutral ? DEFAULT_EXPRESSION : currentExpression)
+      setExpressionSource('default')
     }
   }
 
   async function inferExpression(text) {
-    if (!text || !roomId || !selectedChar) return
+    if (!text || !roomId || !selectedChar) return null
+    setExpressionBusy(true)
     try {
       const result = await tavernService.inferExpression(text, selectedChar.name, roomId, selectedChar.id)
-      if (result.expression && sprites[result.expression]) {
-        setCurrentExpression(result.expression)
+      const expression = result.expression || DEFAULT_EXPRESSION
+      setCurrentExpression(expression)
+      setExpressionSource(result.source || 'keyword')
+      return {
+        expression,
+        source: result.source || 'keyword',
       }
     } catch (err) {
-      // Silently fail - expression inference is optional
+      return {
+        expression: DEFAULT_EXPRESSION,
+        source: 'fallback',
+      }
+    } finally {
+      setExpressionBusy(false)
     }
+  }
+
+  function handleExpressionChange(expression) {
+    setCurrentExpression(expression)
+    setExpressionSource('manual')
+  }
+
+  function buildAssistantMessage({ id, content, timestamp = Date.now(), expression = DEFAULT_EXPRESSION, source = 'default' }) {
+    return {
+      id,
+      role: 'assistant',
+      content,
+      timestamp,
+      character: selectedChar,
+      expression,
+      expressionSource: source,
+    }
+  }
+
+  function buildFallbackReply(id) {
+    const content = selectedChar?.first_mes || '对方没有回应。'
+    return buildAssistantMessage({
+      id,
+      content,
+      expression: DEFAULT_EXPRESSION,
+      source: 'fallback',
+    })
+  }
+
+  function applyExpressionToMessage(messageId, expressionResult) {
+    if (!expressionResult?.expression) return
+    setMessages((prev) => prev.map((message) => (
+      message.id === messageId
+        ? {
+          ...message,
+          expression: expressionResult.expression,
+          expressionSource: expressionResult.source || 'keyword',
+        }
+        : message
+    )))
+  }
+
+  function resetExpressionForCharacter(char) {
+    const nextSprites = normalizeSprites(char?.sprites)
+    setSprites(nextSprites)
+    setCurrentExpression(DEFAULT_EXPRESSION)
+    setExpressionSource('default')
+    setExpressionBusy(false)
+    setDegradationNotice(null)
   }
 
   async function loadHistory() {
@@ -436,32 +597,26 @@ export default function TavernChatRoom({
           id: m.id || `hist-${Date.now()}-${Math.random()}`,
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: m.content,
-          timestamp: m.timestamp
-            ? (m.timestamp > 1e12 ? m.timestamp : m.timestamp * 1000)
-            : Date.now(),
+          timestamp: normalizeChatTimestamp(m.timestamp),
           character: m.role === 'assistant' ? selectedChar : null,
+          expression: m.expression || DEFAULT_EXPRESSION,
+          expressionSource: m.expression_source || 'default',
         })))
       } else if (selectedChar.first_mes) {
         // Add opening message if no history
-        setMessages([{
+        setMessages([buildAssistantMessage({
           id: `init-${Date.now()}`,
-          role: 'assistant',
           content: selectedChar.first_mes,
-          timestamp: Date.now(),
-          character: selectedChar,
-        }])
+        })])
       }
     } catch (err) {
       console.error('Load history error:', err)
       // Add opening message on error
       if (selectedChar.first_mes) {
-        setMessages([{
+        setMessages([buildAssistantMessage({
           id: `init-${Date.now()}`,
-          role: 'assistant',
           content: selectedChar.first_mes,
-          timestamp: Date.now(),
-          character: selectedChar,
-        }])
+        })])
       }
     } finally {
       setLoading(false)
@@ -483,24 +638,65 @@ export default function TavernChatRoom({
 
     try {
       const result = await tavernService.sendChat(roomId, selectedChar.id, text.trim(), visitorId)
+      const responseText = result.response || '...'
+      const replyId = `msg-${Date.now()}-r`
+      const isDegraded = Boolean(result.degraded)
+      const nextExpression = isDegraded ? DEFAULT_EXPRESSION : currentExpression
+      const nextExpressionSource = isDegraded ? 'fallback' : expressionSource
       const charMsg = {
-        id: `msg-${Date.now()}-r`,
-        role: 'assistant',
-        content: result.response || '...',
-        timestamp: Date.now(),
-        character: selectedChar,
+        ...buildAssistantMessage({
+          id: replyId,
+          content: responseText,
+          expression: nextExpression,
+          source: nextExpressionSource,
+        }),
       }
       setMessages((prev) => [...prev, charMsg])
+      if (isDegraded) {
+        setCurrentExpression(DEFAULT_EXPRESSION)
+        setExpressionSource('fallback')
+        setDegradationNotice(result.degradation || {
+          title: 'AI 后端暂时不可用',
+          message: '已切换为规则回应。',
+          action: '店主可以在 AI 配置里测试连接。',
+        })
+      } else {
+        setDegradationNotice(null)
+        const expressionResult = await inferExpression(responseText)
+        applyExpressionToMessage(replyId, expressionResult)
+      }
     } catch (err) {
       console.error('Send error:', err)
-      const charMsg = {
-        id: `msg-${Date.now()}-err`,
-        role: 'assistant',
-        content: selectedChar?.first_mes || '对方没有回应。',
-        timestamp: Date.now(),
-        character: selectedChar,
+      const status = err.errorType
+      let title, message, action
+
+      if (status === 401) {
+        title = '认证失败'
+        message = 'API 密钥无效或已过期，无法连接到 AI 后端。'
+        action = '请店主在 AI 配置中检查 API Key 是否正确。'
+      } else if (status === 403) {
+        title = '无访问权限'
+        message = '没有权限访问该 AI 后端（可能被拒绝或 IP 未白名单）。'
+        action = '请店主确认 Base URL 和 API Key 的权限设置。'
+      } else if (status === 429) {
+        title = '请求过于频繁'
+        message = 'AI 后端限流了，稍等片刻后可重试。'
+        action = '降低对话频率，或店主考虑升级 API 配额。'
+      } else if (status && status >= 500) {
+        title = '服务端暂时不可用'
+        message = err.message || 'AI 后端服务器出错，请稍后再试。'
+        action = '稍后重试；如果持续出现，请店主检查 AI 服务状态。'
+      } else {
+        title = '消息没有送达'
+        message = err.message || '网络或服务端暂时不可用。'
+        action = '稍后重试；如果仍然失败，请店主检查服务状态。'
       }
+
+      const charMsg = buildFallbackReply(`msg-${Date.now()}-err`)
       setMessages((prev) => [...prev, charMsg])
+      setCurrentExpression(DEFAULT_EXPRESSION)
+      setExpressionSource('fallback')
+      setDegradationNotice({ title, message, action })
     } finally {
       setSending(false)
     }
@@ -510,6 +706,7 @@ export default function TavernChatRoom({
     if (char.id === selectedChar?.id) return
     setSelectedChar(char)
     setMessages([])
+    resetExpressionForCharacter(char)
     if (onCharacterSwitch) {
       onCharacterSwitch(char)
     }
@@ -556,6 +753,7 @@ export default function TavernChatRoom({
                   character={selectedChar}
                   size="small"
                   expression={currentExpression}
+                  spritesOverride={sprites}
                   onClick={() => handleAvatarClick(selectedChar)}
                 />
                 <div className="char-bar-info">
@@ -564,12 +762,16 @@ export default function TavernChatRoom({
                     {selectedChar.personality?.slice(0, 30) || selectedChar.archetype || ''}
                   </div>
                 </div>
+                <div className="expression-state" aria-live="polite">
+                  <span>{expressionBusy ? '识别中...' : getExpressionLabel(currentExpression)}</span>
+                  <small>{getExpressionSourceLabel(expressionSource)}</small>
+                </div>
                 {/* Expression selector */}
                 <ExpressionSelector
                   sprites={sprites}
                   availableExpressions={availableExpressions}
                   currentExpression={currentExpression}
-                  onChange={setCurrentExpression}
+                  onChange={handleExpressionChange}
                 />
                 <button
                   className="btn-char-detail"
@@ -579,6 +781,14 @@ export default function TavernChatRoom({
                   ℹ
                 </button>
               </div>
+
+              {degradationNotice ? (
+                <div className="chat-degradation-banner" role="status" aria-live="polite">
+                  <strong>{degradationNotice.title || 'AI 后端暂时不可用'}</strong>
+                  <span>{degradationNotice.message || '已切换为规则回应。'}</span>
+                  {degradationNotice.action ? <small>{degradationNotice.action}</small> : null}
+                </div>
+              ) : null}
 
               {/* Messages */}
               <div className="chat-messages-area">
@@ -591,7 +801,12 @@ export default function TavernChatRoom({
                 {!loading && messages.length === 0 && (
                   <div className="chat-empty">
                     <div className="empty-char-avatar">
-                      <CharacterAvatar character={selectedChar} size="large" />
+                      <CharacterAvatar
+                        character={selectedChar}
+                        size="large"
+                        expression={currentExpression}
+                        spritesOverride={sprites}
+                      />
                     </div>
                     <p>开始和 {selectedChar.name} 对话吧</p>
                     {selectedChar.first_mes && (
@@ -608,6 +823,8 @@ export default function TavernChatRoom({
                     key={msg.id}
                     message={msg}
                     character={msg.character || selectedChar}
+                    sprites={sprites}
+                    visitorNickname={visitorNickname}
                   />
                 ))}
                 <div ref={messagesEndRef} />

@@ -11,7 +11,8 @@
       "Bash(python d:/work/ai-/fablemap/writeback.py)",
       "Bash(powershell -Command \"python d:/work/ai-/print_wb.py\")",
       "Bash(python read_sections.py)",
-      "Bash(python read_test_middle.py)"
+      "Bash(python read_test_middle.py)",
+      "Bash(npm run *)"
     ]
   }
 }

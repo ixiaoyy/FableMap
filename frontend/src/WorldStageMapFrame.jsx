@@ -22,6 +22,8 @@ export default function WorldStageMapFrame({
   toolbarCopy,
   toolbarClassName,
   taverns = [],
+  totalTavernMatches = taverns.length,
+  tavernMarkerLimit = 0,
   onTavernClick,
   activeTavernId,
 }) {
@@ -50,6 +52,8 @@ export default function WorldStageMapFrame({
         ghostTraces={ghostTraces}
         visibleLayers={visibleMapLayers}
         taverns={taverns}
+        totalTavernMatches={totalTavernMatches}
+        tavernMarkerLimit={tavernMarkerLimit}
         onTavernClick={onTavernClick}
         activeTavernId={activeTavernId}
       />

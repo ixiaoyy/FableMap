@@ -27,7 +27,9 @@ async function readJson(response) {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || payload.detail || `HTTP ${response.status}`)
+    const err = new Error(payload.error || payload.detail || `HTTP ${response.status}`)
+    err.errorType = response.status
+    throw err
   }
   return payload
 }
@@ -48,6 +50,8 @@ export function createTavernService(getBaseUrl) {
      * @param {number} options.lon - 中心经度
      * @param {number} options.radius - 搜索半径（米）
      * @param {string} options.access - 访问类型过滤：public | password | private
+     * @param {string} options.status - 营业状态过滤：open | closed
+     * @param {string} options.query - 搜索词
      * @param {string} options.owner_id - 主人 ID
      * @returns {Promise<object>}
      */
@@ -57,6 +61,8 @@ export function createTavernService(getBaseUrl) {
       if (options.lon != null) params.set('lon', options.lon)
       if (options.radius) params.set('radius', options.radius)
       if (options.access) params.set('access', options.access)
+      if (options.status) params.set('status', options.status)
+      if (options.query) params.set('q', options.query)
       if (options.owner_id) params.set('owner_id', options.owner_id)
 
       const response = await fetch(`${getBaseUrl()}/api/taverns?${params}`, {
@@ -121,6 +127,20 @@ export function createTavernService(getBaseUrl) {
      */
     async testLlmConfig(tavernId, config) {
       const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/test-llm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 测试 LLM 配置是否可用（无需酒馆 ID，直接测试配置）
+     * @param {object} config — { backend, model, api_key, base_url }
+     * @returns {Promise<object>}
+     */
+    async testLlmConfigDirect(config) {
+      const response = await fetch(`${getBaseUrl()}/api/llm/test-config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
@@ -370,15 +390,25 @@ export function parseCharacterCard(card) {
     mes_example: data.mes_example || '',
     alternate_greetings: data.alternate_greetings || [],
     tags: data.tags || [],
+    avatar: data.avatar || '',
+    sprites: data.sprites || {},
     // WorldInfo (character_book)
-    world_info: (data.character_book?.entries || []).map((entry) => ({
-      keys: entry.keys || [],
-      content: entry.content || '',
-      selective: entry.selective ?? true,
-      constant: entry.constant ?? false,
-      depth: entry.depth ?? 4,
-      order: entry.order ?? 100,
-    })),
+    world_info: (() => {
+      try {
+        const entries = data.character_book?.entries
+        if (!Array.isArray(entries)) return []
+        return entries.map((entry) => ({
+          keys: entry.keys || [],
+          content: entry.content || '',
+          selective: entry.selective ?? true,
+          constant: entry.constant ?? false,
+          depth: entry.depth ?? 4,
+          order: entry.order ?? 100,
+        }))
+      } catch {
+        return []
+      }
+    })(),
   }
 }
 
@@ -452,6 +482,40 @@ function _extractFromPngBuffer(buffer) {
 // 状态映射工具
 // ─────────────────────────────────────────
 
+export const TAVERN_ACCESS_META = {
+  public: {
+    label: '公开',
+    icon: '🔓',
+    tone: 'public',
+    markerLabel: '公开',
+    description: '任何访客都可以直接进入',
+  },
+  password: {
+    label: '密码',
+    icon: '🔒',
+    tone: 'password',
+    markerLabel: '密令',
+    description: '访客需要输入密码后进入',
+  },
+  private: {
+    label: '私人',
+    icon: '👤',
+    tone: 'private',
+    markerLabel: '私人',
+    description: '仅店主或授权视图可见',
+  },
+}
+
+function getAccessMeta(access) {
+  return TAVERN_ACCESS_META[access] || {
+    label: access || '未知',
+    icon: '❓',
+    tone: 'unknown',
+    markerLabel: access || '未知',
+    description: '入口类型未标记',
+  }
+}
+
 /**
  * 酒馆状态颜色
  * @param {string} status
@@ -480,10 +544,7 @@ export function getTavernStatusLabel(status) {
  * @returns {string}
  */
 export function getTavernAccessLabel(access) {
-  if (access === 'public') return '公开'
-  if (access === 'password') return '密码'
-  if (access === 'private') return '私人'
-  return access
+  return getAccessMeta(access).label
 }
 
 /**
@@ -492,10 +553,34 @@ export function getTavernAccessLabel(access) {
  * @returns {string}
  */
 export function getTavernAccessIcon(access) {
-  if (access === 'public') return '🔓'
-  if (access === 'password') return '🔒'
-  if (access === 'private') return '👤'
-  return '❓'
+  return getAccessMeta(access).icon
+}
+
+/**
+ * 访问类型色调 class 后缀
+ * @param {string} access
+ * @returns {string}
+ */
+export function getTavernAccessTone(access) {
+  return getAccessMeta(access).tone
+}
+
+/**
+ * 地图 marker 上的短标签
+ * @param {string} access
+ * @returns {string}
+ */
+export function getTavernAccessMarkerLabel(access) {
+  return getAccessMeta(access).markerLabel
+}
+
+/**
+ * 访问类型说明
+ * @param {string} access
+ * @returns {string}
+ */
+export function getTavernAccessDescription(access) {
+  return getAccessMeta(access).description
 }
 
 /**

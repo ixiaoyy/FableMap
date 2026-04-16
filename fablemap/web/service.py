@@ -31,7 +31,7 @@ def _tavern_llm_config_to_client(tavern_config) -> "LLMConfig":
 
 from fablemap.api_service import build_health_payload, build_meta_payload, build_nearby_payload
 from fablemap.llm_clients import create_client, LLMError
-from fablemap.prompt_builder import PromptBuildConfig, PromptBuilder
+from fablemap.prompt_builder import ChatMessage as PromptChatMessage, PromptBuildConfig, PromptBuilder
 from fablemap.application.web_payloads import build_behavior_insights, build_orchestrate_payload, record_memory_graph_event
 from fablemap.nearby import generate_nearby_preview
 from fablemap.writeback import WritebackEngine, WritebackStore
@@ -323,17 +323,27 @@ class WebService:
         lon: float | None = None,
         radius: float = 5000,
         access: str | None = None,
+        status: str | None = None,
+        query: str = "",
         owner_id: str = "",
     ) -> dict[str, Any]:
         """List all taverns with optional location filter"""
         taverns = self.tavern_service.list_taverns(
-            lat=lat, lon=lon, radius=radius, access=access, owner_id=owner_id
+            lat=lat, lon=lon, radius=radius, access=access, status=status, query=query, owner_id=owner_id
         )
         return {"taverns": taverns, "count": len(taverns)}
+
+    def list_taverns(self, user_id: str = "", **filters: Any) -> list[dict[str, Any]]:
+        """Compatibility wrapper for legacy router endpoints."""
+        return self.tavern_service.list_taverns(owner_id=user_id, **filters)
 
     def get_tavern_payload(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
         """Get a specific tavern by ID"""
         return self.tavern_service.get_tavern(tavern_id, user_id)
+
+    def get_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
+        """Compatibility wrapper for legacy router endpoints."""
+        return self.get_tavern_payload(tavern_id, user_id)
 
     def create_tavern_payload(self, data: dict[str, Any], owner_id: str = "") -> dict[str, Any]:
         """Create a new tavern"""
@@ -342,6 +352,10 @@ class WebService:
     def update_tavern_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         """Update a tavern"""
         return self.tavern_service.update_tavern(tavern_id, data, user_id)
+
+    def update_tavern(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        """Compatibility wrapper for legacy router endpoints."""
+        return self.update_tavern_payload(tavern_id, data, user_id)
 
     def delete_tavern_payload(self, tavern_id: str, user_id: str = "") -> dict[str, str]:
         """Delete a tavern"""
@@ -377,6 +391,144 @@ class WebService:
         """Import a SillyTavern character card"""
         return self.tavern_service.import_character_card(tavern_id, card_data, user_id)
 
+    def list_tavern_backups(self, tavern_id: str = "") -> dict[str, Any]:
+        backup_dir = self.settings.output_root / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        files = sorted(backup_dir.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True)[:50]
+        backups = []
+        for file_path in files:
+            if tavern_id and tavern_id not in file_path.name:
+                continue
+            backups.append({
+                "name": file_path.name,
+                "path": str(file_path),
+                "size": file_path.stat().st_size,
+                "modified": file_path.stat().st_mtime,
+            })
+        return {"backups": backups}
+
+    def create_tavern_backup(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="Tavern not found")
+        if tavern.owner_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+
+        chat_sessions = self.tavern_store.list_chat_sessions(tavern_id, limit=None)
+        payload = {
+            "version": 1,
+            "created_at": _utc_now_iso(),
+            "tavern": tavern.to_dict_private(user_id),
+            "chat_sessions": [
+                {
+                    "visitor_id": session.get("visitor_id", ""),
+                    "character_id": session.get("character_id", ""),
+                    "messages": [
+                        message.to_dict() if hasattr(message, "to_dict") else message
+                        for message in session.get("messages", [])
+                    ],
+                }
+                for session in chat_sessions
+            ],
+        }
+
+        backup_dir = self.settings.output_root / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_name = f"backup_{_sanitize_snapshot_id(tavern_id)}_{_now_ms()}.json"
+        backup_file = backup_dir / backup_name
+        backup_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return {
+            "ok": True,
+            "backup_file": str(backup_file),
+            "backup_name": backup_name,
+            "tavern_id": tavern_id,
+            "chat_sessions": len(payload["chat_sessions"]),
+        }
+
+    def restore_tavern_backup(
+        self,
+        backup_path: str,
+        tavern_id: str = "",
+        user_id: str = "",
+        replace_chats: bool = True,
+    ) -> dict[str, Any]:
+        if not backup_path:
+            raise HTTPException(status_code=400, detail="backup_path is required")
+
+        backup_file = self._resolve_backup_file(backup_path)
+        try:
+            backup_data = json.loads(backup_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid backup file: {exc}") from exc
+
+        tavern_payload = backup_data.get("tavern", backup_data)
+        target_tavern_id = tavern_id or tavern_payload.get("id", "")
+        if not target_tavern_id:
+            raise HTTPException(status_code=400, detail="tavern_id is required")
+
+        existing = self.tavern_store.get_tavern(target_tavern_id)
+        if existing:
+            if existing.owner_id and existing.owner_id != user_id:
+                raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            self.tavern_service.update_tavern(target_tavern_id, tavern_payload, user_id)
+        else:
+            from fablemap.tavern import Tavern
+            restored_tavern = Tavern.from_dict({**tavern_payload, "id": target_tavern_id})
+            if restored_tavern.owner_id and restored_tavern.owner_id != user_id:
+                raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            restored_tavern.owner_id = restored_tavern.owner_id or user_id
+            self.tavern_store.create_tavern(restored_tavern)
+
+        if replace_chats:
+            self.tavern_store.delete_chat_history(target_tavern_id)
+
+        restored_messages = 0
+        from fablemap.tavern import ChatMessage
+        for session in backup_data.get("chat_sessions", []):
+            if not isinstance(session, dict):
+                continue
+            visitor_id = session.get("visitor_id", "")
+            character_id = session.get("character_id", "")
+            if not visitor_id or not character_id:
+                continue
+            messages = []
+            for message_data in session.get("messages", []):
+                if not isinstance(message_data, dict):
+                    continue
+                messages.append(ChatMessage.from_dict({
+                    **message_data,
+                    "tavern_id": target_tavern_id,
+                    "visitor_id": message_data.get("visitor_id") or visitor_id,
+                    "character_id": message_data.get("character_id") or character_id,
+                    "role": message_data.get("role") or "user",
+                    "content": message_data.get("content") or "",
+                    "timestamp": message_data.get("timestamp") or _utc_now_iso(),
+                }))
+            restored_messages += self.tavern_store.replace_chat_history(
+                target_tavern_id,
+                visitor_id,
+                character_id,
+                messages,
+            )
+
+        return {
+            "ok": True,
+            "tavern_id": target_tavern_id,
+            "restored_messages": restored_messages,
+        }
+
+    def _resolve_backup_file(self, backup_path: str) -> Path:
+        backup_dir = (self.settings.output_root / "backups").resolve()
+        candidate = Path(backup_path)
+        if not candidate.is_absolute():
+            candidate = backup_dir / candidate
+        candidate = candidate.resolve()
+        if not _is_within_root(candidate, backup_dir):
+            raise HTTPException(status_code=400, detail="backup_path must be inside backups directory")
+        if not candidate.exists() or not candidate.is_file():
+            raise HTTPException(status_code=404, detail="Backup file not found")
+        return candidate
+
     # Chat methods using tavern service
     def tavern_chat_payload(
         self,
@@ -386,7 +538,7 @@ class WebService:
         visitor_id: str,
     ) -> dict[str, Any]:
         """Send a chat message and get AI response"""
-        from .tavern import ChatMessage
+        from fablemap.tavern import ChatMessage as TavernChatMessage
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
@@ -399,22 +551,31 @@ class WebService:
 
         # Check if tavern is open
         if tavern.status != "open":
-            return {
-                "character_id": character_id,
-                "character_name": character.name,
-                "response": "此店暂时歇业中。",
-                "mood": "neutral",
-            }
+            return self._degraded_chat_payload(
+                character_id=character_id,
+                character_name=character.name,
+                response_text="此店暂时歇业中。",
+                reason="tavern_closed",
+                title="酒馆正在歇业",
+                message="店主暂时关闭了这间酒馆。等它重新营业后，就可以继续和角色对话。",
+                action="稍后再来，或请店主在控制台重新开放酒馆。",
+                tavern_status=tavern.status,
+            )
 
         # Get LLM config
         llm_config = self.tavern_store.get_llm_config(tavern_id)
         if not llm_config or not llm_config.is_configured():
-            return {
-                "character_id": character_id,
-                "character_name": character.name,
-                "response": "此店暂未配置 AI，无法回应。",
-                "mood": "neutral",
-            }
+            self._mark_tavern_closed(tavern)
+            return self._degraded_chat_payload(
+                character_id=character_id,
+                character_name=character.name,
+                response_text="此店暂未配置 AI，无法回应。",
+                reason="llm_not_configured",
+                title="AI 后端还没配置",
+                message="这间酒馆还没有可用的 API Key 或 Base URL。",
+                action="店主可以在 AI 配置里补全连接信息并测试通过。",
+                tavern_status="closed",
+            )
 
         # Build messages using PromptBuilder
         messages = self.tavern_store.get_chat_history(
@@ -427,7 +588,7 @@ class WebService:
             for m in messages
         ]
         prompt_messages_obj = [
-            ChatMessage(id=m.id, role=m.role, content=m.content)
+            PromptChatMessage(id=m.id, role=m.role, content=m.content)
             for m in messages
         ]
 
@@ -456,6 +617,8 @@ class WebService:
         prompt_result = builder.build(prompt_messages_obj, message)
 
         # Call LLM using the new llm_clients
+        response = None
+        degradation: dict[str, Any] | None = None
         try:
             llm_client_config = _tavern_llm_config_to_client(llm_config)
             llm_client = create_client(llm_client_config)
@@ -464,14 +627,30 @@ class WebService:
         except LLMError as e:
             logger.warning(f"LLM call failed: {e}, falling back to rule-based response")
             response_text = self._fallback_response(message, character.name)
+            self._mark_tavern_closed(tavern)
+            degradation = self._build_degradation(
+                reason="llm_error",
+                title="AI 后端暂时不可用",
+                message="刚才的模型调用失败，已切换为规则回应。",
+                action="店主可以在 AI 配置里测试连接，确认 API Key、模型名称或 Base URL。",
+                technical_detail=str(e),
+            )
         except Exception as e:
             logger.error(f"Unexpected error during LLM call: {e}")
             response_text = self._fallback_response(message, character.name)
+            self._mark_tavern_closed(tavern)
+            degradation = self._build_degradation(
+                reason="llm_unexpected_error",
+                title="AI 回应暂时中断",
+                message="酒馆后端遇到异常，已切换为规则回应。",
+                action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
+                technical_detail=str(e),
+            )
 
         # Save messages
         now = _utc_now_iso()
         self.tavern_store.add_chat_message(
-            ChatMessage(
+            TavernChatMessage(
                 id=f"msg_{uuid.uuid4().hex[:12]}",
                 tavern_id=tavern_id,
                 character_id=character_id,
@@ -482,7 +661,7 @@ class WebService:
             )
         )
         self.tavern_store.add_chat_message(
-            ChatMessage(
+            TavernChatMessage(
                 id=f"msg_{uuid.uuid4().hex[:12]}",
                 tavern_id=tavern_id,
                 character_id=character_id,
@@ -502,8 +681,70 @@ class WebService:
             "character_name": character.name,
             "response": response_text,
             "mood": "curious",
+            "degraded": bool(degradation),
+            "degradation": degradation,
+            "tavern_status": "closed" if degradation else tavern.status,
             "timestamp": _now_ms(),
         }
+
+    def _build_degradation(
+        self,
+        *,
+        reason: str,
+        title: str,
+        message: str,
+        action: str,
+        technical_detail: str = "",
+    ) -> dict[str, str]:
+        detail = (technical_detail or "").strip()
+        if len(detail) > 180:
+            detail = f"{detail[:177]}..."
+        return {
+            "reason": reason,
+            "title": title,
+            "message": message,
+            "action": action,
+            "technical_detail": detail,
+        }
+
+    def _degraded_chat_payload(
+        self,
+        *,
+        character_id: str,
+        character_name: str,
+        response_text: str,
+        reason: str,
+        title: str,
+        message: str,
+        action: str,
+        tavern_status: str,
+        technical_detail: str = "",
+    ) -> dict[str, Any]:
+        return {
+            "character_id": character_id,
+            "character_name": character_name,
+            "response": response_text,
+            "mood": "neutral",
+            "degraded": True,
+            "degradation": self._build_degradation(
+                reason=reason,
+                title=title,
+                message=message,
+                action=action,
+                technical_detail=technical_detail,
+            ),
+            "tavern_status": tavern_status,
+            "timestamp": _now_ms(),
+        }
+
+    def _mark_tavern_closed(self, tavern) -> None:
+        if not tavern or tavern.status == "closed":
+            return
+        tavern.status = "closed"
+        try:
+            self.tavern_store.update_tavern(tavern)
+        except Exception as exc:
+            logger.warning(f"Failed to mark tavern closed after LLM degradation: {exc}")
 
     def _count_tokens(
         self,
@@ -604,6 +845,44 @@ class WebService:
             return {"ok": False, "message": f"连接失败：{str(e)[:200]}"}
         except Exception as e:
             logger.error(f"test_llm failed: {e}")
+            return {"ok": False, "message": f"连接失败：{str(e)[:200]}"}
+
+    def test_llm_config_payload(
+        self,
+        llm_config_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Test LLM configuration directly, without requiring a tavern_id."""
+        from fablemap.llm_clients import create_client, LLMConfig, LLMError
+
+        try:
+            cfg = LLMConfig(
+                backend=llm_config_data.get("backend", "openai"),
+                model=llm_config_data.get("model", ""),
+                api_key=llm_config_data.get("api_key", ""),
+                base_url=llm_config_data.get("base_url", ""),
+                temperature=float(llm_config_data.get("temperature", 0.8)),
+                max_tokens=int(llm_config_data.get("max_tokens", 256)),
+                top_p=float(llm_config_data.get("top_p", 1.0)),
+            )
+
+            if not cfg.api_key and not cfg.base_url:
+                return {"ok": False, "message": "请提供 API Key 或 Base URL"}
+
+            client = create_client(cfg)
+            test_messages = [
+                {"role": "user", "content": "你好，请回复一个简单的问候。"},
+            ]
+            response = client.complete(test_messages)
+            return {
+                "ok": True,
+                "message": "连接成功",
+                "model": response.model,
+                "preview": response.content[:200],
+            }
+        except LLMError as e:
+            return {"ok": False, "message": f"连接失败：{str(e)[:200]}"}
+        except Exception as e:
+            logger.error(f"test_llm_config failed: {e}")
             return {"ok": False, "message": f"连接失败：{str(e)[:200]}"}
 
     def tavern_chat_history_payload(

@@ -65,7 +65,7 @@ class ParsedCharacter:
     depth_prompt: str = ""
     depth_prompt_effective: str = ""
     chat_ranking: bool = True
-   扫一扫: bool = False
+    扫一扫: bool = False
     extensions: dict[str, Any] = field(default_factory=dict)
 
     # WorldInfo / character_book

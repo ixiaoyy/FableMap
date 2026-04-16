@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { getDefaultTavernService, parseCharacterCard, extractCharacterCardFromPng, getTavernAccessLabel, getTavernAccessIcon } from './services/tavernService'
+import LLMConfigForm, { DEFAULT_MODELS, DEFAULT_BASE_URLS } from './LLMConfigForm'
+import CharacterEditor, { createEmptyCharacterDraft } from './CharacterEditor'
 
 /**
  * TavernCreatePanel — 创建酒馆的面板
@@ -23,19 +25,23 @@ export default function TavernCreatePanel({
     lon: initialLon,
     access: 'public',
     password: '',
-    // LLM 配置
-    llm_backend: 'openai',
-    llm_model: 'gpt-4o-mini',
-    llm_api_key: '',
-    llm_base_url: '',
-    temperature: 0.8,
     // 角色
     characters: [],
     scene_prompt: '',
   })
+  const [llmFormData, setLlmFormData] = useState({
+    backend: 'openai',
+    model: DEFAULT_MODELS['openai'],
+    api_key: '',
+    base_url: DEFAULT_BASE_URLS['openai'] || '',
+    temperature: 0.8,
+    max_tokens: 4096,
+    top_p: 0.95,
+  })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [step, setStep] = useState(1) // 1: 基本信息, 2: LLM配置, 3: 角色导入
+  const [editingCharacterIndex, setEditingCharacterIndex] = useState(null)
 
   const tavernService = getDefaultTavernService()
 
@@ -65,25 +71,29 @@ export default function TavernCreatePanel({
       }
 
       // 添加 LLM 配置（如果用户填写了）
-      if (form.llm_api_key) {
+      if (llmFormData.api_key) {
         payload.llm_config = {
-          backend: form.llm_backend,
-          model: form.llm_model,
-          api_key: form.llm_api_key,
-          base_url: form.llm_base_url,
-          temperature: parseFloat(form.temperature),
+          backend: llmFormData.backend,
+          model: llmFormData.model,
+          api_key: llmFormData.api_key,
+          base_url: llmFormData.base_url,
+          temperature: parseFloat(llmFormData.temperature),
+          max_tokens: parseInt(llmFormData.max_tokens),
+          top_p: parseFloat(llmFormData.top_p),
         }
       }
 
       const tavern = await tavernService.createTavern(payload)
 
       // 添加角色
+      const addedCharacters = []
       for (const char of form.characters) {
-        await tavernService.addCharacter(tavern.id, char)
+        const addedCharacter = await tavernService.addCharacter(tavern.id, char)
+        addedCharacters.push(addedCharacter)
       }
 
       if (onCreated) {
-        onCreated(tavern)
+        onCreated({ ...tavern, characters: addedCharacters })
       }
     } catch (err) {
       setError(`创建失败：${err.message}`)
@@ -127,6 +137,25 @@ export default function TavernCreatePanel({
       ...prev,
       characters: prev.characters.filter((_, i) => i !== index),
     }))
+    setEditingCharacterIndex((current) => {
+      if (current === index) return null
+      if (current > index) return current - 1
+      return current
+    })
+  }
+
+  function updateCharacter(index, characterData) {
+    setForm((prev) => ({
+      ...prev,
+      characters: prev.characters.map((character, currentIndex) => (
+        currentIndex === index ? { ...character, ...characterData } : character
+      )),
+    }))
+    setEditingCharacterIndex(null)
+  }
+
+  async function handleTestDirect(config) {
+    return tavernService.testLlmConfigDirect(config)
   }
 
   return (
@@ -252,71 +281,16 @@ export default function TavernCreatePanel({
           <div className="tavern-create-step">
             <div className="form-note">
               <p>配置 AI 后端，让你的酒馆 NPC 可以和访客聊天。</p>
-              <p>可以跳过此步骤，之后在编辑页面配置。</p>
+              <p>可以跳过此步骤，之后在酒馆列表的「AI 配置」按钮中配置。</p>
             </div>
 
-            <div className="form-group">
-              <label>AI 后端</label>
-              <select
-                value={form.llm_backend}
-                onChange={(e) => updateField('llm_backend', e.target.value)}
-              >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Claude (Anthropic)</option>
-                <option value="ollama">Ollama (本地)</option>
-                <option value="openrouter">OpenRouter</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>模型</label>
-              <input
-                type="text"
-                value={form.llm_model}
-                onChange={(e) => updateField('llm_model', e.target.value)}
-                placeholder={
-                  form.llm_backend === 'openai' ? 'gpt-4o-mini' :
-                  form.llm_backend === 'anthropic' ? 'claude-3-haiku-20240307' :
-                  form.llm_backend === 'ollama' ? 'llama3' :
-                  'google/gemini-pro'
-                }
-              />
-            </div>
-
-            <div className="form-group">
-              <label>API Key</label>
-              <input
-                type="password"
-                value={form.llm_api_key}
-                onChange={(e) => updateField('llm_api_key', e.target.value)}
-                placeholder="sk-..."
-              />
-            </div>
-
-            <div className="form-group">
-              <label>自定义 API 地址（可选）</label>
-              <input
-                type="text"
-                value={form.llm_base_url}
-                onChange={(e) => updateField('llm_base_url', e.target.value)}
-                placeholder="https://api.openai.com/v1"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>温度参数: {form.temperature}</label>
-              <input
-                type="range"
-                min="0.1"
-                max="2.0"
-                step="0.1"
-                value={form.temperature}
-                onChange={(e) => updateField('temperature', e.target.value)}
-              />
-              <span className="range-label">
-                {form.temperature < 0.5 ? '精确' : form.temperature < 1.0 ? '平衡' : '创意'}
-              </span>
-            </div>
+            <LLMConfigForm
+              value={llmFormData}
+              onChange={(cfg) => setLlmFormData(cfg)}
+              compact={false}
+              tavernId={null}
+              testDirect={handleTestDirect}
+            />
           </div>
         )}
 
@@ -344,17 +318,38 @@ export default function TavernCreatePanel({
                       <strong>{char.name}</strong>
                       <span className="muted">{char.description?.slice(0, 50)}...</span>
                     </div>
-                    <button
-                      type="button"
-                      className="btn-remove"
-                      onClick={() => removeCharacter(index)}
-                    >
-                      移除
-                    </button>
+                    <div className="character-item-actions">
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setEditingCharacterIndex(index)}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-remove"
+                        onClick={() => removeCharacter(index)}
+                      >
+                        移除
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+
+            {editingCharacterIndex != null && form.characters[editingCharacterIndex] ? (
+              <div className="character-editor-shell">
+                <CharacterEditor
+                  value={form.characters[editingCharacterIndex]}
+                  title={`编辑角色：${form.characters[editingCharacterIndex].name || '未命名角色'}`}
+                  submitLabel="保存到创建表单"
+                  onSave={(characterData) => updateCharacter(editingCharacterIndex, characterData)}
+                  onCancel={() => setEditingCharacterIndex(null)}
+                />
+              </div>
+            ) : null}
 
             {/* 手动添加角色 */}
             <details className="manual-add">
@@ -420,62 +415,19 @@ export default function TavernCreatePanel({
  * 手动添加角色的简单表单
  */
 function ManualCharacterAdder({ onAdd }) {
-  const [form, setForm] = useState({
-    name: '',
-    description: '',
-    personality: '',
-    scenario: '',
-    system_prompt: '',
-    first_mes: '',
-  })
-
-  function handleAdd() {
-    if (!form.name.trim()) return
-    onAdd({ ...form, tags: [] })
-    setForm({ name: '', description: '', personality: '', scenario: '', system_prompt: '', first_mes: '' })
-  }
+  const [draftSeed, setDraftSeed] = useState(() => createEmptyCharacterDraft())
 
   return (
     <div className="manual-char-form">
-      <div className="form-group">
-        <label>角色名称</label>
-        <input
-          type="text"
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          placeholder="例如：刘大爷"
-        />
-      </div>
-      <div className="form-group">
-        <label>角色描述</label>
-        <input
-          type="text"
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          placeholder="角色的外观和身份"
-        />
-      </div>
-      <div className="form-group">
-        <label>性格设定</label>
-        <input
-          type="text"
-          value={form.personality}
-          onChange={(e) => setForm((f) => ({ ...f, personality: e.target.value }))}
-          placeholder="例如：热情、健谈、有些唠叨"
-        />
-      </div>
-      <div className="form-group">
-        <label>开场白</label>
-        <input
-          type="text"
-          value={form.first_mes}
-          onChange={(e) => setForm((f) => ({ ...f, first_mes: e.target.value }))}
-          placeholder="角色说的第一句话"
-        />
-      </div>
-      <button type="button" className="btn-small" onClick={handleAdd}>
-        添加角色
-      </button>
+      <CharacterEditor
+        value={draftSeed}
+        title="新角色"
+        submitLabel="添加角色"
+        onSave={(charData) => {
+          onAdd(charData)
+          setDraftSeed(createEmptyCharacterDraft())
+        }}
+      />
     </div>
   )
 }

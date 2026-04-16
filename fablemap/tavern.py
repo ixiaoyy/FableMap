@@ -242,6 +242,7 @@ class WorldInfoEntry:
             "constant": self.constant,
             "depth": self.depth,
             "order": self.order,
+            "insertion_order": self.order,
             "probability": self.probability,
             "disable": self.disable,
         }
@@ -257,7 +258,7 @@ class WorldInfoEntry:
             selective=d.get("selective", True),
             constant=d.get("constant", False),
             depth=d.get("depth", 4),
-            order=d.get("order", 100),
+            order=d.get("order", d.get("insertion_order", 100)),
             probability=d.get("probability", 100),
             disable=d.get("disable", False),
         )
@@ -372,6 +373,9 @@ class Tavern:
     status: str = "closed"  # 'open' | 'closed'
     characters: list[TavernCharacter] = field(default_factory=list)
     world_info: list[WorldInfoEntry] = field(default_factory=list)
+    groups: list[dict[str, Any]] = field(default_factory=list)
+    bookmarks: list[dict[str, Any]] = field(default_factory=list)
+    chat_templates: list[dict[str, Any]] = field(default_factory=list)
     scene_prompt: str = ""
     llm_config: LLMConfig = field(default_factory=LLMConfig)
     visit_count: int = 0
@@ -391,6 +395,9 @@ class Tavern:
             "status": self.status,
             "characters": [c.to_dict() for c in self.characters],
             "world_info": [w.to_dict() for w in self.world_info],
+            "groups": deepcopy(self.groups),
+            "bookmarks": deepcopy(self.bookmarks),
+            "chat_templates": deepcopy(self.chat_templates),
             "scene_prompt": self.scene_prompt,
             "llm_config": self.llm_config.to_dict(),  # 不包含 api_key
             "visit_count": self.visit_count,
@@ -429,6 +436,9 @@ class Tavern:
             status=d.get("status", "closed"),
             characters=characters,
             world_info=world_info,
+            groups=_normalize_metadata_list(d.get("groups", [])),
+            bookmarks=_normalize_metadata_list(d.get("bookmarks", [])),
+            chat_templates=_normalize_metadata_list(d.get("chat_templates", [])),
             scene_prompt=d.get("scene_prompt", ""),
             llm_config=llm,
             visit_count=d.get("visit_count", 0),
@@ -525,6 +535,9 @@ class TavernStore:
         result = []
         for d in data.values():
             tavern = Tavern.from_dict(d)
+            token_usage = self.get_token_usage(tavern.id)
+            if token_usage:
+                tavern.llm_config.token_used = token_usage
             if tavern.access == "private":
                 if include_private and tavern.owner_id == owner_id:
                     result.append(tavern)
@@ -537,7 +550,11 @@ class TavernStore:
         d = data.get(tavern_id)
         if not d:
             return None
-        return Tavern.from_dict(d)
+        tavern = Tavern.from_dict(d)
+        token_usage = self.get_token_usage(tavern_id)
+        if token_usage:
+            tavern.llm_config.token_used = token_usage
+        return tavern
 
     def create_tavern(self, tavern: Tavern) -> Tavern:
         data = self._load_taverns()
@@ -621,6 +638,99 @@ class TavernStore:
         file_path = chat_dir / f"{visitor_id}_{character_id}.jsonl"
         if not file_path.exists():
             return []
+        messages = self._read_chat_file(file_path)
+        return messages[-limit:]
+
+    def list_chat_sessions(
+        self,
+        tavern_id: str,
+        visitor_id: str = "",
+        character_id: str = "",
+        limit: int | None = 50,
+    ) -> list[dict[str, Any]]:
+        chat_dir = self.root / "chat_history" / tavern_id
+        if not chat_dir.exists():
+            return []
+
+        sessions = []
+        for file_path in sorted(chat_dir.glob("*.jsonl")):
+            messages = self._read_chat_file(file_path)
+            if not messages:
+                continue
+            last_message = messages[-1]
+            session_visitor_id = last_message.visitor_id or messages[0].visitor_id
+            session_character_id = last_message.character_id or messages[0].character_id
+            if visitor_id and session_visitor_id != visitor_id:
+                continue
+            if character_id and session_character_id != character_id:
+                continue
+            visible_messages = messages if limit is None else messages[-limit:]
+            sessions.append({
+                "tavern_id": tavern_id,
+                "visitor_id": session_visitor_id,
+                "character_id": session_character_id,
+                "message_count": len(messages),
+                "messages": visible_messages,
+                "last_message": last_message,
+                "updated_at": last_message.timestamp,
+            })
+
+        sessions.sort(key=lambda session: session.get("updated_at", ""), reverse=True)
+        return sessions
+
+    def delete_chat_history(self, tavern_id: str, visitor_id: str = "", character_id: str = "") -> int:
+        chat_dir = self.root / "chat_history" / tavern_id
+        if not chat_dir.exists():
+            return 0
+
+        deleted = 0
+        for file_path in sorted(chat_dir.glob("*.jsonl")):
+            messages = self._read_chat_file(file_path)
+            if not messages:
+                continue
+            last_message = messages[-1]
+            session_visitor_id = last_message.visitor_id or messages[0].visitor_id
+            session_character_id = last_message.character_id or messages[0].character_id
+            if visitor_id and session_visitor_id != visitor_id:
+                continue
+            if character_id and session_character_id != character_id:
+                continue
+            try:
+                file_path.unlink()
+                deleted += 1
+            except OSError:
+                continue
+        return deleted
+
+    def replace_chat_history(
+        self,
+        tavern_id: str,
+        visitor_id: str,
+        character_id: str,
+        messages: list[ChatMessage],
+    ) -> int:
+        chat_dir = self.root / "chat_history" / tavern_id
+        chat_dir.mkdir(parents=True, exist_ok=True)
+        file_path = chat_dir / f"{visitor_id}_{character_id}.jsonl"
+
+        if not messages:
+            if file_path.exists():
+                file_path.unlink()
+            return 0
+
+        normalized_messages = []
+        for message in messages:
+            message.tavern_id = tavern_id
+            message.visitor_id = visitor_id
+            message.character_id = character_id
+            normalized_messages.append(message)
+
+        with file_path.open("w", encoding="utf-8") as fh:
+            for message in normalized_messages:
+                fh.write(json.dumps(message.to_dict(), ensure_ascii=False) + "\n")
+        return len(normalized_messages)
+
+    def _read_chat_file(self, file_path: Path) -> list[ChatMessage]:
         messages = []
         try:
             for line in file_path.read_text(encoding="utf-8").strip().split("\n"):
@@ -629,31 +739,51 @@ class TavernStore:
                     messages.append(ChatMessage.from_dict(d))
         except (json.JSONDecodeError, OSError):
             return []
-        return messages[-limit:]
+        return messages
 
     def add_chat_message(self, msg: ChatMessage) -> ChatMessage:
         chat_dir = self.root / "chat_history" / msg.tavern_id
         chat_dir.mkdir(parents=True, exist_ok=True)
         file_path = chat_dir / f"{msg.visitor_id}_{msg.character_id}.jsonl"
-        file_path.append_text(
-            json.dumps(msg.to_dict(), ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        with file_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(msg.to_dict(), ensure_ascii=False) + "\n")
         return msg
 
     # ── Token 统计 ──────────────────────
 
     def add_token_usage(self, tavern_id: str, tokens: int) -> None:
-        kv = self._load_keyvault()
-        if tavern_id not in kv:
+        try:
+            token_delta = int(tokens)
+        except (TypeError, ValueError):
             return
-        current = kv[tavern_id].get("token_used", 0)
-        kv[tavern_id]["token_used"] = current + tokens
-        self._save_keyvault(kv)
+        if token_delta <= 0:
+            return
+
+        kv = self._load_keyvault()
+        if tavern_id in kv:
+            current = int(kv[tavern_id].get("token_used", 0) or 0)
+            kv[tavern_id]["token_used"] = current + token_delta
+            self._save_keyvault(kv)
+
+        data = self._load_taverns()
+        if tavern_id in data:
+            llm_config = data[tavern_id].setdefault("llm_config", {})
+            current = int(llm_config.get("token_used", 0) or 0)
+            llm_config["token_used"] = current + token_delta
+            self._save_taverns(data)
 
     def get_token_usage(self, tavern_id: str) -> int:
         kv = self._load_keyvault()
-        return kv.get(tavern_id, {}).get("token_used", 0)
+        keyvault_usage = int(kv.get(tavern_id, {}).get("token_used", 0) or 0)
+
+        data = self._load_taverns()
+        tavern_usage = int(
+            data.get(tavern_id, {})
+            .get("llm_config", {})
+            .get("token_used", 0)
+            or 0
+        )
+        return max(keyvault_usage, tavern_usage)
 
 
 # ─────────────────────────────────────────
@@ -672,14 +802,22 @@ class TavernService:
         lon: float | None = None,
         radius: float = 5000,
         access: str | None = None,
+        status: str | None = None,
+        query: str = "",
         owner_id: str = "",
     ) -> list[dict[str, Any]]:
         """列出酒馆，支持位置过滤"""
-        taverns = self.store.list_taverns(owner_id=owner_id)
+        taverns = self.store.list_taverns(include_private=bool(owner_id), owner_id=owner_id)
+        normalized_query = (query or "").strip()
+        normalized_status = (status or "").strip()
 
         result = []
         for t in taverns:
             if access and t.access != access:
+                continue
+            if normalized_status and t.status != normalized_status:
+                continue
+            if normalized_query and not _matches_tavern_query(t, normalized_query):
                 continue
 
             tavern_dict = t.to_dict_public()
@@ -693,7 +831,7 @@ class TavernService:
             result.append(tavern_dict)
 
         # 按距离排序
-        result.sort(key=lambda x: x["_distance"] or float("inf"))
+        result.sort(key=lambda x: x["_distance"] if x["_distance"] is not None else float("inf"))
         return result
 
     def get_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
@@ -772,6 +910,21 @@ class TavernService:
             tavern.scene_prompt = data["scene_prompt"]
         if "status" in data:
             tavern.status = data["status"]
+        if "characters" in data and isinstance(data["characters"], list):
+            tavern.characters = [
+                _character_from_payload(character_data, tavern_id)
+                for character_data in data["characters"]
+                if isinstance(character_data, dict)
+            ]
+        if "world_info" in data and isinstance(data["world_info"], list):
+            tavern.world_info = [
+                _world_info_from_payload(entry_data, tavern_id)
+                for entry_data in data["world_info"]
+                if isinstance(entry_data, dict)
+            ]
+        for metadata_key in ("groups", "bookmarks", "chat_templates"):
+            if metadata_key in data:
+                setattr(tavern, metadata_key, _normalize_metadata_list(data[metadata_key]))
 
         # 处理密码更新
         if "password" in data:
@@ -784,7 +937,13 @@ class TavernService:
         # 更新 LLM 配置
         llm_data = data.get("llm_config")
         if llm_data:
-            llm_config = LLMConfig.from_dict(llm_data)
+            preserved_token_usage = self.store.get_token_usage(tavern_id) or tavern.llm_config.token_used
+            llm_config = LLMConfig.from_dict(
+                {
+                    **llm_data,
+                    "token_used": llm_data.get("token_used", preserved_token_usage),
+                }
+            )
             if llm_config.api_key:
                 self.store.save_llm_config(tavern_id, llm_config)
                 tavern.llm_config = llm_config
@@ -861,21 +1020,15 @@ class TavernService:
         if tavern.owner_id and tavern.owner_id != user_id:
             raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
 
-        char_id = data.get("id") or f"char_{uuid.uuid4().hex[:12]}"
-        character = TavernCharacter(
-            id=char_id,
-            tavern_id=tavern_id,
-            name=data.get("name", "未命名角色"),
-            description=data.get("description", ""),
-            personality=data.get("personality", ""),
-            scenario=data.get("scenario", ""),
-            system_prompt=data.get("system_prompt", ""),
-            first_mes=data.get("first_mes", ""),
-            mes_example=data.get("mes_example", ""),
-            alternate_greetings=data.get("alternate_greetings", []),
-            tags=data.get("tags", []),
-        )
+        character = _character_from_payload(data, tavern_id)
         tavern.characters.append(character)
+        world_info_payload = data.get("_world_info") or data.get("world_info")
+        if isinstance(world_info_payload, list):
+            tavern.world_info.extend(
+                _world_info_from_payload(entry_data, tavern_id)
+                for entry_data in world_info_payload
+                if isinstance(entry_data, dict)
+            )
         self.store.update_tavern(tavern)
         return character.to_dict()
 
@@ -892,10 +1045,18 @@ class TavernService:
             raise HTTPException(status_code=404, detail="角色不存在")
 
         # 更新字段
-        for key in ("name", "description", "personality", "scenario", "system_prompt",
-                    "first_mes", "mes_example", "alternate_greetings", "tags"):
+        for key in ("name", "description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
             if key in data:
                 setattr(char, key, data[key])
+        if "alternate_greetings" in data:
+            char.alternate_greetings = _normalize_string_list(data["alternate_greetings"])
+        if "tags" in data:
+            char.tags = _normalize_string_list(data["tags"], split_commas=True)
+        if "avatar" in data:
+            char.avatar = str(data.get("avatar") or "").strip()
+        if "sprites" in data:
+            sprite_map = _normalize_sprite_map(data["sprites"])
+            char.sprites = TavernSpriteSet(sprite_map) if sprite_map else None
 
         self.store.update_tavern(tavern)
         return char.to_dict()
@@ -957,6 +1118,8 @@ def _parse_sillytavern_card(card: dict[str, Any]) -> dict[str, Any]:
         "mes_example": data.get("mes_example", ""),
         "alternate_greetings": data.get("alternate_greetings", []),
         "tags": data.get("tags", []),
+        "avatar": data.get("avatar", ""),
+        "sprites": data.get("sprites", {}),
     }
 
     # 解析 character_book (WorldInfo)
@@ -992,6 +1155,72 @@ def _verify_password(password: str, hashed: str) -> bool:
     return _hash_password(password) == hashed
 
 
+def _normalize_string_list(value: Any, split_commas: bool = False) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if value is None:
+        return []
+
+    text = str(value)
+    if split_commas:
+        for separator in (",", "，", "\r", "\n"):
+            text = text.replace(separator, "\n")
+    return [item.strip() for item in text.splitlines() if item.strip()]
+
+
+def _normalize_sprite_map(value: Any) -> dict[str, str]:
+    if isinstance(value, TavernSpriteSet):
+        value = value.to_dict()
+    if not isinstance(value, dict):
+        return {}
+
+    sprite_map: dict[str, str] = {}
+    for key, url in value.items():
+        normalized_key = str(key).strip()
+        normalized_url = str(url or "").strip()
+        if normalized_key and normalized_url:
+            sprite_map[normalized_key] = normalized_url
+    return sprite_map
+
+
+def _normalize_metadata_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [deepcopy(item) for item in value if isinstance(item, dict)]
+
+
+def _character_from_payload(data: dict[str, Any], tavern_id: str) -> TavernCharacter:
+    sprite_map = _normalize_sprite_map(data.get("sprites", {}))
+    return TavernCharacter(
+        id=data.get("id") or f"char_{uuid.uuid4().hex[:12]}",
+        tavern_id=tavern_id,
+        name=data.get("name", "未命名角色"),
+        description=data.get("description", ""),
+        personality=data.get("personality", ""),
+        scenario=data.get("scenario", ""),
+        system_prompt=data.get("system_prompt", ""),
+        first_mes=data.get("first_mes", ""),
+        mes_example=data.get("mes_example", ""),
+        alternate_greetings=_normalize_string_list(data.get("alternate_greetings", [])),
+        tags=_normalize_string_list(data.get("tags", []), split_commas=True),
+        sprites=TavernSpriteSet(sprite_map) if sprite_map else None,
+        avatar=str(data.get("avatar") or "").strip(),
+    )
+
+
+def _world_info_from_payload(data: dict[str, Any], tavern_id: str) -> WorldInfoEntry:
+    entry = deepcopy(data)
+    entry["id"] = entry.get("id") or f"wi_{uuid.uuid4().hex[:12]}"
+    entry["tavern_id"] = tavern_id
+    if "order" not in entry and "insertion_order" in entry:
+        entry["order"] = entry.get("insertion_order")
+    if not isinstance(entry.get("keys"), list):
+        entry["keys"] = _normalize_string_list(entry.get("keys", []), split_commas=True)
+    if not isinstance(entry.get("keys_secondary"), list):
+        entry["keys_secondary"] = _normalize_string_list(entry.get("keys_secondary", []), split_commas=True)
+    return WorldInfoEntry.from_dict(entry)
+
+
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """计算两点间的 Haversine 距离（米）"""
     import math
@@ -1003,6 +1232,34 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> f
     a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
+
+
+def _matches_tavern_query(tavern: Tavern, query: str) -> bool:
+    """Match a tavern against visitor-facing discovery text."""
+    needle = query.casefold()
+    fields: list[Any] = [
+        tavern.id,
+        tavern.name,
+        tavern.description,
+        tavern.address,
+        tavern.access,
+        tavern.status,
+        tavern.scene_prompt,
+    ]
+
+    for character in tavern.characters:
+        fields.extend([
+            character.name,
+            character.description,
+            character.personality,
+            character.scenario,
+            *character.tags,
+        ])
+
+    for entry in tavern.world_info:
+        fields.extend([*entry.keys, *entry.keys_secondary, entry.content])
+
+    return any(needle in str(value).casefold() for value in fields if value)
 
 
 def _utc_now_iso() -> str:

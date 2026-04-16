@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createMapAdapter } from './mapAdapter'
+import { TAVERN_ACCESS_META, getTavernAccessDescription } from './services/tavernService'
 
 const SNAPSHOT_STORAGE_KEY = 'fablemap.activeMapSnapshot'
+const TAVERN_ACCESS_ORDER = ['public', 'password', 'private']
 
 function getSnapshotId(world) {
   const raw = world?.slice_id || world?.id || world?.source?.label || world?.source?.name || 'default'
@@ -68,6 +70,8 @@ export default function WorldMap({
   ghostTraces = [],
   visibleLayers,
   taverns = [],
+  totalTavernMatches = taverns.length,
+  tavernMarkerLimit = 0,
   onTavernClick,
   activeTavernId,
 }) {
@@ -96,6 +100,20 @@ export default function WorldMap({
 
   const center = useMemo(() => computeMapCenter(world, pois, landmarks), [world, pois, landmarks])
   const usingSnapshot = preferSnapshot && Boolean(snapshotManifest)
+  const hiddenTavernMarkerCount = Math.max(0, Number(totalTavernMatches || 0) - taverns.length)
+  const tavernAccessLegend = useMemo(() => {
+    const counts = taverns.reduce((acc, tavern) => {
+      const access = tavern?.access || 'unknown'
+      acc[access] = (acc[access] || 0) + 1
+      return acc
+    }, {})
+
+    return TAVERN_ACCESS_ORDER.map((access) => ({
+      access,
+      count: counts[access] || 0,
+      ...TAVERN_ACCESS_META[access],
+    }))
+  }, [taverns])
 
   // Initialize adapter
   useEffect(() => {
@@ -431,7 +449,7 @@ export default function WorldMap({
             {usingSnapshot ? '本地地图快照' : '地图已接入'}
           </strong>
           <span style={{ fontSize: 13, color: '#cbd5e1', display: 'block', marginBottom: 10 }}>
-            {originLabel || '当前地点'} · {pois.length} 个地点 · {landmarks.length} 个地标
+            {originLabel || '当前地点'} · {pois.length} 个地点 · {landmarks.length} 个地标 · 酒馆标记 {taverns.length} / {totalTavernMatches}
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
@@ -487,6 +505,30 @@ export default function WorldMap({
           <span style={{ fontSize: 12, color: '#93c5fd', display: 'block', marginTop: 6 }}>
             快照 ID · {snapshotId}
           </span>
+        </div>
+      </div>
+
+      <div className="tavern-map-legend" aria-label="酒馆入口分类">
+        <div className="tavern-map-legend__header">
+          <span>酒馆标记</span>
+          <strong>{taverns.length}/{totalTavernMatches}</strong>
+        </div>
+        {hiddenTavernMarkerCount ? (
+          <p className="tavern-map-legend__note">
+            已优先显示前 {tavernMarkerLimit || taverns.length} 间；继续搜索或筛选可缩小 marker 数量。
+          </p>
+        ) : null}
+        <div className="tavern-map-legend__items">
+          {tavernAccessLegend.map((item) => (
+            <div
+              key={item.access}
+              className={`tavern-map-legend__item tavern-access-chip tavern-access-chip--${item.tone}`}
+              title={getTavernAccessDescription(item.access)}
+            >
+              <span>{item.icon} {item.label}</span>
+              <strong>{item.count}</strong>
+            </div>
+          ))}
         </div>
       </div>
 

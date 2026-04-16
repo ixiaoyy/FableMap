@@ -4,6 +4,65 @@ const AMAP_KEY = import.meta.env.VITE_AMAP_KEY
 const AMAP_SECURITY_CODE = import.meta.env.VITE_AMAP_SECURITY_CODE
 const AMAP_SRC = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`
 
+const TAVERN_ACCESS_MARKER_THEME = {
+  public: {
+    icon: '🔓',
+    label: '公开',
+    accent: '#22c55e',
+    border: 'rgba(34,197,94,0.86)',
+    background: 'linear-gradient(135deg,rgba(5,46,22,0.94),rgba(22,101,52,0.96))',
+    activeBackground: 'linear-gradient(135deg,#15803d,#22c55e)',
+    text: '#dcfce7',
+    activeText: '#f0fdf4',
+    shadow: 'rgba(34,197,94,0.32)',
+  },
+  password: {
+    icon: '🔒',
+    label: '密令',
+    accent: '#f59e0b',
+    border: 'rgba(245,158,11,0.9)',
+    background: 'linear-gradient(135deg,rgba(69,26,3,0.94),rgba(146,64,14,0.96))',
+    activeBackground: 'linear-gradient(135deg,#b45309,#f59e0b)',
+    text: '#fef3c7',
+    activeText: '#fff7ed',
+    shadow: 'rgba(245,158,11,0.34)',
+  },
+  private: {
+    icon: '👤',
+    label: '私人',
+    accent: '#e11d48',
+    border: 'rgba(225,29,72,0.86)',
+    background: 'linear-gradient(135deg,rgba(76,5,25,0.94),rgba(159,18,57,0.96))',
+    activeBackground: 'linear-gradient(135deg,#be123c,#e11d48)',
+    text: '#ffe4e6',
+    activeText: '#fff1f2',
+    shadow: 'rgba(225,29,72,0.34)',
+  },
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function getTavernAccessMarkerTheme(access) {
+  return TAVERN_ACCESS_MARKER_THEME[access] || {
+    icon: '❓',
+    label: '未知',
+    accent: '#94a3b8',
+    border: 'rgba(148,163,184,0.72)',
+    background: 'linear-gradient(135deg,rgba(30,41,59,0.94),rgba(71,85,105,0.96))',
+    activeBackground: 'linear-gradient(135deg,#475569,#64748b)',
+    text: '#e2e8f0',
+    activeText: '#f8fafc',
+    shadow: 'rgba(148,163,184,0.28)',
+  }
+}
+
 function buildPoiMarkerContent({ poi, isActive, familiarity }) {
   const label = poi?.fantasy_name || poi?.real_name || poi?.id || '未命名地点'
   return `
@@ -55,28 +114,36 @@ function buildLandmarkMarkerContent(landmark) {
 }
 
 function buildTavernMarkerContent({ tavern, isActive }) {
-  const accessIcon = tavern?.access === 'password' ? '🔒' : tavern?.access === 'private' ? '👤' : '🔓'
+  const accessTheme = getTavernAccessMarkerTheme(tavern?.access)
   const statusColor = tavern?.status === 'open' ? '#22c55e' : '#ef4444'
-  const label = tavern?.name || '酒馆'
+  const label = escapeHtml(tavern?.name || '酒馆')
 
   return `
     <div style="
       display:flex;
       align-items:center;
-      gap:6px;
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid ${isActive ? 'rgba(251,191,36,0.9)' : 'rgba(217,119,6,0.5)'};
-      background:${isActive
-        ? 'linear-gradient(135deg,#d97706,#f59e0b)'
-        : 'linear-gradient(135deg,rgba(30,20,5,0.92),rgba(50,35,10,0.95))'};
-      color:${isActive ? '#fff' : '#fcd34d'};
-      box-shadow:0 8px 24px rgba(217,119,6,0.3);
+      gap:8px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid ${isActive ? accessTheme.accent : accessTheme.border};
+      background:${isActive ? accessTheme.activeBackground : accessTheme.background};
+      color:${isActive ? accessTheme.activeText : accessTheme.text};
+      box-shadow:0 8px 24px ${accessTheme.shadow};
       white-space:nowrap;
       font:600 12px/1.2 Segoe UI,Arial,sans-serif;
     ">
-      <span style="font-size:14px;">${accessIcon}</span>
-      <span style="font-weight:700;">${label}</span>
+      <span style="
+        display:inline-flex;
+        align-items:center;
+        gap:4px;
+        padding:4px 6px;
+        border-radius:6px;
+        background:rgba(255,255,255,0.16);
+        border:1px solid rgba(255,255,255,0.18);
+        font-size:11px;
+        font-weight:800;
+      ">${accessTheme.icon} ${accessTheme.label}</span>
+      <span style="font-weight:800;max-width:180px;overflow:hidden;text-overflow:ellipsis;">${label}</span>
       <span style="
         width:8px;
         height:8px;
@@ -363,8 +430,10 @@ export class AMapAdapter extends MapAdapter {
     if (this._map) {
       this._poiMarkers.forEach((m) => m.setMap(null))
       this._landmarkMarkers.forEach((m) => m.setMap(null))
+      this._tavernMarkers.forEach((m) => m.setMap(null))
       this._poiMarkers = []
       this._landmarkMarkers = []
+      this._tavernMarkers = []
       this._map.destroy()
       this._map = null
     }
