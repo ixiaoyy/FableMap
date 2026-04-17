@@ -26,7 +26,7 @@ export default function TavernDetailPanel({
     setEntering(true)
     setPasswordError('')
     try {
-      await tavernService.enterTavern(tavern.id, passwordToUse)
+      await tavernService.enterTavern(tavern.id, passwordToUse, visitorId)
       if (onEnter) onEnter()
     } catch (err) {
       if (err.message?.includes('密码')) {

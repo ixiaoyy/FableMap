@@ -591,7 +591,7 @@ export default function TavernChatRoom({
     if (!roomId || !selectedChar) return
     setLoading(true)
     try {
-      const result = await tavernService.getChatHistory(roomId, visitorId, selectedChar.id)
+      const result = await tavernService.getChatHistory(roomId, visitorId, selectedChar.id, visitorId)
       if (result.messages && result.messages.length > 0) {
         setMessages(result.messages.map((m) => ({
           id: m.id || `hist-${Date.now()}-${Math.random()}`,
@@ -637,7 +637,13 @@ export default function TavernChatRoom({
     setSending(true)
 
     try {
-      const result = await tavernService.sendChat(roomId, selectedChar.id, text.trim(), visitorId)
+      const result = await tavernService.sendChat(
+        roomId,
+        selectedChar.id,
+        text.trim(),
+        visitorId,
+        visitorNickname,
+      )
       const responseText = result.response || '...'
       const replyId = `msg-${Date.now()}-r`
       const isDegraded = Boolean(result.degraded)

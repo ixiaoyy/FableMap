@@ -320,6 +320,52 @@ class LLMConfig:
 
 
 @dataclass
+class VoiceConfig:
+    """语音配置 — TTS/STT 语音合成与识别配置"""
+    enabled: bool = False
+    tts_provider: str = "elevenlabs"
+    tts_voice: str = ""
+    tts_model: str = ""
+    tts_speed: float = 1.0
+    tts_language: str = ""
+    stt_provider: str = "browser"  # 'browser' | 'whisper' | 'fasterwhisper'
+    stt_model: str = "base"
+    auto_play: bool = False  # 自动播放 AI 语音
+
+    def to_dict(self) -> dict[str, Any]:
+        """公开版本，不包含敏感信息"""
+        return {
+            "enabled": self.enabled,
+            "tts_provider": self.tts_provider,
+            "tts_voice": self.tts_voice,
+            "tts_model": self.tts_model,
+            "tts_speed": self.tts_speed,
+            "tts_language": self.tts_language,
+            "stt_provider": self.stt_provider,
+            "stt_model": self.stt_model,
+            "auto_play": self.auto_play,
+        }
+
+    def to_dict_private(self) -> dict[str, Any]:
+        """私有版本"""
+        return self.to_dict()
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> VoiceConfig:
+        return cls(
+            enabled=d.get("enabled", False),
+            tts_provider=d.get("tts_provider", "elevenlabs"),
+            tts_voice=d.get("tts_voice", ""),
+            tts_model=d.get("tts_model", ""),
+            tts_speed=d.get("tts_speed", 1.0),
+            tts_language=d.get("tts_language", ""),
+            stt_provider=d.get("stt_provider", "browser"),
+            stt_model=d.get("stt_model", "base"),
+            auto_play=d.get("auto_play", False),
+        )
+
+
+@dataclass
 class VisitorState:
     """访客状态 — 访客与酒馆的关系"""
     visitor_id: str
@@ -378,6 +424,7 @@ class Tavern:
     chat_templates: list[dict[str, Any]] = field(default_factory=list)
     scene_prompt: str = ""
     llm_config: LLMConfig = field(default_factory=LLMConfig)
+    voice_config: VoiceConfig = field(default_factory=VoiceConfig)
     visit_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -400,6 +447,7 @@ class Tavern:
             "chat_templates": deepcopy(self.chat_templates),
             "scene_prompt": self.scene_prompt,
             "llm_config": self.llm_config.to_dict(),  # 不包含 api_key
+            "voice_config": self.voice_config.to_dict(),
             "visit_count": self.visit_count,
         }
 
@@ -408,6 +456,7 @@ class Tavern:
         result = self.to_dict()
         if user_id == self.owner_id:
             result["llm_config"] = self.llm_config.to_dict_private()
+            result["voice_config"] = self.voice_config.to_dict_private()
         return result
 
     def to_dict_public(self) -> dict[str, Any]:
@@ -415,6 +464,7 @@ class Tavern:
         result = self.to_dict()
         result.pop("password_hash", None)
         result["llm_config"] = self.llm_config.to_dict()
+        result.pop("voice_config", None)
         return result
 
     @classmethod
@@ -422,6 +472,7 @@ class Tavern:
         characters = [TavernCharacter.from_dict(c) for c in d.get("characters", [])]
         world_info = [WorldInfoEntry.from_dict(w) for w in d.get("world_info", [])]
         llm = LLMConfig.from_dict(d.get("llm_config", {}))
+        voice = VoiceConfig.from_dict(d.get("voice_config", {}))
         return cls(
             id=d["id"],
             name=d["name"],
@@ -441,6 +492,7 @@ class Tavern:
             chat_templates=_normalize_metadata_list(d.get("chat_templates", [])),
             scene_prompt=d.get("scene_prompt", ""),
             llm_config=llm,
+            voice_config=voice,
             visit_count=d.get("visit_count", 0),
         )
 
@@ -455,6 +507,7 @@ class ChatMessage:
     role: str  # 'user' | 'assistant'
     content: str
     timestamp: str
+    visitor_name: str = ""
     token_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -463,6 +516,7 @@ class ChatMessage:
             "tavern_id": self.tavern_id,
             "character_id": self.character_id,
             "visitor_id": self.visitor_id,
+            "visitor_name": self.visitor_name,
             "role": self.role,
             "content": self.content,
             "timestamp": self.timestamp,
@@ -476,6 +530,7 @@ class ChatMessage:
             tavern_id=d.get("tavern_id", ""),
             character_id=d.get("character_id", ""),
             visitor_id=d.get("visitor_id", ""),
+            visitor_name=d.get("visitor_name", ""),
             role=d["role"],
             content=d["content"],
             timestamp=d.get("timestamp", ""),
@@ -568,7 +623,17 @@ class TavernStore:
         data = self._load_taverns()
         if tavern.id not in data:
             raise HTTPException(status_code=404, detail="酒馆不存在")
-        data[tavern.id] = tavern.to_dict()
+        existing = data.get(tavern.id, {})
+        updated = tavern.to_dict()
+        # Preserve private extension buckets that are stored alongside the tavern
+        # document but are not part of Tavern.to_dict(). Without this, simple
+        # tavern metadata updates (e.g. visit_count after enter_tavern) can erase
+        # VisitorState records.
+        if isinstance(existing, dict):
+            for key, value in existing.items():
+                if key.startswith("_") and key not in updated:
+                    updated[key] = value
+        data[tavern.id] = updated
         self._save_taverns(data)
         return tavern
 
@@ -605,6 +670,25 @@ class TavernStore:
             return None
         return LLMConfig.from_dict(d)
 
+    # ── Voice Config ───────────────────────
+
+    def save_voice_config(self, tavern_id: str, config: VoiceConfig) -> None:
+        """保存语音配置（存储在酒馆数据中）"""
+        data = self._load_taverns()
+        if tavern_id not in data:
+            return
+        data[tavern_id]["voice_config"] = config.to_dict()
+        self._save_taverns(data)
+
+    def get_voice_config(self, tavern_id: str) -> VoiceConfig | None:
+        """获取语音配置"""
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        vc = tavern_data.get("voice_config", {})
+        if not vc:
+            return None
+        return VoiceConfig.from_dict(vc)
+
     # ── 访客状态 ────────────────────────
 
     def get_visitor_state(self, tavern_id: str, visitor_id: str) -> VisitorState | None:
@@ -615,6 +699,24 @@ class TavernStore:
         if not v:
             return None
         return VisitorState.from_dict(v)
+
+    def list_visitor_states(self, tavern_id: str) -> list[VisitorState]:
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        visitors = tavern_data.get("_visitors", {})
+        if not isinstance(visitors, dict):
+            return []
+
+        states = []
+        for value in visitors.values():
+            if not isinstance(value, dict):
+                continue
+            try:
+                states.append(VisitorState.from_dict(value))
+            except (KeyError, TypeError, ValueError):
+                continue
+        states.sort(key=lambda state: state.last_visit or "", reverse=True)
+        return states
 
     def update_visitor_state(self, tavern_id: str, state: VisitorState) -> None:
         data = self._load_taverns()
@@ -659,6 +761,7 @@ class TavernStore:
                 continue
             last_message = messages[-1]
             session_visitor_id = last_message.visitor_id or messages[0].visitor_id
+            session_visitor_name = last_message.visitor_name or messages[0].visitor_name
             session_character_id = last_message.character_id or messages[0].character_id
             if visitor_id and session_visitor_id != visitor_id:
                 continue
@@ -668,6 +771,7 @@ class TavernStore:
             sessions.append({
                 "tavern_id": tavern_id,
                 "visitor_id": session_visitor_id,
+                "visitor_name": session_visitor_name,
                 "character_id": session_character_id,
                 "message_count": len(messages),
                 "messages": visible_messages,
@@ -789,6 +893,15 @@ class TavernStore:
 # ─────────────────────────────────────────
 # 服务层
 # ─────────────────────────────────────────
+
+def _visitor_relationship_stage(strength: float, visit_count: int) -> str:
+    if strength >= 0.75 or visit_count >= 8:
+        return "confidant"
+    if strength >= 0.45 or visit_count >= 4:
+        return "regular"
+    if strength >= 0.15 or visit_count >= 2:
+        return "acquaintance"
+    return "stranger"
 
 class TavernService:
     """酒馆服务 — 业务逻辑"""
@@ -952,6 +1065,13 @@ class TavernService:
                 else:
                     tavern.status = "closed"
 
+        # 更新语音配置
+        voice_data = data.get("voice_config")
+        if voice_data:
+            voice_config = VoiceConfig.from_dict(voice_data)
+            tavern.voice_config = voice_config
+            self.store.save_voice_config(tavern_id, voice_config)
+
         tavern = self.store.update_tavern(tavern)
         return tavern.to_dict_private(user_id)
 
@@ -983,17 +1103,23 @@ class TavernService:
         if tavern.access == "private" and tavern.owner_id != user_id:
             raise HTTPException(status_code=403, detail="此酒馆是私人的")
 
-        # 更新访客状态
+        # 更新访客状态。有明确访客身份时才写入，避免匿名空 ID 污染回访面板。
         now = _utc_now_iso()
-        visitor_state = self.store.get_visitor_state(tavern_id, user_id) or VisitorState(
-            visitor_id=user_id,
-            tavern_id=tavern_id,
-        )
-        visitor_state.visit_count += 1
-        if not visitor_state.first_visit:
-            visitor_state.first_visit = now
-        visitor_state.last_visit = now
-        self.store.update_visitor_state(tavern_id, visitor_state)
+        visitor_state = None
+        if user_id:
+            visitor_state = self.store.get_visitor_state(tavern_id, user_id) or VisitorState(
+                visitor_id=user_id,
+                tavern_id=tavern_id,
+            )
+            visitor_state.visit_count += 1
+            if not visitor_state.first_visit:
+                visitor_state.first_visit = now
+            visitor_state.last_visit = now
+            visitor_state.relationship_stage = _visitor_relationship_stage(
+                visitor_state.relationship_strength,
+                visitor_state.visit_count,
+            )
+            self.store.update_visitor_state(tavern_id, visitor_state)
 
         # 更新酒馆访问计数
         tavern.visit_count += 1
@@ -1003,7 +1129,7 @@ class TavernService:
             "ok": True,
             "tavern_id": tavern_id,
             "visitor_id": user_id,
-            "visit_count": visitor_state.visit_count,
+            "visit_count": visitor_state.visit_count if visitor_state else 0,
             "status": tavern.status,
             "characters": [c.to_dict() for c in tavern.characters],
             "scene_prompt": tavern.scene_prompt,

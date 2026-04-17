@@ -36,7 +36,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   // 拉取最新角色列表
   async function refreshCharacters() {
     try {
-      const result = await tavernService.getCharacters(tavern.id)
+      const result = await tavernService.getCharacters(tavern.id, ownerId)
       const list = result?.characters || []
       setCharacters(list)
       if (onCharactersChanged) onCharactersChanged(list)
@@ -78,9 +78,9 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
     try {
       let saved
       if (editingChar === 'new') {
-        saved = await tavernService.addCharacter(tavern.id, payload)
+        saved = await tavernService.addCharacter(tavern.id, payload, ownerId)
       } else {
-        saved = await tavernService.updateCharacter(tavern.id, editingChar.id, payload)
+        saved = await tavernService.updateCharacter(tavern.id, editingChar.id, payload, ownerId)
       }
       const updated = editingChar === 'new'
         ? [...characters, saved]
@@ -100,7 +100,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   async function handleDelete(charId) {
     setDeleting(true)
     try {
-      await tavernService.deleteCharacter(tavern.id, charId)
+      await tavernService.deleteCharacter(tavern.id, charId, ownerId)
       const updated = characters.filter((c) => c.id !== charId)
       setCharacters(updated)
       if (onCharactersChanged) onCharactersChanged(updated)
@@ -126,7 +126,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
         const text = await file.text()
         cardData = parseCharacterCard(JSON.parse(text))
       }
-      const saved = await tavernService.importCharacterCard(tavern.id, cardData)
+      const saved = await tavernService.importCharacterCard(tavern.id, cardData, ownerId)
       const updated = [...characters, saved]
       setCharacters(updated)
       if (onCharactersChanged) onCharactersChanged(updated)

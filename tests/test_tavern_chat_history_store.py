@@ -48,6 +48,29 @@ def test_chat_sessions_are_listed_by_visitor_and_character():
         assert character_sessions[0]["visitor_id"] == "visitor_b"
 
 
+def test_chat_message_preserves_visitor_display_name():
+    with TemporaryDirectory() as tmpdir:
+        store = TavernStore(Path(tmpdir))
+        tavern_id = "tavern_chat_visitor_name"
+
+        message = _message(
+            tavern_id,
+            "visitor_named",
+            "char_keeper",
+            "user",
+            "Call me by name.",
+            "2026-04-17T10:30:00Z",
+        )
+        message.visitor_name = "Mina"
+        store.add_chat_message(message)
+
+        history = store.get_chat_history(tavern_id, "visitor_named", "char_keeper")
+        assert history[0].visitor_name == "Mina"
+
+        sessions = store.list_chat_sessions(tavern_id)
+        assert sessions[0]["visitor_name"] == "Mina"
+
+
 def test_delete_chat_history_removes_matching_jsonl_files_only():
     with TemporaryDirectory() as tmpdir:
         store = TavernStore(Path(tmpdir))

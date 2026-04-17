@@ -76,7 +76,7 @@ def describe_image(
             return f"[Image: {image_source}]"
     else:
         # Assume base64
-        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_source}"})
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_source}"}})
 
     llm_cfg = LLMConfig(
         backend=provider,

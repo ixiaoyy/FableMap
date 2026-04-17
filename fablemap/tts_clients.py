@@ -13,6 +13,7 @@ Each provider implements the same interface: synthesize(text, voice, **options) 
 from __future__ import annotations
 
 import base64
+import asyncio
 import json
 import logging
 import os
@@ -444,14 +445,19 @@ class EdgeTTSProvider(TTSProvider):
             import edge_tts
 
             communicate = edge_tts.Communicate(text, voice, rate=rate_str, pitch=pitch_str)
-            audio = b""
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio += chunk["data"]
+            audio = asyncio.run(self._collect_edge_tts_audio(communicate))
             return TTSResponse(audio=audio, provider="edge_tts", voice_id=voice)
         except ImportError:
             # Fallback: use edge-tts.shutoyam.repl.co proxy
             return self._synthesize_proxy(text, voice, rate_str, pitch_str)
+
+    async def _collect_edge_tts_audio(self, communicate) -> bytes:
+        """Collect audio chunks from edge-tts' async stream API."""
+        audio = b""
+        async for chunk in communicate.stream():
+            if chunk.get("type") == "audio":
+                audio += chunk.get("data", b"")
+        return audio
 
     def _synthesize_proxy(self, text: str, voice: str, rate: str, pitch: str) -> TTSResponse:
         """Use edge-tts proxy service."""

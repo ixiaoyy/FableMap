@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from fastapi import APIRouter, Body, Form, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -189,6 +189,12 @@ def create_api_router(service: WebService) -> APIRouter:
         user_id = _get_user_id(request)
         return service.enter_tavern_payload(tavern_id, password, user_id)
 
+    @router.get("/api/taverns/{tavern_id}/visitors")
+    def list_tavern_visitors(request: Request, tavern_id: str) -> dict:
+        """List visitor states for a tavern (owner view)."""
+        user_id = _get_user_id(request)
+        return service.list_tavern_visitors_payload(tavern_id, user_id)
+
     # ─── Character Routes ────────────────────────────────────────────────
 
     @router.get("/api/taverns/{tavern_id}/characters")
@@ -230,9 +236,11 @@ def create_api_router(service: WebService) -> APIRouter:
         tavern_id: str,
         visitor_id: str,
         character_id: str | None = None,
+        limit: int = 50,
     ) -> dict:
         """Get chat history for a tavern"""
-        return service.tavern_chat_history_payload(tavern_id, visitor_id, character_id)
+        user_id = _get_user_id(request)
+        return service.tavern_chat_history_payload(tavern_id, visitor_id, character_id, user_id, limit)
 
     @router.post("/api/taverns/{tavern_id}/chat")
     def post_tavern_chat(
@@ -241,9 +249,11 @@ def create_api_router(service: WebService) -> APIRouter:
         character_id: str = Body(...),
         message: str = Body(...),
         visitor_id: str = Body(...),
+        visitor_name: str = Body(""),
     ) -> dict:
         """Send a chat message and get AI response"""
-        return service.tavern_chat_payload(tavern_id, character_id, message, visitor_id)
+        user_id = _get_user_id(request)
+        return service.tavern_chat_payload(tavern_id, character_id, message, visitor_id, visitor_name, user_id)
 
     @router.post("/api/taverns/{tavern_id}/test-llm")
     def test_llm(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
@@ -480,6 +490,38 @@ Do not explain. Just output the single emotion word."""
         """List all available TTS providers."""
         from fablemap.tts_clients import list_available_providers
         return {"providers": list_available_providers()}
+
+    # ─── Tavern Voice Routes ─────────────────────────────────────────────────
+
+    @router.get("/api/taverns/{tavern_id}/voice")
+    def get_voice_config(request: Request, tavern_id: str) -> dict:
+        """Get voice config for a tavern."""
+        user_id = _get_user_id(request)
+        return service.get_voice_config_payload(tavern_id, user_id)
+
+    @router.put("/api/taverns/{tavern_id}/voice")
+    def save_voice_config(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
+        """Save voice config (TTS/STT settings)."""
+        user_id = _get_user_id(request)
+        return service.save_voice_config_payload(tavern_id, data, user_id)
+
+    @router.post("/api/taverns/{tavern_id}/tts")
+    def synthesize_voice(request: Request, tavern_id: str, data: dict = Body(...)) -> FileResponse:
+        """Synthesize speech using the tavern's TTS config."""
+        text = data.get("text", "")
+        character_id = data.get("character_id", "")
+        if not text:
+            return JSONResponse(status_code=400, content={"error": "No text provided"})
+
+        user_id = _get_user_id(request)
+        audio_bytes = service.synthesize_voice_payload(tavern_id, text, character_id, user_id)
+
+        import tempfile, os
+        suffix = ".mp3"
+        fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+        os.write(fd, audio_bytes)
+        os.close(fd)
+        return FileResponse(tmp_path, media_type="audio/mpeg", filename="speech.mp3")
 
     # ─── Image Generation Routes ─────────────────────────────────────────────
 
@@ -750,7 +792,6 @@ Do not explain. Just output the single emotion word."""
     def list_chats(request: Request, tavern_id: str = "", character_id: str = "", visitor_id: str = "") -> dict:
         """List all chat sessions."""
         user_id = _get_user_id(request)
-        resolved_visitor_id = visitor_id or user_id
 
         def _chat_row(session: dict, tavern_data: dict) -> dict:
             character = next(
@@ -759,21 +800,33 @@ Do not explain. Just output the single emotion word."""
             )
             last_message = session.get("last_message")
             last_payload = last_message.to_dict() if hasattr(last_message, "to_dict") else (last_message or {})
+            visitor_name = session.get("visitor_name") or last_payload.get("visitor_name", "")
             return {
                 "tavern_id": session.get("tavern_id", tavern_data.get("id", "")),
+                "tavern_name": tavern_data.get("name", ""),
                 "visitor_id": session.get("visitor_id", ""),
+                "visitor_name": visitor_name,
                 "character_id": session.get("character_id", ""),
                 "character_name": character.get("name", ""),
                 "message_count": session.get("message_count", 0),
                 "last_message": str(last_payload.get("content", ""))[:100],
+                "last_role": last_payload.get("role", ""),
                 "updated_at": last_payload.get("timestamp", ""),
             }
+
+        def _visitor_filter_for(tavern_data: dict) -> str:
+            if visitor_id:
+                _ensure_chat_scope(tavern_data, user_id, visitor_id)
+                return visitor_id
+            if user_id and tavern_data.get("owner_id") == user_id:
+                return ""  # owner view: all visitor sessions for this tavern
+            return user_id or "__anonymous_without_visitor_id__"
 
         if tavern_id:
             tavern = service.get_tavern(tavern_id, user_id)
             sessions = service.tavern_store.list_chat_sessions(
                 tavern_id,
-                visitor_id=resolved_visitor_id,
+                visitor_id=_visitor_filter_for(tavern),
                 character_id=character_id,
             )
             chats = [_chat_row(session, tavern) for session in sessions]
@@ -783,9 +836,15 @@ Do not explain. Just output the single emotion word."""
         all_chats = []
         for t in all_taverns:
             t_data = service.get_tavern(t["id"], user_id)
+            if visitor_id:
+                # Owner global filter should only scan owned taverns; visitors can scan their own sessions.
+                if visitor_id != user_id and t_data.get("owner_id") != user_id:
+                    continue
+            elif t_data.get("owner_id") != user_id:
+                continue
             sessions = service.tavern_store.list_chat_sessions(
                 t["id"],
-                visitor_id=resolved_visitor_id,
+                visitor_id=_visitor_filter_for(t_data),
                 character_id=character_id,
             )
             all_chats.extend(_chat_row(session, t_data) for session in sessions)
@@ -805,13 +864,27 @@ Do not explain. Just output the single emotion word."""
 
         from fablemap.tavern import ChatMessage
         resolved_visitor_id = data.get("visitor_id", "") or user_id
+        if resolved_visitor_id:
+            _ensure_chat_scope(
+                tavern,
+                user_id,
+                resolved_visitor_id,
+                legacy_body_visitor_allowed=True,
+            )
         for msg_data in messages:
+            message_visitor_id = msg_data.get("visitor_id") or resolved_visitor_id
+            _ensure_chat_scope(
+                tavern,
+                user_id,
+                message_visitor_id,
+                legacy_body_visitor_allowed=True,
+            )
             msg = ChatMessage.from_dict({
                 **msg_data,
                 "id": msg_data.get("id") or f"msg_{uuid.uuid4().hex[:12]}",
                 "tavern_id": msg_data.get("tavern_id") or tavern_id,
                 "character_id": msg_data.get("character_id") or character_id,
-                "visitor_id": msg_data.get("visitor_id") or resolved_visitor_id,
+                "visitor_id": message_visitor_id,
                 "role": msg_data.get("role") or "user",
                 "content": msg_data.get("content") or "",
                 "timestamp": msg_data.get("timestamp") or _utc_timestamp(),
@@ -824,10 +897,13 @@ Do not explain. Just output the single emotion word."""
     def get_chat(request: Request, tavern_id: str, character_id: str, visitor_id: str = "") -> dict:
         """Get chat history for a character."""
         user_id = _get_user_id(request)
-        resolved_visitor_id = visitor_id or user_id
+        tavern = service.get_tavern(tavern_id, user_id)
+        resolved_visitor_id = visitor_id or ("" if _is_tavern_owner_payload(tavern, user_id) else user_id)
         if resolved_visitor_id:
+            _ensure_chat_scope(tavern, user_id, resolved_visitor_id)
             history = service.tavern_store.get_chat_history(tavern_id, resolved_visitor_id, character_id)
         else:
+            _ensure_chat_scope(tavern, user_id, "", allow_owner_all=True)
             sessions = service.tavern_store.list_chat_sessions(tavern_id, character_id=character_id)
             history = [message for session in sessions for message in session.get("messages", [])]
         return {"messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in history]}
@@ -840,9 +916,11 @@ Do not explain. Just output the single emotion word."""
         if tavern is None:
             return JSONResponse(status_code=404, content={"error": "Tavern not found"})
 
+        resolved_visitor_id = visitor_id or ("" if _is_tavern_owner_payload(tavern, user_id) else user_id)
+        _ensure_chat_scope(tavern, user_id, resolved_visitor_id, allow_owner_all=True)
         deleted = service.tavern_store.delete_chat_history(
             tavern_id,
-            visitor_id=visitor_id or user_id,
+            visitor_id=resolved_visitor_id,
             character_id=character_id,
         )
         return {"ok": True, "deleted": deleted}
@@ -861,14 +939,28 @@ Do not explain. Just output the single emotion word."""
 
         from fablemap.tavern import ChatMessage
         resolved_visitor_id = data.get("visitor_id", "") or user_id
+        if resolved_visitor_id:
+            _ensure_chat_scope(
+                tavern,
+                user_id,
+                resolved_visitor_id,
+                legacy_body_visitor_allowed=True,
+            )
         count = 0
         for msg_data in messages:
+            message_visitor_id = msg_data.get("visitor_id") or resolved_visitor_id
+            _ensure_chat_scope(
+                tavern,
+                user_id,
+                message_visitor_id,
+                legacy_body_visitor_allowed=True,
+            )
             msg = ChatMessage.from_dict({
                 **msg_data,
                 "id": msg_data.get("id") or f"msg_{uuid.uuid4().hex[:12]}",
                 "tavern_id": msg_data.get("tavern_id") or tavern_id,
                 "character_id": msg_data.get("character_id") or character_id,
-                "visitor_id": msg_data.get("visitor_id") or resolved_visitor_id,
+                "visitor_id": message_visitor_id,
                 "role": msg_data.get("role") or "user",
                 "content": msg_data.get("content") or "",
                 "timestamp": msg_data.get("timestamp") or _utc_timestamp(),
@@ -883,23 +975,46 @@ Do not explain. Just output the single emotion word."""
         """Export chat history."""
         tavern_id = data.get("tavern_id", "")
         character_id = data.get("character_id", "")
-        visitor_id = data.get("visitor_id", "") or _get_user_id(request)
+        user_id = _get_user_id(request)
+        tavern = service.get_tavern(tavern_id, user_id)
+        visitor_id = data.get("visitor_id", "") or ("" if _is_tavern_owner_payload(tavern, user_id) else user_id)
         format_type = data.get("format", "json")
 
         if visitor_id:
+            _ensure_chat_scope(tavern, user_id, visitor_id)
             history = service.tavern_store.get_chat_history(tavern_id, visitor_id, character_id)
         else:
+            _ensure_chat_scope(tavern, user_id, "", allow_owner_all=True)
             sessions = service.tavern_store.list_chat_sessions(tavern_id, character_id=character_id)
             history = [message for session in sessions for message in session.get("messages", [])]
         if format_type == "json":
             return {"messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in history]}
         elif format_type == "text":
+            character = next(
+                (char for char in tavern.get("characters", []) if char.get("id") == character_id),
+                {},
+            )
+            visitor_label = ""
+            for m in reversed(history):
+                d = m.to_dict() if hasattr(m, "to_dict") else m
+                visitor_label = d.get("visitor_name", "") or visitor_label
+                if visitor_label:
+                    break
+            visitor_label = visitor_label or (visitor_id[:16] if visitor_id else "访客")
             lines = []
             for m in history:
                 d = m.to_dict() if hasattr(m, "to_dict") else m
                 role = d.get("role", "?")
                 content = d.get("content", "")
-                lines.append(f"{role}: {content}")
+                if role == "assistant":
+                    speaker = character.get("name") or "NPC"
+                elif role == "system":
+                    speaker = "系统"
+                else:
+                    speaker = d.get("visitor_name") or visitor_label
+                timestamp = d.get("timestamp", "")
+                prefix = f"[{timestamp}] " if timestamp else ""
+                lines.append(f"{prefix}{speaker}: {content}")
             return {"text": "\n".join(lines)}
         return JSONResponse(status_code=400, content={"error": "Unknown format"})
 
@@ -908,21 +1023,42 @@ Do not explain. Just output the single emotion word."""
         """Search chat history."""
         tavern_id = data.get("tavern_id", "")
         character_id = data.get("character_id", "")
-        visitor_id = data.get("visitor_id", "") or _get_user_id(request)
-        query = data.get("query", "").lower()
+        user_id = _get_user_id(request)
+        tavern = service.get_tavern(tavern_id, user_id)
+        visitor_id = data.get("visitor_id", "") or ("" if _is_tavern_owner_payload(tavern, user_id) else user_id)
+        raw_query = data.get("query", "")
+        query = str(raw_query or "").strip().lower()
+        try:
+            max_results = int(data.get("limit", 50))
+        except (TypeError, ValueError):
+            max_results = 50
+        max_results = max(1, min(max_results, 200))
+
+        if not query:
+            return {"results": [], "count": 0, "limit": max_results, "truncated": False}
 
         if visitor_id:
+            _ensure_chat_scope(tavern, user_id, visitor_id)
             history = service.tavern_store.get_chat_history(tavern_id, visitor_id, character_id)
         else:
+            _ensure_chat_scope(tavern, user_id, "", allow_owner_all=True)
             sessions = service.tavern_store.list_chat_sessions(tavern_id, character_id=character_id)
             history = [message for session in sessions for message in session.get("messages", [])]
         results = []
+        match_count = 0
         for i, m in enumerate(history):
             d = m.to_dict() if hasattr(m, "to_dict") else m
             content = str(d.get("content", "")).lower()
             if query in content:
-                results.append({"index": i, "message": d})
-        return {"results": results, "count": len(results)}
+                match_count += 1
+                if len(results) < max_results:
+                    results.append({"index": i, "message": d})
+        return {
+            "results": results,
+            "count": match_count,
+            "limit": max_results,
+            "truncated": match_count > len(results),
+        }
 
     # ─── Bookmarks API ─────────────────────────────────────────────────────
     @router.get("/api/bookmarks")
@@ -1222,17 +1358,22 @@ Do not explain. Just output the single emotion word."""
         """Bulk edit messages in a chat history."""
         tavern_id = data.get("tavern_id", "")
         character_id = data.get("character_id", "")
-        visitor_id = data.get("visitor_id", "") or _get_user_id(request)
+        user_id = _get_user_id(request)
         operations = data.get("operations", [])
 
         if not tavern_id or not character_id:
             return JSONResponse(status_code=400, content={"error": "tavern_id and character_id are required"})
 
+        tavern = service.get_tavern(tavern_id, user_id)
+        visitor_id = data.get("visitor_id", "") or ("" if _is_tavern_owner_payload(tavern, user_id) else user_id)
+
         from fablemap.tavern import ChatMessage
         if visitor_id:
+            _ensure_chat_scope(tavern, user_id, visitor_id)
             history = service.tavern_store.get_chat_history(tavern_id, visitor_id, character_id)
             resolved_visitor_id = visitor_id
         else:
+            _ensure_chat_scope(tavern, user_id, "", allow_owner_all=True)
             sessions = service.tavern_store.list_chat_sessions(tavern_id, character_id=character_id, limit=None)
             if len(sessions) > 1:
                 return JSONResponse(status_code=400, content={"error": "visitor_id is required when multiple sessions match"})
@@ -1765,8 +1906,33 @@ def _get_user_id(request: Request) -> str:
     return request.headers.get("X-User-Id", "") or ""
 
 
+def _is_tavern_owner_payload(tavern_data: dict | None, user_id: str) -> bool:
+    return bool(tavern_data and user_id and tavern_data.get("owner_id") == user_id)
+
+
+def _ensure_chat_scope(
+    tavern_data: dict | None,
+    user_id: str,
+    visitor_id: str,
+    *,
+    allow_owner_all: bool = False,
+    legacy_body_visitor_allowed: bool = False,
+) -> None:
+    """Allow chat access only for the session visitor or the tavern owner."""
+    if not tavern_data:
+        raise HTTPException(status_code=404, detail="Tavern not found")
+    if _is_tavern_owner_payload(tavern_data, user_id):
+        if visitor_id or allow_owner_all:
+            return
+    if user_id and visitor_id and user_id == visitor_id:
+        return
+    if legacy_body_visitor_allowed and visitor_id and not user_id:
+        return
+    raise HTTPException(status_code=403, detail="不能访问其他访客的聊天记录")
+
+
 def _utc_timestamp() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 # ─── Expression Inference (keyword-based fallback) ─────────────────────────

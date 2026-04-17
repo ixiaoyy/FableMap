@@ -7,6 +7,7 @@ import { getDefaultTavernService, getTavernAccessIcon, getTavernAccessLabel } fr
  */
 export default function TavernEntryPanel({
   tavernId,
+  visitorId = '',
   onEnter,
   onClose,
 }) {
@@ -27,7 +28,7 @@ export default function TavernEntryPanel({
     setLoading(true)
     setError(null)
     try {
-      const data = await tavernService.getTavern(tavernId)
+      const data = await tavernService.getTavern(tavernId, visitorId)
       setTavern(data)
     } catch (err) {
       setError(err.message)
@@ -40,9 +41,7 @@ export default function TavernEntryPanel({
     setEntering(true)
     setError(null)
     try {
-      if (tavern.access === 'password') {
-        await tavernService.enterTavern(tavernId, password)
-      }
+      await tavernService.enterTavern(tavernId, tavern.access === 'password' ? password : '', visitorId)
       if (onEnter) onEnter(tavern)
     } catch (err) {
       setError(`入场失败: ${err.message}`)

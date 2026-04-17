@@ -341,7 +341,8 @@ class HelpCommand(Command):
         commands = context.get("available_commands", [])
         lines = ["**Available Commands:**"]
         for cmd in commands:
-            lines.append(f"  `{cmd.get('usage', f'/{cmd.get(\"name\", \"?\")}')}` — {cmd.get('description', '')}")
+            usage = cmd.get("usage") or f"/{cmd.get('name', '?')}"
+            lines.append(f"  `{usage}` — {cmd.get('description', '')}")
         return CommandResult(success=True, message="\n".join(lines), action="system")
 
 

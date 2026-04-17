@@ -30,6 +30,57 @@ function formatTokens(value) {
   return numeric.toLocaleString()
 }
 
+function formatChatTimestamp(value) {
+  if (!value) return '暂无时间'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 16)
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatRelationshipStage(stage) {
+  const labels = {
+    stranger: '初访者',
+    acquaintance: '熟面孔',
+    regular: '常客',
+    confidant: '熟客盟友',
+  }
+  return labels[stage] || stage || '未建立'
+}
+
+function getSessionVisitorLabel(session) {
+  return session?.visitor_name || (session?.visitor_id ? session.visitor_id.slice(0, 16) : '匿名访客')
+}
+
+function getChatMessageSpeaker(message, session) {
+  if (message?.role === 'assistant') {
+    return session?.character_name || 'NPC'
+  }
+  if (message?.role === 'system') {
+    return '系统'
+  }
+  return message?.visitor_name || getSessionVisitorLabel(session)
+}
+
+function buildChatTranscript(session, messages = []) {
+  if (!session || !Array.isArray(messages) || messages.length === 0) return ''
+  const header = [
+    `酒馆：${session.tavern_name || session.tavern_id || '未知酒馆'}`,
+    `角色：${session.character_name || session.character_id || '未知角色'}`,
+    `访客：${getSessionVisitorLabel(session)}`,
+  ].join('\n')
+  const body = messages.map((message) => {
+    const timestamp = message?.timestamp ? `[${formatChatTimestamp(message.timestamp)}] ` : ''
+    const speaker = getChatMessageSpeaker(message, session)
+    return `${timestamp}${speaker}: ${message?.content || ''}`
+  }).join('\n')
+  return `${header}\n\n${body}`
+}
+
 function getTavernTokenUsage(tavern) {
   const usage = Number(tavern?.llm_config?.token_used || 0)
   return Number.isFinite(usage) && usage > 0 ? usage : 0
@@ -67,6 +118,25 @@ export default function TavernOwnerPanel({
   const [statusFilter, setStatusFilter] = useState('all')
   const [accessFilter, setAccessFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [chatSessions, setChatSessions] = useState([])
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatError, setChatError] = useState('')
+  const [chatSearchTavernId, setChatSearchTavernId] = useState('')
+  const [chatSearchQuery, setChatSearchQuery] = useState('')
+  const [chatSearchResults, setChatSearchResults] = useState([])
+  const [chatSearchLoading, setChatSearchLoading] = useState(false)
+  const [chatSearchError, setChatSearchError] = useState('')
+  const [chatSearchStatus, setChatSearchStatus] = useState('')
+  const [chatDetailSession, setChatDetailSession] = useState(null)
+  const [chatDetailMessages, setChatDetailMessages] = useState([])
+  const [chatDetailLoading, setChatDetailLoading] = useState(false)
+  const [chatDetailError, setChatDetailError] = useState('')
+  const [chatExportText, setChatExportText] = useState('')
+  const [chatExportLoading, setChatExportLoading] = useState(false)
+  const [chatExportStatus, setChatExportStatus] = useState('')
+  const [visitorStates, setVisitorStates] = useState([])
+  const [visitorLoading, setVisitorLoading] = useState(false)
+  const [visitorError, setVisitorError] = useState('')
   const tavernService = getDefaultTavernService()
   const ownerLabel = ownerId || '未识别店主'
 
@@ -110,6 +180,34 @@ export default function TavernOwnerPanel({
     }
   }, [myTaverns])
 
+  const chatStats = useMemo(() => {
+    const visitorIds = new Set()
+    const visitorNames = new Set()
+    let messageCount = 0
+    chatSessions.forEach((session) => {
+      if (session.visitor_id) visitorIds.add(session.visitor_id)
+      if (session.visitor_name) visitorNames.add(session.visitor_name)
+      messageCount += Number(session.message_count || 0)
+    })
+    return {
+      sessions: chatSessions.length,
+      visitors: visitorNames.size || visitorIds.size,
+      messages: messageCount,
+    }
+  }, [chatSessions])
+
+  const visitorStats = useMemo(() => {
+    const totalVisits = visitorStates.reduce((sum, visitor) => sum + Number(visitor.visit_count || 0), 0)
+    const returningVisitors = visitorStates.filter((visitor) => Number(visitor.visit_count || 0) >= 2).length
+    const engagedVisitors = visitorStates.filter((visitor) => Number(visitor.message_count || 0) > 0).length
+    return {
+      visitors: visitorStates.length,
+      visits: totalVisits,
+      returningVisitors,
+      engagedVisitors,
+    }
+  }, [visitorStates])
+
   const filteredTaverns = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase()
     return myTaverns.filter((tavern) => {
@@ -133,9 +231,27 @@ export default function TavernOwnerPanel({
 
   useEffect(() => {
     if (!showCreate && !editingTavern) {
-      fetchMyTaverns()
+      refreshOwnerData()
     }
   }, [showCreate, editingTavern])
+
+  useEffect(() => {
+    if (!ownerId || showCreate || editingTavern || myTaverns.length === 0) {
+      setVisitorStates([])
+      return
+    }
+    fetchOwnerVisitorStates(myTaverns)
+  }, [ownerId, showCreate, editingTavern, myTaverns])
+
+  useEffect(() => {
+    if (!myTaverns.length) {
+      if (chatSearchTavernId) setChatSearchTavernId('')
+      return
+    }
+    if (!chatSearchTavernId || !myTaverns.some((tavern) => tavern.id === chatSearchTavernId)) {
+      setChatSearchTavernId(myTaverns[0].id)
+    }
+  }, [chatSearchTavernId, myTaverns])
 
   // Switch to create tab when editTavern prop is provided
   useEffect(() => {
@@ -167,10 +283,254 @@ export default function TavernOwnerPanel({
     }
   }
 
+  async function fetchOwnerChatSessions() {
+    setChatError('')
+    if (!ownerId) {
+      setChatSessions([])
+      return
+    }
+    setChatLoading(true)
+    try {
+      const result = await tavernService.listChatSessions({}, ownerId)
+      const chats = Array.isArray(result?.chats) ? result.chats : []
+      setChatSessions(chats)
+    } catch (err) {
+      setChatError(err.message)
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  async function openChatSessionDetail(session) {
+    if (!session?.tavern_id || !session?.visitor_id) return
+    setChatDetailSession(session)
+    setChatDetailMessages([])
+    setChatDetailError('')
+    setChatExportText('')
+    setChatExportStatus('')
+    setChatDetailLoading(true)
+    try {
+      const result = await tavernService.getChatHistory(
+        session.tavern_id,
+        session.visitor_id,
+        session.character_id,
+        ownerId,
+        200,
+      )
+      setChatDetailMessages(Array.isArray(result?.messages) ? result.messages : [])
+    } catch (err) {
+      setChatDetailError(err.message)
+    } finally {
+      setChatDetailLoading(false)
+    }
+  }
+
+  async function openVisitorLatestSession(visitor) {
+    if (!visitor?.tavern_id || !visitor?.visitor_id) return
+    setChatError('')
+    const matchesCurrentSession = (session) => (
+      session.tavern_id === visitor.tavern_id && session.visitor_id === visitor.visitor_id
+    )
+    const knownSessions = chatSessions
+      .filter(matchesCurrentSession)
+      .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
+    if (knownSessions[0]) {
+      openChatSessionDetail(knownSessions[0])
+      return
+    }
+
+    setChatLoading(true)
+    try {
+      const result = await tavernService.listChatSessions(
+        { tavernId: visitor.tavern_id, visitorId: visitor.visitor_id },
+        ownerId,
+      )
+      const fetchedSessions = Array.isArray(result?.chats) ? result.chats : []
+      if (fetchedSessions.length === 0) {
+        setChatError('该访客还没有可查看的聊天会话。')
+        return
+      }
+      setChatSessions((prev) => {
+        const existingKeys = new Set(prev.map((session) => `${session.tavern_id}:${session.visitor_id}:${session.character_id}`))
+        const additions = fetchedSessions.filter((session) => !existingKeys.has(`${session.tavern_id}:${session.visitor_id}:${session.character_id}`))
+        return [...additions, ...prev]
+      })
+      openChatSessionDetail(
+        fetchedSessions.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))[0],
+      )
+    } catch (err) {
+      setChatError(`读取访客会话失败：${err.message}`)
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  function resolveChatSearchSession(message = {}) {
+    const knownSession = chatSessions.find((session) => (
+      session.tavern_id === message.tavern_id
+      && session.visitor_id === message.visitor_id
+      && session.character_id === message.character_id
+    ))
+    if (knownSession) return knownSession
+
+    const tavern = myTaverns.find((item) => item.id === message.tavern_id)
+    const character = tavern?.characters?.find((item) => item.id === message.character_id)
+    return {
+      tavern_id: message.tavern_id || '',
+      tavern_name: tavern?.name || message.tavern_id || '未知酒馆',
+      visitor_id: message.visitor_id || '',
+      visitor_name: message.visitor_name || '',
+      character_id: message.character_id || '',
+      character_name: character?.name || message.character_id || '未知角色',
+      message_count: 0,
+      last_message: message.content || '',
+      last_role: message.role || '',
+      updated_at: message.timestamp || '',
+    }
+  }
+
+  async function runChatSearch(event) {
+    event?.preventDefault?.()
+    const keyword = chatSearchQuery.trim()
+    setChatSearchError('')
+    setChatSearchStatus('')
+    setChatSearchResults([])
+
+    if (!ownerId) {
+      setChatSearchError('缺少店主身份，无法搜索聊天记录。')
+      return
+    }
+    if (!chatSearchTavernId) {
+      setChatSearchError('请先选择要搜索的酒馆。')
+      return
+    }
+    if (!keyword) {
+      setChatSearchStatus('请输入关键词后再搜索。')
+      return
+    }
+
+    setChatSearchLoading(true)
+    try {
+      const result = await tavernService.searchChatHistory(
+        {
+          tavernId: chatSearchTavernId,
+          query: keyword,
+          limit: 20,
+        },
+        ownerId,
+      )
+      const results = Array.isArray(result?.results) ? result.results : []
+      setChatSearchResults(results)
+      if (result?.count > 0) {
+        const suffix = result.truncated ? `，仅显示前 ${result.limit || results.length} 条` : ''
+        setChatSearchStatus(`找到 ${result.count} 条匹配${suffix}`)
+      } else {
+        setChatSearchStatus('没有找到匹配消息。')
+      }
+    } catch (err) {
+      setChatSearchError(err.message)
+    } finally {
+      setChatSearchLoading(false)
+    }
+  }
+
+  function openChatSearchResult(result) {
+    const session = resolveChatSearchSession(result?.message || {})
+    if (!session?.tavern_id || !session?.visitor_id) return
+    openChatSessionDetail(session)
+  }
+
+  async function refreshChatSessionDetail() {
+    if (!chatDetailSession) return
+    openChatSessionDetail(chatDetailSession)
+  }
+
+  async function generateChatExportText() {
+    if (!chatDetailSession) return
+    setChatExportLoading(true)
+    setChatExportStatus('')
+    try {
+      const result = await tavernService.exportChatHistory(
+        {
+          tavernId: chatDetailSession.tavern_id,
+          characterId: chatDetailSession.character_id,
+          visitorId: chatDetailSession.visitor_id,
+          format: 'text',
+        },
+        ownerId,
+      )
+      setChatExportText(result?.text || buildChatTranscript(chatDetailSession, chatDetailMessages))
+      setChatExportStatus('导出文本已生成')
+    } catch (err) {
+      setChatExportStatus(`导出失败：${err.message}`)
+    } finally {
+      setChatExportLoading(false)
+    }
+  }
+
+  async function copyChatExportText() {
+    const text = chatExportText || buildChatTranscript(chatDetailSession, chatDetailMessages)
+    if (!text) return
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        throw new Error('Clipboard unavailable')
+      }
+      await navigator.clipboard.writeText(text)
+      setChatExportStatus('已复制到剪贴板')
+    } catch {
+      setChatExportStatus('当前浏览器不允许自动复制，请手动选中文本复制')
+    }
+  }
+
+  function closeChatSessionDetail() {
+    setChatDetailSession(null)
+    setChatDetailMessages([])
+    setChatDetailError('')
+    setChatExportText('')
+    setChatExportStatus('')
+  }
+
+  async function fetchOwnerVisitorStates(tavernList = myTaverns) {
+    setVisitorError('')
+    if (!ownerId || !tavernList.length) {
+      setVisitorStates([])
+      return
+    }
+    setVisitorLoading(true)
+    try {
+      const visitorPayloads = await Promise.all(
+        tavernList.map(async (tavern) => {
+          const result = await tavernService.getTavernVisitors(tavern.id, ownerId)
+          const visitors = Array.isArray(result?.visitors) ? result.visitors : []
+          return visitors.map((visitor) => ({
+            ...visitor,
+            tavern_id: tavern.id,
+            tavern_name: tavern.name,
+          }))
+        })
+      )
+      setVisitorStates(
+        visitorPayloads
+          .flat()
+          .sort((a, b) => String(b.last_visit || '').localeCompare(String(a.last_visit || '')))
+      )
+    } catch (err) {
+      setVisitorError(err.message)
+    } finally {
+      setVisitorLoading(false)
+    }
+  }
+
+  function refreshOwnerData() {
+    fetchMyTaverns()
+    fetchOwnerChatSessions()
+    fetchOwnerVisitorStates()
+  }
+
   async function handleToggleStatus(tavern) {
     const newStatus = tavern.status === 'open' ? 'closed' : 'open'
     try {
-      await tavernService.updateTavern(tavern.id, { status: newStatus })
+      await tavernService.updateTavern(tavern.id, { status: newStatus }, ownerId)
       setMyTaverns(prev => prev.map(t => t.id === tavern.id ? { ...t, status: newStatus } : t))
     } catch (err) {
       alert(`更新失败: ${err.message}`)
@@ -179,7 +539,7 @@ export default function TavernOwnerPanel({
 
   async function handleSaveEdit(updatedData) {
     try {
-      const result = await tavernService.updateTavern(editingTavern.id, updatedData)
+      const result = await tavernService.updateTavern(editingTavern.id, updatedData, ownerId)
       setMyTaverns(prev => prev.map(t => t.id === editingTavern.id ? { ...t, ...result } : t))
       setEditingTavern(null)
       if (onTavernCreated) onTavernCreated(result)
@@ -190,7 +550,7 @@ export default function TavernOwnerPanel({
 
   async function handleDelete(tavernId) {
     try {
-      await tavernService.deleteTavern(tavernId)
+      await tavernService.deleteTavern(tavernId, ownerId)
       setMyTaverns(prev => prev.filter(t => t.id !== tavernId))
       setDeleteTarget(null)
     } catch (err) {
@@ -203,7 +563,7 @@ export default function TavernOwnerPanel({
     setSavingLlm(true)
     setLlmSaveResult(null)
     try {
-      const result = await tavernService.updateTavern(editingLlmTavern.id, { llm_config: llmFormData })
+      const result = await tavernService.updateTavern(editingLlmTavern.id, { llm_config: llmFormData }, ownerId)
       setMyTaverns(prev => prev.map(t => t.id === editingLlmTavern.id ? { ...t, ...result } : t))
       setEditingLlmTavern(prev => prev ? { ...prev, ...result } : prev)
       setLlmSaveResult({ ok: true, message: 'AI 配置已保存' })
@@ -271,6 +631,7 @@ export default function TavernOwnerPanel({
         <TavernCreatePanel
           initialLat={0}
           initialLon={0}
+          ownerId={ownerId}
           onCreated={handleTavernCreated}
           onCancel={() => { setShowCreate(false); setTab(0) }}
         />
@@ -300,8 +661,8 @@ export default function TavernOwnerPanel({
           </p>
         </div>
         <div className="owner-header__actions">
-          <button className="secondary" onClick={fetchMyTaverns} disabled={loading}>
-            {loading ? '刷新中...' : '刷新列表'}
+          <button className="secondary" onClick={refreshOwnerData} disabled={loading || chatLoading}>
+            {loading || chatLoading ? '刷新中...' : '刷新列表'}
           </button>
           {onClose ? (
             <button className="secondary" onClick={onClose}>返回</button>
@@ -338,6 +699,39 @@ export default function TavernOwnerPanel({
       <TokenUsagePanel
         tokenStats={tokenStats}
         onManageLlm={openLlmEdit}
+      />
+
+      <OwnerChatActivityPanel
+        sessions={chatSessions}
+        stats={chatStats}
+        loading={chatLoading}
+        error={chatError}
+        onRefresh={fetchOwnerChatSessions}
+        onOpenSession={openChatSessionDetail}
+      />
+
+      <OwnerChatSearchPanel
+        taverns={myTaverns}
+        selectedTavernId={chatSearchTavernId}
+        query={chatSearchQuery}
+        results={chatSearchResults}
+        loading={chatSearchLoading}
+        error={chatSearchError}
+        status={chatSearchStatus}
+        onSelectTavern={setChatSearchTavernId}
+        onQueryChange={setChatSearchQuery}
+        onSearch={runChatSearch}
+        onOpenResult={openChatSearchResult}
+        resolveSession={resolveChatSearchSession}
+      />
+
+      <OwnerVisitorStatePanel
+        visitors={visitorStates}
+        stats={visitorStats}
+        loading={visitorLoading}
+        error={visitorError}
+        onRefresh={() => fetchOwnerVisitorStates(myTaverns)}
+        onOpenVisitorSessions={openVisitorLatestSession}
       />
 
       <section className="owner-filters" aria-label="酒馆筛选">
@@ -413,6 +807,22 @@ export default function TavernOwnerPanel({
           ownerId={ownerId}
           onClose={() => setCharacterManagerTavern(null)}
           onCharactersChanged={(chars) => handleCharactersUpdated({ ...characterManagerTavern, characters: chars })}
+        />
+      )}
+
+      {chatDetailSession && (
+        <OwnerChatDetailModal
+          session={chatDetailSession}
+          messages={chatDetailMessages}
+          loading={chatDetailLoading}
+          error={chatDetailError}
+          exportText={chatExportText}
+          exportLoading={chatExportLoading}
+          exportStatus={chatExportStatus}
+          onClose={closeChatSessionDetail}
+          onRefresh={refreshChatSessionDetail}
+          onGenerateExport={generateChatExportText}
+          onCopyExport={copyChatExportText}
         />
       )}
 
@@ -543,6 +953,339 @@ function TokenUsagePanel({ tokenStats, onManageLlm }) {
                   <button type="button" className="button-link" onClick={() => onManageLlm(tavern)}>
                     AI 配置
                   </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function OwnerChatDetailModal({
+  session,
+  messages,
+  loading,
+  error,
+  exportText,
+  exportLoading,
+  exportStatus,
+  onClose,
+  onRefresh,
+  onGenerateExport,
+  onCopyExport,
+}) {
+  const visitorLabel = getSessionVisitorLabel(session)
+  const transcript = exportText || buildChatTranscript(session, messages)
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content panel owner-chat-detail-modal" onClick={(event) => event.stopPropagation()}>
+        <header className="modal-header owner-chat-detail-header">
+          <div>
+            <p className="mini-label">会话详情</p>
+            <h3>{visitorLabel} ↔ {session.character_name || '未知角色'}</h3>
+            <p className="note muted">
+              {session.tavern_name || '未知酒馆'} · {session.message_count || messages.length || 0} 条消息 · {formatChatTimestamp(session.updated_at)}
+            </p>
+          </div>
+          <button className="close-btn" onClick={onClose}>&times;</button>
+        </header>
+
+        <div className="owner-chat-detail-actions">
+          <button type="button" className="secondary" onClick={onRefresh} disabled={loading}>
+            {loading ? '刷新中...' : '刷新历史'}
+          </button>
+          <button type="button" className="secondary" onClick={onGenerateExport} disabled={exportLoading || loading}>
+            {exportLoading ? '生成中...' : '生成导出文本'}
+          </button>
+          <button type="button" className="primary" onClick={onCopyExport} disabled={!transcript}>
+            复制导出
+          </button>
+        </div>
+
+        {error ? (
+          <div className="owner-chat-detail-empty is-error">读取会话失败：{error}</div>
+        ) : loading ? (
+          <div className="owner-chat-detail-empty">正在读取完整聊天历史...</div>
+        ) : messages.length === 0 ? (
+          <div className="owner-chat-detail-empty">这条会话暂时没有可展示的消息。</div>
+        ) : (
+          <div className="owner-chat-detail-list">
+            {messages.map((message, index) => {
+              const role = message.role === 'assistant' ? 'assistant' : (message.role === 'system' ? 'system' : 'user')
+              const speaker = getChatMessageSpeaker(message, session)
+              return (
+                <article key={message.id || `${role}-${index}`} className={`owner-chat-detail-message is-${role}`}>
+                  <div className="owner-chat-detail-message__meta">
+                    <strong>{speaker}</strong>
+                    <time>{formatChatTimestamp(message.timestamp)}</time>
+                  </div>
+                  <p>{message.content}</p>
+                </article>
+              )
+            })}
+          </div>
+        )}
+
+        <label className="owner-chat-export">
+          <span className="mini-label">导出预览</span>
+          <textarea readOnly value={transcript} placeholder="点击“生成导出文本”，或直接复制当前历史预览。" rows={8} />
+        </label>
+        {exportStatus ? <p className="note muted owner-chat-export-status">{exportStatus}</p> : null}
+      </div>
+    </div>
+  )
+}
+
+function OwnerChatActivityPanel({ sessions, stats, loading, error, onRefresh, onOpenSession }) {
+  const rows = sessions.slice(0, 8)
+
+  return (
+    <section className="owner-chat-panel panel" aria-label="访客会话反馈">
+      <div className="owner-chat-panel__header">
+        <div>
+          <p className="mini-label">访客反馈</p>
+          <h2>最近对话会话</h2>
+          <p className="note muted">
+            来自酒馆聊天历史的会话摘要，帮助店主观察访客回访与 NPC 互动情况。
+          </p>
+        </div>
+        <button type="button" className="secondary" onClick={onRefresh} disabled={loading}>
+          {loading ? '刷新中...' : '刷新会话'}
+        </button>
+      </div>
+
+      <div className="owner-chat-summary">
+        <div>
+          <span className="mini-label">会话数</span>
+          <strong>{stats.sessions}</strong>
+        </div>
+        <div>
+          <span className="mini-label">访客数</span>
+          <strong>{stats.visitors}</strong>
+        </div>
+        <div>
+          <span className="mini-label">消息数</span>
+          <strong>{stats.messages}</strong>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="owner-chat-empty is-error">读取会话失败：{error}</div>
+      ) : loading ? (
+        <div className="owner-chat-empty">正在读取访客会话...</div>
+      ) : rows.length === 0 ? (
+        <div className="owner-chat-empty">还没有访客对话。开放酒馆后，这里会显示最近的 NPC 互动。</div>
+      ) : (
+        <div className="owner-chat-list">
+          {rows.map((session) => {
+            const visitorLabel = session.visitor_name || (session.visitor_id ? session.visitor_id.slice(0, 16) : '匿名访客')
+            const lastMessage = session.last_message || '暂无消息预览'
+            return (
+              <article
+                key={`${session.tavern_id}-${session.visitor_id}-${session.character_id}`}
+                className="owner-chat-row"
+              >
+                <div className="owner-chat-row__meta">
+                  <div>
+                    <strong>{visitorLabel}</strong>
+                    <span>{session.tavern_name || '未知酒馆'} · {session.character_name || '未知角色'}</span>
+                  </div>
+                  <time>{formatChatTimestamp(session.updated_at)}</time>
+                </div>
+                <p>{session.last_role === 'assistant' ? 'NPC' : '访客'}：{lastMessage}</p>
+                <div className="owner-chat-row__footer">
+                  <span>{session.message_count || 0} 条消息</span>
+                  <button type="button" className="button-link" onClick={() => onOpenSession?.(session)}>
+                    查看历史
+                  </button>
+                  {session.visitor_id && !session.visitor_name ? (
+                    <small>{session.visitor_id.slice(0, 18)}</small>
+                  ) : null}
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function OwnerChatSearchPanel({
+  taverns,
+  selectedTavernId,
+  query,
+  results,
+  loading,
+  error,
+  status,
+  onSelectTavern,
+  onQueryChange,
+  onSearch,
+  onOpenResult,
+  resolveSession,
+}) {
+  const hasTaverns = taverns.length > 0
+
+  return (
+    <section className="owner-chat-search-panel panel" aria-label="会话关键词搜索">
+      <div className="owner-chat-search-panel__header">
+        <div>
+          <p className="mini-label">会话检索</p>
+          <h2>搜索访客消息</h2>
+          <p className="note muted">
+            在单个酒馆的聊天历史中查找关键词，便于回看高价值反馈或问题线索。
+          </p>
+        </div>
+      </div>
+
+      <form className="owner-chat-search-form" onSubmit={onSearch}>
+        <label>
+          <span className="mini-label">酒馆</span>
+          <select
+            value={selectedTavernId}
+            onChange={(event) => onSelectTavern(event.target.value)}
+            disabled={!hasTaverns || loading}
+          >
+            {hasTaverns ? taverns.map((tavern) => (
+              <option key={tavern.id} value={tavern.id}>{tavern.name || tavern.id}</option>
+            )) : (
+              <option value="">暂无酒馆</option>
+            )}
+          </select>
+        </label>
+        <label className="owner-chat-search-form__query">
+          <span className="mini-label">关键词</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="例如：价格、BUG、喜欢的角色..."
+            disabled={!hasTaverns || loading}
+          />
+        </label>
+        <button type="submit" className="primary" disabled={!hasTaverns || loading}>
+          {loading ? '搜索中...' : '搜索聊天'}
+        </button>
+      </form>
+
+      {error ? <div className="owner-chat-search-status is-error">搜索失败：{error}</div> : null}
+      {!error && status ? <div className="owner-chat-search-status">{status}</div> : null}
+
+      {results.length > 0 ? (
+        <div className="owner-chat-search-results">
+          {results.map((result) => {
+            const message = result.message || {}
+            const session = resolveSession?.(message) || {}
+            const visitorLabel = getSessionVisitorLabel(session)
+            const speaker = getChatMessageSpeaker(message, session)
+            return (
+              <article
+                key={`${message.tavern_id}-${message.visitor_id}-${message.character_id}-${result.index}`}
+                className="owner-chat-search-result"
+              >
+                <div className="owner-chat-search-result__meta">
+                  <div>
+                    <strong>{speaker}</strong>
+                    <span>{session.tavern_name || '未知酒馆'} · {visitorLabel} · {session.character_name || '未知角色'}</span>
+                  </div>
+                  <time>{formatChatTimestamp(message.timestamp)}</time>
+                </div>
+                <p>{message.content || '空消息'}</p>
+                <div className="owner-chat-search-result__footer">
+                  <span>匹配序号 #{Number(result.index || 0) + 1}</span>
+                  <button type="button" className="button-link" onClick={() => onOpenResult?.(result)}>
+                    打开会话
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function OwnerVisitorStatePanel({ visitors, stats, loading, error, onRefresh, onOpenVisitorSessions }) {
+  const rows = visitors.slice(0, 8)
+
+  return (
+    <section className="owner-visitor-panel panel" aria-label="访客回访状态">
+      <div className="owner-visitor-panel__header">
+        <div>
+          <p className="mini-label">回访状态</p>
+          <h2>访客关系与回访</h2>
+          <p className="note muted">
+            来自入场记录和聊天写回的 VisitorState，用来观察哪些访客正在形成持续关系。
+          </p>
+        </div>
+        <button type="button" className="secondary" onClick={onRefresh} disabled={loading}>
+          {loading ? '刷新中...' : '刷新访客'}
+        </button>
+      </div>
+
+      <div className="owner-visitor-summary">
+        <div>
+          <span className="mini-label">访客</span>
+          <strong>{stats.visitors}</strong>
+        </div>
+        <div>
+          <span className="mini-label">访问</span>
+          <strong>{stats.visits}</strong>
+        </div>
+        <div>
+          <span className="mini-label">回访者</span>
+          <strong>{stats.returningVisitors}</strong>
+        </div>
+        <div>
+          <span className="mini-label">已对话</span>
+          <strong>{stats.engagedVisitors}</strong>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="owner-visitor-empty is-error">读取访客状态失败：{error}</div>
+      ) : loading ? (
+        <div className="owner-visitor-empty">正在读取访客状态...</div>
+      ) : rows.length === 0 ? (
+        <div className="owner-visitor-empty">还没有可展示的访客状态。访客进入酒馆后，这里会开始记录回访。</div>
+      ) : (
+        <div className="owner-visitor-list">
+          {rows.map((visitor) => {
+            const rel = visitor.relationship || {}
+            const strength = Number(rel.strength || 0)
+            const percent = Math.max(0, Math.min(100, Math.round(strength * 100)))
+            const visitorLabel = visitor.visitor_name || (visitor.visitor_id ? visitor.visitor_id.slice(0, 16) : '匿名访客')
+            return (
+              <article
+                key={`${visitor.tavern_id}-${visitor.visitor_id}`}
+                className="owner-visitor-row"
+              >
+                <div className="owner-visitor-row__main">
+                  <div>
+                    <strong>{visitorLabel}</strong>
+                    <span>{visitor.tavern_name || '未知酒馆'} · {formatRelationshipStage(rel.stage)}</span>
+                  </div>
+                  <div className="owner-visitor-row__visits">
+                    <strong>{visitor.visit_count || 0}</strong>
+                    <small>次访问</small>
+                  </div>
+                </div>
+                <div className="owner-visitor-bar" aria-hidden="true">
+                  <span style={{ width: `${percent}%` }} />
+                </div>
+                <div className="owner-visitor-row__footer">
+                  <span>{visitor.message_count || 0} 条消息</span>
+                  {Number(visitor.message_count || 0) > 0 ? (
+                    <button type="button" className="button-link" onClick={() => onOpenVisitorSessions?.(visitor)}>
+                      查看会话
+                    </button>
+                  ) : null}
+                  <time>{formatChatTimestamp(visitor.last_visit)}</time>
                 </div>
               </article>
             )

@@ -2,7 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from fablemap.llm_clients import LLMError
-from fablemap.tavern import LLMConfig, Tavern, TavernCharacter
+from fablemap.tavern import ChatMessage, LLMConfig, Tavern, TavernCharacter, VisitorState
 from fablemap.web.config import ApiSettings
 from fablemap.web.service import WebService
 
@@ -82,3 +82,107 @@ def test_missing_llm_config_returns_friendly_degradation_and_closes_tavern():
         assert payload["degradation"]["reason"] == "llm_not_configured"
         assert payload["tavern_status"] == "closed"
         assert service.tavern_store.get_tavern(tavern.id).status == "closed"
+
+
+def test_visitor_name_is_used_in_prompt_and_persisted(monkeypatch):
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        tavern = _create_open_tavern(service)
+        service.tavern_store.save_llm_config(
+            tavern.id,
+            LLMConfig(backend="openai", model="gpt-4o-mini", api_key="sk-test"),
+        )
+
+        captured = {}
+
+        class Response:
+            content = "欢迎回来，Mina。"
+            usage = {"total_tokens": 7}
+
+        class CapturingClient:
+            def complete(self, messages):
+                captured["messages"] = messages
+                return Response()
+
+        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+
+        payload = service.tavern_chat_payload(
+            tavern_id=tavern.id,
+            character_id="char_degrade",
+            message="还记得我的名字吗？",
+            visitor_id="visitor_degrade",
+            visitor_name="Mina",
+        )
+
+        assert payload["degraded"] is False
+        assert any("当前访客称呼" in m.get("content", "") and "Mina" in m.get("content", "") for m in captured["messages"])
+
+        history = service.tavern_store.get_chat_history(tavern.id, "visitor_degrade", "char_degrade")
+        assert [message.visitor_name for message in history] == ["Mina", "Mina"]
+
+
+def test_visitor_relationship_state_is_used_in_prompt(monkeypatch):
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        tavern = _create_open_tavern(service)
+        service.tavern_store.save_llm_config(
+            tavern.id,
+            LLMConfig(backend="openai", model="gpt-4o-mini", api_key="sk-test"),
+        )
+        service.tavern_store.update_visitor_state(
+            tavern.id,
+            VisitorState(
+                visitor_id="visitor_degrade",
+                tavern_id=tavern.id,
+                visit_count=4,
+                first_visit="2026-04-16T10:00:00Z",
+                last_visit="2026-04-17T09:30:00Z",
+                relationship_strength=0.52,
+                relationship_stage="regular",
+            ),
+        )
+        service.tavern_store.add_chat_message(
+            ChatMessage(
+                id="msg_old_relationship_context",
+                tavern_id=tavern.id,
+                character_id="char_degrade",
+                visitor_id="visitor_degrade",
+                visitor_name="Mina",
+                role="user",
+                content="昨天我说过我喜欢靠窗的位置。",
+                timestamp="2026-04-16T10:05:00Z",
+            )
+        )
+
+        captured = {}
+
+        class Response:
+            content = "当然，Mina。靠窗的位置还给你留着。"
+            usage = {"total_tokens": 11}
+
+        class CapturingClient:
+            def complete(self, messages):
+                captured["messages"] = messages
+                return Response()
+
+        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+
+        payload = service.tavern_chat_payload(
+            tavern_id=tavern.id,
+            character_id="char_degrade",
+            message="我回来啦。",
+            visitor_id="visitor_degrade",
+            visitor_name="Mina",
+        )
+
+        assert payload["degraded"] is False
+        relationship_contexts = [
+            m.get("content", "")
+            for m in captured["messages"]
+            if "当前访客关系状态" in m.get("content", "")
+        ]
+        assert relationship_contexts
+        assert "关系阶段=常客" in relationship_contexts[0]
+        assert "到访次数=4" in relationship_contexts[0]
+        assert "历史消息数=1" in relationship_contexts[0]
+        assert "关系强度=52%" in relationship_contexts[0]

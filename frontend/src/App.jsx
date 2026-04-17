@@ -500,6 +500,7 @@ export default function App() {
           {activeTavernId && (
             <TavernEntryPanel 
               tavernId={activeTavernId}
+              visitorId={visitorId}
               onEnter={(tavern) => setEnteredTavern(tavern)}
               onClose={() => setActiveTavernId(null)}
             />

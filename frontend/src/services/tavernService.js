@@ -34,6 +34,19 @@ async function readJson(response) {
   return payload
 }
 
+function buildHeaders(userId = '', extra = {}) {
+  const headers = { ...extra }
+  const cleanUserId = String(userId || '').trim()
+  if (cleanUserId) {
+    headers['X-User-Id'] = cleanUserId
+  }
+  return headers
+}
+
+function buildJsonHeaders(userId = '') {
+  return buildHeaders(userId, { 'Content-Type': 'application/json' })
+}
+
 /**
  * 创建 Tavern Service 客户端
  * @param {() => string} getBaseUrl - 获取 API 基础 URL 的函数
@@ -74,6 +87,7 @@ export function createTavernService(getBaseUrl) {
     /**
      * 创建酒馆
      * @param {object} data
+     * @param {string} userId - 店主/操作者 ID
      * @param {string} data.name - 酒馆名称
      * @param {string} data.description - 酒馆描述
      * @param {number} data.lat - 纬度
@@ -83,10 +97,10 @@ export function createTavernService(getBaseUrl) {
      * @param {object} data.llm_config - LLM 配置
      * @returns {Promise<object>}
      */
-    async createTavern(data) {
+    async createTavern(data, userId = '') {
       const response = await fetch(`${getBaseUrl()}/api/taverns`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildJsonHeaders(userId),
         body: JSON.stringify(data),
       })
       return readJson(response)
@@ -95,11 +109,13 @@ export function createTavernService(getBaseUrl) {
     /**
      * 获取酒馆详情
      * @param {string} tavernId
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async getTavern(tavernId) {
+    async getTavern(tavernId, userId = '') {
       const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}`, {
         cache: 'no-store',
+        headers: buildHeaders(userId),
       })
       return readJson(response)
     },
@@ -108,12 +124,13 @@ export function createTavernService(getBaseUrl) {
      * 更新酒馆
      * @param {string} tavernId
      * @param {object} data
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async updateTavern(tavernId, data) {
+    async updateTavern(tavernId, data, userId = '') {
       const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildJsonHeaders(userId),
         body: JSON.stringify(data),
       })
       return readJson(response)
@@ -151,11 +168,13 @@ export function createTavernService(getBaseUrl) {
     /**
      * 删除酒馆
      * @param {string} tavernId
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async deleteTavern(tavernId) {
+    async deleteTavern(tavernId, userId = '') {
       const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}`, {
         method: 'DELETE',
+        headers: buildHeaders(userId),
       })
       return readJson(response)
     },
@@ -164,13 +183,28 @@ export function createTavernService(getBaseUrl) {
      * 进入酒馆（密码验证）
      * @param {string} tavernId
      * @param {string} password - 密码
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async enterTavern(tavernId, password = '') {
+    async enterTavern(tavernId, password = '', userId = '') {
       const params = password ? `?password=${encodeURIComponent(password)}` : ''
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/enter${params}`,
-        { method: 'POST' }
+        { method: 'POST', headers: buildHeaders(userId) }
+      )
+      return readJson(response)
+    },
+
+    /**
+     * 获取酒馆访客状态列表（店主视图）
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async getTavernVisitors(tavernId, userId = '') {
+      const response = await fetch(
+        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/visitors`,
+        { cache: 'no-store', headers: buildHeaders(userId) }
       )
       return readJson(response)
     },
@@ -180,12 +214,13 @@ export function createTavernService(getBaseUrl) {
     /**
      * 获取酒馆角色列表
      * @param {string} tavernId
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async getCharacters(tavernId) {
+    async getCharacters(tavernId, userId = '') {
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters`,
-        { cache: 'no-store' }
+        { cache: 'no-store', headers: buildHeaders(userId) }
       )
       return readJson(response)
     },
@@ -194,14 +229,15 @@ export function createTavernService(getBaseUrl) {
      * 添加角色
      * @param {string} tavernId
      * @param {object} data - 角色数据
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async addCharacter(tavernId, data) {
+    async addCharacter(tavernId, data, userId = '') {
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(userId),
           body: JSON.stringify(data),
         }
       )
@@ -212,14 +248,15 @@ export function createTavernService(getBaseUrl) {
      * 导入 SillyTavern 角色卡
      * @param {string} tavernId
      * @param {object} cardData - SillyTavern Character Card V2 JSON
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async importCharacterCard(tavernId, cardData) {
+    async importCharacterCard(tavernId, cardData, userId = '') {
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/import`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(userId),
           body: JSON.stringify(cardData),
         }
       )
@@ -231,14 +268,15 @@ export function createTavernService(getBaseUrl) {
      * @param {string} tavernId
      * @param {string} charId
      * @param {object} data
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async updateCharacter(tavernId, charId, data) {
+    async updateCharacter(tavernId, charId, data, userId = '') {
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(charId)}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(userId),
           body: JSON.stringify(data),
         }
       )
@@ -249,12 +287,13 @@ export function createTavernService(getBaseUrl) {
      * 删除角色
      * @param {string} tavernId
      * @param {string} charId
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async deleteCharacter(tavernId, charId) {
+    async deleteCharacter(tavernId, charId, userId = '') {
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(charId)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: buildHeaders(userId) }
       )
       return readJson(response)
     },
@@ -262,22 +301,97 @@ export function createTavernService(getBaseUrl) {
     // ─── Chat ─────────────────────────────────────────────────────
 
     /**
+     * 获取聊天会话摘要（店主看自己酒馆时默认返回全部访客会话）
+     * @param {object} options
+     * @param {string} options.tavernId
+     * @param {string} options.characterId
+     * @param {string} options.visitorId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async listChatSessions(options = {}, userId = '') {
+      const params = new URLSearchParams()
+      if (options.tavernId) params.set('tavern_id', options.tavernId)
+      if (options.characterId) params.set('character_id', options.characterId)
+      if (options.visitorId) params.set('visitor_id', options.visitorId)
+
+      const response = await fetch(`${getBaseUrl()}/api/chats?${params}`, {
+        cache: 'no-store',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
+    /**
      * 获取酒馆聊天记录
      * @param {string} tavernId
      * @param {string} visitorId
      * @param {string} characterId
+     * @param {string} userId
+     * @param {number} limit
      * @returns {Promise<object>}
      */
-    async getChatHistory(tavernId, visitorId, characterId = null) {
+    async getChatHistory(tavernId, visitorId, characterId = null, userId = visitorId, limit = 50) {
       const params = new URLSearchParams({
         visitor_id: visitorId,
       })
       if (characterId) params.set('character_id', characterId)
+      if (limit) params.set('limit', String(limit))
 
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/chat?${params}`,
-        { cache: 'no-store' }
+        { cache: 'no-store', headers: buildHeaders(userId) }
       )
+      return readJson(response)
+    },
+
+    /**
+     * 导出聊天记录
+     * @param {object} options
+     * @param {string} options.tavernId
+     * @param {string} options.characterId
+     * @param {string} options.visitorId
+     * @param {'json'|'text'} options.format
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async exportChatHistory(options = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/chats/export`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          tavern_id: options.tavernId || '',
+          character_id: options.characterId || '',
+          visitor_id: options.visitorId || '',
+          format: options.format || 'json',
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 搜索聊天记录
+     * @param {object} options
+     * @param {string} options.tavernId
+     * @param {string} options.characterId
+     * @param {string} options.visitorId
+     * @param {string} options.query
+     * @param {number} options.limit
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async searchChatHistory(options = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/chats/search`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          tavern_id: options.tavernId || '',
+          character_id: options.characterId || '',
+          visitor_id: options.visitorId || '',
+          query: options.query || '',
+          limit: options.limit || 50,
+        }),
+      })
       return readJson(response)
     },
 
@@ -287,18 +401,21 @@ export function createTavernService(getBaseUrl) {
      * @param {string} characterId
      * @param {string} message
      * @param {string} visitorId
+     * @param {string} visitorName
      * @returns {Promise<object>}
      */
-    async sendChat(tavernId, characterId, message, visitorId) {
+    async sendChat(tavernId, characterId, message, visitorId, visitorName = '') {
+      const cleanVisitorName = String(visitorName || '').trim().slice(0, 24)
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/chat`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(visitorId),
           body: JSON.stringify({
             character_id: characterId,
             message,
             visitor_id: visitorId,
+            visitor_name: cleanVisitorName,
           }),
         }
       )
@@ -320,11 +437,13 @@ export function createTavernService(getBaseUrl) {
      * 获取角色的所有立绘
      * @param {string} tavernId
      * @param {string} characterId
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async getCharacterSprites(tavernId, characterId) {
+    async getCharacterSprites(tavernId, characterId, userId = '') {
       const response = await fetch(
-        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(characterId)}/sprites`
+        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(characterId)}/sprites`,
+        { headers: buildHeaders(userId) }
       )
       return readJson(response)
     },
@@ -334,14 +453,15 @@ export function createTavernService(getBaseUrl) {
      * @param {string} tavernId
      * @param {string} characterId
      * @param {object} sprites - 键为表情名，值为 URL
+     * @param {string} userId
      * @returns {Promise<object>}
      */
-    async updateCharacterSprites(tavernId, characterId, sprites) {
+    async updateCharacterSprites(tavernId, characterId, sprites, userId = '') {
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(characterId)}/sprites`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildJsonHeaders(userId),
           body: JSON.stringify({ sprites }),
         }
       )

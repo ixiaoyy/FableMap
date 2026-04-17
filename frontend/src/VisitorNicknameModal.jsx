@@ -39,7 +39,7 @@ export default function VisitorNicknameModal({ onSubmit }) {
 
         <h2 id="nickname-title" className="visitor-nickname-title">欢迎来到赛博酒馆</h2>
         <p className="visitor-nickname-subtitle">
-          设置你在酒馆中的显示名称，角色和其他访客会看到这个昵称。
+          设置你在酒馆中的显示名称，角色会用这个称呼与你对话。
         </p>
 
         <form className="visitor-nickname-form" onSubmit={handleSubmit}>

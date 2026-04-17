@@ -11,10 +11,13 @@ import CharacterEditor, { createEmptyCharacterDraft } from './CharacterEditor'
  * 2. 设置访问权限（公开/密码/私人）
  * 3. 配置 LLM（可选，暂时跳过）
  * 4. 导入 SillyTavern 角色卡
+ *
+ * @param {string} ownerId - 当前店主/访客身份 ID，用于后端 owner 权限校验
  */
 export default function TavernCreatePanel({
   initialLat = 0,
   initialLon = 0,
+  ownerId = '',
   onCreated,
   onCancel,
 }) {
@@ -68,6 +71,7 @@ export default function TavernCreatePanel({
         access: form.access,
         password: form.access === 'password' ? form.password : '',
         scene_prompt: form.scene_prompt,
+        owner_id: ownerId || undefined,
       }
 
       // 添加 LLM 配置（如果用户填写了）
@@ -83,12 +87,12 @@ export default function TavernCreatePanel({
         }
       }
 
-      const tavern = await tavernService.createTavern(payload)
+      const tavern = await tavernService.createTavern(payload, ownerId)
 
       // 添加角色
       const addedCharacters = []
       for (const char of form.characters) {
-        const addedCharacter = await tavernService.addCharacter(tavern.id, char)
+        const addedCharacter = await tavernService.addCharacter(tavern.id, char, ownerId)
         addedCharacters.push(addedCharacter)
       }
 

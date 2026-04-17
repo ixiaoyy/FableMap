@@ -29,6 +29,32 @@ def _tavern_llm_config_to_client(tavern_config) -> "LLMConfig":
         presence_penalty=getattr(tavern_config, 'presence_penalty', 0.0),
     )
 
+
+def _normalize_visitor_name(value: Any, *, max_length: int = 24) -> str:
+    """Normalize a visitor-provided display name before storing or prompt use."""
+    if not isinstance(value, str):
+        return ""
+    normalized = " ".join(value.split())
+    return normalized[:max_length]
+
+
+def _relationship_stage_for(strength: float, visit_count: int) -> str:
+    if strength >= 0.75 or visit_count >= 8:
+        return "confidant"
+    if strength >= 0.45 or visit_count >= 4:
+        return "regular"
+    if strength >= 0.15 or visit_count >= 2:
+        return "acquaintance"
+    return "stranger"
+
+
+def _clamp_chat_history_limit(value: Any, *, default: int = 50, maximum: int = 500) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(maximum, limit))
+
 from fablemap.api_service import build_health_payload, build_meta_payload, build_nearby_payload
 from fablemap.llm_clients import create_client, LLMError
 from fablemap.prompt_builder import ChatMessage as PromptChatMessage, PromptBuildConfig, PromptBuilder
@@ -361,11 +387,116 @@ class WebService:
         """Delete a tavern"""
         return self.tavern_service.delete_tavern(tavern_id, user_id)
 
+    # ── Voice Config ───────────────────────────────────────────────────
+
+    def save_voice_config_payload(
+        self, tavern_id: str, data: dict[str, Any], user_id: str = ""
+    ) -> dict[str, Any]:
+        """Save voice config (TTS/STT settings)"""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        if tavern.owner_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+
+        from fablemap.tavern import VoiceConfig
+        voice_config = VoiceConfig.from_dict(data)
+        self.tavern_store.save_voice_config(tavern_id, voice_config)
+        # Also update the in-memory tavern object
+        tavern.voice_config = voice_config
+        self.tavern_store.update_tavern(tavern)
+        return {"ok": True, "voice_config": voice_config.to_dict()}
+
+    def get_voice_config_payload(
+        self, tavern_id: str, user_id: str = ""
+    ) -> dict[str, Any]:
+        """Get voice config — owner sees full config, others see public config"""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        vc = self.tavern_store.get_voice_config(tavern_id)
+        if vc:
+            return {"voice_config": vc.to_dict()}
+
+        # Return default empty config
+        from fablemap.tavern import VoiceConfig
+        default_vc = VoiceConfig()
+        return {"voice_config": default_vc.to_dict()}
+
+    def synthesize_voice_payload(
+        self,
+        tavern_id: str,
+        text: str,
+        character_id: str = "",
+        user_id: str = "",
+    ) -> bytes:
+        """Synthesize speech for a tavern using its TTS config."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        vc = self.tavern_store.get_voice_config(tavern_id)
+        if not vc or not vc.enabled:
+            raise HTTPException(status_code=400, detail="语音未启用")
+
+        # Get TTS provider credentials from LLM config (same api_key works)
+        llm_config = self.tavern_store.get_llm_config(tavern_id)
+        api_key = llm_config.api_key if llm_config else ""
+        base_url = llm_config.base_url if llm_config else ""
+
+        # Build TTS config
+        from fablemap.tts_clients import TTSConfig, create_tts_provider
+        tts_cfg = TTSConfig(
+            provider=vc.tts_provider,
+            api_key=api_key,
+            base_url=base_url,
+            voice=vc.tts_voice,
+            model=vc.tts_model,
+            speed=vc.tts_speed,
+            language=vc.tts_language,
+        )
+
+        try:
+            provider = create_tts_provider(tts_cfg)
+            result = provider.synthesize(text, voice=vc.tts_voice or None)
+            return result.audio
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"语音合成失败: {e}")
+
     def enter_tavern_payload(
         self, tavern_id: str, password: str = "", user_id: str = ""
     ) -> dict[str, Any]:
         """Enter a tavern (verify password)"""
         return self.tavern_service.enter_tavern(tavern_id, password, user_id)
+
+    def list_tavern_visitors_payload(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
+        """List visitor states for a tavern. Owner-only."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="Tavern not found")
+        if tavern.owner_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+
+        visitor_names: dict[str, str] = {}
+        message_counts: dict[str, int] = {}
+        for session in self.tavern_store.list_chat_sessions(tavern_id, limit=None):
+            visitor_id = session.get("visitor_id", "")
+            if not visitor_id:
+                continue
+            visitor_name = session.get("visitor_name", "")
+            if visitor_name and not visitor_names.get(visitor_id):
+                visitor_names[visitor_id] = visitor_name
+            message_counts[visitor_id] = message_counts.get(visitor_id, 0) + int(session.get("message_count", 0) or 0)
+
+        visitors = []
+        for state in self.tavern_store.list_visitor_states(tavern_id):
+            payload = state.to_dict()
+            payload["visitor_name"] = visitor_names.get(state.visitor_id, "")
+            payload["message_count"] = message_counts.get(state.visitor_id, 0)
+            visitors.append(payload)
+
+        return {"visitors": visitors, "count": len(visitors)}
 
     def add_character_payload(
         self, tavern_id: str, data: dict[str, Any], user_id: str = ""
@@ -536,13 +667,27 @@ class WebService:
         character_id: str,
         message: str,
         visitor_id: str,
+        visitor_name: str = "",
+        user_id: str = "",
     ) -> dict[str, Any]:
         """Send a chat message and get AI response"""
-        from fablemap.tavern import ChatMessage as TavernChatMessage
+        from fablemap.tavern import ChatMessage as TavernChatMessage, VisitorState
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
             raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        visitor_id = str(visitor_id or user_id or "").strip()
+        user_id = str(user_id or "").strip()
+        if not visitor_id:
+            raise HTTPException(status_code=400, detail="缺少访客身份")
+        if user_id and user_id != visitor_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="不能代替其他访客发送消息")
+        if tavern.access == "private" and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        visitor_display_name = _normalize_visitor_name(visitor_name)
+        prompt_user_name = visitor_display_name or visitor_id[:16] or "旅人"
 
         # Find character
         character = next((c for c in tavern.characters if c.id == character_id), None)
@@ -581,14 +726,30 @@ class WebService:
         messages = self.tavern_store.get_chat_history(
             tavern_id, visitor_id, character_id, limit=20
         )
+        prompt_visitor_state = self.tavern_store.get_visitor_state(tavern_id, visitor_id) if visitor_id else None
+        visitor_message_count = len(messages)
+        if visitor_id:
+            try:
+                visitor_message_count = sum(
+                    int(session.get("message_count", 0) or 0)
+                    for session in self.tavern_store.list_chat_sessions(
+                        tavern_id,
+                        visitor_id=visitor_id,
+                        limit=None,
+                    )
+                )
+            except Exception:
+                visitor_message_count = len(messages)
 
         # Convert to prompt_builder.ChatMessage format
-        prompt_messages = [
-            {"id": m.id, "role": m.role, "content": m.content, "name": "", "timestamp": m.timestamp or ""}
-            for m in messages
-        ]
         prompt_messages_obj = [
-            PromptChatMessage(id=m.id, role=m.role, content=m.content)
+            PromptChatMessage(
+                id=m.id,
+                role=m.role,
+                content=m.content,
+                name=(m.visitor_name or visitor_display_name) if m.role == "user" else character.name,
+                timestamp=m.timestamp or "",
+            )
             for m in messages
         ]
 
@@ -608,7 +769,13 @@ class WebService:
             char_scenario=character.scenario or "",
             char_first_mes=character.first_mes or "",
             char_system_prompt=character.system_prompt or "",
-            user_name=visitor_id[:16] or "旅人",
+            user_name=prompt_user_name,
+            visitor_visit_count=prompt_visitor_state.visit_count if prompt_visitor_state else 0,
+            visitor_relationship_stage=prompt_visitor_state.relationship_stage if prompt_visitor_state else "",
+            visitor_relationship_strength=prompt_visitor_state.relationship_strength if prompt_visitor_state else 0.0,
+            visitor_first_visit=prompt_visitor_state.first_visit if prompt_visitor_state else "",
+            visitor_last_visit=prompt_visitor_state.last_visit if prompt_visitor_state else "",
+            visitor_message_count=visitor_message_count,
             world_info_entries=[e.to_dict() if hasattr(e, "to_dict") else e for e in tavern.world_info],
             output_format=output_format,
             history_max_messages=20,
@@ -655,6 +822,7 @@ class WebService:
                 tavern_id=tavern_id,
                 character_id=character_id,
                 visitor_id=visitor_id,
+                visitor_name=visitor_display_name,
                 role="user",
                 content=message,
                 timestamp=now,
@@ -666,6 +834,7 @@ class WebService:
                 tavern_id=tavern_id,
                 character_id=character_id,
                 visitor_id=visitor_id,
+                visitor_name=visitor_display_name,
                 role="assistant",
                 content=response_text,
                 timestamp=now,
@@ -675,6 +844,25 @@ class WebService:
         # Record token usage
         token_count = self._count_tokens(llm_config.backend, llm_config.model, message, response_text, response)
         self.tavern_store.add_token_usage(tavern_id, token_count)
+
+        if visitor_id:
+            visitor_state = self.tavern_store.get_visitor_state(tavern_id, visitor_id) or VisitorState(
+                visitor_id=visitor_id,
+                tavern_id=tavern_id,
+                first_visit=now,
+            )
+            if not visitor_state.first_visit:
+                visitor_state.first_visit = now
+            visitor_state.last_visit = now
+            visitor_state.relationship_strength = min(
+                1.0,
+                float(visitor_state.relationship_strength or 0.0) + 0.05,
+            )
+            visitor_state.relationship_stage = _relationship_stage_for(
+                visitor_state.relationship_strength,
+                visitor_state.visit_count,
+            )
+            self.tavern_store.update_visitor_state(tavern_id, visitor_state)
 
         return {
             "character_id": character_id,
@@ -890,17 +1078,43 @@ class WebService:
         tavern_id: str,
         visitor_id: str,
         character_id: str | None = None,
+        user_id: str = "",
+        limit: int = 50,
     ) -> dict[str, Any]:
         """Get chat history for a tavern"""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        visitor_id = str(visitor_id or "").strip()
+        user_id = str(user_id or "").strip()
+        if not visitor_id:
+            raise HTTPException(status_code=400, detail="缺少访客身份")
+
+        is_owner = bool(user_id and tavern.owner_id == user_id)
+        is_visitor = bool(user_id and user_id == visitor_id)
+        if not is_owner and not is_visitor:
+            raise HTTPException(status_code=403, detail="不能读取其他访客的聊天记录")
+
+        if tavern.access == "private" and not is_owner:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        history_limit = _clamp_chat_history_limit(limit)
         messages = self.tavern_store.get_chat_history(
-            tavern_id, visitor_id, character_id, limit=50
+            tavern_id, visitor_id, character_id, limit=history_limit
         )
+        character = next((c for c in tavern.characters if c.id == character_id), None) if character_id else None
+        visitor_name = next((m.visitor_name for m in reversed(messages) if getattr(m, "visitor_name", "")), "")
         return {
             "tavern_id": tavern_id,
+            "tavern_name": tavern.name,
             "visitor_id": visitor_id,
+            "visitor_name": visitor_name,
             "character_id": character_id,
+            "character_name": character.name if character else "",
             "messages": [m.to_dict() for m in messages],
             "count": len(messages),
+            "limit": history_limit,
         }
 
     def _inject_managed_taverns(self, payload: dict[str, Any], center_lat: float, center_lon: float, radius: int):

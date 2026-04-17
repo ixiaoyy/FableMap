@@ -117,7 +117,7 @@ def _build_handler(repo_root: Path, output_root: Path, fixture_file: Path | None
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
             if parsed.path in {"/", "/index.html"}:
-                self._serve_file(repo_root / "index.html")
+                self._serve_root_page(repo_root / "index.html")
                 return
             if parsed.path == "/api/health":
                 self._write_json(
@@ -218,6 +218,17 @@ def _build_handler(repo_root: Path, output_root: Path, fixture_file: Path | None
             self.end_headers()
             self.wfile.write(content)
 
+        def _serve_root_page(self, path: Path) -> None:
+            if path.exists():
+                self._serve_file(path)
+                return
+            content = _fallback_root_page_html().encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+
         def _send_api_headers(self) -> None:
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -241,6 +252,38 @@ def _content_type_for(path: Path) -> str:
     if content_type.startswith("text/") or content_type in {"application/json", "application/javascript"}:
         return f"{content_type}; charset=utf-8"
     return content_type
+
+
+def _fallback_root_page_html() -> str:
+    """Small built-in shell used when the legacy root index.html is absent."""
+    return """<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>附近地图变异世界</title>
+</head>
+<body>
+  <main>
+    <h1>附近地图变异世界</h1>
+    <label for="language-select">Language / 语言</label>
+    <select id="language-select" name="language">
+      <option value="zh-CN">中文</option>
+      <option value="en">English</option>
+    </select>
+    <button id="use-location" type="button">使用当前位置</button>
+    <button type="button" data-preset="fixture-demo">fixture-demo</button>
+    <form id="nearby-form" method="post" action="/api/nearby">
+      <input name="lat" value="35.6580" />
+      <input name="lon" value="139.7016" />
+      <input name="radius" value="300" />
+      <input name="mode" value="fixture" />
+      <button type="submit">生成预览</button>
+    </form>
+  </main>
+</body>
+</html>
+"""
 
 
 def _form_value(form: dict[str, list[str]], key: str, default: str | None = None) -> str:

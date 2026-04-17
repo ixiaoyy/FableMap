@@ -52,7 +52,7 @@ export default function TavernInterior({
   async function handleEnter(pwd = '') {
     setEntering(true)
     try {
-      const result = await tavernService.enterTavern(tavern.id, pwd)
+      const result = await tavernService.enterTavern(tavern.id, pwd, visitorId)
       setEntered(true)
       setPasswordRequired(false)
       // Add first message from character
