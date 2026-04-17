@@ -691,7 +691,7 @@ UI：
 
 ## 6. P2：高级系统任务
 
-### FM-VT-P2-01：结构化记忆模型
+### FM-VT-P2-01：结构化记忆模型 `[done 2026-04-17]`
 
 **目标**：从“访问次数 + 关系阶段”升级为内容型剧情记忆。
 
@@ -728,6 +728,16 @@ MemoryAtom {
 - 可创建、查询、更新、删除记忆原子。
 - 记忆按 scope / dimension / horizon 检索。
 - 私密记忆不被店主或其他访客越权读取。
+
+**实现记录**
+
+- `fablemap/memory.py` 新增 `MemoryAtom` 数据模型，覆盖 scope / dimension / horizon / visibility、重要度、置信度、来源消息和扩展元数据规范化。
+- `fablemap/tavern.py` 新增 `_memory_atoms` 私有扩展桶持久化，支持 list / get / save / delete，并继续由 Tavern 更新逻辑保留私有扩展数据。
+- `fablemap/web/service.py` 新增结构化记忆 CRUD 业务逻辑、scope / dimension / horizon / visibility 筛选，以及 private / owner / public 可见性边界。
+- `fablemap/web/router.py` 新增 `/api/taverns/{id}/memory-atoms` 列表 / 创建 / 详情 / 更新 / 删除端点。
+- `frontend/src/services/tavernService.js` 新增结构化记忆 API 封装，供后续记忆面板和自动提炼流水线复用。
+- 新增 `tests/test_tavern_memory_atoms.py`，覆盖模型规范化、CRUD、筛选、私密记忆不被店主或其他访客读取 / 修改 / 删除。
+- 验证：`py -3 -m pytest tests/test_tavern_memory_atoms.py -q` 通过；tavern 相关回归组 17 passed / 4 skipped；`npm --prefix .\frontend run build` 通过；`py -3 -m compileall fablemap` 通过。
 
 ---
 
@@ -1073,7 +1083,7 @@ PromptBlock {
 | FM-VT-P1-06 | Codex | done | 已实现 3 个内置酒馆模板和模板安装 UI；验证 `pytest` 171 passed，前端 build 通过 |
 | FM-VT-P1-07 | Codex | done | 已实现输出护栏规则引擎、店主编辑器和保存/预览 API；验证 `pytest` 173 passed，前端 build 通过 |
 | FM-VT-P1-08 | Codex | done | 已完成店主控制台分组导航与高级工具台；抽出 OwnerConsoleSections；验证 `pytest` 173 passed，前端 build 通过 |
-| FM-VT-P2-01 | 未认领 | todo |  |
+| FM-VT-P2-01 | Codex | done | 已实现 MemoryAtom 模型、酒馆私有扩展桶持久化、CRUD API、前端 service 封装和权限测试；验证新增测试通过、前端 build 通过 |
 | FM-VT-P2-02 | 未认领 | todo |  |
 | FM-VT-P2-03 | 未认领 | todo |  |
 | FM-VT-P2-04 | Codex | done | 已实现 Prompt Block 段落引擎、店主编辑器和保存/预览 API；验证 `pytest` 177 passed，前端 build 通过 |

@@ -19,6 +19,113 @@ logger = logging.getLogger(__name__)
 
 # ─── Memory Types ───────────────────────────────────────────────────────────────
 
+MEMORY_SCOPES = {"visitor_character", "visitor_tavern", "tavern_public", "place"}
+MEMORY_DIMENSIONS = {"fact", "emotion", "event", "preference", "promise"}
+MEMORY_HORIZONS = {"short", "mid", "long"}
+MEMORY_VISIBILITIES = {"private", "owner", "public"}
+
+
+def _choice(value: Any, allowed: set[str], default: str) -> str:
+    candidate = str(value or "").strip()
+    return candidate if candidate in allowed else default
+
+
+def _bounded_float(value: Any, default: float = 0.0) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(0.0, min(1.0, parsed))
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if value is None:
+        return []
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _metadata(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+@dataclass
+class MemoryAtom:
+    """A structured tavern memory atom.
+
+    This is the storage-neutral unit for the FM-VT-P2 memory system. It keeps
+    the task-list contract fields and adds small routing metadata needed for
+    tavern-level auth and filtering.
+    """
+
+    id: str = ""
+    tavern_id: str = ""
+    scope: str = "visitor_tavern"
+    dimension: str = "fact"
+    horizon: str = "short"
+    subject: str = ""
+    content: str = ""
+    importance: float = 0.5
+    confidence: float = 1.0
+    source_message_ids: list[str] = field(default_factory=list)
+    created_at: str = ""
+    updated_at: str = ""
+    pinned: bool = False
+    visibility: str = "private"
+    visitor_id: str = ""
+    character_id: str = ""
+    place_id: str = ""
+    created_by: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "tavern_id": self.tavern_id,
+            "scope": self.scope,
+            "dimension": self.dimension,
+            "horizon": self.horizon,
+            "subject": self.subject,
+            "content": self.content,
+            "importance": self.importance,
+            "confidence": self.confidence,
+            "source_message_ids": list(self.source_message_ids),
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "pinned": self.pinned,
+            "visibility": self.visibility,
+            "visitor_id": self.visitor_id,
+            "character_id": self.character_id,
+            "place_id": self.place_id,
+            "created_by": self.created_by,
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MemoryAtom":
+        return cls(
+            id=str(data.get("id") or "").strip(),
+            tavern_id=str(data.get("tavern_id") or "").strip(),
+            scope=_choice(data.get("scope"), MEMORY_SCOPES, "visitor_tavern"),
+            dimension=_choice(data.get("dimension"), MEMORY_DIMENSIONS, "fact"),
+            horizon=_choice(data.get("horizon"), MEMORY_HORIZONS, "short"),
+            subject=str(data.get("subject") or "").strip(),
+            content=str(data.get("content") or ""),
+            importance=_bounded_float(data.get("importance"), 0.5),
+            confidence=_bounded_float(data.get("confidence"), 1.0),
+            source_message_ids=_string_list(data.get("source_message_ids")),
+            created_at=str(data.get("created_at") or "").strip(),
+            updated_at=str(data.get("updated_at") or "").strip(),
+            pinned=bool(data.get("pinned", False)),
+            visibility=_choice(data.get("visibility"), MEMORY_VISIBILITIES, "private"),
+            visitor_id=str(data.get("visitor_id") or "").strip(),
+            character_id=str(data.get("character_id") or "").strip(),
+            place_id=str(data.get("place_id") or "").strip(),
+            created_by=str(data.get("created_by") or "").strip(),
+            metadata=_metadata(data.get("metadata")),
+        )
+
 
 @dataclass
 class MemoryEntry:

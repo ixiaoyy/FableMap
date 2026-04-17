@@ -416,6 +416,73 @@ export function createTavernService(getBaseUrl) {
       return readJson(response)
     },
 
+    /**
+     * 获取当前用户可见的结构化记忆
+     * @param {string} tavernId
+     * @param {object} filters — { scope, dimension, horizon, visibility, visitor_id, character_id, place_id, limit }
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async listMemoryAtoms(tavernId, filters = {}, userId = '') {
+      const params = new URLSearchParams()
+      for (const key of ['scope', 'dimension', 'horizon', 'visibility', 'visitor_id', 'character_id', 'place_id', 'limit']) {
+        if (filters[key] != null && filters[key] !== '') params.set(key, filters[key])
+      }
+      const response = await fetch(
+        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/memory-atoms?${params}`,
+        { cache: 'no-store', headers: buildHeaders(userId) }
+      )
+      return readJson(response)
+    },
+
+    /**
+     * 创建结构化记忆
+     * @param {string} tavernId
+     * @param {object} data
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async createMemoryAtom(tavernId, data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/memory-atoms`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 更新结构化记忆
+     * @param {string} tavernId
+     * @param {string} memoryId
+     * @param {object} data
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async updateMemoryAtom(tavernId, memoryId, data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 删除结构化记忆
+     * @param {string} tavernId
+     * @param {string} memoryId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async deleteMemoryAtom(tavernId, memoryId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}`, {
+        method: 'DELETE',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
     // ─── Character Management ──────────────────────────────────────
 
     /**

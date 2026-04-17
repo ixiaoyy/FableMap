@@ -139,8 +139,149 @@ def _package_dict(package: dict[str, Any], tavern_payload: dict[str, Any], key: 
     value = tavern_payload.get(key)
     return value if isinstance(value, dict) else {}
 
+
+def _memory_filter(value: Any, allowed: set[str]) -> str:
+    normalized = str(value or "").strip()
+    return normalized if normalized in allowed else ""
+
+
+def _is_tavern_owner_obj(tavern: Any, user_id: str) -> bool:
+    return bool(user_id and getattr(tavern, "owner_id", "") and getattr(tavern, "owner_id", "") == user_id)
+
+
+def _memory_subject_user_ids(atom: MemoryAtom) -> set[str]:
+    ids: set[str] = set()
+    if atom.visitor_id:
+        ids.add(atom.visitor_id)
+    if atom.scope.startswith("visitor_") and atom.subject:
+        ids.add(atom.subject)
+    return ids
+
+
+def _memory_subject_matches(atom: MemoryAtom, user_id: str) -> bool:
+    return bool(user_id and user_id in _memory_subject_user_ids(atom))
+
+
+def _memory_atom_is_visible(atom: MemoryAtom, tavern: Any, user_id: str) -> bool:
+    if atom.visibility == "public":
+        return True
+    if atom.visibility == "owner":
+        return _is_tavern_owner_obj(tavern, user_id) or _memory_subject_matches(atom, user_id)
+    return _memory_subject_matches(atom, user_id)
+
+
+def _memory_atom_is_editable(atom: MemoryAtom, tavern: Any, user_id: str) -> bool:
+    if atom.visibility == "private":
+        return _memory_subject_matches(atom, user_id)
+    return _is_tavern_owner_obj(tavern, user_id) or bool(user_id and atom.created_by == user_id)
+
+
+def _memory_atom_matches_filters(
+    atom: MemoryAtom,
+    *,
+    scope: str = "",
+    dimension: str = "",
+    horizon: str = "",
+    visibility: str = "",
+    visitor_id: str = "",
+    character_id: str = "",
+    place_id: str = "",
+) -> bool:
+    if scope and atom.scope != scope:
+        return False
+    if dimension and atom.dimension != dimension:
+        return False
+    if horizon and atom.horizon != horizon:
+        return False
+    if visibility and atom.visibility != visibility:
+        return False
+    if visitor_id and atom.visitor_id != visitor_id and atom.subject != visitor_id:
+        return False
+    if character_id and atom.character_id != character_id:
+        return False
+    if place_id and atom.place_id != place_id:
+        return False
+    return True
+
+
+def _clamp_memory_limit(value: Any, default: int = 100, maximum: int = 500) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(maximum, limit))
+
+
+def _memory_atom_from_payload(
+    data: dict[str, Any],
+    *,
+    tavern_id: str,
+    user_id: str,
+    existing: MemoryAtom | None = None,
+) -> MemoryAtom:
+    now = _utc_now_iso()
+    if existing:
+        payload = existing.to_dict()
+    else:
+        payload = {
+            "id": f"mem_{uuid.uuid4().hex[:12]}",
+            "tavern_id": tavern_id,
+            "created_at": now,
+            "updated_at": now,
+            "created_by": user_id,
+        }
+
+    editable_fields = (
+        "scope",
+        "dimension",
+        "horizon",
+        "subject",
+        "content",
+        "importance",
+        "confidence",
+        "source_message_ids",
+        "pinned",
+        "visibility",
+        "visitor_id",
+        "character_id",
+        "place_id",
+        "metadata",
+    )
+    for key in editable_fields:
+        if key in data:
+            payload[key] = data[key]
+
+    if not existing:
+        payload["id"] = str(data.get("id") or payload["id"]).strip() or payload["id"]
+        payload["created_by"] = user_id
+        payload["created_at"] = now
+    payload["tavern_id"] = tavern_id
+    payload["updated_at"] = now
+
+    scope = str(payload.get("scope") or "visitor_tavern").strip()
+    visibility = str(payload.get("visibility") or "private").strip()
+    if visibility == "private" and not str(payload.get("visitor_id") or "").strip():
+        payload["visitor_id"] = user_id
+    if scope.startswith("visitor_"):
+        if not str(payload.get("visitor_id") or "").strip():
+            payload["visitor_id"] = str(payload.get("subject") or user_id or "").strip()
+        if not str(payload.get("subject") or "").strip():
+            payload["subject"] = str(payload.get("visitor_id") or user_id or "").strip()
+
+    atom = MemoryAtom.from_dict(payload)
+    if not atom.content.strip():
+        raise HTTPException(status_code=400, detail="记忆内容不能为空")
+    return atom
+
 from fablemap.api_service import build_health_payload, build_meta_payload, build_nearby_payload
 from fablemap.llm_clients import create_client, LLMError
+from fablemap.memory import (
+    MEMORY_DIMENSIONS,
+    MEMORY_HORIZONS,
+    MEMORY_SCOPES,
+    MEMORY_VISIBILITIES,
+    MemoryAtom,
+)
 from fablemap.output_rules import apply_output_rules, default_output_rules, normalize_output_rules
 from fablemap.presets import (
     combine_runtime_presets,
@@ -966,6 +1107,148 @@ class WebService:
             visitors.append(payload)
 
         return {"visitors": visitors, "count": len(visitors)}
+
+    def list_memory_atoms_payload(
+        self,
+        tavern_id: str,
+        user_id: str = "",
+        *,
+        scope: str = "",
+        dimension: str = "",
+        horizon: str = "",
+        visibility: str = "",
+        visitor_id: str = "",
+        character_id: str = "",
+        place_id: str = "",
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """List structured memory atoms visible to the current user."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        filters = {
+            "scope": _memory_filter(scope, MEMORY_SCOPES),
+            "dimension": _memory_filter(dimension, MEMORY_DIMENSIONS),
+            "horizon": _memory_filter(horizon, MEMORY_HORIZONS),
+            "visibility": _memory_filter(visibility, MEMORY_VISIBILITIES),
+            "visitor_id": str(visitor_id or "").strip(),
+            "character_id": str(character_id or "").strip(),
+            "place_id": str(place_id or "").strip(),
+        }
+        max_items = _clamp_memory_limit(limit)
+
+        atoms = []
+        for atom in self.tavern_store.list_memory_atoms(tavern_id):
+            if not _memory_atom_is_visible(atom, tavern, user_id):
+                continue
+            if not _memory_atom_matches_filters(atom, **filters):
+                continue
+            atoms.append(atom.to_dict())
+            if len(atoms) >= max_items:
+                break
+
+        return {
+            "tavern_id": tavern_id,
+            "memory_atoms": atoms,
+            "count": len(atoms),
+            "filters": filters,
+        }
+
+    def get_memory_atom_payload(self, tavern_id: str, memory_id: str, user_id: str = "") -> dict[str, Any]:
+        """Return a single structured memory atom if visible to the current user."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        atom = self.tavern_store.get_memory_atom(tavern_id, memory_id)
+        if not atom:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        if not _memory_atom_is_visible(atom, tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能访问这条记忆")
+        return {"tavern_id": tavern_id, "memory_atom": atom.to_dict()}
+
+    def create_memory_atom_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        """Create a structured memory atom with tavern and visitor visibility rules."""
+        if not user_id:
+            raise HTTPException(status_code=401, detail="创建记忆需要明确用户身份")
+
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        owner = _is_tavern_owner_obj(tavern, user_id)
+        if tavern.access == "private" and not owner:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        atom = _memory_atom_from_payload(data or {}, tavern_id=tavern_id, user_id=user_id)
+        if atom.visibility == "private" and not _memory_subject_matches(atom, user_id):
+            raise HTTPException(status_code=403, detail="只能创建自己的私密记忆")
+        if atom.visibility == "private" and atom.scope.startswith("visitor_"):
+            private_ids = {value for value in (atom.subject, atom.visitor_id) if value}
+            if private_ids != {user_id}:
+                raise HTTPException(status_code=403, detail="私密访客记忆只能属于当前访客")
+        if atom.scope.startswith("visitor_") and atom.visitor_id and atom.visitor_id != user_id and not owner:
+            raise HTTPException(status_code=403, detail="不能为其他访客创建记忆")
+        if atom.visibility != "private" and not owner and atom.scope not in {"visitor_character", "visitor_tavern"}:
+            raise HTTPException(status_code=403, detail="只有店主能创建公共酒馆或地点记忆")
+
+        created = self.tavern_store.save_memory_atom(tavern_id, atom)
+        return {"ok": True, "tavern_id": tavern_id, "memory_atom": created.to_dict()}
+
+    def update_memory_atom_payload(
+        self,
+        tavern_id: str,
+        memory_id: str,
+        data: dict[str, Any],
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        """Update a structured memory atom if the current user can edit it."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        existing = self.tavern_store.get_memory_atom(tavern_id, memory_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        if not _memory_atom_is_editable(existing, tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能修改这条记忆")
+
+        updated = _memory_atom_from_payload(data or {}, tavern_id=tavern_id, user_id=user_id, existing=existing)
+        if updated.visibility == "private" and not _memory_subject_matches(updated, user_id):
+            raise HTTPException(status_code=403, detail="私密记忆只能属于当前访客")
+        if updated.visibility == "private" and updated.scope.startswith("visitor_"):
+            private_ids = {value for value in (updated.subject, updated.visitor_id) if value}
+            if private_ids != {user_id}:
+                raise HTTPException(status_code=403, detail="私密访客记忆只能属于当前访客")
+        if updated.scope.startswith("visitor_") and updated.visitor_id and updated.visitor_id != user_id and not _is_tavern_owner_obj(tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能把记忆转给其他访客")
+
+        saved = self.tavern_store.save_memory_atom(tavern_id, updated)
+        return {"ok": True, "tavern_id": tavern_id, "memory_atom": saved.to_dict()}
+
+    def delete_memory_atom_payload(self, tavern_id: str, memory_id: str, user_id: str = "") -> dict[str, Any]:
+        """Delete a structured memory atom if the current user can edit it."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+        atom = self.tavern_store.get_memory_atom(tavern_id, memory_id)
+        if not atom:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        if not _memory_atom_is_editable(atom, tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能删除这条记忆")
+
+        deleted = self.tavern_store.delete_memory_atom(tavern_id, memory_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        return {"ok": True, "tavern_id": tavern_id, "memory_id": memory_id}
 
     def add_character_payload(
         self, tavern_id: str, data: dict[str, Any], user_id: str = ""

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
+from fablemap.memory import MemoryAtom
 
 # ─────────────────────────────────────────
 # 类型别名
@@ -744,6 +745,69 @@ class TavernStore:
         visitors = tavern_data.setdefault("_visitors", {})
         visitors[state.visitor_id] = state.to_dict()
         self._save_taverns(data)
+
+    # ── 结构化记忆 ────────────────────────
+
+    def list_memory_atoms(self, tavern_id: str) -> list[MemoryAtom]:
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        atoms = tavern_data.get("_memory_atoms", {})
+        if not isinstance(atoms, dict):
+            return []
+
+        result = []
+        for value in atoms.values():
+            if not isinstance(value, dict):
+                continue
+            try:
+                result.append(MemoryAtom.from_dict(value))
+            except (TypeError, ValueError):
+                continue
+        result.sort(
+            key=lambda atom: (
+                atom.pinned,
+                atom.updated_at or atom.created_at,
+                atom.id,
+            ),
+            reverse=True,
+        )
+        return result
+
+    def get_memory_atom(self, tavern_id: str, memory_id: str) -> MemoryAtom | None:
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        atoms = tavern_data.get("_memory_atoms", {})
+        if not isinstance(atoms, dict):
+            return None
+        value = atoms.get(memory_id)
+        if not isinstance(value, dict):
+            return None
+        try:
+            return MemoryAtom.from_dict(value)
+        except (TypeError, ValueError):
+            return None
+
+    def save_memory_atom(self, tavern_id: str, atom: MemoryAtom) -> MemoryAtom:
+        data = self._load_taverns()
+        tavern_data = data.setdefault(tavern_id, {})
+        atoms = tavern_data.setdefault("_memory_atoms", {})
+        if not isinstance(atoms, dict):
+            atoms = {}
+            tavern_data["_memory_atoms"] = atoms
+        atom.tavern_id = tavern_id
+        atoms[atom.id] = atom.to_dict()
+        self._save_taverns(data)
+        return atom
+
+    def delete_memory_atom(self, tavern_id: str, memory_id: str) -> bool:
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        atoms = tavern_data.get("_memory_atoms", {})
+        if not isinstance(atoms, dict) or memory_id not in atoms:
+            return False
+        del atoms[memory_id]
+        self._save_taverns(data)
+        return True
 
     # ── Chat History ─────────────────────
 

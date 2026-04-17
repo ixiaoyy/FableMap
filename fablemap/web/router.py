@@ -267,6 +267,58 @@ def create_api_router(service: WebService) -> APIRouter:
         user_id = _get_user_id(request)
         return service.list_tavern_visitors_payload(tavern_id, user_id)
 
+    @router.get("/api/taverns/{tavern_id}/memory-atoms")
+    def list_memory_atoms(
+        request: Request,
+        tavern_id: str,
+        scope: str = "",
+        dimension: str = "",
+        horizon: str = "",
+        visibility: str = "",
+        visitor_id: str = "",
+        character_id: str = "",
+        place_id: str = "",
+        limit: int = 100,
+    ) -> dict:
+        """List structured memory atoms visible to the current user."""
+        user_id = _get_user_id(request)
+        return service.list_memory_atoms_payload(
+            tavern_id,
+            user_id,
+            scope=scope,
+            dimension=dimension,
+            horizon=horizon,
+            visibility=visibility,
+            visitor_id=visitor_id,
+            character_id=character_id,
+            place_id=place_id,
+            limit=limit,
+        )
+
+    @router.post("/api/taverns/{tavern_id}/memory-atoms")
+    def create_memory_atom(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
+        """Create a structured memory atom."""
+        user_id = _get_user_id(request)
+        return service.create_memory_atom_payload(tavern_id, data, user_id)
+
+    @router.get("/api/taverns/{tavern_id}/memory-atoms/{memory_id}")
+    def get_memory_atom(request: Request, tavern_id: str, memory_id: str) -> dict:
+        """Get one structured memory atom if visible."""
+        user_id = _get_user_id(request)
+        return service.get_memory_atom_payload(tavern_id, memory_id, user_id)
+
+    @router.put("/api/taverns/{tavern_id}/memory-atoms/{memory_id}")
+    def update_memory_atom(request: Request, tavern_id: str, memory_id: str, data: dict = Body(...)) -> dict:
+        """Update a structured memory atom."""
+        user_id = _get_user_id(request)
+        return service.update_memory_atom_payload(tavern_id, memory_id, data, user_id)
+
+    @router.delete("/api/taverns/{tavern_id}/memory-atoms/{memory_id}")
+    def delete_memory_atom(request: Request, tavern_id: str, memory_id: str) -> dict:
+        """Delete a structured memory atom."""
+        user_id = _get_user_id(request)
+        return service.delete_memory_atom_payload(tavern_id, memory_id, user_id)
+
     # ─── Character Routes ────────────────────────────────────────────────
 
     @router.get("/api/taverns/{tavern_id}/characters")
