@@ -1080,6 +1080,15 @@ PromptBlock {
 - 输出修正规则失败不影响聊天主链路
 - 降级回应仍能落库
 
+**实现记录 2026-04-19**
+
+- 新增 `tests/test_tavern_qa04_prompt_output.py`，7 个测试用例覆盖全部四个验收维度。
+- 回归 Prompt Block 自定义 order 保存 → 检索 → 组装顺序一致；token budget 裁剪确定性（相同输入相同 budget 结果相同，超预算以 `…` 结尾，未超原文保留）；极小 `memory_policy.budget_tokens` 下聊天 API 不崩溃。
+- 回归输出修正无效正则（`pattern="("`）保存成功，聊天继续完成，消息正常落库；`apply_output_rules` 在 errors 字段中记录坏规则，正常规则继续执行。
+- 回归 LLM 上游错误时降级回应返回 `degraded=True`，历史记录仍含 assistant 消息，访客可回访。
+- API 级别回归：`prompt-blocks` 默认顺序 scene/character_system/character_profile；`output-rules` API 含坏正则时仍返回 200 并记录 errors；`prompt-blocks/preview` 正常组装 messages。
+- 验证：`py -3 -m pytest tests/test_tavern_qa04_prompt_output.py -q` 7 passed；`py -3 -m pytest tests/ --ignore=tests/test_api.py -q` 185 passed（+7，无回归）。
+
 ---
 
 ## 9. 推荐实施顺序
@@ -1161,3 +1170,4 @@ PromptBlock {
 | FM-VT-QA-01 | Codex | done | 已新增开店向导回归测试，覆盖入口权限、AI 配置测试和角色导入 / 手动创建链路；验证测试、compileall 和前端 build 通过 |
 | FM-VT-QA-02 | Codex | done | 已新增记忆权限回归测试，覆盖访客 private、店主 owner/public、跨访客拒绝和酒馆包导出隐私边界 |
 | FM-VT-QA-03 | Codex | done | 已新增世界书注入回归测试，并补齐按条目 depth 扫描最近历史；覆盖常驻、关键词、次级关键词、排序、禁用、概率和命中测试 API |
+| FM-VT-QA-04 | Codex | done | 已新增 Prompt/输出修正综合回归测试，7 个测试用例覆盖 Prompt Block 顺序稳定、token budget 裁剪确定性、输出修正坏正则容错和降级回应落库；验证 185 passed |
