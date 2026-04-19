@@ -172,6 +172,8 @@ class TavernCharacter:
     tags: list[str] = field(default_factory=list)
     sprites: TavernSpriteSet | None = None
     avatar: str = ""  # 默认立绘（用于聊天界面显示）
+    appearance: dict[str, Any] = field(default_factory=dict)
+    talkativeness: float = 0.5  # 0.0–1.0，群聊时说话频率
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -188,6 +190,8 @@ class TavernCharacter:
             "tags": self.tags,
             "sprites": self.sprites.to_dict() if self.sprites else {},
             "avatar": self.avatar or (self.sprites.get("neutral") if self.sprites else ""),
+            "appearance": deepcopy(self.appearance) if isinstance(self.appearance, dict) else {},
+            "talkativeness": _normalize_talkativeness(self.talkativeness),
         }
 
     @classmethod
@@ -214,6 +218,8 @@ class TavernCharacter:
             tags=d.get("tags", []),
             sprites=sprites,
             avatar=d.get("avatar", ""),
+            appearance=_normalize_character_appearance(d.get("appearance")),
+            talkativeness=_normalize_talkativeness(d.get("talkativeness", 0.5)),
         )
 
 
@@ -437,6 +443,8 @@ class Tavern:
     llm_config: LLMConfig = field(default_factory=LLMConfig)
     voice_config: VoiceConfig = field(default_factory=VoiceConfig)
     visit_count: int = 0
+    group_chat_enabled: bool = False  # 是否启用群聊模式
+    group_chat_config: dict[str, Any] = field(default_factory=dict)  # { strategy, max_responses_per_turn, min_interval, ... }
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -465,6 +473,8 @@ class Tavern:
             "llm_config": self.llm_config.to_dict(),  # 不包含 api_key
             "voice_config": self.voice_config.to_dict(),
             "visit_count": self.visit_count,
+            "group_chat_enabled": self.group_chat_enabled,
+            "group_chat_config": deepcopy(self.group_chat_config),
         }
 
     def to_dict_private(self, user_id: str) -> dict[str, Any]:
@@ -515,6 +525,8 @@ class Tavern:
             llm_config=llm,
             voice_config=voice,
             visit_count=d.get("visit_count", 0),
+            group_chat_enabled=_normalize_bool(d.get("group_chat_enabled", False)),
+            group_chat_config=_normalize_group_chat_config(d.get("group_chat_config", {})),
         )
 
 
@@ -1064,6 +1076,8 @@ class TavernService:
             active_preset_id=str(data.get("active_preset_id") or ""),
             memory_policy=deepcopy(data.get("memory_policy", {})) if isinstance(data.get("memory_policy"), dict) else {},
             scene_prompt=data.get("scene_prompt", ""),
+            group_chat_enabled=_normalize_bool(data.get("group_chat_enabled", False)),
+            group_chat_config=_normalize_group_chat_config(data.get("group_chat_config", {})),
         )
 
         # 处理密码
@@ -1133,6 +1147,10 @@ class TavernService:
             tavern.active_preset_id = str(data.get("active_preset_id") or "").strip()
         if "memory_policy" in data:
             tavern.memory_policy = deepcopy(data["memory_policy"]) if isinstance(data["memory_policy"], dict) else {}
+        if "group_chat_enabled" in data:
+            tavern.group_chat_enabled = _normalize_bool(data.get("group_chat_enabled"))
+        if "group_chat_config" in data:
+            tavern.group_chat_config = _normalize_group_chat_config(data.get("group_chat_config"))
 
         # 处理密码更新
         if "password" in data:
@@ -1283,6 +1301,10 @@ class TavernService:
             char.tags = _normalize_string_list(data["tags"], split_commas=True)
         if "avatar" in data:
             char.avatar = str(data.get("avatar") or "").strip()
+        if "appearance" in data:
+            char.appearance = _normalize_character_appearance(data.get("appearance"))
+        if "talkativeness" in data:
+            char.talkativeness = _normalize_talkativeness(data.get("talkativeness"))
         if "sprites" in data:
             sprite_map = _normalize_sprite_map(data["sprites"])
             char.sprites = TavernSpriteSet(sprite_map) if sprite_map else None
@@ -1348,6 +1370,8 @@ def _parse_sillytavern_card(card: dict[str, Any]) -> dict[str, Any]:
         "alternate_greetings": data.get("alternate_greetings", []),
         "tags": data.get("tags", []),
         "avatar": data.get("avatar", ""),
+        "appearance": data.get("appearance", {}),
+        "talkativeness": data.get("talkativeness", 0.5),
         "sprites": data.get("sprites", {}),
     }
 
@@ -1412,6 +1436,84 @@ def _normalize_sprite_map(value: Any) -> dict[str, str]:
     return sprite_map
 
 
+def _normalize_talkativeness(value: Any) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return 0.5
+    if parsed != parsed:
+        return 0.5
+    return max(0.0, min(1.0, parsed))
+
+
+def _normalize_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+    return bool(value)
+
+
+def _normalize_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, parsed))
+
+
+def _normalize_group_chat_config(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        value = {}
+
+    allowed_strategies = {"balanced", "weighted_random", "round_robin", "relevance"}
+    strategy = str(value.get("strategy") or "balanced").strip()
+    if strategy not in allowed_strategies:
+        strategy = "balanced"
+
+    return {
+        "strategy": strategy,
+        "max_responses_per_turn": _normalize_int(value.get("max_responses_per_turn", 2), 2, 1, 3),
+        "response_cooldown_seconds": _normalize_int(value.get("response_cooldown_seconds", 0), 0, 0, 30),
+        "require_name_prefix": _normalize_bool(value.get("require_name_prefix", True)),
+    }
+
+
+def _normalize_character_appearance(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+
+    active_preset_id = str(
+        value.get("active_preset_id")
+        or value.get("active")
+        or ""
+    ).strip()
+
+    wardrobe_source = value.get("wardrobe_ids", value.get("wardrobe", []))
+    if isinstance(wardrobe_source, list):
+        wardrobe_ids = []
+        for item in wardrobe_source:
+            preset_id = str(item or "").strip()
+            if preset_id and preset_id not in wardrobe_ids:
+                wardrobe_ids.append(preset_id)
+    else:
+        wardrobe_ids = _normalize_string_list(wardrobe_source, split_commas=True)
+
+    if active_preset_id and active_preset_id not in wardrobe_ids:
+        wardrobe_ids.insert(0, active_preset_id)
+
+    normalized: dict[str, Any] = {}
+    if active_preset_id:
+        normalized["active_preset_id"] = active_preset_id
+    if wardrobe_ids:
+        normalized["wardrobe_ids"] = wardrobe_ids[:8]
+
+    note = str(value.get("note") or "").strip()
+    if note:
+        normalized["note"] = note[:200]
+    return normalized
+
+
 def _normalize_metadata_list(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
@@ -1434,6 +1536,8 @@ def _character_from_payload(data: dict[str, Any], tavern_id: str) -> TavernChara
         tags=_normalize_string_list(data.get("tags", []), split_commas=True),
         sprites=TavernSpriteSet(sprite_map) if sprite_map else None,
         avatar=str(data.get("avatar") or "").strip(),
+        appearance=_normalize_character_appearance(data.get("appearance")),
+        talkativeness=_normalize_talkativeness(data.get("talkativeness", 0.5)),
     )
 
 

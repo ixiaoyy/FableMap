@@ -17,6 +17,31 @@ import random
 from dataclasses import dataclass, field
 from typing import Optional
 
+GROUP_STRATEGIES = {"balanced", "weighted_random", "round_robin", "relevance"}
+
+
+def _clamp_float(value, default: float = 0.5, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = default
+    if parsed != parsed:
+        parsed = default
+    return max(minimum, min(maximum, parsed))
+
+
+def _clamp_int(value, default: int = 2, minimum: int = 1, maximum: int = 3) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(maximum, parsed))
+
+
+def _normalize_strategy(value) -> str:
+    strategy = str(value or "").strip()
+    return strategy if strategy in GROUP_STRATEGIES else "balanced"
+
 # ─── Models ─────────────────────────────────────────────────────────────────────
 
 
@@ -29,6 +54,14 @@ class GroupMember:
     avatar_url: str = ""
     is_narrator: bool = False  # Can narrate events
     is_user: bool = False  # Is the human user
+
+    def __post_init__(self) -> None:
+        self.character_id = str(self.character_id or "").strip()
+        self.name = str(self.name or "").strip()
+        self.talkativeness = _clamp_float(self.talkativeness)
+        self.avatar_url = str(self.avatar_url or "").strip()
+        self.is_narrator = bool(self.is_narrator)
+        self.is_user = bool(self.is_user)
 
 
 @dataclass
@@ -67,7 +100,7 @@ class TalkativenessSelector:
         strategy: str = "balanced",
     ) -> Optional[GroupMember]:
         """Select the next character to speak."""
-        active_members = [m for m in members if not m.is_user]
+        active_members = [m for m in members if not m.is_user and m.talkativeness > 0]
 
         if not active_members:
             return None
@@ -174,12 +207,24 @@ class GroupChatManager:
         self.members: list[GroupMember] = []
         self.messages: list[GroupMessage] = []
         self.selector = TalkativenessSelector()
-        self.strategy: str = "balanced"
+        self._strategy: str = "balanced"
         self.max_responses_per_turn: int = 2  # Max characters who respond per user message
+
+    @property
+    def strategy(self) -> str:
+        return self._strategy
+
+    @strategy.setter
+    def strategy(self, value: str) -> None:
+        self._strategy = _normalize_strategy(value)
+
+    def set_max_responses_per_turn(self, value: int) -> None:
+        """Set the per-turn response cap."""
+        self.max_responses_per_turn = _clamp_int(value)
 
     def add_member(self, member: GroupMember) -> None:
         """Add a character to the group chat."""
-        if member.character_id not in [m.character_id for m in self.members]:
+        if member.character_id and member.character_id not in [m.character_id for m in self.members]:
             self.members.append(member)
 
     def remove_member(self, character_id: str) -> bool:
@@ -201,7 +246,7 @@ class GroupChatManager:
         """Set talkativeness for a character (0.0-1.0)."""
         member = self.get_member(character_id)
         if member:
-            member.talkativeness = max(0.0, min(1.0, value))
+            member.talkativeness = _clamp_float(value)
             return True
         return False
 
@@ -228,21 +273,22 @@ class GroupChatManager:
     def _calculate_response_count(self) -> int:
         """Calculate how many characters should respond."""
         # Average talkativeness of active members
-        active = [m for m in self.members if not m.is_user and not m.is_narrator]
+        active = [m for m in self.members if not m.is_user and not m.is_narrator and m.talkativeness > 0]
         if not active:
             return 0
 
         avg_talk = sum(m.talkativeness for m in active) / len(active)
 
-        # Higher average talkativeness = more responses
+        # Higher average talkativeness = more responses, capped by tavern config.
         if avg_talk > 0.7:
-            return min(3, len(active))
+            desired = 3
         elif avg_talk > 0.4:
-            return 2
+            desired = 2
         elif avg_talk > 0.2:
-            return 1
+            desired = 1
         else:
             return 0
+        return min(desired, len(active), self.max_responses_per_turn)
 
     def add_message(self, message: GroupMessage) -> None:
         """Add a message to the chat history."""
@@ -256,6 +302,21 @@ class GroupChatManager:
             content=content,
             character_id="user",
             character_name="旅人",
+        )
+        self.messages.append(msg)
+        return msg
+
+    def add_assistant_message(self, character_id: str, content: str, character_name: str = "") -> GroupMessage:
+        """Add an assistant message from a group member."""
+        normalized_character_id = str(character_id or "").strip()
+        member = self.get_member(normalized_character_id)
+        resolved_name = str(character_name or "").strip() or (member.name if member else "")
+        msg = GroupMessage(
+            id=str(len(self.messages)),
+            role="assistant",
+            content=str(content or ""),
+            character_id=normalized_character_id,
+            character_name=resolved_name,
         )
         self.messages.append(msg)
         return msg
@@ -283,15 +344,13 @@ class GroupChatManager:
                 else:
                     result.append({"role": "user", "content": msg.content})
             elif msg.role == "assistant":
-                # Only include the responding character
-                if msg.character_id == responding_character_id:
-                    if include_names:
-                        result.append({
-                            "role": "assistant",
-                            "content": f"{msg.character_name}: {msg.content}",
-                        })
-                    else:
-                        result.append({"role": "assistant", "content": msg.content})
+                if include_names:
+                    result.append({
+                        "role": "assistant",
+                        "content": f"{msg.character_name}: {msg.content}",
+                    })
+                else:
+                    result.append({"role": "assistant", "content": msg.content})
 
         return result
 

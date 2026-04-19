@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { getDefaultTavernService } from './services/tavernService'
 import TavernContextPanel from './TavernContextPanel'
 import TavernMemoryPanel from './TavernMemoryPanel'
+import CharacterAvatar from './CharacterAvatar'
+import CharacterLookSummary from './CharacterLookSummary'
 
 /**
  * TavernChatRoom — 酒馆三栏布局聊天房间
@@ -84,12 +86,29 @@ const EXPRESSION_SOURCE_LABELS = {
   manual: '手动选择',
 }
 
+const GROUP_STRATEGY_LABELS = {
+  balanced: '均衡轮换',
+  weighted_random: '按积极度',
+  round_robin: '固定轮流',
+  relevance: '减少重复',
+}
+
 function getExpressionLabel(expression) {
   return EXPRESSION_LABELS[expression] || expression || EXPRESSION_LABELS.neutral
 }
 
 function getExpressionSourceLabel(source) {
   return EXPRESSION_SOURCE_LABELS[source] || source || EXPRESSION_SOURCE_LABELS.default
+}
+
+function getGroupStrategyLabel(strategy) {
+  return GROUP_STRATEGY_LABELS[strategy] || GROUP_STRATEGY_LABELS.balanced
+}
+
+function getGroupResponseCapLabel(maxResponses) {
+  const parsed = Number.parseInt(maxResponses, 10)
+  const count = Number.isFinite(parsed) ? Math.max(1, Math.min(3, parsed)) : 2
+  return `每轮最多 ${count} 人`
 }
 
 function normalizeSprites(rawSprites) {
@@ -114,52 +133,6 @@ function normalizeChatTimestamp(timestamp) {
   }
   const parsed = Date.parse(timestamp)
   return Number.isNaN(parsed) ? Date.now() : parsed
-}
-
-// ─────────────────────────────────────────
-// Character Avatar Component
-// ─────────────────────────────────────────
-
-function CharacterAvatar({ character, size = 'normal', isActive, onClick, expression = DEFAULT_EXPRESSION, spritesOverride = null }) {
-  const sizeMap = {
-    small: '40px',
-    normal: '56px',
-    large: '72px',
-  }
-  const px = sizeMap[size] || sizeMap.normal
-
-  // 获取立绘 URL（支持表情精灵图）
-  // 优先级：1. 指定表情的立绘 2. avatar 字段 3. sprites.neutral 4. image_url
-  const sprites = normalizeSprites(spritesOverride || character?.sprites)
-  const resolvedExpression = expression || DEFAULT_EXPRESSION
-  const avatarUrl = sprites[resolvedExpression] || character?.avatar || sprites.neutral || character?.image_url || null
-  const expressionClass = String(resolvedExpression).replace(/[^a-z0-9_-]/gi, '') || DEFAULT_EXPRESSION
-
-  return (
-    <div
-      className={`char-avatar char-avatar--${expressionClass} ${isActive ? 'active' : ''} ${onClick ? 'clickable' : ''}`}
-      style={{ width: px, height: px, flexShrink: 0 }}
-      onClick={onClick}
-      title={character?.name ? `${character.name} · ${getExpressionLabel(resolvedExpression)}` : character?.name}
-    >
-      {avatarUrl ? (
-        <img src={avatarUrl} alt={character?.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-      ) : (
-        <div className="char-avatar-placeholder" style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '8px',
-          background: 'linear-gradient(135deg, #1e293b, #334155)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: size === 'small' ? '16px' : size === 'large' ? '28px' : '20px',
-        }}>
-          {character?.name?.[0] || '?'}
-        </div>
-      )}
-    </div>
-  )
 }
 
 // ─────────────────────────────────────────
@@ -213,6 +186,7 @@ function CharacterSidebar({ characters, selectedChar, onSelectChar }) {
               <div className="char-archetype muted">
                 {char.archetype || char.personality?.slice(0, 20) || ''}
               </div>
+              <CharacterLookSummary character={char} compact />
             </div>
           </div>
         ))}
@@ -503,6 +477,10 @@ function CharacterDetail({ character, onClose }) {
             </div>
           </div>
         )}
+        <div className="char-detail-section">
+          <label>外观</label>
+          <CharacterLookSummary character={character} showDefault showSummary />
+        </div>
       </div>
     </div>
   )
@@ -584,8 +562,12 @@ export default function TavernChatRoom({
   const [contextPanelOpen, setContextPanelOpen] = useState(false)
   const [visitorMemoryState, setVisitorMemoryState] = useState(entryState)
   const [createdMemories, setCreatedMemories] = useState([])
+  const [groupSessionId, setGroupSessionId] = useState('')
+  const [groupSessionError, setGroupSessionError] = useState('')
   const messagesEndRef = useRef(null)
   const tavernService = getDefaultTavernService()
+  const groupChatEnabled = Boolean(tavern?.group_chat_enabled && characters.length > 1)
+  const groupChatConfig = tavern?.group_chat_config || {}
 
   // Auto-select first character
   useEffect(() => {
@@ -596,10 +578,17 @@ export default function TavernChatRoom({
 
   // Load chat history when character changes
   useEffect(() => {
+    if (groupChatEnabled) return
     if (selectedChar && roomId) {
       loadHistory()
     }
-  }, [selectedChar?.id])
+  }, [selectedChar?.id, roomId, groupChatEnabled])
+
+  useEffect(() => {
+    if (groupChatEnabled) {
+      setMessages([])
+    }
+  }, [roomId, groupChatEnabled])
 
   useEffect(() => {
     setVisitorMemoryState(entryState)
@@ -612,6 +601,7 @@ export default function TavernChatRoom({
 
   // Add opening message when character changes
   useEffect(() => {
+    if (groupChatEnabled) return
     if (selectedChar?.first_mes && messages.length === 0) {
       setMessages([{
         id: `init-${Date.now()}`,
@@ -623,7 +613,22 @@ export default function TavernChatRoom({
         expressionSource: 'default',
       }])
     }
-  }, [selectedChar?.id])
+  }, [selectedChar?.id, groupChatEnabled])
+
+  useEffect(() => {
+    setGroupSessionId('')
+    setGroupSessionError('')
+    if (!groupChatEnabled || !characters.length) return
+    createGroupSession().catch((err) => {
+      setGroupSessionError(`群聊会话准备失败：${err.message}`)
+    })
+  }, [
+    groupChatEnabled,
+    roomId,
+    characters.map((character) => `${character.id}:${character.talkativeness}`).join('|'),
+    groupChatConfig.strategy,
+    groupChatConfig.max_responses_per_turn,
+  ])
 
   // Load sprites and expressions when character changes
   useEffect(() => {
@@ -691,13 +696,39 @@ export default function TavernChatRoom({
     setExpressionSource('manual')
   }
 
-  function buildAssistantMessage({ id, content, timestamp = Date.now(), expression = DEFAULT_EXPRESSION, source = 'default' }) {
+  async function createGroupSession() {
+    if (!groupChatEnabled || !characters.length) return ''
+    const result = await tavernService.createGroupChat(
+      {
+        strategy: groupChatConfig.strategy || 'balanced',
+        max_responses_per_turn: groupChatConfig.max_responses_per_turn || 2,
+        members: characters.map((character) => ({
+          character_id: character.id,
+          name: character.name,
+          talkativeness: character.talkativeness ?? 0.5,
+          avatar_url: character.avatar || '',
+        })),
+      },
+      visitorId,
+    )
+    const nextSessionId = result.session_id || ''
+    setGroupSessionId(nextSessionId)
+    setGroupSessionError('')
+    return nextSessionId
+  }
+
+  async function ensureGroupSession() {
+    if (groupSessionId) return groupSessionId
+    return createGroupSession()
+  }
+
+  function buildAssistantMessage({ id, content, timestamp = Date.now(), expression = DEFAULT_EXPRESSION, source = 'default', character = selectedChar }) {
     return {
       id,
       role: 'assistant',
       content,
       timestamp,
-      character: selectedChar,
+      character,
       expression,
       expressionSource: source,
     }
@@ -773,6 +804,11 @@ export default function TavernChatRoom({
 
   async function handleSend(text) {
     if (!text.trim() || sending || !selectedChar) return
+
+    if (groupChatEnabled) {
+      await handleGroupSend(text)
+      return
+    }
 
     const userMsg = {
       id: `msg-${Date.now()}`,
@@ -862,14 +898,114 @@ export default function TavernChatRoom({
     }
   }
 
+  async function handleGroupSend(text) {
+    const cleanText = text.trim()
+    if (!cleanText || sending || characters.length === 0) return
+
+    const userMsg = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: cleanText,
+      timestamp: Date.now(),
+      character: null,
+    }
+    setMessages((prev) => [...prev, userMsg])
+    setSending(true)
+
+    try {
+      const sessionId = await ensureGroupSession()
+      if (!sessionId) {
+        throw new Error('群聊会话未创建')
+      }
+      const selection = await tavernService.sendGroupMessage(
+        sessionId,
+        cleanText,
+        visitorId,
+        { include_names: groupChatConfig.require_name_prefix !== false },
+      )
+      const selectedIds = Array.isArray(selection?.responses)
+        ? selection.responses.map((response) => response.character_id).filter(Boolean)
+        : []
+      const responseContextByCharacter = new Map(
+        Array.isArray(selection?.responses)
+          ? selection.responses
+            .filter((response) => response.character_id)
+            .map((response) => [response.character_id, Array.isArray(response.context) ? response.context : []])
+          : []
+      )
+      const fallbackIds = characters
+        .filter((character) => Number(character.talkativeness ?? 0.5) > 0)
+        .slice(0, groupChatConfig.max_responses_per_turn || 2)
+        .map((character) => character.id)
+      const speakerIds = (selectedIds.length ? selectedIds : fallbackIds).slice(0, groupChatConfig.max_responses_per_turn || 3)
+
+      if (speakerIds.length === 0) {
+        setMessages((prev) => [...prev, {
+          id: `group-empty-${Date.now()}`,
+          role: 'system',
+          content: '群聊里暂时没有角色接话。',
+          timestamp: Date.now(),
+        }])
+        return
+      }
+
+      for (const speakerId of speakerIds) {
+        const speaker = characters.find((character) => character.id === speakerId)
+        if (!speaker) continue
+        const result = await tavernService.sendChat(
+          roomId,
+          speaker.id,
+          cleanText,
+          visitorId,
+          visitorNickname,
+          { extra_context: responseContextByCharacter.get(speaker.id) || [] },
+        )
+        if (result.visitor_state) {
+          setVisitorMemoryState(result.visitor_state)
+        }
+        if (result.created_memories && result.created_memories.length > 0) {
+          setCreatedMemories(result.created_memories)
+        }
+        const responseText = result.response || '...'
+        setMessages((prev) => [...prev, buildAssistantMessage({
+          id: `group-${Date.now()}-${speaker.id}`,
+          content: responseText,
+          expression: result.degraded ? DEFAULT_EXPRESSION : (result.expression || DEFAULT_EXPRESSION),
+          source: result.degraded ? 'fallback' : 'default',
+          character: speaker,
+        })])
+        tavernService.recordGroupMessage(sessionId, {
+          character_id: speaker.id,
+          name: speaker.name,
+          content: responseText,
+        }, visitorId).catch((recordErr) => {
+          console.warn('Record group response failed:', recordErr)
+        })
+      }
+      setDegradationNotice(null)
+    } catch (err) {
+      console.error('Group send error:', err)
+      setGroupSessionError(`群聊发送失败：${err.message}`)
+      setMessages((prev) => [...prev, {
+        id: `group-error-${Date.now()}`,
+        role: 'system',
+        content: `群聊发送失败：${err.message}`,
+        timestamp: Date.now(),
+      }])
+    } finally {
+      setSending(false)
+    }
+  }
+
   function handleSelectChar(char) {
     if (char.id === selectedChar?.id) return
     setSelectedChar(char)
-    setMessages([])
     resetExpressionForCharacter(char)
     if (onCharacterSwitch) {
       onCharacterSwitch(char)
     }
+    if (groupChatEnabled) return
+    setMessages([])
   }
 
   function handleAvatarClick(char) {
@@ -908,6 +1044,9 @@ export default function TavernChatRoom({
           {characters.length > 0 && (
             <span className="char-badge">{characters.length} 角色</span>
           )}
+          {groupChatEnabled ? (
+            <span className="char-badge is-group">群聊模式</span>
+          ) : null}
           <button
             type="button"
             className={`btn-context-panel ${contextPanelOpen ? 'active' : ''}`}
@@ -956,22 +1095,32 @@ export default function TavernChatRoom({
                   onClick={() => handleAvatarClick(selectedChar)}
                 />
                 <div className="char-bar-info">
-                  <div className="char-bar-name">{selectedChar.name}</div>
+                  <div className="char-bar-name">{groupChatEnabled ? '多人群聊' : selectedChar.name}</div>
                   <div className="char-bar-archetype muted">
-                    {selectedChar.personality?.slice(0, 30) || selectedChar.archetype || ''}
+                    {groupChatEnabled
+                      ? `${characters.length} 个角色会按${getGroupStrategyLabel(groupChatConfig.strategy)}接话`
+                      : selectedChar.personality?.slice(0, 30) || selectedChar.archetype || ''}
                   </div>
                 </div>
-                <div className="expression-state" aria-live="polite">
-                  <span>{expressionBusy ? '识别中...' : getExpressionLabel(currentExpression)}</span>
-                  <small>{getExpressionSourceLabel(expressionSource)}</small>
-                </div>
-                {/* Expression selector */}
-                <ExpressionSelector
-                  sprites={sprites}
-                  availableExpressions={availableExpressions}
-                  currentExpression={currentExpression}
-                  onChange={handleExpressionChange}
-                />
+                {groupChatEnabled ? (
+                  <div className="expression-state" aria-live="polite">
+                    <span>{getGroupStrategyLabel(groupChatConfig.strategy)}</span>
+                    <small>{getGroupResponseCapLabel(groupChatConfig.max_responses_per_turn)}</small>
+                  </div>
+                ) : (
+                  <>
+                    <div className="expression-state" aria-live="polite">
+                      <span>{expressionBusy ? '识别中...' : getExpressionLabel(currentExpression)}</span>
+                      <small>{getExpressionSourceLabel(expressionSource)}</small>
+                    </div>
+                    <ExpressionSelector
+                      sprites={sprites}
+                      availableExpressions={availableExpressions}
+                      currentExpression={currentExpression}
+                      onChange={handleExpressionChange}
+                    />
+                  </>
+                )}
                 <button
                   className="btn-char-detail"
                   onClick={() => setShowDetail(!showDetail)}
@@ -986,6 +1135,13 @@ export default function TavernChatRoom({
                   <strong>{degradationNotice.title || 'AI 服务暂时不可用'}</strong>
                   <span>{degradationNotice.message || '已切换为规则回应。'}</span>
                   {degradationNotice.action ? <small>{degradationNotice.action}</small> : null}
+                </div>
+              ) : null}
+
+              {groupSessionError ? (
+                <div className="chat-degradation-banner" role="status" aria-live="polite">
+                  <strong>群聊会话暂时不可用</strong>
+                  <span>{groupSessionError}</span>
                 </div>
               ) : null}
 
@@ -1007,8 +1163,13 @@ export default function TavernChatRoom({
                         spritesOverride={sprites}
                       />
                     </div>
-                    <p>开始和 {selectedChar.name} 对话吧</p>
-                    {selectedChar.first_mes && (
+                    <p>{groupChatEnabled ? '开始群聊吧' : `开始和 ${selectedChar.name} 对话吧`}</p>
+                    {groupChatEnabled ? (
+                      <div className="first-mes-quote">
+                        <span className="quote-label">群聊：</span>
+                        <span className="quote-text">向所有角色发一句话，让他们按群聊策略接话。</span>
+                      </div>
+                    ) : selectedChar.first_mes && (
                       <div className="first-mes-quote">
                         <span className="quote-label">开场白：</span>
                         <span className="quote-text">{selectedChar.first_mes}</span>
@@ -1022,7 +1183,7 @@ export default function TavernChatRoom({
                     key={msg.id}
                     message={msg}
                     character={msg.character || selectedChar}
-                    sprites={sprites}
+                    sprites={msg.character?.sprites || sprites}
                     visitorNickname={visitorNickname}
                     voiceConfig={voiceConfig}
                     tavernId={roomId}

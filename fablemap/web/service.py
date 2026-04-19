@@ -316,6 +316,58 @@ from fablemap.tavern import TavernService as TavernServiceCore, TavernStore as T
 from .config import ApiSettings
 
 
+def _compact_prompt_context_text(value: Any, *, max_chars: int = 1200) -> str:
+    if not isinstance(value, str):
+        return ""
+    normalized = "\n".join(line.strip() for line in value.replace("\r\n", "\n").splitlines() if line.strip())
+    return normalized[:max_chars]
+
+
+def _strip_context_speaker_prefix(value: str) -> str:
+    text = str(value or "").strip()
+    for separator in ("：", ":"):
+        if separator in text:
+            prefix, rest = text.split(separator, 1)
+            if 0 < len(prefix.strip()) <= 32 and rest.strip():
+                return rest.strip()
+    return text
+
+
+def _same_prompt_context_user_message(content: str, current_message: str) -> bool:
+    expected = " ".join(str(current_message or "").split())
+    if not expected:
+        return False
+    candidate = " ".join(_strip_context_speaker_prefix(content).split())
+    return candidate == expected
+
+
+def _sanitize_prompt_extra_context(extra_context: Any, current_message: str) -> list[PromptChatMessage]:
+    """Convert caller-provided group context into safe prompt history messages."""
+    if not isinstance(extra_context, list):
+        return []
+
+    result: list[PromptChatMessage] = []
+    for raw_message in extra_context[-30:]:
+        if not isinstance(raw_message, dict):
+            continue
+        role = str(raw_message.get("role") or "").strip().lower()
+        if role not in {"user", "assistant"}:
+            continue
+        content = _compact_prompt_context_text(raw_message.get("content"))
+        if not content:
+            continue
+        if role == "user" and _same_prompt_context_user_message(content, current_message):
+            continue
+        result.append(
+            PromptChatMessage(
+                role=role,
+                content=content,
+                name=_normalize_visitor_name(raw_message.get("name"), max_length=32),
+            )
+        )
+    return result
+
+
 class WebService:
     def __init__(self, settings: ApiSettings):
         self.settings = settings.resolved()
@@ -1656,6 +1708,7 @@ class WebService:
         visitor_id: str,
         visitor_name: str = "",
         user_id: str = "",
+        extra_context: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Send a chat message and get AI response"""
         from fablemap.tavern import ChatMessage as TavernChatMessage, VisitorState
@@ -1738,7 +1791,7 @@ class WebService:
                 timestamp=m.timestamp or "",
             )
             for m in messages
-        ]
+        ] + _sanitize_prompt_extra_context(extra_context, message)
 
         # Determine output format based on backend
         output_format = "openai"

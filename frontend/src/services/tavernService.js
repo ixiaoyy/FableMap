@@ -624,6 +624,165 @@ export function createTavernService(getBaseUrl) {
       return readJson(response)
     },
 
+    // ─── Groups / Group Chat ─────────────────────────────────────
+
+    /**
+     * 获取持久化群组列表
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async listGroups(tavernId = '', userId = '') {
+      const params = new URLSearchParams()
+      if (tavernId) params.set('tavern_id', tavernId)
+      const response = await fetch(`${getBaseUrl()}/api/groups?${params}`, {
+        cache: 'no-store',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 创建持久化群组
+     * @param {object} data
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async createGroup(data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/groups`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 更新持久化群组
+     * @param {string} groupId
+     * @param {object} data
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async updateGroup(groupId, data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/groups/${encodeURIComponent(groupId)}`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 删除持久化群组
+     * @param {string} groupId
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async deleteGroup(groupId, tavernId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/groups/${encodeURIComponent(groupId)}`, {
+        method: 'DELETE',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({ tavern_id: tavernId }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 创建临时群聊会话
+     * @param {object} data - { members, strategy }
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async createGroupChat(data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/group/create`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 读取临时群聊会话
+     * @param {string} sessionId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async getGroupChat(sessionId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/group/${encodeURIComponent(sessionId)}`, {
+        cache: 'no-store',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 添加临时群聊成员
+     * @param {string} sessionId
+     * @param {object} member
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async addGroupMember(sessionId, member, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/group/${encodeURIComponent(sessionId)}/add_member`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(member),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 更新临时群聊成员发言积极度
+     * @param {string} sessionId
+     * @param {string} characterId
+     * @param {number} value
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async updateGroupTalkativeness(sessionId, characterId, value, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/group/${encodeURIComponent(sessionId)}/talkativeness`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({ character_id: characterId, value }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 发送临时群聊消息
+     * @param {string} sessionId
+     * @param {string} message
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async sendGroupMessage(sessionId, message, userId = '', options = {}) {
+      const response = await fetch(`${getBaseUrl()}/api/group/${encodeURIComponent(sessionId)}/send`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({ message, ...options }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 记录临时群聊中已生成的角色回复
+     * @param {string} sessionId
+     * @param {object} data - { character_id, name, content }
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async recordGroupMessage(sessionId, data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/group/${encodeURIComponent(sessionId)}/record`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
     // ─── Chat ─────────────────────────────────────────────────────
 
     /**
@@ -728,21 +887,26 @@ export function createTavernService(getBaseUrl) {
      * @param {string} message
      * @param {string} visitorId
      * @param {string} visitorName
+     * @param {object} options
      * @returns {Promise<object>}
      */
-    async sendChat(tavernId, characterId, message, visitorId, visitorName = '') {
+    async sendChat(tavernId, characterId, message, visitorId, visitorName = '', options = {}) {
       const cleanVisitorName = String(visitorName || '').trim().slice(0, 24)
+      const body = {
+        character_id: characterId,
+        message,
+        visitor_id: visitorId,
+        visitor_name: cleanVisitorName,
+      }
+      if (Array.isArray(options.extra_context)) {
+        body.extra_context = options.extra_context
+      }
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/chat`,
         {
           method: 'POST',
           headers: buildJsonHeaders(visitorId),
-          body: JSON.stringify({
-            character_id: characterId,
-            message,
-            visitor_id: visitorId,
-            visitor_name: cleanVisitorName,
-          }),
+          body: JSON.stringify(body),
         }
       )
       return readJson(response)
@@ -837,6 +1001,8 @@ export function parseCharacterCard(card) {
     alternate_greetings: data.alternate_greetings || [],
     tags: data.tags || [],
     avatar: data.avatar || '',
+    appearance: data.appearance || {},
+    talkativeness: data.talkativeness ?? 0.5,
     sprites: data.sprites || {},
     // WorldInfo (character_book)
     world_info: (() => {

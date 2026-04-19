@@ -33,6 +33,11 @@ def test_character_editor_fields_persist_on_add_and_update():
                 "alternate_greetings": ["Welcome back.", "The lamp is still on."],
                 "tags": "keeper, night",
                 "avatar": "https://example.test/mira.png",
+                "appearance": {
+                    "active_preset_id": "rain-clerk",
+                    "wardrobe_ids": ["rain-clerk", "night-platform"],
+                },
+                "talkativeness": "1.4",
                 "sprites": {
                     "neutral": "https://example.test/mira-neutral.png",
                     "joy": "",
@@ -44,6 +49,9 @@ def test_character_editor_fields_persist_on_add_and_update():
 
         assert created["avatar"] == "https://example.test/mira.png"
         assert created["tags"] == ["keeper", "night"]
+        assert created["appearance"]["active_preset_id"] == "rain-clerk"
+        assert created["appearance"]["wardrobe_ids"] == ["rain-clerk", "night-platform"]
+        assert created["talkativeness"] == 1.0
         assert created["sprites"] == {
             "neutral": "https://example.test/mira-neutral.png",
             "anger": "https://example.test/mira-anger.png",
@@ -57,6 +65,12 @@ def test_character_editor_fields_persist_on_add_and_update():
                 "alternate_greetings": "First line\nSecond line",
                 "tags": ["keeper", "late shift"],
                 "avatar": "https://example.test/mira-updated.png",
+                "appearance": {
+                    "active_preset_id": "city-photographer",
+                    "wardrobe_ids": ["city-photographer", "archive-curator", "city-photographer"],
+                    "note": "Late shift visual variants.",
+                },
+                "talkativeness": -0.25,
                 "sprites": {
                     "neutral": "https://example.test/mira-neutral-v2.png",
                     "sadness": "https://example.test/mira-sadness.png",
@@ -69,11 +83,17 @@ def test_character_editor_fields_persist_on_add_and_update():
         assert updated["alternate_greetings"] == ["First line", "Second line"]
         assert updated["tags"] == ["keeper", "late shift"]
         assert updated["avatar"] == "https://example.test/mira-updated.png"
+        assert updated["appearance"]["active_preset_id"] == "city-photographer"
+        assert updated["appearance"]["wardrobe_ids"] == ["city-photographer", "archive-curator"]
+        assert updated["appearance"]["note"] == "Late shift visual variants."
+        assert updated["talkativeness"] == 0.0
         assert updated["sprites"]["neutral"] == "https://example.test/mira-neutral-v2.png"
         assert updated["sprites"]["sadness"] == "https://example.test/mira-sadness.png"
 
         fetched = service.get_tavern(tavern.id, user_id=tavern.owner_id)
         assert fetched["characters"][0]["avatar"] == "https://example.test/mira-updated.png"
+        assert fetched["characters"][0]["appearance"]["active_preset_id"] == "city-photographer"
+        assert fetched["characters"][0]["talkativeness"] == 0.0
         assert fetched["characters"][0]["sprites"]["sadness"] == "https://example.test/mira-sadness.png"
 
 
@@ -89,6 +109,11 @@ def test_update_tavern_characters_payload_persists_sprites():
         tavern_payload = service.get_tavern(tavern.id, user_id=tavern.owner_id)
         character_payload = tavern_payload["characters"][0]
         character_payload["avatar"] = "https://example.test/sprite-avatar.png"
+        character_payload["appearance"] = {
+            "active_preset_id": "tea-storyteller",
+            "wardrobe_ids": ["tea-storyteller", "ferry-keeper"],
+        }
+        character_payload["talkativeness"] = 0.72
         character_payload["sprites"] = {
             "neutral": "https://example.test/sprite-neutral.png",
             "joy": "https://example.test/sprite-joy.png",
@@ -103,8 +128,21 @@ def test_update_tavern_characters_payload_persists_sprites():
         updated_character = updated_tavern["characters"][0]
         assert updated_character["id"] == created["id"]
         assert updated_character["avatar"] == "https://example.test/sprite-avatar.png"
+        assert updated_character["appearance"]["active_preset_id"] == "tea-storyteller"
+        assert updated_character["talkativeness"] == 0.72
         assert updated_character["sprites"]["neutral"] == "https://example.test/sprite-neutral.png"
         assert updated_character["sprites"]["joy"] == "https://example.test/sprite-joy.png"
+
+        group_updated = service.update_tavern(
+            tavern.id,
+            {
+                "group_chat_enabled": True,
+                "group_chat_config": {"strategy": "balanced", "max_responses_per_turn": 2},
+            },
+            user_id=tavern.owner_id,
+        )
+        assert group_updated["group_chat_enabled"] is True
+        assert group_updated["group_chat_config"]["strategy"] == "balanced"
 
 
 def test_character_sprites_api_persists_through_web_service():

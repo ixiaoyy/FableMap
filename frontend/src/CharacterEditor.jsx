@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import CharacterLookSummary from './CharacterLookSummary'
+import {
+  CHARACTER_LOOK_PRESETS,
+  normalizeCharacterAppearance,
+  removeCharacterLookFromWardrobe,
+  withActiveCharacterLook,
+} from './characterLooks'
 
 const SPRITE_FIELDS = [
   ['neutral', '中性'],
@@ -66,6 +73,12 @@ function splitTags(value) {
     .filter(Boolean)
 }
 
+function normalizeTalkativeness(value) {
+  const parsed = Number.parseFloat(value)
+  if (!Number.isFinite(parsed)) return 0.5
+  return Math.max(0, Math.min(1, parsed))
+}
+
 function normalizeCharacterDraft(character = {}) {
   const sprites = cleanSpriteMap(character.sprites)
   return {
@@ -81,6 +94,8 @@ function normalizeCharacterDraft(character = {}) {
     alternate_greetings_text: listToLines(character.alternate_greetings),
     tags_text: listToTags(character.tags),
     avatar: toText(character.avatar),
+    appearance: normalizeCharacterAppearance(character),
+    talkativeness: normalizeTalkativeness(character.talkativeness),
     sprites,
   }
 }
@@ -113,6 +128,8 @@ export function normalizeCharacterPayload(draft) {
     alternate_greetings: splitLines(draft.alternate_greetings_text),
     tags: splitTags(draft.tags_text),
     avatar: draft.avatar.trim(),
+    appearance: normalizeCharacterAppearance(draft),
+    talkativeness: normalizeTalkativeness(draft.talkativeness),
     sprites: cleanSpriteMap(draft.sprites),
   }
 
@@ -154,6 +171,61 @@ export default function CharacterEditor({
     }))
   }
 
+  function updateAppearance(nextAppearance) {
+    setDraft((prev) => ({
+      ...prev,
+      appearance: normalizeCharacterAppearance(nextAppearance),
+    }))
+  }
+
+  function updateActiveLook(presetId) {
+    setDraft((prev) => {
+      const appearance = normalizeCharacterAppearance(prev)
+      if (!presetId) {
+        return {
+          ...prev,
+          appearance: {
+            active_preset_id: '',
+            wardrobe_ids: [],
+            note: appearance.note,
+          },
+        }
+      }
+      return {
+        ...prev,
+        appearance: withActiveCharacterLook(prev, presetId),
+      }
+    })
+  }
+
+  function toggleWardrobeLook(presetId) {
+    setDraft((prev) => {
+      const appearance = normalizeCharacterAppearance(prev)
+      const hasPreset = appearance.wardrobe_ids.includes(presetId)
+      if (hasPreset) {
+        return {
+          ...prev,
+          appearance: removeCharacterLookFromWardrobe(prev, presetId),
+        }
+      }
+      const wardrobeIds = [...appearance.wardrobe_ids, presetId].slice(0, 6)
+      const activePresetId = appearance.active_preset_id || presetId
+      return {
+        ...prev,
+        appearance: normalizeCharacterAppearance({
+          ...appearance,
+          active_preset_id: activePresetId,
+          wardrobe_ids: wardrobeIds,
+        }),
+      }
+    })
+  }
+
+  function updateAppearanceNote(note) {
+    const appearance = normalizeCharacterAppearance(draft)
+    updateAppearance({ ...appearance, note })
+  }
+
   function handleSave() {
     const payload = normalizeCharacterPayload(draft)
     if (!payload.name) {
@@ -163,6 +235,8 @@ export default function CharacterEditor({
     setError('')
     onSave(payload)
   }
+
+  const appearance = normalizeCharacterAppearance(draft)
 
   return (
     <div className="character-editor">
@@ -188,6 +262,20 @@ export default function CharacterEditor({
           />
         </label>
       </div>
+
+      <label className="character-editor-full character-editor-range-field">
+        <span>群聊发言积极度</span>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={draft.talkativeness}
+          onChange={(event) => updateField('talkativeness', Number.parseFloat(event.target.value))}
+          disabled={disabled}
+        />
+        <small>{Math.round(normalizeTalkativeness(draft.talkativeness) * 100)}% · 数值越高，群聊里越容易主动接话。</small>
+      </label>
 
       <label className="character-editor-full">
         <span>角色描述</span>
@@ -277,6 +365,75 @@ export default function CharacterEditor({
           placeholder="https://example.com/avatar.png"
         />
       </label>
+
+      <section className="character-editor-appearance">
+        <div className="character-editor-section-heading">
+          <span>外观预设</span>
+          <small>选择角色在聊天头像和列表里的默认形象，可保留最多 6 套衣橱方案。</small>
+        </div>
+
+        <div className="character-editor-grid">
+          <label>
+            <span>当前形象</span>
+            <select
+              value={appearance.active_preset_id}
+              onChange={(event) => updateActiveLook(event.target.value)}
+              disabled={disabled}
+            >
+              <option value="">默认形象</option>
+              {CHARACTER_LOOK_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.category} / {preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>外观备注</span>
+            <input
+              value={appearance.note}
+              onChange={(event) => updateAppearanceNote(event.target.value)}
+              disabled={disabled}
+              maxLength={200}
+              placeholder="例如：夜班版、校庆版、雨天版"
+            />
+          </label>
+        </div>
+
+        <CharacterLookSummary
+          character={{ ...draft, appearance }}
+          showDefault
+          showSummary
+          className="character-editor-look-summary"
+        />
+
+        <div className="character-look-options" aria-label="角色衣橱">
+          {CHARACTER_LOOK_PRESETS.map((preset) => {
+            const selected = appearance.wardrobe_ids.includes(preset.id)
+            const active = appearance.active_preset_id === preset.id
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                className={[
+                  'character-look-option',
+                  selected ? 'is-selected' : '',
+                  active ? 'is-active' : '',
+                ].filter(Boolean).join(' ')}
+                onClick={() => toggleWardrobeLook(preset.id)}
+                disabled={disabled}
+                title={preset.summary}
+              >
+                <span className="character-look-option__badge">{preset.badge || preset.name[0]}</span>
+                <span>
+                  <strong>{preset.name}</strong>
+                  <small>{preset.category}</small>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
       <details className="character-editor-sprites">
         <summary>表情立绘 ({configuredSpriteCount} 已配置)</summary>

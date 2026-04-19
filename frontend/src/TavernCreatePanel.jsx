@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { getDefaultTavernService, parseCharacterCard, extractCharacterCardFromPng, getTavernAccessLabel, getTavernAccessIcon } from './services/tavernService'
 import LLMConfigForm, { DEFAULT_MODELS, DEFAULT_BASE_URLS, LLM_BACKENDS } from './LLMConfigForm'
 import CharacterEditor, { createEmptyCharacterDraft } from './CharacterEditor'
+import CharacterAvatar from './CharacterAvatar'
+import CharacterLookSummary from './CharacterLookSummary'
+import SystemCharacterPresetPicker from './SystemCharacterPresetPicker'
+import { createCharacterPayloadFromPreset } from './systemCharacterPresets'
 
 const CREATE_STEPS = [
   { id: 1, title: '地点', hint: '把酒馆钉在真实地图上', icon: '📍' },
@@ -241,6 +245,14 @@ export default function TavernCreatePanel({
     setEditingCharacterIndex(null)
   }
 
+  function addPresetCharacter(preset) {
+    setForm((prev) => ({
+      ...prev,
+      characters: [...prev.characters, createCharacterPayloadFromPreset(preset)],
+    }))
+    setError('')
+  }
+
   async function handleTestDirect(config) {
     return tavernService.testLlmConfigDirect(config)
   }
@@ -413,14 +425,24 @@ export default function TavernCreatePanel({
               />
             </div>
 
+            <SystemCharacterPresetPicker
+              title="也可以直接用系统预设角色"
+              description="先把一批常用角色原型放进来：都市夜谈、校园旧事、江湖人情、近未来和温柔治愈都能直接起步。"
+              actionLabel="加入角色"
+              disabled={editingCharacterIndex != null}
+              onPick={addPresetCharacter}
+            />
+
             {form.characters.length > 0 ? (
               <div className="character-list">
                 <label>已添加角色 ({form.characters.length})</label>
                 {form.characters.map((char, index) => (
                   <div key={index} className="character-item">
+                    <CharacterAvatar character={char} size="small" />
                     <div className="character-info">
                       <strong>{char.name || `未命名角色 ${index + 1}`}</strong>
                       <span className="muted">{char.description?.slice(0, 80) || '暂无描述'}</span>
+                      <CharacterLookSummary character={char} compact />
                     </div>
                     <div className="character-item-actions">
                       <button

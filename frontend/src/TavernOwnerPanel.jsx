@@ -7,6 +7,7 @@ import WorldBookEditor from './WorldBookEditor'
 import OutputRulesEditor from './OutputRulesEditor'
 import PromptBlockEditor from './PromptBlockEditor'
 import PresetManager from './PresetManager'
+import TavernGroupSettingsModal from './TavernGroupSettingsModal'
 import { OwnerAdvancedToolPanel, OwnerNextActionPanel, OwnerSectionNav } from './OwnerConsoleSections'
 
 const STATUS_FILTERS = [
@@ -152,6 +153,7 @@ export default function TavernOwnerPanel({
   const [outputRulesTavern, setOutputRulesTavern] = useState(null)
   const [promptBlocksTavern, setPromptBlocksTavern] = useState(null)
   const [presetManagerTavern, setPresetManagerTavern] = useState(null)
+  const [groupSettingsTavern, setGroupSettingsTavern] = useState(null)
   const [llmFormData, setLlmFormData] = useState(null)
   const [savingLlm, setSavingLlm] = useState(false)
   const [llmSaveResult, setLlmSaveResult] = useState(null)
@@ -728,6 +730,12 @@ export default function TavernOwnerPanel({
     if (onTavernCreated) onTavernCreated(updatedTavern)
   }
 
+  function handleGroupSettingsUpdated(updatedTavern) {
+    setMyTaverns(prev => prev.map(t => t.id === updatedTavern.id ? { ...t, ...updatedTavern } : t))
+    setGroupSettingsTavern(updatedTavern)
+    if (onTavernCreated) onTavernCreated(updatedTavern)
+  }
+
   async function handleExportPackage(tavern) {
     if (!tavern?.id) return
     setPackageBusy(`export:${tavern.id}`)
@@ -993,6 +1001,7 @@ export default function TavernOwnerPanel({
           onManageOutputRules={setOutputRulesTavern}
           onManagePromptBlocks={setPromptBlocksTavern}
           onManagePresets={setPresetManagerTavern}
+          onManageGroupSettings={setGroupSettingsTavern}
           onExportPackage={handleExportPackage}
           onDelete={(tavern) => setDeleteTarget(tavern.id)}
         />
@@ -1010,6 +1019,7 @@ export default function TavernOwnerPanel({
           onManageOutputRules={setOutputRulesTavern}
           onManagePromptBlocks={setPromptBlocksTavern}
           onManagePresets={setPresetManagerTavern}
+          onManageGroupSettings={setGroupSettingsTavern}
           onExportPackage={handleExportPackage}
         />
       )}
@@ -1056,6 +1066,15 @@ export default function TavernOwnerPanel({
           ownerId={ownerId}
           onClose={() => setPresetManagerTavern(null)}
           onPresetApplied={handlePresetApplied}
+        />
+      )}
+
+      {groupSettingsTavern && (
+        <TavernGroupSettingsModal
+          tavern={groupSettingsTavern}
+          ownerId={ownerId}
+          onClose={() => setGroupSettingsTavern(null)}
+          onSaved={handleGroupSettingsUpdated}
         />
       )}
 
@@ -1190,6 +1209,7 @@ function OwnerTavernManagementSection({
   onManageOutputRules,
   onManagePromptBlocks,
   onManagePresets,
+  onManageGroupSettings,
   onExportPackage,
   onDelete,
 }) {
@@ -1269,6 +1289,7 @@ function OwnerTavernManagementSection({
               onManageOutputRules={() => onManageOutputRules(tavern)}
               onManagePromptBlocks={() => onManagePromptBlocks(tavern)}
               onManagePresets={() => onManagePresets(tavern)}
+              onManageGroupSettings={() => onManageGroupSettings(tavern)}
               onExportPackage={() => onExportPackage(tavern)}
               packageBusy={packageBusy === `export:${tavern.id}`}
               onDelete={() => onDelete(tavern)}
@@ -1702,6 +1723,7 @@ function TavernCard({
   onManageOutputRules,
   onManagePromptBlocks,
   onManagePresets,
+  onManageGroupSettings,
   onExportPackage,
   packageBusy,
   onDelete,
@@ -1713,6 +1735,7 @@ function TavernCard({
   const worldInfoCount = tavern?.world_info?.length || 0
   const promptBlockCount = tavern?.prompt_blocks?.length || 0
   const presetCount = tavern?.runtime_presets?.length || 0
+  const groupEnabled = Boolean(tavern?.group_chat_enabled)
 
   return (
     <div className={`tavern-card panel ${!isOpen ? 'is-closed' : ''}`}>
@@ -1732,6 +1755,7 @@ function TavernCard({
           <span className="char-count-badge">{worldInfoCount} 世界书</span>
           <span className="char-count-badge">{promptBlockCount || '默认'} 段落</span>
           <span className="char-count-badge">{presetCount || '内置'} 预设</span>
+          <span className={`char-count-badge ${groupEnabled ? 'is-on' : ''}`}>{groupEnabled ? '群聊开' : '群聊关'}</span>
         </div>
       </div>
 
@@ -1760,6 +1784,7 @@ function TavernCard({
         <button className="secondary" onClick={onManageWorldBook}>世界书</button>
         <button className="secondary" onClick={onManagePromptBlocks}>段落</button>
         <button className="secondary" onClick={onManagePresets}>预设</button>
+        <button className="secondary" onClick={onManageGroupSettings}>群聊</button>
         <button className="secondary" onClick={onManageOutputRules}>护栏</button>
         <button className="secondary" onClick={onExportPackage} disabled={packageBusy}>
           {packageBusy ? '导出中...' : '导出包'}

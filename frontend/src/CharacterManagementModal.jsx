@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
 import { getDefaultTavernService, parseCharacterCard, extractCharacterCardFromPng } from './services/tavernService'
 import CharacterEditor, { createEmptyCharacterDraft, normalizeCharacterPayload } from './CharacterEditor'
+import CharacterAvatar from './CharacterAvatar'
+import CharacterLookSummary from './CharacterLookSummary'
+import SystemCharacterPresetPicker from './SystemCharacterPresetPicker'
+import { createCharacterDraftFromPreset } from './systemCharacterPresets'
 
 /**
  * CharacterManagementModal — 酒馆角色管理面板
@@ -49,6 +53,15 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   function handleAddNew() {
     setEditingChar('new')
     setEditorDraft(createEmptyCharacterDraft())
+    setEditorError('')
+  }
+
+  function handleAddFromPreset(preset) {
+    setEditingChar('new')
+    setEditorDraft({
+      ...createEmptyCharacterDraft(),
+      ...createCharacterDraftFromPreset(preset),
+    })
     setEditorError('')
   }
 
@@ -232,18 +245,13 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                     className={`char-mgmt-item ${editingChar?.id === char.id ? 'is-active' : ''}`}
                   >
                     <div className="char-mgmt-item-info">
-                      <div className="char-mgmt-item-avatar">
-                        {char.avatar ? (
-                          <img src={char.avatar} alt={char.name} onError={(e) => { e.target.style.display = 'none' }} />
-                        ) : (
-                          <span>{char.name?.[0] || '?'}</span>
-                        )}
-                      </div>
+                      <CharacterAvatar character={char} size="small" className="char-mgmt-item-avatar" />
                       <div className="char-mgmt-item-text">
                         <strong>{char.name}</strong>
                         {char.personality && (
                           <span className="muted">{char.personality.slice(0, 40)}{char.personality.length > 40 ? '...' : ''}</span>
                         )}
+                        <CharacterLookSummary character={char} compact />
                       </div>
                     </div>
                     <div className="char-mgmt-item-actions">
@@ -273,8 +281,14 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
           {/* 右侧：编辑器 / 删除确认 / 导入提示 */}
           <div className="char-mgmt-editor-area">
             {!editingChar ? (
-              <div className="char-mgmt-editor-placeholder">
-                <p>从左侧选择一个角色进行编辑，或导入 SillyTavern 角色卡。</p>
+              <div className="char-mgmt-editor-placeholder char-mgmt-editor-placeholder--picker">
+                <SystemCharacterPresetPicker
+                  title="快速起一个新角色"
+                  description="系统会先帮你填好角色原型，点一下就能继续在右侧编辑并保存。"
+                  actionLabel="用作新角色"
+                  disabled={saving || importing || deleting}
+                  onPick={handleAddFromPreset}
+                />
               </div>
             ) : editingChar === 'new' ? (
               <EditorWrapper

@@ -21,7 +21,9 @@
       "Bash(python -c \"print\\('hello'\\)\")",
       "Bash(python -c ' *)",
       "Bash(py -3 -m pytest tests/ --ignore=tests/test_api.py -q)",
-      "Bash(py -3 -m pytest tests/ -q --tb=short)"
+      "Bash(py -3 -m pytest tests/ -q --tb=short)",
+      "Bash(git push *)",
+      "Bash(npm --prefix ./frontend run build)"
     ],
     "additionalDirectories": [
       "d:\\work\\ai-\\fablemap\\web"

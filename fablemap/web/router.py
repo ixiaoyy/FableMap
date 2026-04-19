@@ -410,10 +410,19 @@ def create_api_router(service: WebService) -> APIRouter:
         message: str = Body(...),
         visitor_id: str = Body(...),
         visitor_name: str = Body(""),
+        extra_context: list[dict] | None = Body(None),
     ) -> dict:
         """Send a chat message and get AI response"""
         user_id = _get_user_id(request)
-        return service.tavern_chat_payload(tavern_id, character_id, message, visitor_id, visitor_name, user_id)
+        return service.tavern_chat_payload(
+            tavern_id,
+            character_id,
+            message,
+            visitor_id,
+            visitor_name,
+            user_id,
+            extra_context=extra_context,
+        )
 
     @router.post("/api/taverns/{tavern_id}/test-llm")
     def test_llm(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
@@ -1721,17 +1730,23 @@ Do not explain. Just output the single emotion word."""
         from fablemap.group_chat import GroupChatManager, GroupMember
 
         group_manager = GroupChatManager()
+        group_manager.strategy = data.get("strategy", "balanced")
+        group_manager.set_max_responses_per_turn(data.get("max_responses_per_turn", 2))
         for member_data in data.get("members", []):
             group_manager.add_member(GroupMember(
                 character_id=member_data.get("character_id", ""),
                 name=member_data.get("name", ""),
                 talkativeness=member_data.get("talkativeness", 0.5),
+                avatar_url=member_data.get("avatar_url", ""),
                 is_user=member_data.get("is_user", False),
                 is_narrator=member_data.get("is_narrator", False),
             ))
-        group_manager.strategy = data.get("strategy", "balanced")
         session_id = service.create_group_chat_session(group_manager)
-        return {"session_id": session_id}
+        return {
+            "session_id": session_id,
+            "strategy": group_manager.strategy,
+            "max_responses_per_turn": group_manager.max_responses_per_turn,
+        }
 
     @router.get("/api/group/{session_id}")
     def get_group_chat(session_id: str) -> dict:
@@ -1742,6 +1757,7 @@ Do not explain. Just output the single emotion word."""
         return {
             "members": [{"id": m.character_id, "name": m.name, "talkativeness": m.talkativeness} for m in gm.members],
             "strategy": gm.strategy,
+            "max_responses_per_turn": gm.max_responses_per_turn,
             "message_count": len(gm.messages),
         }
 
@@ -1771,27 +1787,53 @@ Do not explain. Just output the single emotion word."""
     @router.post("/api/group/{session_id}/send")
     def send_group_message(session_id: str, request: Request, data: dict = Body(...)) -> dict:
         """Send a message in group chat and get responses."""
-        from fablemap.group_chat import GroupMessage
         gm = service.get_group_chat_session(session_id)
         if not gm:
             return JSONResponse(status_code=404, content={"error": "Session not found"})
 
         content = data.get("message", "")
-        user_id = _get_user_id(request)
+        include_names = data.get("include_names", True) is not False
         gm.add_user_message(content)
 
         # Select speakers and prepare context
         speakers = gm.select_next_speakers()
         responses = []
         for speaker in speakers:
-            context = gm.format_for_llm(speaker.character_id)
+            context = gm.format_for_llm(speaker.character_id, include_names=include_names)
             responses.append({
                 "character_id": speaker.character_id,
                 "name": speaker.name,
                 "context": context,
             })
 
-        return {"responses": responses, "speakers": [s.name for s in speakers]}
+        return {
+            "responses": responses,
+            "speakers": [s.name for s in speakers],
+            "message_count": len(gm.messages),
+        }
+
+    @router.post("/api/group/{session_id}/record")
+    def record_group_message(session_id: str, data: dict = Body(...)) -> dict:
+        """Record a generated assistant response in a group chat session."""
+        gm = service.get_group_chat_session(session_id)
+        if not gm:
+            return JSONResponse(status_code=404, content={"error": "Session not found"})
+        message = gm.add_assistant_message(
+            data.get("character_id", ""),
+            data.get("content", ""),
+            character_name=data.get("name", ""),
+        )
+        return {
+            "recorded": True,
+            "message": {
+                "id": message.id,
+                "role": message.role,
+                "character_id": message.character_id,
+                "character_name": message.character_name,
+                "content": message.content,
+            },
+            "message_count": len(gm.messages),
+        }
 
     # ─── Preset Routes ─────────────────────────────────────────────────────
 

@@ -1171,3 +1171,104 @@ PromptBlock {
 | FM-VT-QA-02 | Codex | done | 已新增记忆权限回归测试，覆盖访客 private、店主 owner/public、跨访客拒绝和酒馆包导出隐私边界 |
 | FM-VT-QA-03 | Codex | done | 已新增世界书注入回归测试，并补齐按条目 depth 扫描最近历史；覆盖常驻、关键词、次级关键词、排序、禁用、概率和命中测试 API |
 | FM-VT-QA-04 | Codex | done | 已新增 Prompt/输出修正综合回归测试，7 个测试用例覆盖 Prompt Block 顺序稳定、token budget 裁剪确定性、输出修正坏正则容错和降级回应落库；验证 185 passed |
+
+---
+
+## 12. Group Chat (FM-VT-GC)
+
+群聊（Group Chat）让酒馆中多个 NPC 能相互回应，形成多人对话场景，而非仅限访客与单个 NPC 的 1-on-1 互动。
+
+核心概念：
+- **群聊管理器**（`GroupChatManager`）管理会话成员、消息历史、发言者选择策略
+- **发言者选择**（`TalkativenessSelector`）：round_robin / weighted_random / relevance / balanced 四种策略，按 `talkativeness`（0.0–1.0）决定谁接话
+- **酒馆集成**：群聊使用酒馆的 LLM 配置、Prompt Block、WorldInfo、记忆注入
+- **持久化**：群聊消息写入 `TavernStore` chat history，`group_id` 字段标识群聊会话
+
+### FM-VT-GC-05：Tavern 模型群聊字段 + service 层 `[in_progress]`
+
+**目标**：在 Tavern 模型添加群聊开关和角色 talkativeness；实现 `tavern_group_chat_payload()`。
+
+**改动文件**
+
+- `fablemap/tavern.py`：`TavernCharacter` 添加 `talkativeness`；`Tavern` 添加 `group_chat_enabled`（bool）、`group_chat_config`（dict）；更新 `to_dict()` / `from_dict()`
+- `fablemap/web/service.py`：新增 `tavern_group_chat_payload()`，调用 `GroupChatManager` 选人，按角色依次调用 LLM，写入群聊消息
+
+**验收标准**
+
+- Tavern 可序列化和反序列化群聊字段（向后兼容）
+- `tavern_group_chat_payload()` 能基于 talkativeness 选择发言者并逐个生成回复
+
+---
+
+### FM-VT-GC-06：群聊 API 路由 `[pending]`
+
+**目标**：在 `/api/taverns/{id}/group-chat/*` 下实现群聊相关接口。
+
+**改动文件**
+
+- `fablemap/web/router.py`：新增群聊路由（enable、disable、send、history、talkativeness 配置）
+
+**验收标准**
+
+- 群聊 API 与现有单聊 API 权限一致（访客可发送，店主可配置）
+
+---
+
+### FM-VT-GC-07：前端群聊 API 封装 `[pending]`
+
+**目标**：在 `tavernService.js` 添加群聊相关方法。
+
+**改动文件**
+
+- `frontend/src/services/tavernService.js`：新增 `sendGroupChat`、`getGroupChatHistory`、`updateTalkativeness` 等方法
+
+---
+
+### FM-VT-GC-08：TavernGroupChatRoom 界面 `[pending]`
+
+**目标**：实现多人聊天界面，展示角色头像、发言者和群聊消息流。
+
+**改动文件**
+
+- 新增 `frontend/src/TavernGroupChatRoom.jsx`（或集成到现有 `TavernChatRoom.jsx`）
+
+**验收标准**
+
+- 访客发送消息后，多个 NPC 依次回复，显示各自头像和角色名
+
+---
+
+### FM-VT-GC-09：店主群聊配置界面 `[pending]`
+
+**目标**：店主可配置每个角色的 talkativeness、选择发言策略、开关群聊。
+
+**改动文件**
+
+- 新增 `frontend/src/TavernGroupChatManager.jsx`（或 `TavernGroupSettingsModal.jsx`）
+
+**验收标准**
+
+- 店主可在控制台看到每个角色的 talkativeness 滑块和策略选择
+
+---
+
+### FM-VT-GC-10：群聊测试 `[pending]`
+
+**目标**：覆盖群聊发言选择、LLM 调用、消息持久化和权限边界的测试用例。
+
+**改动文件**
+
+- `tests/test_group_chat.py`
+
+---
+
+## 认领记录（续）
+
+| 任务 ID | 认领人 / Agent | 状态 | 备注 |
+|---------|----------------|------|------|
+| FM-VT-GC-05 | Codex | in_progress | Tavern 模型添加 group_chat 字段；service 层 tavern_group_chat_payload() 实现中 |
+| FM-VT-GC-06 | — | pending | 群聊 API 路由 |
+| FM-VT-GC-07 | — | pending | 前端 tavernService.js 群聊 API |
+| FM-VT-GC-08 | — | pending | TavernGroupChatRoom 界面 |
+| FM-VT-GC-09 | — | pending | 店主群聊配置界面 |
+| FM-VT-GC-10 | — | pending | 群聊测试用例 |
