@@ -23,16 +23,11 @@ import { useScrollToWorldStage } from './hooks/useScrollToWorldStage'
 import { useWorldSession } from './hooks/useWorldSession'
 import { buildAppPanelProps } from './services/appPanelProps'
 import { buildEntryStatusText, buildHeroMetrics, buildStageStatusViewModel } from './services/appShellViewModel'
+import { buildGuestNickname, resolveNewcomerTavern } from './services/newcomerTavern'
 import { getDefaultTavernService, getTavernAccessLabel, getTavernStatusLabel } from './services/tavernService'
 
 const MAX_TAVERN_MAP_MARKERS = 80
 const FIRST_RUN_MODE_STORAGE_KEY = 'fablemap_first_run_mode'
-const NEWCOMER_TAVERN_ID = 'pw_lantern_helpdesk'
-const NEWCOMER_TAVERN_QUERY = '公益'
-
-function buildGuestNickname() {
-  return `旅人${Math.random().toString(36).slice(2, 6).toUpperCase()}`
-}
 
 function buildTavernSearchText(tavern) {
   const characters = Array.isArray(tavern?.characters) ? tavern.characters : []
@@ -97,25 +92,6 @@ function pickTavernsForMap(taverns, activeTavernId, limit = MAX_TAVERN_MAP_MARKE
   if (!activeTavern) return visible
 
   return [...visible.slice(0, Math.max(0, limit - 1)), activeTavern]
-}
-
-async function resolveNewcomerTavern(tavernService, userId) {
-  try {
-    return await tavernService.getTavern(NEWCOMER_TAVERN_ID, userId)
-  } catch (primaryError) {
-    const payload = await tavernService.listTaverns({
-      query: NEWCOMER_TAVERN_QUERY,
-      access: 'public',
-      status: 'open',
-    })
-    const candidates = Array.isArray(payload) ? payload : (payload.taverns || [])
-    const tavern = candidates.find((item) => item?.id === NEWCOMER_TAVERN_ID) ||
-      candidates.find((item) => item?.status === 'open' && item?.access === 'public')
-    if (tavern) {
-      return tavern
-    }
-    throw primaryError
-  }
 }
 
 export default function App() {
