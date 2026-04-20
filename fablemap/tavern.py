@@ -8,6 +8,7 @@ FableMap Tavern — 赛博酒馆 CRUD 核心
 from __future__ import annotations
 
 import json
+import os
 import uuid
 import hashlib
 from copy import deepcopy
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
+from fablemap.default_taverns import default_public_welfare_taverns
 from fablemap.memory import MemoryAtom
 
 # ─────────────────────────────────────────
@@ -323,6 +325,9 @@ class LLMConfig:
 
     def is_configured(self) -> bool:
         """检查是否已配置有效的 LLM"""
+        no_external_backend = {"rules", "rule_based", "public_welfare"}
+        if self.backend in no_external_backend:
+            return True
         local_no_key_backends = {"ollama", "local", "localai"}
         if not self.backend:
             return False
@@ -571,6 +576,11 @@ class ChatMessage:
         )
 
 
+def _default_public_welfare_seeding_enabled() -> bool:
+    value = os.environ.get("FABLEMAP_SEED_DEFAULT_TAVERNS", "1").strip().lower()
+    return value not in {"0", "false", "no", "off", "disabled"}
+
+
 # ─────────────────────────────────────────
 # 存储层
 # ─────────────────────────────────────────
@@ -586,10 +596,38 @@ class TavernStore:
         self._ensure_files()
 
     def _ensure_files(self) -> None:
+        created_taverns_file = not self.taverns_file.exists()
         if not self.taverns_file.exists():
             self.taverns_file.write_text("{}", encoding="utf-8")
         if not self.keyvault_file.exists():
             self.keyvault_file.write_text("{}", encoding="utf-8")
+        if _default_public_welfare_seeding_enabled():
+            self._seed_default_public_welfare_taverns(created_taverns_file=created_taverns_file)
+
+    def _seed_default_public_welfare_taverns(self, *, created_taverns_file: bool = False) -> None:
+        """Idempotently add platform public-welfare taverns to fresh stores."""
+        try:
+            loaded = json.loads(self.taverns_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            # Do not overwrite a damaged or temporarily inaccessible data file
+            # during construction. Recovery tools should decide what to do.
+            return
+        if not isinstance(loaded, dict):
+            if created_taverns_file:
+                loaded = {}
+            else:
+                return
+
+        data = loaded
+        changed = False
+        for tavern in default_public_welfare_taverns():
+            tavern_id = str(tavern.get("id") or "").strip()
+            if not tavern_id or tavern_id in data:
+                continue
+            data[tavern_id] = tavern
+            changed = True
+        if changed:
+            self._save_taverns(data)
 
     def _load_taverns(self) -> dict[str, Any]:
         try:
@@ -699,9 +737,17 @@ class TavernStore:
         """获取 LLM 配置（包含 api_key）"""
         kv = self._load_keyvault()
         d = kv.get(tavern_id)
-        if not d:
+        if d:
+            return LLMConfig.from_dict(d)
+
+        # Built-in/public demo taverns can use a non-secret local backend that is
+        # stored in taverns.json only. Never resurrect unconfigured remote keys.
+        tavern_data = self._load_taverns().get(tavern_id, {})
+        fallback = tavern_data.get("llm_config", {}) if isinstance(tavern_data, dict) else {}
+        if not isinstance(fallback, dict) or not fallback:
             return None
-        return LLMConfig.from_dict(d)
+        config = LLMConfig.from_dict(fallback)
+        return config if config.is_configured() else None
 
     # ── Voice Config ───────────────────────
 
@@ -1022,6 +1068,8 @@ class TavernService:
 
         result = []
         for t in taverns:
+            if owner_id and t.owner_id != owner_id:
+                continue
             if access and t.access != access:
                 continue
             if normalized_status and t.status != normalized_status:

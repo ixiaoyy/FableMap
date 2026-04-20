@@ -783,6 +783,202 @@ export function createTavernService(getBaseUrl) {
       return readJson(response)
     },
 
+    // ─── Tavern Group Chat API ────────────────────────────────────
+
+    /**
+     * 获取酒馆持久群聊配置和角色发言积极度
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async getGroupChatConfig(tavernId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/group-chat`, {
+        cache: 'no-store',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 保存酒馆持久群聊配置（店主）
+     * @param {string} tavernId
+     * @param {object} data — { group_chat_enabled, group_chat_config, character_talkativeness? }
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async updateGroupChatConfig(tavernId, data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/group-chat/config`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 向酒馆持久群聊发送消息，由后端选择多个角色并返回回复
+     * @param {string} tavernId
+     * @param {string} message
+     * @param {string} visitorId
+     * @param {string} visitorName
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async sendGroupChat(tavernId, message, visitorId, visitorName = '', userId = '') {
+      const cleanVisitorName = String(visitorName || '').trim().slice(0, 24)
+      const cleanVisitorId = String(visitorId || userId || '').trim()
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/group-chat`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId || cleanVisitorId),
+        body: JSON.stringify({
+          message,
+          visitor_id: cleanVisitorId,
+          visitor_name: cleanVisitorName,
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 获取酒馆持久群聊历史
+     * @param {string} tavernId
+     * @param {string} visitorId
+     * @param {string} userId
+     * @param {number} limit
+     * @returns {Promise<object>}
+     */
+    async getGroupChatHistory(tavernId, visitorId = '', userId = '', limit = 50) {
+      const params = new URLSearchParams()
+      const cleanVisitorId = String(visitorId || '').trim()
+      if (cleanVisitorId) params.set('visitor_id', cleanVisitorId)
+      if (limit != null) params.set('limit', limit)
+      const response = await fetch(
+        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/group-chat/history?${params}`,
+        { cache: 'no-store', headers: buildHeaders(userId || cleanVisitorId) },
+      )
+      return readJson(response)
+    },
+
+    /**
+     * 更新单个角色的群聊发言积极度（店主）
+     * @param {string} tavernId
+     * @param {string} characterId
+     * @param {number} talkativeness
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async updateTalkativeness(tavernId, characterId, talkativeness, userId = '') {
+      const response = await fetch(
+        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(characterId)}/talkativeness`,
+        {
+          method: 'PUT',
+          headers: buildJsonHeaders(userId),
+          body: JSON.stringify({ talkativeness }),
+        },
+      )
+      return readJson(response)
+    },
+
+    // ─── Voice (TTS/STT) API ───────────────────────────────────────
+
+    /**
+     * 获取酒馆语音配置
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async getVoiceConfig(tavernId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/voice`, {
+        cache: 'no-store',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 保存酒馆语音配置（店主）
+     * @param {string} tavernId
+     * @param {object} config
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async saveVoiceConfig(tavernId, config, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/voice`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(config),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 合成语音，返回可播放的 blob URL
+     * @param {string} tavernId
+     * @param {string} text
+     * @param {string} characterId
+     * @param {string} userId
+     * @returns {Promise<string>}
+     */
+    async synthesizeVoice(tavernId, text, characterId = '', userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/tts`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({ text, character_id: characterId }),
+      })
+      if (!response.ok) {
+        const raw = await response.text()
+        let payload = {}
+        try {
+          payload = raw ? JSON.parse(raw) : {}
+        } catch {
+          payload = { error: raw.slice(0, 120) }
+        }
+        throw new Error(payload.error || payload.detail || `语音合成失败: ${response.status}`)
+      }
+      const blob = await response.blob()
+      return URL.createObjectURL(blob)
+    },
+
+    /**
+     * 上传音频给后端 STT 转写
+     * @param {string} tavernId
+     * @param {Blob|File} audioFile
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async transcribeVoice(tavernId, audioFile, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/stt`, {
+        method: 'POST',
+        headers: buildHeaders(userId),
+        body: audioFile,
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 获取可用的 TTS 提供者列表
+     * @returns {Promise<object>}
+     */
+    async listTtsProviders() {
+      const response = await fetch(`${getBaseUrl()}/api/tts/providers`, { cache: 'no-store' })
+      return readJson(response)
+    },
+
+    /**
+     * 获取某个 TTS 提供者可用的声音
+     * @param {string} provider
+     * @param {string} apiKey
+     * @returns {Promise<object>}
+     */
+    async listTtsVoices(provider, apiKey = '') {
+      const response = await fetch(`${getBaseUrl()}/api/tts/voices`, {
+        method: 'POST',
+        headers: buildJsonHeaders(),
+        body: JSON.stringify({ provider, api_key: apiKey }),
+      })
+      return readJson(response)
+    },
+
     // ─── Chat ─────────────────────────────────────────────────────
 
     /**

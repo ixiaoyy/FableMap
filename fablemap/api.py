@@ -7,7 +7,6 @@ import webbrowser
 from pathlib import Path
 from typing import Sequence
 
-import uvicorn
 from fastapi import FastAPI
 
 from .web.app import create_web_app
@@ -80,6 +79,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def run_api(args: argparse.Namespace) -> int:
     try:
+        import uvicorn
+
         settings = ApiSettings(
             output_root=args.output_root,
             fixture_file=args.fixture_file,

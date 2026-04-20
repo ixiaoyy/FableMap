@@ -27,6 +27,12 @@ import { getDefaultTavernService, getTavernAccessLabel, getTavernStatusLabel } f
 
 const MAX_TAVERN_MAP_MARKERS = 80
 const FIRST_RUN_MODE_STORAGE_KEY = 'fablemap_first_run_mode'
+const NEWCOMER_TAVERN_ID = 'pw_lantern_helpdesk'
+const NEWCOMER_TAVERN_QUERY = '公益'
+
+function buildGuestNickname() {
+  return `旅人${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+}
 
 function buildTavernSearchText(tavern) {
   const characters = Array.isArray(tavern?.characters) ? tavern.characters : []
@@ -93,6 +99,25 @@ function pickTavernsForMap(taverns, activeTavernId, limit = MAX_TAVERN_MAP_MARKE
   return [...visible.slice(0, Math.max(0, limit - 1)), activeTavern]
 }
 
+async function resolveNewcomerTavern(tavernService, userId) {
+  try {
+    return await tavernService.getTavern(NEWCOMER_TAVERN_ID, userId)
+  } catch (primaryError) {
+    const payload = await tavernService.listTaverns({
+      query: NEWCOMER_TAVERN_QUERY,
+      access: 'public',
+      status: 'open',
+    })
+    const candidates = Array.isArray(payload) ? payload : (payload.taverns || [])
+    const tavern = candidates.find((item) => item?.id === NEWCOMER_TAVERN_ID) ||
+      candidates.find((item) => item?.status === 'open' && item?.access === 'public')
+    if (tavern) {
+      return tavern
+    }
+    throw primaryError
+  }
+}
+
 export default function App() {
   const [view, setView] = useState('map') // 'map' | 'owner' | 'templates'
   const stageRef = useRef(null)
@@ -108,6 +133,8 @@ export default function App() {
   const [tavernSortMode, setTavernSortMode] = useState('distance')
   const [ownerCreateSignal, setOwnerCreateSignal] = useState(0)
   const [homeSettingsOpen, setHomeSettingsOpen] = useState(false)
+  const [quickStartLoading, setQuickStartLoading] = useState(false)
+  const [quickStartError, setQuickStartError] = useState('')
 
   // Visitor ID — persisted across sessions
   const [visitorId] = useState(() => {
@@ -302,15 +329,50 @@ export default function App() {
     setTavernRefreshKey((key) => key + 1)
   }
 
-  function completeFirstRun({ nickname, mode }) {
+  function persistFirstRunChoice(nickname, mode = 'play') {
     localStorage.setItem('fablemap_visitor_nickname', nickname)
     localStorage.setItem(FIRST_RUN_MODE_STORAGE_KEY, mode)
     setVisitorNickname(nickname)
     setFirstRunMode(mode)
+  }
+
+  function completeFirstRun({ nickname, mode }) {
+    persistFirstRunChoice(nickname, mode)
     setView(mode === 'owner' ? 'owner' : 'map')
     if (mode === 'owner') {
       setOwnerCreateSignal((signal) => signal + 1)
     }
+  }
+
+  async function quickStartNewcomerExperience(options = {}) {
+    const nickname = String(options.nickname || visitorNickname || '').trim() || buildGuestNickname()
+    setQuickStartLoading(true)
+    setQuickStartError('')
+    try {
+      const service = getDefaultTavernService()
+      const tavern = await resolveNewcomerTavern(service, visitorId)
+      const entryState = await service.enterTavern(tavern.id, '', visitorId)
+
+      persistFirstRunChoice(nickname, 'play')
+      setView('map')
+      setEnteredTavern({ ...tavern, entry_state: entryState })
+      setActiveTavernId(tavern.id)
+      setTaverns((prev) => [tavern, ...prev.filter((item) => item.id !== tavern.id)])
+      return { ...tavern, entry_state: entryState }
+    } catch (err) {
+      let message = err?.message || '新手酒馆暂时无法进入，请稍后重试或先刷新附近酒馆。'
+      if (message.includes('酒馆不存在') || message.includes('404')) {
+        message = '内置公益新手酒馆未启用；请确认后端已启动，并且没有关闭 FABLEMAP_SEED_DEFAULT_TAVERNS。'
+      }
+      setQuickStartError(message)
+      throw new Error(message)
+    } finally {
+      setQuickStartLoading(false)
+    }
+  }
+
+  function handleQuickStartClick() {
+    quickStartNewcomerExperience().catch(() => {})
   }
 
   function resetFirstRunGuide() {
@@ -488,8 +550,15 @@ export default function App() {
                 : '店主只需要关注酒馆、角色、AI 和访客回访；世界书、数据和调试能力都放在后续高级入口里。'}
           </p>
           <div className="hero-actions">
+            <button
+              className="primary hero-instant-play"
+              onClick={handleQuickStartClick}
+              disabled={quickStartLoading}
+            >
+              {quickStartLoading ? '⚡ 正在进入...' : '⚡ 立即试玩'}
+            </button>
             <button 
-              className={view === 'map' ? 'primary' : 'secondary'} 
+              className={view === 'map' ? 'primary' : 'secondary'}
               onClick={openDiscoverView}
             >
               🔎 发现酒馆
@@ -520,6 +589,9 @@ export default function App() {
               ⚙️ 设置
             </button>
           </div>
+          {quickStartError ? (
+            <p className="quick-start-error" role="alert">{quickStartError}</p>
+          ) : null}
           {homeSettingsOpen ? (
             <div className="home-settings-panel" aria-label="设置与高级入口">
               <div className="home-settings-row">
@@ -609,6 +681,8 @@ export default function App() {
               onRefreshTaverns={refreshTaverns}
               activeTavernId={activeTavernId}
               onTavernClick={(id) => setActiveTavernId(id)}
+              onQuickStartTavern={handleQuickStartClick}
+              quickStartLoading={quickStartLoading}
             />
           </div>
 
@@ -651,6 +725,7 @@ export default function App() {
           initialNickname={visitorNickname}
           initialMode={firstRunMode}
           onComplete={completeFirstRun}
+          onQuickTry={quickStartNewcomerExperience}
         />
       )}
     </div>

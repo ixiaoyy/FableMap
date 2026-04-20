@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getDefaultTavernService } from './services/tavernService'
 import CharacterAvatar from './CharacterAvatar'
 import CharacterLookSummary from './CharacterLookSummary'
@@ -36,6 +36,17 @@ function normalizeTalkativeness(value) {
   return clampNumber(value, 0, 1, 0.5)
 }
 
+function normalizeBool(value, fallback = false) {
+  if (value == null || value === '') return fallback
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false
+  }
+  return Boolean(value)
+}
+
 function normalizeGroupConfig(value = {}) {
   const strategyIds = new Set(GROUP_STRATEGIES.map((item) => item.id))
   const strategy = strategyIds.has(value.strategy) ? value.strategy : 'balanced'
@@ -43,7 +54,7 @@ function normalizeGroupConfig(value = {}) {
     strategy,
     max_responses_per_turn: Math.round(clampNumber(value.max_responses_per_turn, 1, 3, 2)),
     response_cooldown_seconds: Math.round(clampNumber(value.response_cooldown_seconds, 0, 30, 0)),
-    require_name_prefix: value.require_name_prefix !== false,
+    require_name_prefix: normalizeBool(value.require_name_prefix, true),
   }
 }
 
@@ -54,6 +65,31 @@ function normalizeCharacter(character = {}) {
   }
 }
 
+function mergeConfigCharacters(currentCharacters = [], configCharacters = []) {
+  const byId = new Map(
+    configCharacters
+      .filter((character) => character?.id)
+      .map((character) => [character.id, character]),
+  )
+  const seen = new Set()
+  const merged = currentCharacters.map((character) => {
+    const remote = byId.get(character?.id)
+    if (character?.id) seen.add(character.id)
+    return normalizeCharacter({
+      ...character,
+      talkativeness: remote?.talkativeness ?? character?.talkativeness,
+      avatar: remote?.avatar || character?.avatar || '',
+    })
+  })
+
+  configCharacters.forEach((character) => {
+    if (character?.id && !seen.has(character.id)) {
+      merged.push(normalizeCharacter(character))
+    }
+  })
+  return merged
+}
+
 export default function TavernGroupSettingsModal({
   tavern,
   ownerId = '',
@@ -61,11 +97,13 @@ export default function TavernGroupSettingsModal({
   onSaved,
 }) {
   const tavernService = getDefaultTavernService()
-  const [enabled, setEnabled] = useState(Boolean(tavern?.group_chat_enabled))
+  const [enabled, setEnabled] = useState(normalizeBool(tavern?.group_chat_enabled))
   const [config, setConfig] = useState(() => normalizeGroupConfig(tavern?.group_chat_config || {}))
   const [characters, setCharacters] = useState(() => (tavern?.characters || []).map(normalizeCharacter))
+  const [loadingConfig, setLoadingConfig] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const averageTalkativeness = useMemo(() => {
     if (!characters.length) return 0
@@ -75,12 +113,43 @@ export default function TavernGroupSettingsModal({
 
   const enabledCharacterCount = characters.filter((character) => normalizeTalkativeness(character.talkativeness) > 0).length
   const canEnable = characters.length >= 2 && enabledCharacterCount >= 1
+  const isBusy = saving || loadingConfig
+
+  useEffect(() => {
+    if (!tavern?.id) return undefined
+    let cancelled = false
+
+    async function loadConfig() {
+      setLoadingConfig(true)
+      setError('')
+      try {
+        const payload = await tavernService.getGroupChatConfig(tavern.id, ownerId)
+        if (cancelled) return
+        setEnabled(normalizeBool(payload?.group_chat_enabled))
+        setConfig(normalizeGroupConfig(payload?.group_chat_config || {}))
+        setCharacters((prev) => mergeConfigCharacters(prev, Array.isArray(payload?.characters) ? payload.characters : []))
+      } catch (err) {
+        if (!cancelled) {
+          setError(`读取群聊配置失败：${err.message}`)
+        }
+      } finally {
+        if (!cancelled) setLoadingConfig(false)
+      }
+    }
+
+    loadConfig()
+    return () => {
+      cancelled = true
+    }
+  }, [ownerId, tavern?.id])
 
   function updateConfig(key, value) {
+    setNotice('')
     setConfig((prev) => normalizeGroupConfig({ ...prev, [key]: value }))
   }
 
   function updateCharacterTalkativeness(characterId, value) {
+    setNotice('')
     setCharacters((prev) => prev.map((character) => (
       character.id === characterId
         ? { ...character, talkativeness: normalizeTalkativeness(value) }
@@ -96,16 +165,31 @@ export default function TavernGroupSettingsModal({
 
     setSaving(true)
     setError('')
+    setNotice('')
     try {
+      const normalizedConfig = normalizeGroupConfig(config)
+      const characterTalkativeness = characters.reduce((acc, character) => {
+        if (character?.id) acc[character.id] = normalizeTalkativeness(character.talkativeness)
+        return acc
+      }, {})
       const payload = {
         group_chat_enabled: enabled,
-        group_chat_config: normalizeGroupConfig(config),
-        characters: characters.map((character) => ({
-          ...character,
-          talkativeness: normalizeTalkativeness(character.talkativeness),
-        })),
+        group_chat_config: normalizedConfig,
+        character_talkativeness: characterTalkativeness,
       }
-      const updated = await tavernService.updateTavern(tavern.id, payload, ownerId)
+      const result = await tavernService.updateGroupChatConfig(tavern.id, payload, ownerId)
+      const resultCharacters = Array.isArray(result?.characters) ? result.characters : characters
+      const mergedCharacters = mergeConfigCharacters(tavern?.characters || characters, resultCharacters)
+      const updated = {
+        ...tavern,
+        group_chat_enabled: normalizeBool(result?.group_chat_enabled, enabled),
+        group_chat_config: normalizeGroupConfig(result?.group_chat_config || normalizedConfig),
+        characters: mergedCharacters,
+      }
+      setEnabled(updated.group_chat_enabled)
+      setConfig(updated.group_chat_config)
+      setCharacters(mergeConfigCharacters(characters, resultCharacters))
+      setNotice('群聊设置已保存，访客侧群聊入口会立即读取新配置。')
       onSaved?.(updated)
     } catch (err) {
       setError(`保存失败：${err.message}`)
@@ -148,8 +232,11 @@ export default function TavernGroupSettingsModal({
             <input
               type="checkbox"
               checked={enabled}
-              onChange={(event) => setEnabled(event.target.checked)}
-              disabled={saving}
+              onChange={(event) => {
+                setNotice('')
+                setEnabled(event.target.checked)
+              }}
+              disabled={isBusy}
             />
             <span>
               <strong>启用群聊模式</strong>
@@ -158,6 +245,12 @@ export default function TavernGroupSettingsModal({
           </label>
           {!canEnable ? (
             <div className="group-settings-warning">当前酒馆角色不足，群聊保存时会保持关闭或提示补角色。</div>
+          ) : null}
+          {loadingConfig ? (
+            <div className="group-settings-notice">正在读取最新群聊配置...</div>
+          ) : null}
+          {notice ? (
+            <div className="group-settings-notice is-ok">{notice}</div>
           ) : null}
         </section>
 
@@ -173,7 +266,7 @@ export default function TavernGroupSettingsModal({
                 type="button"
                 className={config.strategy === strategy.id ? 'is-active' : ''}
                 onClick={() => updateConfig('strategy', strategy.id)}
-                disabled={saving}
+                disabled={isBusy}
               >
                 <strong>{strategy.label}</strong>
                 <small>{strategy.helper}</small>
@@ -190,7 +283,7 @@ export default function TavernGroupSettingsModal({
                 step="1"
                 value={config.max_responses_per_turn}
                 onChange={(event) => updateConfig('max_responses_per_turn', event.target.value)}
-                disabled={saving}
+                disabled={isBusy}
               />
               <small>{config.max_responses_per_turn} 位角色</small>
             </label>
@@ -203,7 +296,7 @@ export default function TavernGroupSettingsModal({
                 step="5"
                 value={config.response_cooldown_seconds}
                 onChange={(event) => updateConfig('response_cooldown_seconds', event.target.value)}
-                disabled={saving}
+                disabled={isBusy}
               />
               <small>{config.response_cooldown_seconds} 秒</small>
             </label>
@@ -212,7 +305,7 @@ export default function TavernGroupSettingsModal({
                 type="checkbox"
                 checked={config.require_name_prefix}
                 onChange={(event) => updateConfig('require_name_prefix', event.target.checked)}
-                disabled={saving}
+                disabled={isBusy}
               />
               <span>回复里保留角色名提示</span>
             </label>
@@ -225,7 +318,9 @@ export default function TavernGroupSettingsModal({
             <span>这些数值会同步保存到角色卡，可在角色编辑器继续微调。</span>
           </div>
           <div className="group-character-list">
-            {characters.map((character) => {
+            {characters.length === 0 ? (
+              <p className="group-settings-empty">还没有角色。请先在“角色”管理中添加至少 2 位 NPC，再开启群聊。</p>
+            ) : characters.map((character) => {
               const talkativeness = normalizeTalkativeness(character.talkativeness)
               return (
                 <article key={character.id || character.name} className="group-character-row">
@@ -243,7 +338,7 @@ export default function TavernGroupSettingsModal({
                       step="0.05"
                       value={talkativeness}
                       onChange={(event) => updateCharacterTalkativeness(character.id, event.target.value)}
-                      disabled={saving}
+                      disabled={isBusy}
                     />
                   </div>
                 </article>
@@ -256,8 +351,8 @@ export default function TavernGroupSettingsModal({
 
         <div className="modal-actions">
           <button type="button" className="secondary" onClick={onClose} disabled={saving}>取消</button>
-          <button type="button" className="primary" onClick={handleSave} disabled={saving}>
-            {saving ? '保存中...' : '保存群聊设置'}
+          <button type="button" className="primary" onClick={handleSave} disabled={isBusy}>
+            {saving ? '保存中...' : loadingConfig ? '读取中...' : '保存群聊设置'}
           </button>
         </div>
       </div>

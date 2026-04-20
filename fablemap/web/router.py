@@ -429,6 +429,70 @@ def create_api_router(service: WebService) -> APIRouter:
         """Test LLM configuration"""
         return service.test_llm_payload(tavern_id, data)
 
+    # ─── Group Chat Routes ────────────────────────────────────────────────────
+
+    @router.get("/api/taverns/{tavern_id}/group-chat")
+    def get_group_chat_config(request: Request, tavern_id: str) -> dict:
+        """Get group chat status and configuration."""
+        user_id = _get_user_id(request)
+        return service.get_group_chat_config_payload(tavern_id, user_id)
+
+    @router.put("/api/taverns/{tavern_id}/group-chat/config")
+    def update_group_chat_config(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
+        """Update group chat configuration (owner only)."""
+        user_id = _get_user_id(request)
+        return service.update_group_chat_config_payload(tavern_id, data, user_id)
+
+    @router.post("/api/taverns/{tavern_id}/group-chat")
+    def send_group_chat(
+        request: Request,
+        tavern_id: str,
+        message: str = Body(...),
+        visitor_id: str = Body(...),
+        visitor_name: str = Body(""),
+    ) -> dict:
+        """Send a group chat message and get responses from multiple characters."""
+        user_id = _get_user_id(request)
+        return service.send_group_chat_payload(
+            tavern_id,
+            message=message,
+            visitor_id=visitor_id,
+            visitor_name=visitor_name,
+            user_id=user_id,
+        )
+
+    @router.get("/api/taverns/{tavern_id}/group-chat/history")
+    def get_group_chat_history(
+        request: Request,
+        tavern_id: str,
+        visitor_id: str = "",
+        limit: int = 50,
+    ) -> dict:
+        """Get group chat history."""
+        user_id = _get_user_id(request)
+        return service.get_group_chat_history_payload(
+            tavern_id,
+            visitor_id=visitor_id,
+            user_id=user_id,
+            limit=limit,
+        )
+
+    @router.put("/api/taverns/{tavern_id}/characters/{char_id}/talkativeness")
+    def update_character_talkativeness(
+        request: Request,
+        tavern_id: str,
+        char_id: str,
+        data: dict = Body(...),
+    ) -> dict:
+        """Update character talkativeness for group chat (owner only)."""
+        user_id = _get_user_id(request)
+        talkativeness = data.get("talkativeness", 0.5)
+        return service.update_group_chat_config_payload(
+            tavern_id,
+            {"character_talkativeness": {char_id: talkativeness}},
+            user_id,
+        )
+
     @router.post("/api/llm/test-config")
     def test_llm_config(request: Request, data: dict = Body(...)) -> dict:
         """Test LLM configuration directly, without requiring a tavern_id."""

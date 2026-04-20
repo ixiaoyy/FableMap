@@ -257,7 +257,7 @@ function ChatMessage({ message, character, sprites, visitorNickname, voiceConfig
 // Chat Input Area
 // ─────────────────────────────────────────
 
-function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig }) {
+function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, tavernId }) {
   const [text, setText] = useState('')
   const [recording, setRecording] = useState(false)
   const textareaRef = useRef(null)
@@ -304,8 +304,7 @@ function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig })
           setRecording(false)
 
           try {
-            const { transcribeVoice } = await import('./services/tavernService')
-            const result = await transcribeVoice(voiceConfig?.tavernId || '', blob)
+            const result = await getDefaultTavernService().transcribeVoice(tavernId || voiceConfig?.tavernId || '', blob)
             setText((prev) => prev + (result.text || ''))
             // Auto-resize after adding text
             setTimeout(() => {
@@ -562,7 +561,6 @@ export default function TavernChatRoom({
   const [contextPanelOpen, setContextPanelOpen] = useState(false)
   const [visitorMemoryState, setVisitorMemoryState] = useState(entryState)
   const [createdMemories, setCreatedMemories] = useState([])
-  const [groupSessionId, setGroupSessionId] = useState('')
   const [groupSessionError, setGroupSessionError] = useState('')
   const messagesEndRef = useRef(null)
   const tavernService = getDefaultTavernService()
@@ -585,10 +583,15 @@ export default function TavernChatRoom({
   }, [selectedChar?.id, roomId, groupChatEnabled])
 
   useEffect(() => {
-    if (groupChatEnabled) {
-      setMessages([])
-    }
-  }, [roomId, groupChatEnabled])
+    if (!groupChatEnabled) return
+    setGroupSessionError('')
+    loadGroupHistory()
+  }, [
+    roomId,
+    visitorId,
+    groupChatEnabled,
+    characters.map((character) => character.id).join('|'),
+  ])
 
   useEffect(() => {
     setVisitorMemoryState(entryState)
@@ -614,21 +617,6 @@ export default function TavernChatRoom({
       }])
     }
   }, [selectedChar?.id, groupChatEnabled])
-
-  useEffect(() => {
-    setGroupSessionId('')
-    setGroupSessionError('')
-    if (!groupChatEnabled || !characters.length) return
-    createGroupSession().catch((err) => {
-      setGroupSessionError(`群聊会话准备失败：${err.message}`)
-    })
-  }, [
-    groupChatEnabled,
-    roomId,
-    characters.map((character) => `${character.id}:${character.talkativeness}`).join('|'),
-    groupChatConfig.strategy,
-    groupChatConfig.max_responses_per_turn,
-  ])
 
   // Load sprites and expressions when character changes
   useEffect(() => {
@@ -696,32 +684,6 @@ export default function TavernChatRoom({
     setExpressionSource('manual')
   }
 
-  async function createGroupSession() {
-    if (!groupChatEnabled || !characters.length) return ''
-    const result = await tavernService.createGroupChat(
-      {
-        strategy: groupChatConfig.strategy || 'balanced',
-        max_responses_per_turn: groupChatConfig.max_responses_per_turn || 2,
-        members: characters.map((character) => ({
-          character_id: character.id,
-          name: character.name,
-          talkativeness: character.talkativeness ?? 0.5,
-          avatar_url: character.avatar || '',
-        })),
-      },
-      visitorId,
-    )
-    const nextSessionId = result.session_id || ''
-    setGroupSessionId(nextSessionId)
-    setGroupSessionError('')
-    return nextSessionId
-  }
-
-  async function ensureGroupSession() {
-    if (groupSessionId) return groupSessionId
-    return createGroupSession()
-  }
-
   function buildAssistantMessage({ id, content, timestamp = Date.now(), expression = DEFAULT_EXPRESSION, source = 'default', character = selectedChar }) {
     return {
       id,
@@ -741,6 +703,46 @@ export default function TavernChatRoom({
       content,
       expression: DEFAULT_EXPRESSION,
       source: 'fallback',
+    })
+  }
+
+  function findGroupCharacter(characterId, fallbackName = '', avatar = '') {
+    const found = characters.find((character) => character.id === characterId)
+    if (found) return found
+    if (!characterId && !fallbackName) return null
+    return {
+      id: characterId || `group-char-${fallbackName || 'unknown'}`,
+      name: fallbackName || characterId || '群聊角色',
+      avatar: avatar || '',
+      sprites: {},
+    }
+  }
+
+  function mapGroupHistoryMessage(message, index = 0) {
+    const role = message.role === 'assistant' ? 'assistant' : (message.role === 'system' ? 'system' : 'user')
+    const character = role === 'assistant'
+      ? findGroupCharacter(message.character_id, message.character_name, message.avatar)
+      : null
+    return {
+      id: message.id || `group-hist-${Date.now()}-${index}`,
+      role,
+      content: message.content || '',
+      timestamp: normalizeChatTimestamp(message.timestamp),
+      character,
+      expression: message.expression || DEFAULT_EXPRESSION,
+      expressionSource: message.expression_source || 'default',
+    }
+  }
+
+  function mapGroupResponseMessage(response, index = 0) {
+    const character = findGroupCharacter(response.character_id, response.character_name, response.avatar)
+    return buildAssistantMessage({
+      id: response.id || `group-${Date.now()}-${response.character_id || index}`,
+      content: response.content || '...',
+      timestamp: normalizeChatTimestamp(response.timestamp),
+      expression: response.expression || DEFAULT_EXPRESSION,
+      source: response.expression_source || 'default',
+      character,
     })
   }
 
@@ -764,6 +766,23 @@ export default function TavernChatRoom({
     setExpressionSource('default')
     setExpressionBusy(false)
     setDegradationNotice(null)
+  }
+
+  async function loadGroupHistory() {
+    if (!roomId) return
+    setLoading(true)
+    try {
+      const result = await tavernService.getGroupChatHistory(roomId, visitorId, visitorId, 80)
+      const historyMessages = Array.isArray(result.messages) ? result.messages : []
+      setMessages(historyMessages.map(mapGroupHistoryMessage))
+      setGroupSessionError('')
+    } catch (err) {
+      console.error('Load group history error:', err)
+      setMessages([])
+      setGroupSessionError(`群聊历史加载失败：${err.message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function loadHistory() {
@@ -913,75 +932,41 @@ export default function TavernChatRoom({
     setSending(true)
 
     try {
-      const sessionId = await ensureGroupSession()
-      if (!sessionId) {
-        throw new Error('群聊会话未创建')
-      }
-      const selection = await tavernService.sendGroupMessage(
-        sessionId,
+      const result = await tavernService.sendGroupChat(
+        roomId,
         cleanText,
         visitorId,
-        { include_names: groupChatConfig.require_name_prefix !== false },
+        visitorNickname,
+        visitorId,
       )
-      const selectedIds = Array.isArray(selection?.responses)
-        ? selection.responses.map((response) => response.character_id).filter(Boolean)
+      const replyMessages = Array.isArray(result.messages)
+        ? result.messages.map(mapGroupResponseMessage)
         : []
-      const responseContextByCharacter = new Map(
-        Array.isArray(selection?.responses)
-          ? selection.responses
-            .filter((response) => response.character_id)
-            .map((response) => [response.character_id, Array.isArray(response.context) ? response.context : []])
-          : []
-      )
-      const fallbackIds = characters
-        .filter((character) => Number(character.talkativeness ?? 0.5) > 0)
-        .slice(0, groupChatConfig.max_responses_per_turn || 2)
-        .map((character) => character.id)
-      const speakerIds = (selectedIds.length ? selectedIds : fallbackIds).slice(0, groupChatConfig.max_responses_per_turn || 3)
 
-      if (speakerIds.length === 0) {
+      if (result.visitor_state) {
+        setVisitorMemoryState(result.visitor_state)
+      }
+      if (result.created_memories && result.created_memories.length > 0) {
+        setCreatedMemories(result.created_memories)
+      }
+
+      if (result.degraded) {
+        setGroupSessionError(result.error || '群聊角色暂时没有回应。')
+      } else {
+        setGroupSessionError('')
+      }
+
+      if (replyMessages.length === 0) {
         setMessages((prev) => [...prev, {
           id: `group-empty-${Date.now()}`,
           role: 'system',
-          content: '群聊里暂时没有角色接话。',
+          content: result.error || '群聊里暂时没有角色接话。',
           timestamp: Date.now(),
         }])
         return
       }
 
-      for (const speakerId of speakerIds) {
-        const speaker = characters.find((character) => character.id === speakerId)
-        if (!speaker) continue
-        const result = await tavernService.sendChat(
-          roomId,
-          speaker.id,
-          cleanText,
-          visitorId,
-          visitorNickname,
-          { extra_context: responseContextByCharacter.get(speaker.id) || [] },
-        )
-        if (result.visitor_state) {
-          setVisitorMemoryState(result.visitor_state)
-        }
-        if (result.created_memories && result.created_memories.length > 0) {
-          setCreatedMemories(result.created_memories)
-        }
-        const responseText = result.response || '...'
-        setMessages((prev) => [...prev, buildAssistantMessage({
-          id: `group-${Date.now()}-${speaker.id}`,
-          content: responseText,
-          expression: result.degraded ? DEFAULT_EXPRESSION : (result.expression || DEFAULT_EXPRESSION),
-          source: result.degraded ? 'fallback' : 'default',
-          character: speaker,
-        })])
-        tavernService.recordGroupMessage(sessionId, {
-          character_id: speaker.id,
-          name: speaker.name,
-          content: responseText,
-        }, visitorId).catch((recordErr) => {
-          console.warn('Record group response failed:', recordErr)
-        })
-      }
+      setMessages((prev) => [...prev, ...replyMessages])
       setDegradationNotice(null)
     } catch (err) {
       console.error('Group send error:', err)
@@ -1198,7 +1183,9 @@ export default function TavernChatRoom({
                 onSend={handleSend}
                 sending={sending}
                 character={selectedChar}
+                placeholder={groupChatEnabled ? '对群聊里的所有角色说...' : undefined}
                 voiceConfig={voiceConfig}
+                tavernId={roomId}
               />
             </>
           ) : (

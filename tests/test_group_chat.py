@@ -284,3 +284,458 @@ def test_tavern_group_chat_config_is_normalized(tmp_path):
         "response_cooldown_seconds": 0,
         "require_name_prefix": False,
     }
+
+
+def test_tavern_group_chat_routes_update_config_and_send_rules_backend(tmp_path):
+    import pytest
+
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    from fablemap.web.app import create_web_app
+    from fablemap.web.config import ApiSettings
+
+    app = create_web_app(
+        ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
+    )
+    tavern_id = "route_group_chat_tavern"
+    owner_headers = {"X-User-Id": "owner_route_group"}
+    visitor_headers = {"X-User-Id": "visitor_route_group"}
+
+    with TestClient(app) as client:
+        create_response = client.post(
+            "/api/taverns",
+            headers=owner_headers,
+            json={
+                "id": tavern_id,
+                "name": "Route Group Tavern",
+                "description": "Checks tavern-level group chat routes.",
+                "lat": 31.23,
+                "lon": 121.47,
+                "access": "public",
+                "llm_config": {"backend": "rules", "model": "public-welfare-rules-v1"},
+            },
+        )
+        assert create_response.status_code == 200
+        assert create_response.json()["status"] == "open"
+
+        alpha_response = client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Alpha", "first_mes": "欢迎来到群聊。", "talkativeness": 1},
+        )
+        beta_response = client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Beta", "first_mes": "我也在。", "talkativeness": 1},
+        )
+        assert alpha_response.status_code == 200
+        assert beta_response.status_code == 200
+        beta_id = beta_response.json()["id"]
+
+        config_response = client.put(
+            f"/api/taverns/{tavern_id}/group-chat/config",
+            headers=owner_headers,
+            json={
+                "group_chat_enabled": "true",
+                "group_chat_config": {
+                    "strategy": "round_robin",
+                    "max_responses_per_turn": 2,
+                    "require_name_prefix": "false",
+                },
+                "character_talkativeness": {beta_id: "0"},
+            },
+        )
+        assert config_response.status_code == 200
+        config_payload = config_response.json()
+        assert config_payload["group_chat_enabled"] is True
+        assert config_payload["group_chat_config"]["strategy"] == "round_robin"
+        assert config_payload["group_chat_config"]["require_name_prefix"] is False
+        assert any(c["id"] == beta_id and c["talkativeness"] == 0.0 for c in config_payload["characters"])
+
+        send_response = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=visitor_headers,
+            json={
+                "message": "你好，我喜欢蓝莓派，这是我的重要偏好。",
+                "visitor_id": "visitor_route_group",
+                "visitor_name": "测试旅人",
+            },
+        )
+        assert send_response.status_code == 200
+        send_payload = send_response.json()
+        assert send_payload["degraded"] is False
+        assert send_payload["speaker_count"] == 1
+        assert send_payload["messages"][0]["character_name"] == "Alpha"
+        assert send_payload["messages"][0]["content"]
+        assert send_payload["visitor_state"]["visitor_id"] == "visitor_route_group"
+        assert send_payload["visitor_state"]["relationship"]["strength"] > 0
+        assert send_payload["created_memories"]
+        assert any("蓝莓派" in memory["content"] for memory in send_payload["created_memories"])
+
+        history_response = client.get(
+            f"/api/taverns/{tavern_id}/group-chat/history",
+            headers=visitor_headers,
+            params={"visitor_id": "visitor_route_group", "limit": 10},
+        )
+        assert history_response.status_code == 200
+        history_payload = history_response.json()
+        assert history_payload["message_count"] == 2
+        # Messages stored with character_id "_group" may sort before/after
+        # assistant messages depending on timestamp granularity and test isolation.
+        # Verify the user message and exactly one assistant reply are present.
+        assert set(m["role"] for m in history_payload["messages"]) == {"user", "assistant"}
+        assert [m["role"] for m in history_payload["messages"]].count("assistant") == 1
+
+        memories_response = client.get(
+            f"/api/taverns/{tavern_id}/memories",
+            headers=visitor_headers,
+            params={"visitor_id": "visitor_route_group"},
+        )
+        assert memories_response.status_code == 200
+        memories = memories_response.json()["memories"]
+        assert any(memory["scope"] == "visitor_tavern" and "蓝莓派" in memory["content"] for memory in memories)
+
+
+def test_tavern_group_chat_rejects_cross_visitor_access(tmp_path):
+    import pytest
+
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    from fablemap.web.app import create_web_app
+    from fablemap.web.config import ApiSettings
+
+    app = create_web_app(
+        ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
+    )
+    tavern_id = "route_group_chat_acl"
+    owner_headers = {"X-User-Id": "owner_group_acl"}
+    victim_headers = {"X-User-Id": "victim_group_acl"}
+    attacker_headers = {"X-User-Id": "attacker_group_acl"}
+
+    with TestClient(app) as client:
+        create_response = client.post(
+            "/api/taverns",
+            headers=owner_headers,
+            json={
+                "id": tavern_id,
+                "name": "ACL Group Tavern",
+                "description": "Checks visitor isolation for group chats.",
+                "lat": 31.23,
+                "lon": 121.47,
+                "access": "public",
+                "llm_config": {"backend": "rules", "model": "public-welfare-rules-v1"},
+            },
+        )
+        assert create_response.status_code == 200
+        assert client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Alpha", "first_mes": "欢迎。", "talkativeness": 1},
+        ).status_code == 200
+        assert client.put(
+            f"/api/taverns/{tavern_id}/group-chat/config",
+            headers=owner_headers,
+            json={
+                "group_chat_enabled": True,
+                "group_chat_config": {"strategy": "round_robin", "max_responses_per_turn": 1},
+            },
+        ).status_code == 200
+
+        attacker_send = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=attacker_headers,
+            json={
+                "message": "我想冒充别人。",
+                "visitor_id": "victim_group_acl",
+                "visitor_name": "受害者",
+            },
+        )
+        assert attacker_send.status_code == 403
+
+        victim_send = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=victim_headers,
+            json={
+                "message": "你好，我是本人。",
+                "visitor_id": "victim_group_acl",
+                "visitor_name": "受害者",
+            },
+        )
+        assert victim_send.status_code == 200
+        assert victim_send.json()["speaker_count"] == 1
+
+        attacker_history = client.get(
+            f"/api/taverns/{tavern_id}/group-chat/history",
+            headers=attacker_headers,
+            params={"visitor_id": "victim_group_acl"},
+        )
+        assert attacker_history.status_code == 403
+
+        owner_history = client.get(
+            f"/api/taverns/{tavern_id}/group-chat/history",
+            headers=owner_headers,
+            params={"visitor_id": "victim_group_acl"},
+        )
+        assert owner_history.status_code == 200
+        assert owner_history.json()["message_count"] == 2
+
+
+def test_tavern_group_chat_round_robin_persists_across_turns(tmp_path):
+    import pytest
+
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    from fablemap.web.app import create_web_app
+    from fablemap.web.config import ApiSettings
+
+    app = create_web_app(
+        ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
+    )
+    tavern_id = "route_group_chat_round_robin"
+    owner_headers = {"X-User-Id": "owner_group_rr"}
+    visitor_headers = {"X-User-Id": "visitor_group_rr"}
+
+    with TestClient(app) as client:
+        assert client.post(
+            "/api/taverns",
+            headers=owner_headers,
+            json={
+                "id": tavern_id,
+                "name": "Round Robin Tavern",
+                "description": "Checks persisted round robin speaker selection.",
+                "lat": 31.23,
+                "lon": 121.47,
+                "access": "public",
+                "llm_config": {"backend": "rules", "model": "public-welfare-rules-v1"},
+            },
+        ).status_code == 200
+        assert client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Alpha", "first_mes": "A 在。", "talkativeness": 1},
+        ).status_code == 200
+        assert client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Beta", "first_mes": "B 在。", "talkativeness": 1},
+        ).status_code == 200
+        assert client.put(
+            f"/api/taverns/{tavern_id}/group-chat/config",
+            headers=owner_headers,
+            json={
+                "group_chat_enabled": True,
+                "group_chat_config": {
+                    "strategy": "round_robin",
+                    "max_responses_per_turn": 1,
+                    "response_cooldown_seconds": 0,
+                },
+            },
+        ).status_code == 200
+
+        first = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=visitor_headers,
+            json={"message": "第一轮。", "visitor_id": "visitor_group_rr", "visitor_name": "旅人"},
+        )
+        second = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=visitor_headers,
+            json={"message": "第二轮。", "visitor_id": "visitor_group_rr", "visitor_name": "旅人"},
+        )
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert [first.json()["messages"][0]["character_name"], second.json()["messages"][0]["character_name"]] == [
+            "Alpha",
+            "Beta",
+        ]
+
+
+def test_tavern_group_chat_response_cooldown_suppresses_recent_speakers(tmp_path):
+    import pytest
+
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    from fablemap.web.app import create_web_app
+    from fablemap.web.config import ApiSettings
+
+    app = create_web_app(
+        ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
+    )
+    tavern_id = "route_group_chat_cooldown"
+    owner_headers = {"X-User-Id": "owner_group_cooldown"}
+    visitor_headers = {"X-User-Id": "visitor_group_cooldown"}
+
+    with TestClient(app) as client:
+        assert client.post(
+            "/api/taverns",
+            headers=owner_headers,
+            json={
+                "id": tavern_id,
+                "name": "Cooldown Tavern",
+                "description": "Checks group response cooldown.",
+                "lat": 31.23,
+                "lon": 121.47,
+                "access": "public",
+                "llm_config": {"backend": "rules", "model": "public-welfare-rules-v1"},
+            },
+        ).status_code == 200
+        assert client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Alpha", "first_mes": "A 在。", "talkativeness": 1},
+        ).status_code == 200
+        assert client.post(
+            f"/api/taverns/{tavern_id}/characters",
+            headers=owner_headers,
+            json={"name": "Beta", "first_mes": "B 在。", "talkativeness": 1},
+        ).status_code == 200
+        assert client.put(
+            f"/api/taverns/{tavern_id}/group-chat/config",
+            headers=owner_headers,
+            json={
+                "group_chat_enabled": True,
+                "group_chat_config": {
+                    "strategy": "round_robin",
+                    "max_responses_per_turn": 1,
+                    "response_cooldown_seconds": 30,
+                },
+            },
+        ).status_code == 200
+
+        first = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=visitor_headers,
+            json={"message": "第一轮。", "visitor_id": "visitor_group_cooldown", "visitor_name": "旅人"},
+        )
+        second = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=visitor_headers,
+            json={"message": "第二轮。", "visitor_id": "visitor_group_cooldown", "visitor_name": "旅人"},
+        )
+        third = client.post(
+            f"/api/taverns/{tavern_id}/group-chat",
+            headers=visitor_headers,
+            json={"message": "第三轮。", "visitor_id": "visitor_group_cooldown", "visitor_name": "旅人"},
+        )
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert third.status_code == 200
+        assert first.json()["messages"][0]["character_name"] == "Alpha"
+        assert second.json()["messages"][0]["character_name"] == "Beta"
+        assert third.json()["speaker_count"] == 0
+        assert third.json()["degraded"] is True
+
+
+def test_tavern_group_chat_uses_prompt_builder_context_and_output_rules(tmp_path, monkeypatch):
+    from fablemap.memory import MemoryAtom
+    from fablemap.tavern import LLMConfig, Tavern, TavernCharacter, WorldInfoEntry
+    from fablemap.web.config import ApiSettings
+    from fablemap.web.service import WebService
+
+    service = WebService(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
+    tavern = Tavern(
+        id="tavern_group_prompt_builder",
+        name="Prompt Builder Group Tavern",
+        description="A tavern for group prompt-builder checks.",
+        lat=31.23,
+        lon=121.47,
+        owner_id="owner_group_prompt_builder",
+        status="open",
+        group_chat_enabled=True,
+        group_chat_config={
+            "strategy": "round_robin",
+            "max_responses_per_turn": 1,
+            "response_cooldown_seconds": 0,
+            "require_name_prefix": True,
+        },
+        memory_policy={
+            "mode": "structured",
+            "short_term": True,
+            "mid_term": True,
+            "long_term": True,
+            "budget_tokens": 1200,
+        },
+        output_rules=[
+            {
+                "id": "remove_narration_prefix",
+                "name": "去除旁白前缀",
+                "enabled": True,
+                "kind": "literal",
+                "pattern": "旁白：",
+                "replacement": "",
+            }
+        ],
+        world_info=[
+            WorldInfoEntry(
+                id="wi_old_key",
+                tavern_id="tavern_group_prompt_builder",
+                keys=["钥匙"],
+                content="吧台后面的旧钥匙只会交给记得蓝莓派的人。",
+            )
+        ],
+        characters=[
+            TavernCharacter(
+                id="char_alpha_prompt_builder",
+                tavern_id="tavern_group_prompt_builder",
+                name="Alpha",
+                first_mes="我在听。",
+                talkativeness=1,
+            )
+        ],
+    )
+    service.tavern_store.create_tavern(tavern)
+    service.tavern_store.save_llm_config(
+        tavern.id,
+        LLMConfig(backend="openai", model="gpt-4o-mini", api_key="sk-test-group-prompt"),
+    )
+    service.tavern_store.save_memory_atom(
+        tavern.id,
+        MemoryAtom(
+            id="mem_blueberry",
+            tavern_id=tavern.id,
+            scope="visitor_tavern",
+            dimension="preference",
+            horizon="long",
+            subject="visitor_group_prompt_builder",
+            content="访客喜欢蓝莓派。",
+            importance=0.9,
+            visibility="private",
+            visitor_id="visitor_group_prompt_builder",
+            created_by="visitor_group_prompt_builder",
+        ),
+    )
+
+    captured = {}
+
+    class DummyResponse:
+        content = "旁白：钥匙在吧台后面，我也记得蓝莓派。"
+        usage = {"total_tokens": 11}
+
+    class CapturingClient:
+        def complete(self, messages):
+            captured["messages"] = messages
+            return DummyResponse()
+
+    monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+
+    payload = service.send_group_chat_payload(
+        tavern_id=tavern.id,
+        message="我来找钥匙，也想提起蓝莓派。",
+        visitor_id="visitor_group_prompt_builder",
+        visitor_name="测试旅人",
+        user_id="visitor_group_prompt_builder",
+    )
+
+    prompt_text = "\n\n".join(message.get("content", "") for message in captured["messages"])
+
+    assert payload["degraded"] is False
+    assert payload["messages"][0]["content"] == "钥匙在吧台后面，我也记得蓝莓派。"
+    assert payload["messages"][0]["output_rules"]["changed"] is True
+    assert "吧台后面的旧钥匙只会交给记得蓝莓派的人。" in prompt_text
+    assert "访客喜欢蓝莓派。" in prompt_text
+    assert any(
+        message["role"] == "user" and "测试旅人: 我来找钥匙，也想提起蓝莓派。" in message["content"]
+        for message in captured["messages"]
+    )

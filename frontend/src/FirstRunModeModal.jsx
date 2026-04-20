@@ -26,10 +26,11 @@ const MODE_OPTIONS = [
  * 1. 只是来玩：发现酒馆 → 进入对话
  * 2. 我要开店：店主身份 → 选地点 → 创建酒馆
  */
-export default function FirstRunModeModal({ initialNickname = '', initialMode = '', onComplete }) {
+export default function FirstRunModeModal({ initialNickname = '', initialMode = '', onComplete, onQuickTry }) {
   const [nickname, setNickname] = useState(initialNickname)
   const [mode, setMode] = useState(initialMode || 'play')
   const [error, setError] = useState('')
+  const [quickTrying, setQuickTrying] = useState(false)
 
   const selectedOption = MODE_OPTIONS.find((item) => item.id === mode) || MODE_OPTIONS[0]
 
@@ -47,6 +48,18 @@ export default function FirstRunModeModal({ initialNickname = '', initialMode = 
     onComplete?.({ nickname: trimmed, mode: selectedOption.id })
   }
 
+  async function handleQuickTry() {
+    setQuickTrying(true)
+    setError('')
+    try {
+      await onQuickTry?.({ nickname: nickname.trim() })
+    } catch (err) {
+      setError(err?.message || '暂时无法进入新手酒馆，请稍后重试。')
+    } finally {
+      setQuickTrying(false)
+    }
+  }
+
   return (
     <div className="modal-overlay visitor-nickname-overlay first-run-overlay" role="dialog" aria-modal="true" aria-labelledby="first-run-title">
       <div className="modal-content panel visitor-nickname-modal first-run-modal">
@@ -58,6 +71,22 @@ export default function FirstRunModeModal({ initialNickname = '', initialMode = 
         <p className="visitor-nickname-subtitle first-run-subtitle">
           先告诉系统你想怎么开始。之后不会重复打扰，可随时重置新手引导。
         </p>
+
+        <div className="first-run-quick-card">
+          <div>
+            <span className="mini-label">30 秒可体验</span>
+            <strong>不想填配置？直接进入公益新手酒馆。</strong>
+            <p>系统会给你临时生成访客称呼，使用本地规则后端，不需要 API Key 或定位权限。</p>
+          </div>
+          <button
+            type="button"
+            className="primary first-run-quick-btn"
+            onClick={handleQuickTry}
+            disabled={quickTrying}
+          >
+            {quickTrying ? '正在开门...' : '⚡ 直接试玩'}
+          </button>
+        </div>
 
         <form className="visitor-nickname-form first-run-form" onSubmit={handleSubmit}>
           <div className="visitor-nickname-field">

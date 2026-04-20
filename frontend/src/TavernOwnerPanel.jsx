@@ -1153,6 +1153,7 @@ export default function TavernOwnerPanel({
               {/* Voice Config Section */}
               <VoiceConfigSection
                 tavernId={editingLlmTavern.id}
+                ownerId={ownerId}
                 onSave={(voiceConfig) => {
                   setMyTaverns(prev => prev.map(t =>
                     t.id === editingLlmTavern.id ? { ...t, voice_config: voiceConfig } : t
@@ -1886,7 +1887,7 @@ function TavernEditModal({ tavern, onSave, onClose }) {
 
 // ─── Voice Config Section ─────────────────────────────────────────────────────
 
-function VoiceConfigSection({ tavernId, onSave }) {
+function VoiceConfigSection({ tavernId, ownerId = '', onSave }) {
   const [config, setConfig] = useState({
     enabled: false,
     tts_provider: 'elevenlabs',
@@ -1903,7 +1904,7 @@ function VoiceConfigSection({ tavernId, onSave }) {
   useEffect(() => {
     if (!tavernId) return
     setLoading(true)
-    tavernService.getVoiceConfig(tavernId).then((data) => {
+    tavernService.getVoiceConfig(tavernId, ownerId).then((data) => {
       setConfig(data.voice_config || {
         enabled: false,
         tts_provider: 'elevenlabs',
@@ -1914,14 +1915,14 @@ function VoiceConfigSection({ tavernId, onSave }) {
     }).catch(() => {
       // Use defaults on error
     }).finally(() => setLoading(false))
-  }, [tavernId])
+  }, [tavernId, ownerId])
 
   async function handleSave() {
     if (!tavernId) return
     setSaving(true)
     setResult(null)
     try {
-      await tavernService.saveVoiceConfig(tavernId, config)
+      await tavernService.saveVoiceConfig(tavernId, config, ownerId)
       setResult({ ok: true, message: '语音配置已保存' })
       if (onSave) onSave(config)
     } catch (err) {
@@ -1936,7 +1937,7 @@ function VoiceConfigSection({ tavernId, onSave }) {
     setTesting(true)
     setResult(null)
     try {
-      const audioUrl = await tavernService.synthesizeVoice(tavernId, '你好，这是语音测试')
+      const audioUrl = await tavernService.synthesizeVoice(tavernId, '你好，这是语音测试', '', ownerId)
       const audio = new Audio(audioUrl)
       audio.play()
       setResult({ ok: true, message: '正在播放测试语音...' })

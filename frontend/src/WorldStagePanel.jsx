@@ -85,6 +85,8 @@ export default function WorldStagePanel({
   onRefreshTaverns,
   onTavernClick,
   activeTavernId,
+  onQuickStartTavern,
+  quickStartLoading = false,
   mapOnly = false,
 }) {
   const activePoiPanelRef = useRef(null)
@@ -332,6 +334,8 @@ export default function WorldStagePanel({
               activeTavernId={activeTavernId}
               onTavernClick={onTavernClick}
               onRefreshTaverns={onRefreshTaverns}
+              onQuickStartTavern={onQuickStartTavern}
+              quickStartLoading={quickStartLoading}
             />
 
             {orchestrationEvents.length ? (

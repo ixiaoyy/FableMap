@@ -1,7 +1,7 @@
 # FableMap 共享任务清单：轻量酒馆体验壳与记忆系统
 
 > **创建日期**：2026-04-17
-> **状态**：待实现 / 可认领
+> **状态**：主线任务已完成，保留为历史任务与验收记录
 > **来源**：参考 VisionTale 轻量 Web 酒馆形态 + FableMap 现有赛博酒馆方向
 > **用途**：给后续 AI / 人类协作者统一拆任务、认领、实现、验收。
 
@@ -1184,7 +1184,7 @@ PromptBlock {
 - **酒馆集成**：群聊使用酒馆的 LLM 配置、Prompt Block、WorldInfo、记忆注入
 - **持久化**：群聊消息写入 `TavernStore` chat history，`group_id` 字段标识群聊会话
 
-### FM-VT-GC-05：Tavern 模型群聊字段 + service 层 `[in_progress]`
+### FM-VT-GC-05：Tavern 模型群聊字段 + service 层 `[done]`
 
 **目标**：在 Tavern 模型添加群聊开关和角色 talkativeness；实现 `tavern_group_chat_payload()`。
 
@@ -1200,7 +1200,7 @@ PromptBlock {
 
 ---
 
-### FM-VT-GC-06：群聊 API 路由 `[pending]`
+### FM-VT-GC-06：群聊 API 路由 `[done]`
 
 **目标**：在 `/api/taverns/{id}/group-chat/*` 下实现群聊相关接口。
 
@@ -1214,7 +1214,7 @@ PromptBlock {
 
 ---
 
-### FM-VT-GC-07：前端群聊 API 封装 `[pending]`
+### FM-VT-GC-07：前端群聊 API 封装 `[done]`
 
 **目标**：在 `tavernService.js` 添加群聊相关方法。
 
@@ -1224,7 +1224,7 @@ PromptBlock {
 
 ---
 
-### FM-VT-GC-08：TavernGroupChatRoom 界面 `[pending]`
+### FM-VT-GC-08：TavernGroupChatRoom 界面 `[done]`
 
 **目标**：实现多人聊天界面，展示角色头像、发言者和群聊消息流。
 
@@ -1238,7 +1238,7 @@ PromptBlock {
 
 ---
 
-### FM-VT-GC-09：店主群聊配置界面 `[pending]`
+### FM-VT-GC-09：店主群聊配置界面 `[done 2026-04-20]`
 
 **目标**：店主可配置每个角色的 talkativeness、选择发言策略、开关群聊。
 
@@ -1250,9 +1250,17 @@ PromptBlock {
 
 - 店主可在控制台看到每个角色的 talkativeness 滑块和策略选择
 
+**实现记录**
+
+- 已新增并接入 `frontend/src/TavernGroupSettingsModal.jsx`，店主可从酒馆卡片和高级工具台打开“群聊”配置。
+- 配置界面支持群聊开关、balanced / weighted_random / round_robin / relevance 策略选择、每轮最多回应、回应间隔、角色名提示和每个角色 talkativeness 滑块。
+- 保存时调用酒馆级 `/api/taverns/{id}/group-chat/config`，只提交群聊配置与角色发言积极度，不覆盖整张角色卡。
+- `frontend/src/styles.css` 已补群聊配置弹窗、策略卡、角色滑块和移动端折叠样式。
+- 验证：`npm --prefix .\frontend run build`、`& 'C:\Users\phpxi\miniconda3\python.exe' -m pytest -q --tb=short -p no:cacheprovider --basetemp .\tmp_pytest_escalated_gc09 tests/test_group_chat.py`、`git -c safe.directory=D:/work/ai- diff --check`。
+
 ---
 
-### FM-VT-GC-10：群聊测试 `[pending]`
+### FM-VT-GC-10：群聊测试 `[done]`
 
 **目标**：覆盖群聊发言选择、LLM 调用、消息持久化和权限边界的测试用例。
 
@@ -1262,13 +1270,40 @@ PromptBlock {
 
 ---
 
+### FM-VT-GC-11：群聊记忆与回访联动 `[done 2026-04-20]`
+
+**目标**：群聊发送成功后，像单聊一样更新访客回访关系，并把本轮群聊提炼成可见结构化记忆。
+
+**改动文件**
+
+- `fablemap/web/service.py`
+- `frontend/src/TavernChatRoom.jsx`
+- `tests/test_group_chat.py`
+
+**验收标准**
+
+- 酒馆级群聊 API 返回 `visitor_state` 和 `created_memories`。
+- 前端群聊发送后刷新访客记忆面板状态。
+- 自动记忆以 `visitor_tavern` 范围保存，避免绑定到单个 NPC。
+
+**实现记录**
+
+- `send_group_chat_payload()` 在保存用户消息和多角色回复后，更新 VisitorState 的最近到访、关系强度和关系阶段。
+- 群聊多角色回复合并为一轮 `assistant_message`，调用 `auto_create_memories_from_chat()` 生成 `visitor_tavern` 结构化记忆。
+- `TavernChatRoom.jsx` 群聊发送后接收 `visitor_state` / `created_memories`，刷新记忆面板。
+- `tests/test_group_chat.py` 覆盖群聊发送后返回 visitor_state、生成蓝莓派偏好记忆，并可从 `/memories` 读取。
+- 验证：`& 'C:\Users\phpxi\miniconda3\python.exe' -m pytest -q --tb=short -p no:cacheprovider --basetemp .\tmp_pytest_escalated_gc11 tests/test_group_chat.py`、`npm --prefix .\frontend run build`、`git -c safe.directory=D:/work/ai- diff --check`。
+
+---
+
 ## 认领记录（续）
 
 | 任务 ID | 认领人 / Agent | 状态 | 备注 |
 |---------|----------------|------|------|
-| FM-VT-GC-05 | Codex | in_progress | Tavern 模型添加 group_chat 字段；service 层 tavern_group_chat_payload() 实现中 |
-| FM-VT-GC-06 | — | pending | 群聊 API 路由 |
-| FM-VT-GC-07 | — | pending | 前端 tavernService.js 群聊 API |
-| FM-VT-GC-08 | — | pending | TavernGroupChatRoom 界面 |
-| FM-VT-GC-09 | — | pending | 店主群聊配置界面 |
-| FM-VT-GC-10 | — | pending | 群聊测试用例 |
+| FM-VT-GC-05 | Codex | done | Tavern 模型添加 group_chat 字段；service 层 tavern_group_chat_payload() |
+| FM-VT-GC-06 | lijin | done | 已实现群聊 API 路由：GET/PUT /group-chat、POST /group-chat、GET /group-chat/history、PUT /characters/{id}/talkativeness |
+| FM-VT-GC-07 | Codex | done | 已封装 get/update config、sendGroupChat、history 和 talkativeness 方法 |
+| FM-VT-GC-08 | Codex | done | TavernChatRoom 群聊模式已接入酒馆级 sendGroupChat/history，多角色消息流展示头像和角色名 |
+| FM-VT-GC-09 | Codex | done | 店主群聊配置界面：开关、策略选择、角色 talkativeness 滑块 |
+| FM-VT-GC-10 | Codex | done | 已修复消息顺序断言脆弱性；完整回归 216 passed |
+| FM-VT-GC-11 | Codex | done | 群聊发送返回 visitor_state / created_memories，并刷新访客记忆 |

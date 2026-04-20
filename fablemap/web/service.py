@@ -311,7 +311,13 @@ from fablemap.writeback import WritebackEngine, WritebackStore
 from fablemap.orchestrator.rule_engine import RuleBasedOrchestrator
 from fablemap.memory_graph import WorldMemoryGraph
 from fablemap.dynamic_signals import inject_disturbance, clear_disturbance, get_disturbance
-from fablemap.tavern import TavernService as TavernServiceCore, TavernStore as TavernStoreCore
+from fablemap.tavern import (
+    TavernService as TavernServiceCore,
+    TavernStore as TavernStoreCore,
+    _normalize_bool,
+    _normalize_group_chat_config,
+    _normalize_talkativeness,
+)
 
 from .config import ApiSettings
 
@@ -1699,6 +1705,129 @@ class WebService:
             raise HTTPException(status_code=404, detail="Backup file not found")
         return candidate
 
+    def _build_tavern_character_prompt(
+        self,
+        *,
+        tavern: Any,
+        character: Any,
+        llm_config: Any,
+        message: str,
+        visitor_id: str,
+        visitor_display_name: str = "",
+        extra_context: list[dict[str, Any]] | None = None,
+        history_messages: list[Any] | None = None,
+    ) -> dict[str, Any]:
+        """Build the same prompt stack for single chat and tavern-level group chat."""
+        tavern_id = getattr(tavern, "id", "")
+        character_id = getattr(character, "id", "")
+        prompt_user_name = visitor_display_name or visitor_id[:16] or "旅人"
+        messages = history_messages if history_messages is not None else self.tavern_store.get_chat_history(
+            tavern_id, visitor_id, character_id, limit=20
+        )
+        prompt_visitor_state = self.tavern_store.get_visitor_state(tavern_id, visitor_id) if visitor_id else None
+        visitor_message_count = len(messages)
+        if visitor_id:
+            try:
+                visitor_message_count = sum(
+                    int(session.get("message_count", 0) or 0)
+                    for session in self.tavern_store.list_chat_sessions(
+                        tavern_id,
+                        visitor_id=visitor_id,
+                        limit=None,
+                    )
+                )
+            except Exception:
+                visitor_message_count = len(messages)
+
+        character_names = {c.id: c.name for c in getattr(tavern, "characters", [])}
+        prompt_messages_obj = [
+            PromptChatMessage(
+                id=m.id,
+                role=m.role,
+                content=m.content,
+                name=(
+                    (m.visitor_name or visitor_display_name or prompt_user_name)
+                    if m.role == "user"
+                    else character_names.get(m.character_id, getattr(character, "name", ""))
+                ),
+                timestamp=m.timestamp or "",
+            )
+            for m in messages
+        ] + _sanitize_prompt_extra_context(extra_context, message)
+
+        output_format = "openai"
+        backend = str(getattr(llm_config, "backend", "") or "").lower()
+        if backend in ("claude",):
+            output_format = "claude"
+        elif backend in (
+            "ooba",
+            "mancer",
+            "vllm",
+            "tabby",
+            "koboldcpp",
+            "togetherai",
+            "llamacpp",
+            "infermaticai",
+            "dreamgen",
+            "featherless",
+            "huggingface",
+            "generic",
+            "ollama",
+        ):
+            output_format = "textgen"
+
+        memory_policy = safe_memory_policy(getattr(tavern, "memory_policy", {}))
+        prompt_memory_atoms: list[MemoryAtom] = []
+        if memory_policy.get("mode") in {"structured", "balanced", "long_context"}:
+            try:
+                visible_atoms = [
+                    atom for atom in self.tavern_store.list_memory_atoms(tavern_id)
+                    if _memory_atom_is_visible(atom, tavern, visitor_id)
+                ]
+                prompt_memory_atoms = select_memory_atoms_for_prompt(
+                    visible_atoms,
+                    visitor_id=visitor_id,
+                    character_id=character_id,
+                    current_message=message,
+                    budget_tokens=memory_policy.get("budget_tokens", 1200),
+                    include_short=bool(memory_policy.get("short_term", True)),
+                    include_mid=bool(memory_policy.get("mid_term", True)),
+                    include_long=bool(memory_policy.get("long_term", True)),
+                )
+            except Exception:
+                prompt_memory_atoms = []
+
+        config = PromptBuildConfig(
+            tavern_name=getattr(tavern, "name", ""),
+            tavern_scene_prompt=getattr(tavern, "scene_prompt", "") or "",
+            char_name=getattr(character, "name", ""),
+            char_personality=getattr(character, "personality", "") or "",
+            char_scenario=getattr(character, "scenario", "") or "",
+            char_first_mes=getattr(character, "first_mes", "") or "",
+            char_system_prompt=getattr(character, "system_prompt", "") or "",
+            user_name=prompt_user_name,
+            visitor_visit_count=prompt_visitor_state.visit_count if prompt_visitor_state else 0,
+            visitor_relationship_stage=prompt_visitor_state.relationship_stage if prompt_visitor_state else "",
+            visitor_relationship_strength=prompt_visitor_state.relationship_strength if prompt_visitor_state else 0.0,
+            visitor_first_visit=prompt_visitor_state.first_visit if prompt_visitor_state else "",
+            visitor_last_visit=prompt_visitor_state.last_visit if prompt_visitor_state else "",
+            visitor_message_count=visitor_message_count,
+            memory_atoms=[atom.to_dict() for atom in prompt_memory_atoms],
+            memory_budget_tokens=int(memory_policy.get("budget_tokens", 0) or 0),
+            world_info_entries=[e.to_dict() if hasattr(e, "to_dict") else e for e in getattr(tavern, "world_info", [])],
+            prompt_blocks=normalize_prompt_blocks(getattr(tavern, "prompt_blocks", [])),
+            output_format=output_format,
+            history_max_messages=20,
+        )
+        builder = PromptBuilder(config)
+        return {
+            "prompt_result": builder.build(prompt_messages_obj, message),
+            "history_messages": messages,
+            "visitor_state": prompt_visitor_state,
+            "visitor_message_count": visitor_message_count,
+            "memory_atoms": prompt_memory_atoms,
+        }
+
     # Chat methods using tavern service
     def tavern_chat_payload(
         self,
@@ -1762,121 +1891,50 @@ class WebService:
                 tavern_status="closed",
             )
 
-        # Build messages using PromptBuilder
-        messages = self.tavern_store.get_chat_history(
-            tavern_id, visitor_id, character_id, limit=20
+        prompt_bundle = self._build_tavern_character_prompt(
+            tavern=tavern,
+            character=character,
+            llm_config=llm_config,
+            message=message,
+            visitor_id=visitor_id,
+            visitor_display_name=visitor_display_name,
+            extra_context=extra_context,
         )
-        prompt_visitor_state = self.tavern_store.get_visitor_state(tavern_id, visitor_id) if visitor_id else None
-        visitor_message_count = len(messages)
-        if visitor_id:
-            try:
-                visitor_message_count = sum(
-                    int(session.get("message_count", 0) or 0)
-                    for session in self.tavern_store.list_chat_sessions(
-                        tavern_id,
-                        visitor_id=visitor_id,
-                        limit=None,
-                    )
-                )
-            except Exception:
-                visitor_message_count = len(messages)
-
-        # Convert to prompt_builder.ChatMessage format
-        prompt_messages_obj = [
-            PromptChatMessage(
-                id=m.id,
-                role=m.role,
-                content=m.content,
-                name=(m.visitor_name or visitor_display_name) if m.role == "user" else character.name,
-                timestamp=m.timestamp or "",
-            )
-            for m in messages
-        ] + _sanitize_prompt_extra_context(extra_context, message)
-
-        # Determine output format based on backend
-        output_format = "openai"
-        if llm_config.backend in ("claude",):
-            output_format = "claude"
-        elif llm_config.backend in ("ooba", "mancer", "vllm", "tabby", "koboldcpp", "togetherai", "llamacpp", "infermaticai", "dreamgen", "featherless", "huggingface", "generic", "ollama"):
-            output_format = "textgen"
-
-        memory_policy = safe_memory_policy(tavern.memory_policy)
-        prompt_memory_atoms: list[MemoryAtom] = []
-        if memory_policy.get("mode") in {"structured", "balanced", "long_context"}:
-            try:
-                visible_atoms = [
-                    atom for atom in self.tavern_store.list_memory_atoms(tavern_id)
-                    if _memory_atom_is_visible(atom, tavern, visitor_id)
-                ]
-                prompt_memory_atoms = select_memory_atoms_for_prompt(
-                    visible_atoms,
-                    visitor_id=visitor_id,
-                    character_id=character_id,
-                    current_message=message,
-                    budget_tokens=memory_policy.get("budget_tokens", 1200),
-                    include_short=bool(memory_policy.get("short_term", True)),
-                    include_mid=bool(memory_policy.get("mid_term", True)),
-                    include_long=bool(memory_policy.get("long_term", True)),
-                )
-            except Exception:
-                prompt_memory_atoms = []
-
-        # Build prompt
-        config = PromptBuildConfig(
-            tavern_name=tavern.name,
-            tavern_scene_prompt=tavern.scene_prompt or "",
-            char_name=character.name,
-            char_personality=character.personality or "",
-            char_scenario=character.scenario or "",
-            char_first_mes=character.first_mes or "",
-            char_system_prompt=character.system_prompt or "",
-            user_name=prompt_user_name,
-            visitor_visit_count=prompt_visitor_state.visit_count if prompt_visitor_state else 0,
-            visitor_relationship_stage=prompt_visitor_state.relationship_stage if prompt_visitor_state else "",
-            visitor_relationship_strength=prompt_visitor_state.relationship_strength if prompt_visitor_state else 0.0,
-            visitor_first_visit=prompt_visitor_state.first_visit if prompt_visitor_state else "",
-            visitor_last_visit=prompt_visitor_state.last_visit if prompt_visitor_state else "",
-            visitor_message_count=visitor_message_count,
-            memory_atoms=[atom.to_dict() for atom in prompt_memory_atoms],
-            memory_budget_tokens=int(memory_policy.get("budget_tokens", 0) or 0),
-            world_info_entries=[e.to_dict() if hasattr(e, "to_dict") else e for e in tavern.world_info],
-            prompt_blocks=normalize_prompt_blocks(tavern.prompt_blocks),
-            output_format=output_format,
-            history_max_messages=20,
-        )
-        builder = PromptBuilder(config)
-        prompt_result = builder.build(prompt_messages_obj, message)
+        prompt_result = prompt_bundle["prompt_result"]
 
         # Call LLM using the new llm_clients
         response = None
         degradation: dict[str, Any] | None = None
-        try:
-            llm_client_config = _tavern_llm_config_to_client(llm_config)
-            llm_client = create_client(llm_client_config)
-            response = llm_client.complete(prompt_result["messages"])
-            response_text = response.content
-        except LLMError as e:
-            logger.warning(f"LLM call failed: {e}, falling back to rule-based response")
-            response_text = self._fallback_response(message, character.name)
-            self._mark_tavern_closed(tavern)
-            degradation = self._build_degradation(
-                reason="llm_error",
-                title="AI 后端暂时不可用",
-                message="刚才的模型调用失败，已切换为规则回应。",
-                action="店主可以在 AI 配置里测试连接，确认 API Key、模型名称或 Base URL。",
-                technical_detail=str(e),
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error during LLM call: {e}")
-            response_text = self._fallback_response(message, character.name)
-            self._mark_tavern_closed(tavern)
-            degradation = self._build_degradation(
-                reason="llm_unexpected_error",
-                title="AI 回应暂时中断",
-                message="酒馆后端遇到异常，已切换为规则回应。",
-                action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
-                technical_detail=str(e),
-            )
+        if str(llm_config.backend or "").lower() in {"rules", "rule_based", "public_welfare"}:
+            response_text = self._rules_backend_response(message, character, tavern)
+        else:
+            try:
+                llm_client_config = _tavern_llm_config_to_client(llm_config)
+                llm_client = create_client(llm_client_config)
+                response = llm_client.complete(prompt_result["messages"])
+                response_text = response.content
+            except LLMError as e:
+                logger.warning(f"LLM call failed: {e}, falling back to rule-based response")
+                response_text = self._fallback_response(message, character.name)
+                self._mark_tavern_closed(tavern)
+                degradation = self._build_degradation(
+                    reason="llm_error",
+                    title="AI 后端暂时不可用",
+                    message="刚才的模型调用失败，已切换为规则回应。",
+                    action="店主可以在 AI 配置里测试连接，确认 API Key、模型名称或 Base URL。",
+                    technical_detail=str(e),
+                )
+            except Exception as e:
+                logger.error(f"Unexpected error during LLM call: {e}")
+                response_text = self._fallback_response(message, character.name)
+                self._mark_tavern_closed(tavern)
+                degradation = self._build_degradation(
+                    reason="llm_unexpected_error",
+                    title="AI 回应暂时中断",
+                    message="酒馆后端遇到异常，已切换为规则回应。",
+                    action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
+                    technical_detail=str(e),
+                )
 
         output_rule_result = apply_output_rules(response_text, tavern.output_rules)
         response_text = output_rule_result["text"]
@@ -2050,6 +2108,9 @@ class WebService:
         Count tokens for input and output text.
         Uses LLM API usage data when available, falls back to TokenCounter.
         """
+        if str(backend or "").lower() in {"rules", "rule_based", "public_welfare"}:
+            return 0
+
         from fablemap.token_counter import get_counter
 
         total = 0
@@ -2081,6 +2142,57 @@ class WebService:
             counter = get_counter("cl100k_base")
         total = counter.count(input_text) + counter.count(output_text)
         return total
+
+    def _rules_backend_response(self, message: str, character: Any, tavern: Any) -> str:
+        """Local, no-network response mode for built-in public welfare taverns."""
+        text = (message or "").strip()
+        lowered = text.lower()
+        char_name = getattr(character, "name", "") or "值守员"
+        first_mes = (getattr(character, "first_mes", "") or "").strip()
+        tavern_name = getattr(tavern, "name", "") or "公益酒馆"
+
+        danger_keywords = ("自伤", "伤害自己", "不想活", "suicide", "kill myself", "撑不住")
+        if any(keyword in lowered or keyword in text for keyword in danger_keywords):
+            return (
+                f"{char_name}把声音放得很稳：先把手边可能伤到你的东西放远一点。"
+                "如果你现在有立即危险，请马上联系身边可信任的人，或拨打当地紧急电话。"
+                "你也可以只回我一个字：你现在是一个人吗？"
+            )
+
+        if any(keyword in lowered for keyword in ("hi", "hello")) or any(keyword in text for keyword in ("你好", "您好", "在吗")):
+            if first_mes:
+                return first_mes
+            return f"欢迎来到{tavern_name}。我是{char_name}，你可以先说说现在最想解决的一件小事。"
+
+        if any(keyword in text for keyword in ("新手", "怎么开始", "怎么玩", "开店", "帮助", "规则", "隐私")):
+            return (
+                f"{char_name}指了指桌上的说明卡：先选地点，再选公开/密码/私人，最后放入一个角色开始测试。"
+                "如果你只是来逛，记住两件事就好：不要透露敏感信息；遇到喜欢的酒馆，可以先从一句简单问候开始。"
+            )
+
+        if any(keyword in text for keyword in ("谢谢", "感谢", "谢了")) or "thank" in lowered:
+            return f"{char_name}笑了笑：不用谢。公益酒馆的规矩就是这样——能帮一点是一点，剩下的我们慢慢来。"
+
+        if any(keyword in text for keyword in ("再见", "走了", "离开")) or any(keyword in lowered for keyword in ("bye", "goodbye")):
+            return f"{char_name}把门口的小灯拨亮了一点：路上慢点。下次经过{tavern_name}，还可以进来坐坐。"
+
+        if any(keyword in text for keyword in ("找不到", "丢了", "失物", "线索", "忘了")):
+            return (
+                f"{char_name}拿出一张空白标签：我们先不急着找答案。写三列就够——最后一次确定的时间、地点、"
+                "还有一个你能记住的细节。"
+            )
+
+        if any(keyword in text for keyword in ("太多", "压力", "焦虑", "累", "烦", "不知道")):
+            return (
+                f"{char_name}认真听完后说：先把事情拆小。今天不用处理全部，只选一个十分钟内能做的动作。"
+                "你愿意从最不费力的那一步说起吗？"
+            )
+
+        snippet = text[:28] + ("…" if len(text) > 28 else "")
+        return (
+            f"{char_name}点点头，把“{snippet or '这件事'}”记在便签上：我听见了。"
+            "我们可以先把它分成三部分：已经发生的、你能控制的、需要别人帮忙的。你想先看哪一部分？"
+        )
 
     def _fallback_response(self, message: str, char_name: str) -> str:
         """Rule-based fallback when LLM is unavailable."""
@@ -2419,6 +2531,526 @@ class WebService:
     def get_group_chat_session(self, session_id: str):
         """Get a group chat session by ID."""
         return getattr(self, "_group_chat_sessions", {}).get(session_id)
+
+    # ─── Group Chat API ──────────────────────────────────────────────────
+
+    def get_group_chat_config_payload(
+        self,
+        tavern_id: str,
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        """Get group chat status and config for a tavern."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        if tavern.access == "private" and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        return {
+            "tavern_id": tavern_id,
+            "group_chat_enabled": tavern.group_chat_enabled,
+            "group_chat_config": tavern.group_chat_config,
+            "characters": [
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "talkativeness": c.talkativeness,
+                    "avatar": c.avatar or (c.sprites.get("neutral") if c.sprites else ""),
+                }
+                for c in tavern.characters
+            ],
+            "character_count": len(tavern.characters),
+        }
+
+    def update_group_chat_config_payload(
+        self,
+        tavern_id: str,
+        data: dict[str, Any],
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        """Update group chat config (owner only)."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        if tavern.owner_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+
+        data = data or {}
+
+        # Update group chat enabled
+        if "group_chat_enabled" in data:
+            tavern.group_chat_enabled = _normalize_bool(data["group_chat_enabled"])
+
+        # Update group chat config
+        if "group_chat_config" in data and isinstance(data["group_chat_config"], dict):
+            config = {**(tavern.group_chat_config or {}), **data["group_chat_config"]}
+            tavern.group_chat_config = _normalize_group_chat_config(config)
+
+        # Update character talkativeness
+        if "character_talkativeness" in data and isinstance(data["character_talkativeness"], dict):
+            for char_id, talkativeness in data["character_talkativeness"].items():
+                char = next((c for c in tavern.characters if c.id == char_id), None)
+                if char:
+                    char.talkativeness = _normalize_talkativeness(talkativeness)
+
+        self.tavern_store.update_tavern(tavern)
+
+        return {
+            "ok": True,
+            "group_chat_enabled": tavern.group_chat_enabled,
+            "group_chat_config": tavern.group_chat_config,
+            "characters": [
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "talkativeness": c.talkativeness,
+                    "avatar": c.avatar or (c.sprites.get("neutral") if c.sprites else ""),
+                }
+                for c in tavern.characters
+            ],
+        }
+
+    def _ensure_group_chat_visitor_scope(
+        self,
+        tavern: Any,
+        user_id: str,
+        visitor_id: str,
+        *,
+        allow_owner_all: bool = False,
+    ) -> None:
+        """Enforce the same visitor/owner boundary used by single chat."""
+        user_id = str(user_id or "").strip()
+        visitor_id = str(visitor_id or "").strip()
+        if not user_id:
+            raise HTTPException(status_code=403, detail="缺少访客身份")
+        if getattr(tavern, "owner_id", "") == user_id:
+            if visitor_id or allow_owner_all:
+                return
+        if visitor_id and visitor_id == user_id:
+            return
+        raise HTTPException(status_code=403, detail="不能访问其他访客的群聊会话")
+
+    def _parse_group_chat_timestamp(self, value: str):
+        from datetime import UTC, datetime
+
+        text = str(value or "").strip()
+        if not text:
+            return None
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
+
+    def _group_chat_cooled_character_ids(
+        self,
+        history: list[Any],
+        *,
+        cooldown_seconds: int,
+        now_iso: str,
+    ) -> set[str]:
+        if cooldown_seconds <= 0:
+            return set()
+        now_dt = self._parse_group_chat_timestamp(now_iso)
+        if now_dt is None:
+            return set()
+        cooled: set[str] = set()
+        for message in reversed(history):
+            if getattr(message, "role", "") != "assistant":
+                continue
+            message_dt = self._parse_group_chat_timestamp(getattr(message, "timestamp", ""))
+            if message_dt is None:
+                continue
+            elapsed = (now_dt - message_dt).total_seconds()
+            if 0 <= elapsed < cooldown_seconds:
+                cooled.add(str(getattr(message, "character_id", "") or ""))
+            elif elapsed >= cooldown_seconds:
+                break
+        return cooled
+
+    def _seed_group_round_robin_selector(self, manager: Any, active_character_ids: list[str], history: list[Any]) -> None:
+        if getattr(manager, "strategy", "") != "round_robin" or not active_character_ids:
+            return
+        for message in reversed(history):
+            character_id = str(getattr(message, "character_id", "") or "")
+            if getattr(message, "role", "") == "assistant" and character_id in active_character_ids:
+                manager.selector._round_robin_index = (active_character_ids.index(character_id) + 1) % len(active_character_ids)
+                return
+
+    def send_group_chat_payload(
+        self,
+        tavern_id: str,
+        message: str,
+        visitor_id: str,
+        visitor_name: str = "",
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        """Send a group chat message and get responses from multiple characters."""
+        from fablemap.group_chat import GroupChatManager, GroupMember
+        from fablemap.tavern import ChatMessage as TavernChatMessage, VisitorState
+
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        visitor_id = str(visitor_id or user_id or "").strip()
+        user_id = str(user_id or "").strip()
+        if not visitor_id:
+            raise HTTPException(status_code=400, detail="缺少访客身份")
+        self._ensure_group_chat_visitor_scope(tavern, user_id, visitor_id)
+
+        if tavern.access == "private" and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        # Check if group chat is enabled
+        if not tavern.group_chat_enabled:
+            raise HTTPException(status_code=400, detail="群聊未启用")
+
+        if not tavern.characters:
+            raise HTTPException(status_code=400, detail="酒馆没有角色")
+
+        # Check if tavern is open
+        if tavern.status != "open":
+            return {
+                "messages": [],
+                "error": "酒馆正在歇业",
+                "degraded": True,
+            }
+
+        # Get LLM config
+        llm_config = self.tavern_store.get_llm_config(tavern_id)
+        if not llm_config or not llm_config.is_configured():
+            return {
+                "messages": [],
+                "error": "AI 后端还没配置",
+                "degraded": True,
+            }
+
+        # Create group chat manager
+        manager = GroupChatManager()
+        manager.strategy = tavern.group_chat_config.get("strategy", "balanced")
+        manager.set_max_responses_per_turn(tavern.group_chat_config.get("max_responses_per_turn", 2))
+
+        now = _utc_now_iso()
+
+        # Get persisted group-visible history before saving the current user
+        # message. PromptBuilder receives the current message separately, so this
+        # avoids duplicating the latest visitor turn while still preserving prior
+        # group replies for speaker selection and context.
+        history = self._group_chat_history_messages(tavern, visitor_id, limit=30)
+
+        cooldown_seconds = int((tavern.group_chat_config or {}).get("response_cooldown_seconds", 0) or 0)
+        cooled_character_ids = self._group_chat_cooled_character_ids(
+            history,
+            cooldown_seconds=cooldown_seconds,
+            now_iso=now,
+        )
+
+        # Add characters as members
+        for char in tavern.characters:
+            manager.add_member(GroupMember(
+                character_id=char.id,
+                name=char.name,
+                talkativeness=0.0 if char.id in cooled_character_ids else char.talkativeness,
+                avatar_url=char.avatar or (char.sprites.get("neutral") if char.sprites else ""),
+            ))
+
+        # Add user as member
+        visitor_display_name = _normalize_visitor_name(visitor_name) or "旅人"
+        manager.add_member(GroupMember(
+            character_id="user",
+            name=visitor_display_name,
+            talkativeness=1.0,
+            is_user=True,
+        ))
+
+        # Add user message to selector-local context and persisted group history.
+        manager.add_user_message(message)
+        current_user_message_id = f"msg_{uuid.uuid4().hex[:12]}"
+        self.tavern_store.add_chat_message(TavernChatMessage(
+            id=current_user_message_id,
+            tavern_id=tavern_id,
+            character_id="_group",
+            visitor_id=visitor_id,
+            role="user",
+            content=message,
+            timestamp=now,
+            visitor_name=visitor_display_name,
+            token_count=0,
+        ))
+
+        rules_backend = str(llm_config.backend or "").lower() in {"rules", "rule_based", "public_welfare"}
+
+        # Select speakers
+        active_character_ids = [
+            member.character_id
+            for member in manager.members
+            if not member.is_user and not member.is_narrator and member.talkativeness > 0
+        ]
+        self._seed_group_round_robin_selector(manager, active_character_ids, history)
+        speakers = manager.select_next_speakers()
+        responses = []
+        total_token_count = 0
+        turn_degraded = False
+
+        for speaker in speakers:
+            if speaker.is_user:
+                continue
+
+            # Find character in tavern
+            char = next((c for c in tavern.characters if c.id == speaker.character_id), None)
+            if not char:
+                continue
+
+            response = None
+            degradation: dict[str, Any] | None = None
+            try:
+                prompt_bundle = self._build_tavern_character_prompt(
+                    tavern=tavern,
+                    character=char,
+                    llm_config=llm_config,
+                    message=(
+                        f"{visitor_display_name}: {message}"
+                        if tavern.group_chat_config.get("require_name_prefix", True)
+                        else message
+                    ),
+                    visitor_id=visitor_id,
+                    visitor_display_name=visitor_display_name,
+                    history_messages=history[-30:],
+                )
+                prompt_result = prompt_bundle["prompt_result"]
+
+                if rules_backend:
+                    response_text = self._rules_backend_response(message, char, tavern)
+                else:
+                    client = create_client(_tavern_llm_config_to_client(llm_config))
+                    response = client.complete(prompt_result["messages"])
+                    response_text = response.content
+            except LLMError as e:
+                logger.warning(f"Group chat LLM error for {speaker.character_id}: {e}")
+                response_text = self._fallback_response(message, char.name)
+                self._mark_tavern_closed(tavern)
+                turn_degraded = True
+                degradation = self._build_degradation(
+                    reason="llm_error",
+                    title="AI 后端暂时不可用",
+                    message="刚才的模型调用失败，已切换为规则回应。",
+                    action="店主可以在 AI 配置里测试连接，确认 API Key、模型名称或 Base URL。",
+                    technical_detail=str(e),
+                )
+            except Exception as e:
+                logger.error(f"Unexpected group chat error for {speaker.character_id}: {e}")
+                response_text = self._fallback_response(message, char.name)
+                self._mark_tavern_closed(tavern)
+                turn_degraded = True
+                degradation = self._build_degradation(
+                    reason="llm_unexpected_error",
+                    title="AI 回应暂时中断",
+                    message="群聊后端遇到异常，已切换为规则回应。",
+                    action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
+                    technical_detail=str(e),
+                )
+
+            output_rule_result = apply_output_rules(response_text, tavern.output_rules)
+            response_text = output_rule_result["text"]
+            if output_rule_result.get("errors"):
+                logger.warning(
+                    "Group chat output rule errors for tavern %s: %s",
+                    tavern_id,
+                    output_rule_result.get("errors"),
+                )
+
+            token_count = self._count_tokens(llm_config.backend, llm_config.model, message, response_text, response)
+            total_token_count += token_count
+
+            # Add response to manager and collect
+            manager.add_assistant_message(speaker.character_id, response_text, speaker.name)
+            response_timestamp = _utc_now_iso()
+
+            # Save to chat history
+            assistant_message_id = f"msg_{uuid.uuid4().hex[:12]}"
+            tavern_msg = TavernChatMessage(
+                id=assistant_message_id,
+                tavern_id=tavern_id,
+                character_id=speaker.character_id,
+                visitor_id=visitor_id,
+                role="assistant",
+                content=response_text,
+                timestamp=response_timestamp,
+                visitor_name=visitor_display_name,
+                token_count=token_count,
+            )
+            self.tavern_store.add_chat_message(tavern_msg)
+            history.append(tavern_msg)
+
+            response_payload = {
+                "id": assistant_message_id,
+                "character_id": speaker.character_id,
+                "character_name": speaker.name,
+                "avatar": speaker.avatar_url,
+                "content": response_text,
+                "timestamp": response_timestamp,
+                "degraded": bool(degradation),
+                "output_rules": {
+                    "changed": output_rule_result.get("changed", False),
+                    "applied": output_rule_result.get("applied", []),
+                    "errors": output_rule_result.get("errors", []),
+                },
+            }
+            if degradation:
+                response_payload["degradation"] = degradation
+            responses.append(response_payload)
+
+        # Update token usage
+        if total_token_count > 0:
+            self.tavern_store.add_token_usage(tavern_id, total_token_count)
+
+        updated_visitor_state = None
+        if visitor_id:
+            visitor_state = self.tavern_store.get_visitor_state(tavern_id, visitor_id) or VisitorState(
+                visitor_id=visitor_id,
+                tavern_id=tavern_id,
+                first_visit=now,
+            )
+            if not visitor_state.first_visit:
+                visitor_state.first_visit = now
+            visitor_state.last_visit = now
+            visitor_state.relationship_strength = min(
+                1.0,
+                float(visitor_state.relationship_strength or 0.0) + 0.05,
+            )
+            visitor_state.relationship_stage = _relationship_stage_for(
+                visitor_state.relationship_strength,
+                visitor_state.visit_count,
+            )
+            self.tavern_store.update_visitor_state(tavern_id, visitor_state)
+            updated_visitor_state = visitor_state
+
+        if not responses:
+            return {
+                "messages": [],
+                "speaker_count": 0,
+                "strategy": manager.strategy,
+                "error": "群聊角色暂时没有回应",
+                "degraded": True,
+                "visitor_state": updated_visitor_state.to_dict() if updated_visitor_state else None,
+                "created_memories": [],
+            }
+
+        created_memories: list[dict] = []
+        if visitor_id and tavern_id:
+            try:
+                assistant_text = "\n".join(
+                    f"{response.get('character_name') or '群聊角色'}: {response.get('content') or ''}".strip()
+                    for response in responses
+                    if response.get("content")
+                )
+                assistant_message_ids = [str(response.get("id") or "") for response in responses if response.get("id")]
+                atoms = auto_create_memories_from_chat(
+                    self.tavern_store,
+                    tavern_id,
+                    visitor_id,
+                    "",
+                    "群聊",
+                    message,
+                    assistant_text,
+                    user_message_id=current_user_message_id,
+                    assistant_message_id=assistant_message_ids[0] if assistant_message_ids else "",
+                    importance_threshold=0.5,
+                )
+                created_memories = [m.to_dict() for m in atoms]
+            except Exception:
+                pass  # Never interrupt group chat for memory errors
+
+        return {
+            "messages": responses,
+            "speaker_count": len(responses),
+            "strategy": manager.strategy,
+            "degraded": turn_degraded,
+            "visitor_state": updated_visitor_state.to_dict() if updated_visitor_state else None,
+            "created_memories": created_memories,
+        }
+
+    def _group_chat_history_messages(self, tavern: Any, visitor_id: str, *, limit: int = 50) -> list[Any]:
+        """Return recent group-chat-visible messages across character files."""
+        character_ids = {c.id for c in getattr(tavern, "characters", [])}
+        character_ids.add("_group")
+        sessions = self.tavern_store.list_chat_sessions(
+            tavern.id,
+            visitor_id=visitor_id,
+            limit=None,
+        )
+        messages: list[Any] = []
+        for session in sessions:
+            for message in session.get("messages", []):
+                if message.character_id in character_ids:
+                    messages.append(message)
+        messages.sort(key=lambda item: (item.timestamp or "", item.id or ""))
+        return messages[-limit:]
+
+    def get_group_chat_history_payload(
+        self,
+        tavern_id: str,
+        visitor_id: str = "",
+        user_id: str = "",
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Get group chat history."""
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+
+        requested_visitor_id = str(visitor_id or "").strip()
+        user_id = str(user_id or "").strip()
+        if requested_visitor_id:
+            visitor_id = requested_visitor_id
+            self._ensure_group_chat_visitor_scope(tavern, user_id, visitor_id, allow_owner_all=True)
+        elif getattr(tavern, "owner_id", "") == user_id:
+            visitor_id = ""
+            self._ensure_group_chat_visitor_scope(tavern, user_id, visitor_id, allow_owner_all=True)
+        else:
+            visitor_id = user_id
+            self._ensure_group_chat_visitor_scope(tavern, user_id, visitor_id)
+
+        # Check access
+        if tavern.access == "private" and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+        # Get chat history
+        history = self._group_chat_history_messages(
+            tavern,
+            visitor_id,
+            limit=_clamp_chat_history_limit(limit),
+        )
+
+        messages = []
+        for m in history:
+            char = next((c for c in tavern.characters if c.id == m.character_id), None)
+            if m.character_id == "_group":
+                char_name = m.visitor_name or "旅人"
+            else:
+                char_name = char.name if char else m.character_id
+
+            messages.append({
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "character_id": m.character_id,
+                "character_name": char_name,
+                "visitor_name": m.visitor_name,
+                "timestamp": m.timestamp,
+            })
+
+        return {
+            "messages": messages,
+            "message_count": len(messages),
+        }
 
     # ─── Preset Manager ───────────────────────────────────────────────────
 

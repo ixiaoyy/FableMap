@@ -61,6 +61,8 @@ export default function WorldStageTavernDiscoveryLane({
   mapMarkerLimit = 0,
   onTavernClick,
   onRefreshTaverns,
+  onQuickStartTavern,
+  quickStartLoading = false,
 }) {
   const [visibleCount, setVisibleCount] = useState(DISCOVERY_BATCH_SIZE)
   const canReset = Boolean(search || accessFilter !== 'all' || statusFilter !== 'all' || sortMode !== 'distance')
@@ -147,6 +149,24 @@ export default function WorldStageTavernDiscoveryLane({
         {markerHiddenCount ? <span>地图显示 {mapMarkerCount} / {taverns.length} 个 marker</span> : null}
       </div>
 
+      {onQuickStartTavern ? (
+        <div className="tavern-discovery-quick-start">
+          <div>
+            <span className="mini-label">新手直达</span>
+            <strong>先体验一次完整聊天，再决定要不要调地图。</strong>
+            <p>进入平台内置公益酒馆：公开、营业中、本地规则回应，不需要 API Key。</p>
+          </div>
+          <button
+            type="button"
+            className="primary tavern-discovery-quick-btn"
+            onClick={onQuickStartTavern}
+            disabled={quickStartLoading}
+          >
+            {quickStartLoading ? '正在进入...' : '⚡ 立即试玩'}
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
         <div className="storyboard-placeholder-card tavern-discovery-empty tavern-discovery-empty--error">
           <strong>附近酒馆暂时没有连通</strong>
@@ -206,6 +226,16 @@ export default function WorldStageTavernDiscoveryLane({
         <div className="storyboard-placeholder-card tavern-discovery-empty">
           <strong>{totalTaverns ? '没有匹配的酒馆' : '附近还没有公开酒馆'}</strong>
           <p>{totalTaverns ? '可以放宽搜索词、入口或营业状态。' : '切换入口位置或扩大半径，再刷新附近酒馆。'}</p>
+          {onQuickStartTavern ? (
+            <button
+              type="button"
+              className="primary tavern-discovery-empty-action"
+              onClick={onQuickStartTavern}
+              disabled={quickStartLoading}
+            >
+              {quickStartLoading ? '正在进入新手酒馆...' : '先进入新手公益酒馆'}
+            </button>
+          ) : null}
         </div>
       )}
     </div>

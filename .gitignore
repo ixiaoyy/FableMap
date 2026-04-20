@@ -8,6 +8,11 @@ frontend/.vite/
 
 # Python
 .pytest_cache/
+tmp_pytest/
+tmp_pytest*/
+manual_tmp_test/
+artifacts/pytest-tmp/
+artifacts/pytest-*/
 
 # Generated outputs
 .fablemap-api/
