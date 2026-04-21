@@ -1,0 +1,108 @@
+.tavern-mini-game-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(129, 140, 248, 0.22);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top left, rgba(129, 140, 248, 0.18), transparent 32%),
+    rgba(15, 23, 42, 0.58);
+}
+
+.tavern-mini-game-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.tavern-mini-game-panel__header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.tavern-mini-game-panel__header strong {
+  color: #f8fafc;
+}
+
+.tavern-mini-game-panel__header span,
+.tavern-mini-game-panel__header small {
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.tavern-mini-game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.tavern-mini-game-card {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  min-height: 84px;
+  padding: 10px;
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.tavern-mini-game-card:hover:not(:disabled),
+.tavern-mini-game-card:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(251, 191, 36, 0.65);
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.tavern-mini-game-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.tavern-mini-game-card__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.14);
+  font-size: 18px;
+}
+
+.tavern-mini-game-card__body {
+  display: grid;
+  gap: 3px;
+}
+
+.tavern-mini-game-card__body strong {
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.tavern-mini-game-card__body small {
+  color: #fbbf24;
+  font-size: 11px;
+}
+
+.tavern-mini-game-card__body em {
+  color: #cbd5e1;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .tavern-mini-game-panel__header {
+    flex-direction: column;
+  }
+
+  .tavern-mini-game-grid {
+    grid-template-columns: 1fr;
+  }
+}

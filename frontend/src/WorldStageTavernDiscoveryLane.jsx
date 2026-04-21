@@ -8,6 +8,7 @@ import {
   getTavernStatusColor,
   getTavernStatusLabel,
 } from './services/tavernService'
+import { inferTavernPlayMode } from './tavernPlayModes'
 
 const ACCESS_OPTIONS = [
   { value: 'all', label: '全部入口' },
@@ -182,6 +183,7 @@ export default function WorldStageTavernDiscoveryLane({
           {visibleTaverns.map((tavern) => {
             const isActive = tavern.id === activeTavernId
             const characterCount = getCharacterCount(tavern)
+            const playMode = inferTavernPlayMode(tavern)
             return (
               <button
                 key={tavern.id}
@@ -207,6 +209,7 @@ export default function WorldStageTavernDiscoveryLane({
                   </span>
                   <span>{getDistanceLabel(tavern)}</span>
                   <span>{characterCount} 位角色</span>
+                  <span>{playMode.icon} {playMode.label}</span>
                   <span>{tavern.visit_count || 0} 次访问</span>
                 </div>
                 <div className="tavern-discovery-card__footer">

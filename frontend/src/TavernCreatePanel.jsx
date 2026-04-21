@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { getDefaultTavernService, parseCharacterCard, extractCharacterCardFromPng, getTavernAccessLabel, getTavernAccessIcon } from './services/tavernService'
 import LLMConfigForm, { DEFAULT_MODELS, DEFAULT_BASE_URLS, LLM_BACKENDS } from './LLMConfigForm'
 import CharacterEditor, { createEmptyCharacterDraft } from './CharacterEditor'
@@ -6,6 +6,8 @@ import CharacterAvatar from './CharacterAvatar'
 import CharacterLookSummary from './CharacterLookSummary'
 import SystemCharacterPresetPicker from './SystemCharacterPresetPicker'
 import { createCharacterPayloadFromPreset } from './systemCharacterPresets'
+import { TAVERN_TEMPLATES } from './tavernTemplates'
+import { getWizardReadiness } from './tavernCreateReadiness'
 
 const CREATE_STEPS = [
   { id: 1, title: '地点', hint: '把酒馆钉在真实地图上', icon: '📍' },
@@ -32,6 +34,12 @@ function getBackendLabel(backend) {
 function formatCoordinate(value) {
   const parsed = Number.parseFloat(value)
   return Number.isFinite(parsed) ? parsed.toFixed(6) : '未填写'
+}
+
+function cloneTemplateCharacters(template) {
+  const characters = template?.package?.characters
+  if (!Array.isArray(characters)) return []
+  return characters.map((character) => JSON.parse(JSON.stringify(character)))
 }
 
 /**
@@ -80,6 +88,10 @@ export default function TavernCreatePanel({
   const tavernService = getDefaultTavernService()
   const currentStep = CREATE_STEPS.find((item) => item.id === step) || CREATE_STEPS[0]
   const hasLlmConfig = hasUsableLlmConfig(llmFormData)
+  const readiness = useMemo(
+    () => getWizardReadiness(form, hasLlmConfig),
+    [form, hasLlmConfig],
+  )
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -253,6 +265,24 @@ export default function TavernCreatePanel({
     setError('')
   }
 
+  function applyQuickTemplate(template, mode = 'fill') {
+    const overwrite = mode === 'overwrite'
+    const templateTavern = template?.package?.tavern || {}
+    const templateCharacters = cloneTemplateCharacters(template)
+    setForm((prev) => ({
+      ...prev,
+      name: overwrite || !prev.name.trim() ? (templateTavern.name || template.title || prev.name) : prev.name,
+      description: overwrite || !prev.description.trim()
+        ? (templateTavern.description || template.summary || prev.description)
+        : prev.description,
+      scene_prompt: overwrite || !prev.scene_prompt.trim()
+        ? (templateTavern.scene_prompt || prev.scene_prompt)
+        : prev.scene_prompt,
+      characters: overwrite || prev.characters.length === 0 ? templateCharacters : prev.characters,
+    }))
+    setError('')
+  }
+
   async function handleTestDirect(config) {
     return tavernService.testLlmConfigDirect(config)
   }
@@ -340,6 +370,41 @@ export default function TavernCreatePanel({
         {/* Step 2: 酒馆 */}
         {step === 2 && (
           <div className="tavern-create-step">
+            <div className="quick-template-strip">
+              <div className="quick-template-strip__header">
+                <div>
+                  <span className="mini-label">体验加速</span>
+                  <strong>从一个可聊的酒馆模版起步</strong>
+                  <p>会自动补齐酒馆氛围，并在角色为空时带入第一个 NPC；之后仍可逐项修改。</p>
+                </div>
+              </div>
+              <div className="quick-template-strip__grid">
+                {TAVERN_TEMPLATES.slice(0, 5).map((template) => (
+                  <article key={template.id} className="quick-template-card">
+                    <strong>{template.title}</strong>
+                    <p>{template.summary}</p>
+                    <small>{template.tags.slice(0, 3).join(' · ')}</small>
+                    <footer>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => applyQuickTemplate(template, 'fill')}
+                      >
+                        补空字段
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => applyQuickTemplate(template, 'overwrite')}
+                      >
+                        覆盖套用
+                      </button>
+                    </footer>
+                  </article>
+                ))}
+              </div>
+            </div>
+
             <div className="form-group">
               <label>酒馆名称 *</label>
               <input
@@ -516,6 +581,37 @@ export default function TavernCreatePanel({
         {/* Step 5: 开门 */}
         {step === 5 && (
           <div className="tavern-create-step">
+            <div className={`wizard-readiness-panel ${readiness.percent >= 80 ? 'is-ready' : ''}`}>
+              <div className="wizard-readiness-panel__header">
+                <div>
+                  <span className="mini-label">开门检查</span>
+                  <strong>{readiness.percent}% 准备度</strong>
+                  <p>
+                    {readiness.missingRequired.length
+                      ? `还有必填项未完成：${readiness.missingRequired.map((item) => item.label).join('、')}`
+                      : readiness.percent >= 80
+                        ? '已经适合开门；剩下的高级设置可以创建后继续调。'
+                        : '可以开门，但建议先补齐简介、场景或 NPC 开场白来提升第一轮体验。'}
+                  </p>
+                </div>
+                <span>{readiness.doneCount}/{readiness.total}</span>
+              </div>
+              <div className="wizard-readiness-list">
+                {readiness.checks.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={item.done ? 'is-done' : ''}
+                    onClick={() => goToStep(item.step)}
+                  >
+                    <span>{item.done ? '✓' : item.optional ? '○' : '·'}</span>
+                    <strong>{item.label}</strong>
+                    <small>{item.hint}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="wizard-summary">
               <div className="wizard-summary-card">
                 <span className="summary-kicker">地图锚点</span>

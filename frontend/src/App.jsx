@@ -31,6 +31,7 @@ const FIRST_RUN_MODE_STORAGE_KEY = 'fablemap_first_run_mode'
 
 function buildTavernSearchText(tavern) {
   const characters = Array.isArray(tavern?.characters) ? tavern.characters : []
+  const bookmarks = Array.isArray(tavern?.bookmarks) ? tavern.bookmarks : []
   return [
     tavern?.id,
     tavern?.name,
@@ -41,6 +42,7 @@ function buildTavernSearchText(tavern) {
     getTavernAccessLabel(tavern?.access),
     tavern?.status,
     getTavernStatusLabel(tavern?.status),
+    ...bookmarks.map((bookmark) => bookmark?.content),
     ...characters.flatMap((character) => [
       character?.name,
       character?.description,

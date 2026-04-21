@@ -5,8 +5,8 @@ const MODE_OPTIONS = [
     id: 'play',
     icon: '🧭',
     title: '我只是来玩的',
-    description: '先设置昵称，再去地图附近找一间酒馆直接进入对话。',
-    steps: ['设置昵称', '发现附近酒馆', '进入对话'],
+    description: '不用懂复杂设置：先设置昵称，进酒馆后可以点快捷句开始聊天或文字小游戏。',
+    steps: ['设置昵称', '点快捷句', '聊天/小游戏'],
     cta: '开始找酒馆',
   },
   {
@@ -69,7 +69,7 @@ export default function FirstRunModeModal({ initialNickname = '', initialMode = 
 
         <h2 id="first-run-title" className="visitor-nickname-title">欢迎来到 FableMap 赛博酒馆</h2>
         <p className="visitor-nickname-subtitle first-run-subtitle">
-          先告诉系统你想怎么开始。之后不会重复打扰，可随时重置新手引导。
+          不会玩也没关系：可以直接试玩、点快捷句开始，或用模板开店。之后不会重复打扰，可随时重置新手引导。
         </p>
 
         <div className="first-run-quick-card">
@@ -80,11 +80,11 @@ export default function FirstRunModeModal({ initialNickname = '', initialMode = 
           </div>
           <button
             type="button"
-            className="primary first-run-quick-btn"
+            className="primary first-run-quick-btn large"
             onClick={handleQuickTry}
             disabled={quickTrying}
           >
-            {quickTrying ? '正在开门...' : '⚡ 直接试玩'}
+            {quickTrying ? '正在开门...' : '⚡ 立即试玩 (30秒)'}
           </button>
         </div>
 
@@ -131,12 +131,25 @@ export default function FirstRunModeModal({ initialNickname = '', initialMode = 
           {error && <span className="visitor-nickname-error">{error}</span>}
 
           <button
-            type="submit"
-            className="primary visitor-nickname-submit"
+            type="button"
+            className="primary visitor-nickname-submit first-run-submit"
+            onClick={handleSubmit}
             disabled={!nickname.trim()}
           >
             {selectedOption.cta}
           </button>
+
+          <div className="first-run-skip-hint muted">
+            或直接
+            <button
+              type="button"
+              className="button-link first-run-quick-link"
+              onClick={handleQuickTry}
+              disabled={quickTrying}
+            >
+              {quickTrying ? '进入中...' : '⚡ 跳过，30 秒体验'}
+            </button>
+          </div>
         </form>
 
         <p className="visitor-nickname-hint muted">

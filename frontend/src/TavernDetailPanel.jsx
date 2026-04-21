@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getDefaultTavernService, getTavernStatusColor, getTavernStatusLabel, getTavernAccessLabel, getTavernAccessIcon } from './services/tavernService'
+import { inferTavernPlayMode, getTavernPlayBadges } from './tavernPlayModes'
 
 /**
  * TavernDetailPanel — 酒馆详情面板
@@ -21,6 +22,8 @@ export default function TavernDetailPanel({
 
   const isOwner = tavern?.owner_id === visitorId
   const characters = tavern?.characters || []
+  const playMode = inferTavernPlayMode(tavern)
+  const playBadges = getTavernPlayBadges(tavern)
 
   async function handleEnter(passwordToUse = '') {
     setEntering(true)
@@ -78,6 +81,9 @@ export default function TavernDetailPanel({
                 <span className="tavern-badge tavern-badge--chars">
                   {characters.length} 个角色
                 </span>
+                <span className="tavern-badge tavern-badge--play">
+                  {playMode.icon} {playMode.label}
+                </span>
               </div>
             </div>
           </div>
@@ -105,6 +111,22 @@ export default function TavernDetailPanel({
             此酒馆暂未配置 AI 或已歇业，暂时无法聊天。
           </div>
         )}
+
+        <div className="tavern-detail-section">
+          <label className="tavern-detail-label">怎么玩</label>
+          <div className="tavern-detail-play-card">
+            <div>
+              <strong>{playMode.icon} {playMode.label}</strong>
+              <p>{playMode.summary}</p>
+            </div>
+            <div className="tavern-detail-play-badges">
+              {playBadges.map((badge) => <span key={badge}>{badge}</span>)}
+            </div>
+            <div className="tavern-detail-play-prompts">
+              {playMode.prompts.slice(0, 3).map((prompt) => <small key={prompt}>{prompt}</small>)}
+            </div>
+          </div>
+        </div>
 
         {/* Character list */}
         {characters.length > 0 && (

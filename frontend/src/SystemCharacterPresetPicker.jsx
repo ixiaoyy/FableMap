@@ -14,6 +14,7 @@ export default function SystemCharacterPresetPicker({
   onPick,
 }) {
   const [activeCategory, setActiveCategory] = useState('全部')
+  const [query, setQuery] = useState('')
 
   const categories = useMemo(
     () => ['全部', ...SYSTEM_CHARACTER_PRESET_CATEGORIES],
@@ -21,11 +22,20 @@ export default function SystemCharacterPresetPicker({
   )
 
   const presets = useMemo(() => {
-    if (activeCategory === '全部') {
-      return SYSTEM_CHARACTER_PRESETS
-    }
-    return SYSTEM_CHARACTER_PRESETS.filter((preset) => preset.category === activeCategory)
-  }, [activeCategory])
+    const keyword = query.trim().toLowerCase()
+    return SYSTEM_CHARACTER_PRESETS.filter((preset) => {
+      if (activeCategory !== '全部' && preset.category !== activeCategory) return false
+      if (!keyword) return true
+      return [
+        preset.name,
+        preset.category,
+        preset.summary,
+        preset.description,
+        preset.personality,
+        preset.tags?.join(' '),
+      ].join(' ').toLowerCase().includes(keyword)
+    })
+  }, [activeCategory, query])
 
   return (
     <section className="system-character-picker">
@@ -35,19 +45,35 @@ export default function SystemCharacterPresetPicker({
           <strong>{title}</strong>
           <p>{description}</p>
         </div>
+        <span className="system-character-picker__count">
+          {presets.length}/{SYSTEM_CHARACTER_PRESETS.length}
+        </span>
       </div>
 
-      <div className="system-character-picker__filters" aria-label="角色题材筛选">
-        {categories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            className={activeCategory === category ? 'is-active' : ''}
-            onClick={() => setActiveCategory(category)}
-          >
-            {category}
-          </button>
-        ))}
+      <div className="system-character-picker__toolbar">
+        <label className="system-character-picker__search">
+          <span>搜索角色</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="搜夜班、档案、公益、技术员..."
+            disabled={disabled}
+          />
+        </label>
+        <div className="system-character-picker__filters" aria-label="角色题材筛选">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={activeCategory === category ? 'is-active' : ''}
+              onClick={() => setActiveCategory(category)}
+              disabled={disabled}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
       </div>
 
       {presets.length === 0 ? (

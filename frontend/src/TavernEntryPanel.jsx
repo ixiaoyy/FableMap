@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDefaultTavernService, getTavernAccessIcon, getTavernAccessLabel } from './services/tavernService'
+import { inferTavernPlayMode, getTavernPlayBadges } from './tavernPlayModes'
 
 /**
  * TavernEntryPanel — 酒馆入场面板
@@ -53,6 +54,8 @@ export default function TavernEntryPanel({
   if (loading) return <div className="panel tavern-entry-panel is-loading">正在打听酒馆消息...</div>
   if (error && !tavern) return <div className="panel tavern-entry-panel is-error">{error}</div>
   if (!tavern) return null
+  const playMode = inferTavernPlayMode(tavern)
+  const playBadges = getTavernPlayBadges(tavern)
 
   return (
     <div className="panel tavern-entry-panel slide-up">
@@ -71,6 +74,22 @@ export default function TavernEntryPanel({
 
       <section className="tavern-entry-content">
         <p className="tavern-description">{tavern.description || '这里似乎是一个神秘的去处，没有任何公开的描述。'}</p>
+
+        <div className="tavern-entry-play-card">
+          <div className="tavern-entry-play-card__main">
+            <span>{playMode.icon}</span>
+            <div>
+              <strong>{playMode.label}</strong>
+              <p>{playMode.summary}</p>
+            </div>
+          </div>
+          <div className="tavern-entry-play-card__badges">
+            {playBadges.map((badge) => <small key={badge}>{badge}</small>)}
+          </div>
+          <div className="tavern-entry-play-card__prompts">
+            {playMode.prompts.slice(0, 3).map((prompt) => <span key={prompt}>{prompt}</span>)}
+          </div>
+        </div>
         
         <div className="tavern-chars-preview">
           <label className="mini-label">驻店角色 ({tavern.characters?.length || 0})</label>

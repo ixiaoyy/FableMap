@@ -1,0 +1,60 @@
+feature: 2026-04-21-ai-mini-game-templates
+created: 2026-04-21
+
+steps:
+  - action: "先写失败的小游戏纯函数脚本测试：覆盖模板数量、id 唯一、排序、兜底、prompt 安全约束"
+    exit_signal: "node frontend/scripts/mini-games-test.mjs 在实现前失败，失败原因指向缺少 tavernMiniGames.js 模块或相关导出"
+    status: done
+  - action: "新建小游戏模板纯函数模块：定义 6 个模板、排序函数、开局提示生成函数"
+    exit_signal: "node frontend/scripts/mini-games-test.mjs 输出 mini-games-test: ok，且模板 id 唯一、开局提示包含模板标题和安全边界"
+    status: done
+  - action: "新建小游戏面板组件与样式：组件只接收 props，不发请求、不读写 localStorage"
+    exit_signal: "组件能在无模板时返回 null，在有模板时渲染按钮并调用 onStart(template)"
+    status: done
+  - action: "薄接入 TavernChatRoom：计算模板、处理点击、放到输入区上方"
+    exit_signal: "点击模板后走现有单聊/群聊发送链路；ChatInputArea 快捷句仍保留"
+    status: done
+  - action: "接入前端测试脚本与文档记录：更新 package test 并补充用户可见变化说明"
+    exit_signal: "npm --prefix .\\frontend test 包含 mini-games 测试；文档说明不涉及 schema/API 变更"
+    status: done
+  - action: "构建与移动端样式收口：检查窄屏布局并运行前端 build"
+    exit_signal: "npm --prefix .\\frontend run build 成功；既有 chunk size warning 只记录不解决"
+    status: done
+
+checks:
+  - item: "不做战斗、等级装备、竞技排行榜、传统 RPG 任务系统"
+    source: 范围守护
+    status: passed
+  - item: "不做复杂状态机、跨设备游戏进度同步、多人访客社交"
+    source: 范围守护
+    status: passed
+  - item: "不让平台自动生成酒馆内容；模板只提供通用玩法结构和开局提示"
+    source: 范围守护
+    status: passed
+  - item: "不新增后端 API、不新增依赖、不引入 UI 框架或游戏引擎"
+    source: 范围守护
+    status: passed
+  - item: "不改现有冒险工会声望、任务板和 localStorage 进度语义"
+    source: 范围守护
+    status: passed
+  - item: "MINI_GAME_TEMPLATES 包含 6 个模板且每个模板 id 唯一"
+    source: 接口契约
+    status: passed
+  - item: "buildMiniGameStartPrompt 兜底空模板返回空字符串"
+    source: 接口契约
+    status: passed
+  - item: "开局提示包含模板标题、角色称呼、老少皆宜和高风险内容禁止约束"
+    source: 接口契约
+    status: passed
+  - item: "TavernMiniGamePanel 无模板返回 null，有模板时按钮触发 onStart(template)"
+    source: 接口契约
+    status: passed
+  - item: "线索调查玩法优先展示 clue-trail，任务/冒险语境优先展示 tiny-quest，普通聊天展示全部模板"
+    source: 测试约束
+    status: passed
+  - item: "frontend/scripts/play-modes-test.mjs 继续通过，冒险工会行为不回归"
+    source: 测试约束
+    status: passed
+  - item: "npm --prefix .\\frontend test 与 npm --prefix .\\frontend run build 可作为最终前端验证"
+    source: 测试约束
+    status: passed

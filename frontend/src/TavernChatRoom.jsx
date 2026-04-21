@@ -1,9 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { getDefaultTavernService } from './services/tavernService'
 import TavernContextPanel from './TavernContextPanel'
 import TavernMemoryPanel from './TavernMemoryPanel'
 import CharacterAvatar from './CharacterAvatar'
 import CharacterLookSummary from './CharacterLookSummary'
+import TavernMiniGamePanel from './TavernMiniGamePanel'
+import {
+  buildGuildActionPrompt,
+  GUILD_REPUTATION_TIERS,
+  getGuildQuestBoard,
+  getGuildTier,
+  inferTavernPlayMode,
+  loadGuildProgress,
+  saveGuildProgress,
+  updateGuildProgress,
+} from './tavernPlayModes'
+import { buildMiniGameStartPrompt, getMiniGameTemplates } from './tavernMiniGames'
 
 /**
  * TavernChatRoom — 酒馆三栏布局聊天房间
@@ -257,7 +269,7 @@ function ChatMessage({ message, character, sprites, visitorNickname, voiceConfig
 // Chat Input Area
 // ─────────────────────────────────────────
 
-function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, tavernId }) {
+function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, tavernId, quickPrompts = [] }) {
   const [text, setText] = useState('')
   const [recording, setRecording] = useState(false)
   const textareaRef = useRef(null)
@@ -381,6 +393,26 @@ function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, t
 
   return (
     <div className="chat-input-area">
+      {quickPrompts.length > 0 ? (
+        <div className="chat-quick-actions" aria-label="快捷开始">
+          <div className="chat-quick-actions__title">
+            <strong>不知道说什么？</strong>
+            <span>点一句就能开始，适合老人、小朋友和第一次来的访客。</span>
+          </div>
+          <div className="chat-quick-actions__chips">
+            {quickPrompts.slice(0, 5).map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => onSend(prompt)}
+                disabled={sending}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="input-wrapper">
         <textarea
           ref={textareaRef}
@@ -426,6 +458,98 @@ function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, t
       </div>
     </div>
   )
+}
+
+// ─────────────────────────────────────────
+// Guild Quest Panel
+// ─────────────────────────────────────────
+
+function GuildQuestPanel({
+  enabled,
+  progress,
+  quests,
+  tier,
+  sending,
+  onAction,
+}) {
+  if (!enabled) return null
+
+  const acceptedCount = progress.acceptedQuestIds.length
+  const completedCount = progress.completedQuestIds.length
+  const nextTier = getNextGuildTier(progress.reputation)
+
+  return (
+    <section className="guild-quest-panel" aria-label="冒险工会任务板">
+      <div className="guild-quest-panel__header">
+        <div>
+          <span className="guild-kicker">🛡️ 冒险工会任务板</span>
+          <h4>{tier.title} · {tier.badge}</h4>
+          <p>{tier.treatment}</p>
+        </div>
+        <div className="guild-header-actions">
+          <button
+            type="button"
+            className="guild-status-btn"
+            onClick={() => onAction('status')}
+            disabled={sending}
+          >
+            查看身份
+          </button>
+          <button
+            type="button"
+            className="guild-status-btn"
+            onClick={() => onAction('post')}
+            disabled={sending}
+          >
+            发委托
+          </button>
+        </div>
+      </div>
+
+      <div className="guild-progress-row">
+        <span>声望 <strong>{progress.reputation}</strong></span>
+        <span>进行中 <strong>{acceptedCount}</strong></span>
+        <span>已完成 <strong>{completedCount}</strong></span>
+        {nextTier ? (
+          <span>距 {nextTier.title} 还差 <strong>{Math.max(0, nextTier.min - progress.reputation)}</strong></span>
+        ) : (
+          <span>已达最高身份</span>
+        )}
+      </div>
+
+      <div className="guild-quest-list">
+        {quests.map((quest) => (
+          <article key={quest.id} className={`guild-quest-card is-${quest.status}`}>
+            <div className="guild-quest-card__top">
+              <strong>{quest.title}</strong>
+              <span>{quest.difficulty} · +{quest.reward} 声望</span>
+            </div>
+            <p>{quest.summary}</p>
+            <small>奖励身份：{quest.identityReward} · 待遇：{quest.treatment}</small>
+            <div className="guild-quest-card__actions">
+              {quest.status === 'available' ? (
+                <button type="button" onClick={() => onAction('accept', quest)} disabled={sending}>
+                  接任务
+                </button>
+              ) : null}
+              {quest.status === 'accepted' ? (
+                <button type="button" onClick={() => onAction('complete', quest)} disabled={sending}>
+                  提交完成
+                </button>
+              ) : null}
+              {quest.status === 'completed' ? (
+                <span className="guild-quest-done">已完成</span>
+              ) : null}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function getNextGuildTier(reputation) {
+  return GUILD_REPUTATION_TIERS.find((tier) => tier.min > reputation) || null
 }
 
 // ─────────────────────────────────────────
@@ -566,6 +690,22 @@ export default function TavernChatRoom({
   const tavernService = getDefaultTavernService()
   const groupChatEnabled = Boolean(tavern?.group_chat_enabled && characters.length > 1)
   const groupChatConfig = tavern?.group_chat_config || {}
+  const playMode = useMemo(
+    () => inferTavernPlayMode(tavern || { characters }, selectedChar),
+    [tavern, characters, selectedChar],
+  )
+  const guildEnabled = playMode.id === 'guild'
+  const [guildProgress, setGuildProgress] = useState(() => loadGuildProgress(roomId, visitorId))
+  const quickPrompts = playMode.prompts || []
+  const miniGameTemplates = useMemo(
+    () => getMiniGameTemplates({ playModeId: playMode.id, tavern, character: selectedChar }),
+    [playMode.id, tavern, selectedChar],
+  )
+  const guildTier = useMemo(() => getGuildTier(guildProgress), [guildProgress])
+  const guildQuests = useMemo(
+    () => getGuildQuestBoard(tavern || {}, guildProgress),
+    [tavern, guildProgress],
+  )
 
   // Auto-select first character
   useEffect(() => {
@@ -596,6 +736,11 @@ export default function TavernChatRoom({
   useEffect(() => {
     setVisitorMemoryState(entryState)
   }, [entryState])
+
+  useEffect(() => {
+    if (!guildEnabled) return
+    setGuildProgress(loadGuildProgress(roomId, visitorId))
+  }, [guildEnabled, roomId, visitorId])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -982,6 +1127,42 @@ export default function TavernChatRoom({
     }
   }
 
+  function commitGuildProgress(nextProgress) {
+    const savedProgress = saveGuildProgress(roomId, visitorId, nextProgress)
+    setGuildProgress(savedProgress)
+    return savedProgress
+  }
+
+  function handleGuildAction(action, quest = null) {
+    if (!guildEnabled || sending) return
+
+    if (action === 'status' || action === 'post') {
+      handleSend(buildGuildActionPrompt(action, null, guildTier))
+      return
+    }
+
+    const nextProgress = updateGuildProgress(guildProgress, {
+      type: action,
+      questId: quest?.id,
+      quest,
+    })
+    const savedProgress = commitGuildProgress(nextProgress)
+    const nextTier = getGuildTier(savedProgress)
+    handleSend(buildGuildActionPrompt(action, quest, nextTier))
+  }
+
+  function handleMiniGameStart(template) {
+    if (!selectedChar || sending) return
+    const prompt = buildMiniGameStartPrompt(template, {
+      tavernName: roomName,
+      characterName: selectedChar.name,
+      playModeLabel: playMode.label,
+    })
+    if (prompt) {
+      handleSend(prompt)
+    }
+  }
+
   function handleSelectChar(char) {
     if (char.id === selectedChar?.id) return
     setSelectedChar(char)
@@ -1087,6 +1268,10 @@ export default function TavernChatRoom({
                       : selectedChar.personality?.slice(0, 30) || selectedChar.archetype || ''}
                   </div>
                 </div>
+                <div className="chat-play-mode-pill" title={playMode.summary}>
+                  <span>{playMode.icon}</span>
+                  <strong>{playMode.label}</strong>
+                </div>
                 {groupChatEnabled ? (
                   <div className="expression-state" aria-live="polite">
                     <span>{getGroupStrategyLabel(groupChatConfig.strategy)}</span>
@@ -1130,6 +1315,15 @@ export default function TavernChatRoom({
                 </div>
               ) : null}
 
+              <GuildQuestPanel
+                enabled={guildEnabled}
+                progress={guildProgress}
+                quests={guildQuests}
+                tier={guildTier}
+                sending={sending}
+                onAction={handleGuildAction}
+              />
+
               {/* Messages */}
               <div className="chat-messages-area">
                 {loading && (
@@ -1160,6 +1354,14 @@ export default function TavernChatRoom({
                         <span className="quote-text">{selectedChar.first_mes}</span>
                       </div>
                     )}
+                    <div className="chat-how-to-card">
+                      <strong>{playMode.icon} {playMode.label}：{playMode.summary}</strong>
+                      <ol>
+                        <li>先点下方快捷句，不用自己想第一句话。</li>
+                        <li>看到选项时，直接回复序号或你想做的动作。</li>
+                        <li>想换玩法，随时说“这里怎么玩”。</li>
+                      </ol>
+                    </div>
                   </div>
                 )}
 
@@ -1175,10 +1377,26 @@ export default function TavernChatRoom({
                     onPlayTTS={handlePlayTTS}
                   />
                 ))}
+                {sending && (
+                  <div className="chat-typing-indicator" aria-live="polite" aria-label="AI 正在输入">
+                    <div className="typing-indicator">
+                      <span className="typing-indicator__dot" />
+                      <span className="typing-indicator__dot" />
+                      <span className="typing-indicator__dot" />
+                    </div>
+                    <span className="typing-indicator__label">AI 正在思考...</span>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Input */}
+              <TavernMiniGamePanel
+                templates={miniGameTemplates}
+                sending={sending}
+                disabled={!selectedChar}
+                onStart={handleMiniGameStart}
+              />
               <ChatInputArea
                 onSend={handleSend}
                 sending={sending}
@@ -1186,6 +1404,7 @@ export default function TavernChatRoom({
                 placeholder={groupChatEnabled ? '对群聊里的所有角色说...' : undefined}
                 voiceConfig={voiceConfig}
                 tavernId={roomId}
+                quickPrompts={quickPrompts}
               />
             </>
           ) : (

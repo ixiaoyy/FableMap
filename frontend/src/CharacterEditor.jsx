@@ -6,6 +6,11 @@ import {
   removeCharacterLookFromWardrobe,
   withActiveCharacterLook,
 } from './characterLooks'
+import {
+  NPC_PERSONALITY_TEMPLATE_CATEGORIES,
+  applyNpcPersonalityTemplateToDraft,
+  filterNpcPersonalityTemplates,
+} from './personalityTemplates'
 
 const SPRITE_FIELDS = [
   ['neutral', '中性'],
@@ -149,6 +154,8 @@ export default function CharacterEditor({
 }) {
   const [draft, setDraft] = useState(() => normalizeCharacterDraft(value))
   const [error, setError] = useState('')
+  const [activeTemplateCategory, setActiveTemplateCategory] = useState('推荐')
+  const [templateQuery, setTemplateQuery] = useState('')
 
   useEffect(() => {
     setDraft(normalizeCharacterDraft(value))
@@ -156,6 +163,45 @@ export default function CharacterEditor({
   }, [value])
 
   const configuredSpriteCount = useMemo(() => Object.keys(cleanSpriteMap(draft.sprites)).length, [draft.sprites])
+  const templateCategories = useMemo(
+    () => ['推荐', '全部', ...NPC_PERSONALITY_TEMPLATE_CATEGORIES],
+    [],
+  )
+  const filteredPersonalityTemplates = useMemo(() => filterNpcPersonalityTemplates({
+    category: activeTemplateCategory,
+    query: templateQuery,
+    draft,
+    limit: 4,
+  }), [activeTemplateCategory, draft, templateQuery])
+  const completion = useMemo(() => {
+    const checks = [
+      { label: '名称', done: Boolean(draft.name.trim()) },
+      { label: '描述', done: Boolean(draft.description.trim()) },
+      { label: '性格', done: Boolean(draft.personality.trim()) },
+      { label: '场景', done: Boolean(draft.scenario.trim()) },
+      { label: '开场白', done: Boolean(draft.first_mes.trim()) },
+      { label: '边界指令', done: Boolean(draft.system_prompt.trim()) },
+    ]
+    const done = checks.filter((item) => item.done).length
+    return {
+      done,
+      total: checks.length,
+      missing: checks.filter((item) => !item.done).map((item) => item.label),
+    }
+  }, [draft])
+  const preview = useMemo(() => {
+    const tags = splitTags(draft.tags_text).slice(0, 5)
+    const tone = draft.personality.trim().split(/[。；;\n]/).find(Boolean) || '还没有性格设定，建议先套用一个 NPC 性格模版。'
+    const boundary = draft.system_prompt.trim().split(/[。；;\n]/).find(Boolean) || '还没有边界指令，角色可能更容易跑题。'
+    return {
+      name: draft.name.trim() || '未命名 NPC',
+      firstMes: draft.first_mes.trim() || '（保存前建议补一句角色第一次见到访客时会说的话。）',
+      tone,
+      boundary,
+      tags,
+      talkativenessPercent: Math.round(normalizeTalkativeness(draft.talkativeness) * 100),
+    }
+  }, [draft])
 
   function updateField(key, nextValue) {
     setDraft((prev) => ({ ...prev, [key]: nextValue }))
@@ -226,6 +272,11 @@ export default function CharacterEditor({
     updateAppearance({ ...appearance, note })
   }
 
+  function applyPersonalityTemplate(template, mode = 'fill') {
+    setDraft((prev) => applyNpcPersonalityTemplateToDraft(prev, template, { mode }))
+    setError('')
+  }
+
   function handleSave() {
     const payload = normalizeCharacterPayload(draft)
     if (!payload.name) {
@@ -241,6 +292,134 @@ export default function CharacterEditor({
   return (
     <div className="character-editor">
       {title ? <h4>{title}</h4> : null}
+
+      <div className="character-editor-guidance">
+        <div>
+          <span className="mini-label">角色完成度</span>
+          <strong>{completion.done}/{completion.total}</strong>
+          <p>
+            {completion.missing.length
+              ? `建议补齐：${completion.missing.slice(0, 3).join('、')}${completion.missing.length > 3 ? '…' : ''}`
+              : '关键字段已齐，可以直接保存或继续精修外观。'}
+          </p>
+        </div>
+        <div className="character-editor-guidance__chips" aria-label="角色关键字段状态">
+          {['性格', '场景', '开场白', '边界指令'].map((label) => {
+            const fieldMap = {
+              性格: draft.personality,
+              场景: draft.scenario,
+              开场白: draft.first_mes,
+              边界指令: draft.system_prompt,
+            }
+            return (
+              <span key={label} className={fieldMap[label]?.trim() ? 'is-done' : ''}>
+                {fieldMap[label]?.trim() ? '✓' : '·'} {label}
+              </span>
+            )
+          })}
+        </div>
+      </div>
+
+      <details
+        className="character-personality-templates"
+        open={!draft.personality.trim() && !draft.system_prompt.trim()}
+      >
+        <summary>
+          <span>NPC 性格模版</span>
+          <small>
+            {activeTemplateCategory === '推荐'
+              ? '已根据角色名称、标签、描述和场景推荐；也可搜索或切换分类。'
+              : '先选口吻、边界和开场，再按你的酒馆继续改。'}
+          </small>
+        </summary>
+
+        <label className="character-personality-template-search">
+          <span>搜索模版</span>
+          <input
+            type="search"
+            value={templateQuery}
+            onChange={(event) => setTemplateQuery(event.target.value)}
+            disabled={disabled}
+            placeholder="搜树洞、档案、社区、赛博、线索..."
+          />
+        </label>
+
+        <div className="character-personality-template-filters" aria-label="NPC 性格模版分类">
+          {templateCategories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={activeTemplateCategory === category ? 'is-active' : ''}
+              onClick={() => setActiveTemplateCategory(category)}
+              disabled={disabled}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        {filteredPersonalityTemplates.length > 0 ? (
+          <div className="character-personality-template-grid">
+            {filteredPersonalityTemplates.map((template) => (
+              <article key={template.id} className="character-personality-template-card">
+                <header>
+                  <span className="character-personality-template-card__badge">{template.badge}</span>
+                  <div>
+                    <strong>{template.name}</strong>
+                    <small>{template.category}</small>
+                  </div>
+                </header>
+                <p>{template.summary}</p>
+                <em>适合：{template.bestFor}</em>
+                <footer>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => applyPersonalityTemplate(template, 'fill')}
+                    disabled={disabled}
+                    title="只填当前为空的字段，并合并标签与备用开场白"
+                  >
+                    补空字段
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => applyPersonalityTemplate(template, 'overwrite')}
+                    disabled={disabled}
+                    title="用此模版覆盖性格、场景、指令、开场白和示例对话"
+                  >
+                    覆盖应用
+                  </button>
+                </footer>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="character-personality-template-empty">
+            没有匹配的模版。换个关键词，或切回“推荐”。
+          </div>
+        )}
+      </details>
+
+      <section className="character-preview-card" aria-label="NPC 对话预览">
+        <div className="character-preview-card__header">
+          <div>
+            <span className="mini-label">访客第一印象预览</span>
+            <strong>{preview.name}</strong>
+          </div>
+          <span>{preview.talkativenessPercent}% 发言积极度</span>
+        </div>
+        <blockquote>{preview.firstMes}</blockquote>
+        <div className="character-preview-card__meta">
+          <p><b>口吻：</b>{preview.tone}</p>
+          <p><b>边界：</b>{preview.boundary}</p>
+        </div>
+        {preview.tags.length ? (
+          <div className="character-preview-card__tags">
+            {preview.tags.map((tag) => <small key={tag}>{tag}</small>)}
+          </div>
+        ) : null}
+      </section>
 
       <div className="character-editor-grid">
         <label>
