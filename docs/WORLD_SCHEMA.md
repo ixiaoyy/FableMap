@@ -51,6 +51,7 @@ interface Tavern {
   // ── 酒馆内容 ──────────────────────
   characters: TavernCharacter[];  // 酒馆内的 NPC 列表
   world_info: WorldInfoEntry[];   // 世界知识（关键词注入）
+  gameplay_definitions: GameplayDefinition[]; // 店主配置的结构化玩法定义
   scene_prompt?: string;          // 场景氛围提示词（附加上下文）
 }
 ```
@@ -215,7 +216,105 @@ interface ChatMessage {
 
 ---
 
-## 八、SillyTavern 角色卡字段映射
+## 八、Gameplay（酒馆玩法）
+
+Gameplay 是酒馆内容的一部分：`GameplayDefinition` 随 Tavern 导出 / 导入；访客运行时进度进入 `GameplaySession`，不混入 `ChatMessage`，也不进入公开 Tavern payload。
+
+```typescript
+/**
+ * 玩法定义 — 店主发布在单间酒馆内的可玩体验
+ */
+interface GameplayDefinition {
+  id: string;
+  title: string;                 // 最长 48 字
+  status: 'draft' | 'published' | 'disabled';
+  summary?: string;              // 访客可见简介
+  entry_label?: string;          // 入口按钮文案
+  mode: 'ai_directed_branch' | string;
+
+  owner_brief: {
+    goal: string;                // 玩法目标
+    tone?: string;               // 主持语气
+    materials: string[];         // 可用素材
+    forbidden: string[];         // 安全 / 隐私边界
+  };
+
+  nodes: GameplayNode[];
+  completion: {
+    complete_node_ids: string[];
+    reward_text: string;
+    memory_atom: { enabled: boolean }; // 默认 false，首版不自动写长期记忆
+  };
+}
+
+interface GameplayNode {
+  id: string;
+  kind: 'scene' | 'complete' | string;
+  narration: string;
+  choices: GameplayChoice[];
+  fallback_events: GameplayFallbackEvent[];
+}
+
+interface GameplayChoice {
+  id: string;
+  label: string;
+  next_node_id?: string;
+  completes?: boolean;
+}
+
+interface GameplayFallbackEvent {
+  id: string;
+  text: string;
+  next_node_id?: string;
+}
+
+/**
+ * 玩法会话 — 某个访客在某间酒馆的一局玩法进度
+ */
+interface GameplaySession {
+  id: string;
+  tavern_id: string;
+  gameplay_id: string;
+  visitor_id: string;
+  character_id?: string;
+  state: 'started' | 'in_progress' | 'completed' | 'abandoned';
+  current_node_id: string;
+  turn_count: number;
+  variables: Record<string, unknown>;
+  events: GameplayEvent[];
+  completion?: {
+    summary: string;
+    reward_text: string;
+    completed_at: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+interface GameplayEvent {
+  id: string;
+  type: 'started' | 'choice' | 'ai_director' | 'random_event' | 'completed' | 'abandoned' | string;
+  timestamp: string;
+  narration: string;
+  from_node_id?: string;
+  to_node_id?: string;
+  choice_id?: string;
+  seed?: string;                 // fallback 可回放随机种子
+  source?: 'system' | 'choice' | 'ai' | 'fallback' | string;
+  metadata?: Record<string, unknown>;
+}
+```
+
+约束：
+
+- 访客只能通过专用 Gameplay API 读取自己的 `GameplaySession`；店主可查看本酒馆 session 摘要。
+- `_gameplay_sessions` 是 `TavernStore` 私有桶，不写入公开 Tavern payload，不随酒馆包导出。
+- AI Director 只能在店主给出的玩法定义和安全边界内主持；没有可用 AI 或 AI 返回非法结构时，使用节点 `fallback_events`。
+- 玩法不等于战斗 / 等级 / 装备 / 排行榜系统；不得要求真实危险行动或索取敏感身份信息。
+
+---
+
+## 九、SillyTavern 角色卡字段映射
 
 SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
@@ -234,7 +333,7 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ---
 
-## 九、旧世界 Schema（历史参考）
+## 十、旧世界 Schema（历史参考）
 
 以下为旧的 world Schema，保留为历史参考。新的赛博酒馆平台不再使用这套概念体系。
 
@@ -268,5 +367,6 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ## 版本历史
 
+- v0.3 (2026-04-21): 增加 `gameplay_definitions`、`GameplayDefinition`、`GameplaySession`、`GameplayEvent`，明确玩法会话与公开 Tavern payload 的边界。
 - v0.2 (2026-04-14): 按赛博酒馆平台方向重写，替换为 Tavern/TavernCharacter/LLMConfig 模型。旧 Schema 降级为历史参考。
 - v0.1 (2026-03-10): 初始版本，基于 AI 生成叙事引擎方向。

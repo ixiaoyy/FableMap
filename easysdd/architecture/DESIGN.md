@@ -31,6 +31,9 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 - WorldInfoEntry：世界知识条目
 - TavernScene：酒馆场景
 - VisitorState：访客状态
+- GameplayDefinition：店主发布在某间酒馆内的结构化轻玩法定义
+- GameplaySession：访客在某间酒馆开启的一局玩法进度
+- AI Director：在店主玩法边界内主持下一步的结构化推进服务
 - Tavernkeeper：店主
 - Explorer：探索者 / 访客
 
@@ -43,9 +46,12 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 - Map Display（地图展示层）
 - Tavern Experience（酒馆体验层）
   - [AI 主持小游戏模板库](../features/2026-04-21-ai-mini-game-templates/ai-mini-game-templates-design.md)：聊天输入区上方的前端局部增强，内置 6 个老少皆宜玩法模板，不改变 Tavern / TavernCharacter / VisitorState / ChatMessage schema。
+  - [AI 导演的酒馆玩法系统](gameplay-system.md)：店主轻配置 `GameplayDefinition`，访客通过 `GameplaySession` 开始、继续、选择、自由输入、完成或放弃玩法。
 - AI Dialogue / Prompt / Memory（AI 对话、提示词与记忆）
   - AI 主持小游戏通过现有 `handleSend()` 普通用户消息触发当前 NPC / 群聊回复，不新增后端 PromptBuilder、LLM 配置或记忆写回分支。
+  - Gameplay AI Director 使用店主玩法定义、当前节点和访客输入生成结构化事件；无 AI 或非法结果时使用可回放 fallback。
 - Data Persistence（数据持久层）
+  - `gameplay_definitions` 属于 Tavern 公开内容；`_gameplay_sessions` 是 TavernStore 私有运行时桶。
 
 ## 5. 关键架构决定
 
@@ -55,9 +61,11 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 - [docs/WHAT_NOT_TO_BUILD.md](../../docs/WHAT_NOT_TO_BUILD.md)
 - [docs/AI参与开发协议.md](../../docs/AI参与开发协议.md)
 - AI 主持小游戏模板库采用“前端模板 + 普通聊天消息”方案；平台只提供通用玩法结构，不替店主生成酒馆专属剧情，详见 [feature design](../features/2026-04-21-ai-mini-game-templates/ai-mini-game-templates-design.md)。
+- AI 导演的酒馆玩法系统采用“店主轻配置 + 后端 GameplaySession + AI Director / fallback”方案；默认公益酒馆可以预置样例玩法，普通店主内容仍由店主发布确认，详见 [feature design](../features/2026-04-21-tavern-gameplay-system/tavern-gameplay-system-design.md)。
 
 ## 6. 已知约束 / 硬边界
 
 - onboarding 阶段不移动、不删除既有 docs/ 文档。
 - `easysdd/tools/` 与 `easysdd/reference/` 是技能包维护的共享资产，可由 onboarding 覆盖刷新。
 - 根目录 `AGENTS.md` 是本仓库 AI 协作硬约束入口；后续工作流仍需同时按需参考 `docs/AI参与开发协议.md`。
+- Gameplay 不引入可执行脚本、战斗等级装备、访客社交或平台级 Token 计费；完成结算默认只写玩法会话，不自动写长期记忆。

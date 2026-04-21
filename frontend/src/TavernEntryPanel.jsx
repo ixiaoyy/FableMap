@@ -51,8 +51,30 @@ export default function TavernEntryPanel({
     }
   }
 
-  if (loading) return <div className="panel tavern-entry-panel is-loading">正在打听酒馆消息...</div>
-  if (error && !tavern) return <div className="panel tavern-entry-panel is-error">{error}</div>
+  if (loading) return (
+    <div className="panel tavern-entry-panel is-loading slide-up">
+      <div className="tavern-entry-loading">
+        <div className="loading-spinner">
+          <div className="spinner-ring" />
+        </div>
+        <p>正在打听酒馆消息...</p>
+        <div className="skeleton-tavern-preview">
+          <div className="skeleton-line skeleton-line--title" />
+          <div className="skeleton-line skeleton-line--text" />
+          <div className="skeleton-line skeleton-line--text short" />
+        </div>
+      </div>
+    </div>
+  )
+  if (error && !tavern) return (
+    <div className="panel tavern-entry-panel is-error slide-up">
+      <div className="tavern-entry-error">
+        <span className="error-icon">⚠️</span>
+        <p>{error}</p>
+        <button type="button" className="secondary" onClick={fetchTavern}>重试</button>
+      </div>
+    </div>
+  )
   if (!tavern) return null
   const playMode = inferTavernPlayMode(tavern)
   const playBadges = getTavernPlayBadges(tavern)

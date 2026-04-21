@@ -267,6 +267,47 @@ def create_api_router(service: WebService) -> APIRouter:
         user_id = _get_user_id(request)
         return service.list_tavern_visitors_payload(tavern_id, user_id)
 
+    @router.get("/api/taverns/{tavern_id}/gameplays")
+    def list_gameplays(request: Request, tavern_id: str) -> dict:
+        """List gameplay definitions visible to the current user."""
+        user_id = _get_user_id(request)
+        return service.get_gameplays_payload(tavern_id, user_id)
+
+    @router.put("/api/taverns/{tavern_id}/gameplays")
+    def save_gameplays(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
+        """Save owner-managed gameplay definitions."""
+        user_id = _get_user_id(request)
+        return service.save_gameplays_payload(tavern_id, data, user_id)
+
+    @router.get("/api/taverns/{tavern_id}/gameplay-sessions")
+    def list_gameplay_sessions(
+        request: Request,
+        tavern_id: str,
+        state: str = "",
+        visitor_id: str = "",
+    ) -> dict:
+        """List gameplay sessions for the current visitor or owner."""
+        user_id = _get_user_id(request)
+        return service.list_gameplay_sessions_payload(tavern_id, user_id, state=state, visitor_id=visitor_id)
+
+    @router.post("/api/taverns/{tavern_id}/gameplay-sessions")
+    def start_gameplay_session(request: Request, tavern_id: str, data: dict = Body(...)) -> dict:
+        """Start or resume a gameplay session."""
+        user_id = _get_user_id(request)
+        return service.start_gameplay_session_payload(tavern_id, data, user_id)
+
+    @router.post("/api/taverns/{tavern_id}/gameplay-sessions/{session_id}/advance")
+    def advance_gameplay_session(request: Request, tavern_id: str, session_id: str, data: dict = Body(...)) -> dict:
+        """Advance a gameplay session."""
+        user_id = _get_user_id(request)
+        return service.advance_gameplay_session_payload(tavern_id, session_id, data, user_id)
+
+    @router.post("/api/taverns/{tavern_id}/gameplay-sessions/{session_id}/abandon")
+    def abandon_gameplay_session(request: Request, tavern_id: str, session_id: str) -> dict:
+        """Abandon a gameplay session."""
+        user_id = _get_user_id(request)
+        return service.abandon_gameplay_session_payload(tavern_id, session_id, user_id)
+
     @router.get("/api/taverns/{tavern_id}/memory-atoms")
     def list_memory_atoms(
         request: Request,

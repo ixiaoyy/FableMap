@@ -439,6 +439,7 @@ class Tavern:
     groups: list[dict[str, Any]] = field(default_factory=list)
     bookmarks: list[dict[str, Any]] = field(default_factory=list)
     chat_templates: list[dict[str, Any]] = field(default_factory=list)
+    gameplay_definitions: list[dict[str, Any]] = field(default_factory=list)
     output_rules: list[dict[str, Any]] = field(default_factory=list)
     prompt_blocks: list[dict[str, Any]] = field(default_factory=list)
     runtime_presets: list[dict[str, Any]] = field(default_factory=list)
@@ -469,6 +470,7 @@ class Tavern:
             "groups": deepcopy(self.groups),
             "bookmarks": deepcopy(self.bookmarks),
             "chat_templates": deepcopy(self.chat_templates),
+            "gameplay_definitions": deepcopy(self.gameplay_definitions),
             "output_rules": deepcopy(self.output_rules),
             "prompt_blocks": deepcopy(self.prompt_blocks),
             "runtime_presets": deepcopy(self.runtime_presets),
@@ -521,6 +523,7 @@ class Tavern:
             groups=_normalize_metadata_list(d.get("groups", [])),
             bookmarks=_normalize_metadata_list(d.get("bookmarks", [])),
             chat_templates=_normalize_metadata_list(d.get("chat_templates", [])),
+            gameplay_definitions=_normalize_metadata_list(d.get("gameplay_definitions", [])),
             output_rules=_normalize_metadata_list(d.get("output_rules", [])),
             prompt_blocks=_normalize_metadata_list(d.get("prompt_blocks", [])),
             runtime_presets=_normalize_metadata_list(d.get("runtime_presets", [])),
@@ -867,6 +870,55 @@ class TavernStore:
         self._save_taverns(data)
         return True
 
+    # ── 玩法会话 ────────────────────────
+
+    def list_gameplay_sessions(self, tavern_id: str) -> list[Any]:
+        from fablemap.gameplay import GameplaySession
+
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        sessions = tavern_data.get("_gameplay_sessions", {})
+        if not isinstance(sessions, dict):
+            return []
+        result = []
+        for value in sessions.values():
+            if not isinstance(value, dict):
+                continue
+            try:
+                result.append(GameplaySession.from_dict(value))
+            except (TypeError, ValueError):
+                continue
+        result.sort(key=lambda session: session.updated_at or session.created_at, reverse=True)
+        return result
+
+    def get_gameplay_session(self, tavern_id: str, session_id: str) -> Any | None:
+        from fablemap.gameplay import GameplaySession
+
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        sessions = tavern_data.get("_gameplay_sessions", {})
+        if not isinstance(sessions, dict):
+            return None
+        value = sessions.get(session_id)
+        if not isinstance(value, dict):
+            return None
+        try:
+            return GameplaySession.from_dict(value)
+        except (TypeError, ValueError):
+            return None
+
+    def save_gameplay_session(self, tavern_id: str, session: Any) -> Any:
+        data = self._load_taverns()
+        tavern_data = data.setdefault(tavern_id, {})
+        sessions = tavern_data.setdefault("_gameplay_sessions", {})
+        if not isinstance(sessions, dict):
+            sessions = {}
+            tavern_data["_gameplay_sessions"] = sessions
+        session.tavern_id = tavern_id
+        sessions[session.id] = session.to_dict()
+        self._save_taverns(data)
+        return session
+
     # ── Chat History ─────────────────────
 
     def get_chat_history(
@@ -1118,6 +1170,7 @@ class TavernService:
             access=data.get("access", "public"),
             password_hash="",
             status="closed",
+            gameplay_definitions=_normalize_metadata_list(data.get("gameplay_definitions", [])),
             output_rules=_normalize_metadata_list(data.get("output_rules", [])),
             prompt_blocks=_normalize_metadata_list(data.get("prompt_blocks", [])),
             runtime_presets=_normalize_metadata_list(data.get("runtime_presets", [])),
@@ -1188,7 +1241,7 @@ class TavernService:
                 for entry_data in data["world_info"]
                 if isinstance(entry_data, dict)
             ]
-        for metadata_key in ("groups", "bookmarks", "chat_templates", "output_rules", "prompt_blocks", "runtime_presets"):
+        for metadata_key in ("groups", "bookmarks", "chat_templates", "gameplay_definitions", "output_rules", "prompt_blocks", "runtime_presets"):
             if metadata_key in data:
                 setattr(tavern, metadata_key, _normalize_metadata_list(data[metadata_key]))
         if "active_preset_id" in data:

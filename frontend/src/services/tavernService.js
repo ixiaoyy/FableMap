@@ -261,6 +261,112 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
+     * 获取当前用户可见的酒馆玩法定义。
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>} { tavern_id, gameplays }
+     */
+    async getGameplays(tavernId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/gameplays`, {
+        cache: 'no-store',
+        headers: buildHeaders(userId),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 保存店主维护的玩法定义列表。
+     * @param {string} tavernId
+     * @param {Array<object>} gameplays
+     * @param {string} userId
+     * @returns {Promise<object>} { ok, tavern_id, gameplays }
+     */
+    async saveGameplays(tavernId, gameplays, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/gameplays`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({ gameplays: Array.isArray(gameplays) ? gameplays : [] }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 开始或恢复一局玩法。
+     * @param {string} tavernId
+     * @param {object} data — { gameplayId|gameplay_id, characterId|character_id }
+     * @param {string} userId
+     * @returns {Promise<object>} { ok, resumed, session, scene }
+     */
+    async startGameplaySession(tavernId, data = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/gameplay-sessions`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          gameplay_id: data.gameplay_id || data.gameplayId || '',
+          character_id: data.character_id || data.characterId || '',
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 推进一局玩法，可传选项或自由文本。
+     * @param {string} tavernId
+     * @param {string} sessionId
+     * @param {object} data — { choiceId|choice_id, message }
+     * @param {string} userId
+     * @returns {Promise<object>} { ok, source, event, session, scene }
+     */
+    async advanceGameplaySession(tavernId, sessionId, data = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/gameplay-sessions/${encodeURIComponent(sessionId)}/advance`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          choice_id: data.choice_id || data.choiceId || '',
+          message: data.message || '',
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 列出玩法会话，访客默认只看到自己，店主可按 visitorId 过滤。
+     * @param {string} tavernId
+     * @param {object} options — { state, visitorId|visitor_id }
+     * @param {string} userId
+     * @returns {Promise<object>} { tavern_id, sessions }
+     */
+    async listGameplaySessions(tavernId, options = {}, userId = '') {
+      const params = new URLSearchParams()
+      if (options.state) params.set('state', options.state)
+      if (options.visitor_id || options.visitorId) {
+        params.set('visitor_id', options.visitor_id || options.visitorId)
+      }
+      const query = params.toString()
+      const response = await fetch(
+        `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/gameplay-sessions${query ? `?${query}` : ''}`,
+        { cache: 'no-store', headers: buildHeaders(userId) },
+      )
+      return readJson(response)
+    },
+
+    /**
+     * 放弃一局玩法。
+     * @param {string} tavernId
+     * @param {string} sessionId
+     * @param {string} userId
+     * @returns {Promise<object>} { ok, session }
+     */
+    async abandonGameplaySession(tavernId, sessionId, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/gameplay-sessions/${encodeURIComponent(sessionId)}/abandon`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({}),
+      })
+      return readJson(response)
+    },
+
+    /**
      * 获取酒馆运行预设（内置 + 店主自定义）
      * @param {string} tavernId
      * @param {string} userId

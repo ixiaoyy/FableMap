@@ -97,6 +97,7 @@ def _tavern(
     characters: list[dict[str, Any]],
     world_info: list[dict[str, Any]],
     bookmarks: list[dict[str, Any]],
+    gameplay_definitions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "id": tavern_id,
@@ -115,6 +116,7 @@ def _tavern(
         "groups": [],
         "bookmarks": bookmarks,
         "chat_templates": [],
+        "gameplay_definitions": gameplay_definitions or [],
         "output_rules": [],
         "prompt_blocks": [],
         "runtime_presets": [],
@@ -137,6 +139,77 @@ def _tavern(
             "max_responses_per_turn": 2,
             "response_cooldown_seconds": 0,
             "require_name_prefix": True,
+        },
+    }
+
+
+def _gameplay(
+    *,
+    gameplay_id: str,
+    title: str,
+    summary: str,
+    entry_label: str,
+    goal: str,
+    tone: str,
+    materials: list[str],
+    forbidden: list[str],
+    start: str,
+    progress: str,
+    reward: str,
+    fallback: str,
+) -> dict[str, Any]:
+    return {
+        "id": gameplay_id,
+        "title": title,
+        "status": "published",
+        "summary": summary,
+        "entry_label": entry_label,
+        "mode": "ai_directed_branch",
+        "owner_brief": {
+            "goal": goal,
+            "tone": tone,
+            "materials": materials,
+            "forbidden": forbidden,
+        },
+        "nodes": [
+            {
+                "id": "start",
+                "kind": "scene",
+                "narration": start,
+                "choices": [
+                    {"id": "continue", "label": "继续下一步", "next_node_id": "progress"},
+                    {"id": "finish", "label": "直接整理结论", "next_node_id": "complete", "completes": True},
+                ],
+                "fallback_events": [
+                    {"id": "opening-fallback", "text": fallback, "next_node_id": "progress"},
+                ],
+            },
+            {
+                "id": "progress",
+                "kind": "scene",
+                "narration": progress,
+                "choices": [
+                    {"id": "detail", "label": "补充一个细节", "next_node_id": "progress"},
+                    {"id": "complete", "label": "完成并结算", "next_node_id": "complete", "completes": True},
+                ],
+                "fallback_events": [
+                    {"id": "progress-fallback", "text": fallback, "next_node_id": "progress"},
+                ],
+            },
+            {
+                "id": "complete",
+                "kind": "complete",
+                "narration": "主持人把这局体验整理成简短结算，并给出一个文字奖励。",
+                "choices": [],
+                "fallback_events": [
+                    {"id": "complete-fallback", "text": reward, "next_node_id": "complete"},
+                ],
+            },
+        ],
+        "completion": {
+            "complete_node_ids": ["complete"],
+            "reward_text": reward,
+            "memory_atom": {"enabled": False},
         },
     }
 
@@ -201,6 +274,22 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
             bookmarks=[
                 {"id": "bm_pw_helpdesk", "content": "公益默认酒馆 · 新手引导 · 不需要 API Key"}
             ],
+            gameplay_definitions=[
+                _gameplay(
+                    gameplay_id="gp_pw_helpdesk_first_tavern",
+                    title="开店路线演练",
+                    summary="跟小舟用三步演练选地点、设访问权限、放入第一个 NPC。",
+                    entry_label="演练开店路线",
+                    goal="帮助新手理解开店主流程和隐私选择。",
+                    tone="明亮、可靠、低门槛",
+                    materials=["地图桌", "便签", "白色小灯"],
+                    forbidden=["索取隐私", "推销付费", "替访客做真实商业承诺"],
+                    start="小舟把地图桌上的三张便签推过来：地点、门牌、第一位 NPC。先选你最想弄懂的一张。",
+                    progress="小舟按你的选择继续演示，并提醒公开、密码、私人三种访问方式的差别。",
+                    reward="你得到一张“新手开店路线卡”：先选真实坐标，再写场景，最后配置角色和 AI。",
+                    fallback="小舟随机抽出一张隐私选择卡，请你判断公开、密码、私人哪一种更合适。",
+                )
+            ],
         ),
         _tavern(
             tavern_id="pw_midnight_treehole",
@@ -253,6 +342,22 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
             bookmarks=[
                 {"id": "bm_pw_treehole", "content": "公益默认酒馆 · 倾听陪伴 · 非医疗建议"}
             ],
+            gameplay_definitions=[
+                _gameplay(
+                    gameplay_id="gp_pw_treehole_future_note",
+                    title="给未来自己的短讯",
+                    summary="把今晚的一句话整理成给未来自己的温和短讯。",
+                    entry_label="写一封短讯",
+                    goal="陪访客把情绪整理成一段不诊断、不评判的短句。",
+                    tone="安静、尊重边界、温和",
+                    materials=["匿名留言簿", "设备灯", "夜间电台"],
+                    forbidden=["医疗诊断", "替访客做人生决定", "忽视即时危险"],
+                    start="安澜打开匿名留言簿，只留一个空格：今晚最想先放下哪一句？",
+                    progress="安澜把你的句子压成更轻一点的版本，并问它适合留给今晚、明早，还是一周后的自己。",
+                    reward="你得到一张“今晚先慢一点”的电台便签。",
+                    fallback="电台随机亮起一盏设备灯，安澜请你只补一个词：现在最需要的是安静、陪伴，还是暂停。",
+                )
+            ],
         ),
         _tavern(
             tavern_id="pw_community_repair",
@@ -303,6 +408,22 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
             ],
             bookmarks=[
                 {"id": "bm_pw_repair", "content": "公益默认酒馆 · 社区互助 · 低风险行动建议"}
+            ],
+            gameplay_definitions=[
+                _gameplay(
+                    gameplay_id="gp_pw_repair_one_small_fix",
+                    title="今日一件小修补",
+                    summary="跟阿槐把一个琐碎问题拆成今天能做的一件小事。",
+                    entry_label="抽工具箱事件",
+                    goal="把大问题拆成低风险、可执行的一步。",
+                    tone="烟火气、务实、邻里互助",
+                    materials=["工具箱", "旧伞骨", "针线", "互助告示"],
+                    forbidden=["专业法律金融医疗结论", "高风险操作", "责备访客"],
+                    start="阿槐把工具箱三层拉开：马上能修、等零件、换种用法。你想先看哪一层？",
+                    progress="阿槐根据你的选择，把问题拆成一个今天能做的小动作，并给出不超过三步的行动清单。",
+                    reward="你得到一枚“今天先修一颗螺丝”的纸徽章。",
+                    fallback="工具箱里随机滚出一颗螺丝，阿槐请你说出今天最想先拧紧的一件小事。",
+                )
             ],
         ),
         _tavern(
@@ -355,6 +476,22 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
             ],
             bookmarks=[
                 {"id": "bm_pw_archive", "content": "公益默认酒馆 · 失物整理 · 不收集敏感信息"}
+            ],
+            gameplay_definitions=[
+                _gameplay(
+                    gameplay_id="gp_pw_archive_lost_object",
+                    title="三步线索登记",
+                    summary="和闻笺把失物线索整理成时间、地点、最后一个确定细节。",
+                    entry_label="开始失物登记",
+                    goal="整理公开线索，不承诺找回，不索取敏感身份信息。",
+                    tone="安静、条理清楚、温柔悬疑",
+                    materials=["失物登记册", "空白标签", "台灯"],
+                    forbidden=["索取身份证件", "索取住址或手机号", "承诺一定找回"],
+                    start="闻笺推来一张三列表格：时间、地点、最后一个确定细节。你想先填哪一列？",
+                    progress="闻笺把你给出的线索编号，并提醒只保留公开、低风险的信息。",
+                    reward="你得到一张“线索整理者”纸质标签。",
+                    fallback="闻笺随机抽到一张天气标签，请你补一个天气、光线或最后动作。",
+                )
             ],
         ),
     ]

@@ -56,6 +56,8 @@ FableMap 赛博酒馆版使用全新的概念体系：
 - 创建向导支持一键套用酒馆模板、系统预设 NPC、开门检查清单；角色编辑器内提供可补空/覆盖的 NPC 性格模板、推荐筛选与访客第一印象预览
 - 访客侧提供“不会说什么就点一下”的快捷句、玩法提示和轻文字游戏模板（线索调查 / 社区小任务 / 冒险工会），让聊天酒馆也能扩展为选择式文字互动
 - 冒险工会玩法支持本地任务板、发委托、接委托、提交完成、声望身份奖励和酒馆差异化待遇
+- 店主可用轻配置表单添加结构化酒馆玩法；访客可开始 / 继续 / 选择 / 自由输入 / 完成 / 放弃一局玩法，AI 可用时由 AI Director 主持，无 AI 时使用可回放随机事件 fallback
+- 4 个默认公益酒馆已内置贴合各自主题的 published 玩法，无需外部 API Key 也可体验
 
 当前已存在但**不再作为主线继续扩写**的部分：
 
@@ -86,6 +88,7 @@ http://127.0.0.1:8950/
 | 模块 | 用途 |
 |------|------|
 | `tavern.py` | 酒馆核心: Tavern CRUD, 状态管理 |
+| `gameplay.py` | 酒馆玩法模型、AI Director 与 fallback 推进 |
 | `llm_clients.py` | LLM 客户端工厂: OpenAI / Claude / Ollama |
 | `char_card_parser.py` | SillyTavern 角色卡解析 (JSON / PNG tEXt) |
 | `world_info_injector.py` | 世界知识注入器 (关键词匹配) |
@@ -98,6 +101,9 @@ http://127.0.0.1:8950/
 | 模块 | 用途 |
 |------|------|
 | `services/tavernService.js` | 酒馆 CRUD, LLM 调用 |
+| `GameplayManager.jsx` | 店主玩法管理 |
+| `TavernGameplayLauncher.jsx` | 访客玩法入口 |
+| `GameplaySessionPanel.jsx` | 访客玩法会话面板 |
 | `services/characterEngine.js` | 角色数据结构 |
 | `services/placeProtocol.js` | Place 协议 |
 | `services/apiClient.js` | API 客户端 |
@@ -125,6 +131,12 @@ http://127.0.0.1:8950/
 | POST | `/api/taverns/{id}/chat` | 发送消息并获取 AI 回复 |
 | GET | `/api/taverns/{id}/chat` | 获取对话历史 |
 | POST | `/api/taverns/{id}/enter` | 进入酒馆（验证密码） |
+| GET | `/api/taverns/{id}/gameplays` | 获取当前用户可见玩法 |
+| PUT | `/api/taverns/{id}/gameplays` | 店主保存玩法定义 |
+| GET | `/api/taverns/{id}/gameplay-sessions` | 列出玩法会话 |
+| POST | `/api/taverns/{id}/gameplay-sessions` | 开始或恢复玩法 |
+| POST | `/api/taverns/{id}/gameplay-sessions/{sid}/advance` | 推进玩法 |
+| POST | `/api/taverns/{id}/gameplay-sessions/{sid}/abandon` | 放弃玩法 |
 
 ## 文档导航
 

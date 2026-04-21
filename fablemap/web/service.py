@@ -283,6 +283,18 @@ def _memory_atom_from_payload(
 
 from fablemap.api_service import build_health_payload, build_meta_payload, build_nearby_payload
 from fablemap.llm_clients import create_client, LLMError
+from fablemap.gameplay import (
+    AIDirector,
+    GameplaySession,
+    completion_payload,
+    fallback_result,
+    is_complete_node,
+    new_event,
+    node_by_id,
+    normalize_gameplay_definition,
+    normalize_gameplay_definitions,
+    scene_for_node,
+)
 from fablemap.memory import (
     MEMORY_DIMENSIONS,
     MEMORY_HORIZONS,
@@ -717,6 +729,316 @@ class WebService:
     def update_tavern(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         """Compatibility wrapper for legacy router endpoints."""
         return self.update_tavern_payload(tavern_id, data, user_id)
+
+    # ─── Gameplay System ────────────────────────────────────────────────
+
+    def _ensure_gameplay_tavern_visible(self, tavern: Any, user_id: str) -> None:
+        if tavern.access == "private" and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+
+    def _ensure_gameplay_owner(self, tavern: Any, user_id: str) -> None:
+        if tavern.owner_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="只有酒馆主人可以编辑玩法")
+
+    def _gameplay_definition_for_user(self, gameplay: dict[str, Any], *, owner: bool) -> dict[str, Any]:
+        if owner:
+            return deepcopy(gameplay)
+        return {
+            "id": gameplay.get("id", ""),
+            "title": gameplay.get("title", ""),
+            "status": gameplay.get("status", ""),
+            "summary": gameplay.get("summary", ""),
+            "entry_label": gameplay.get("entry_label", "开始玩法"),
+            "mode": gameplay.get("mode", "ai_directed_branch"),
+        }
+
+    def get_gameplays_payload(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        self._ensure_gameplay_tavern_visible(tavern, user_id)
+        owner = bool(user_id and tavern.owner_id == user_id)
+        gameplays = normalize_gameplay_definitions(tavern.gameplay_definitions)
+        if not owner:
+            gameplays = [gameplay for gameplay in gameplays if gameplay.get("status") == "published"]
+        return {
+            "tavern_id": tavern_id,
+            "gameplays": [
+                self._gameplay_definition_for_user(gameplay, owner=owner)
+                for gameplay in gameplays
+            ],
+        }
+
+    def save_gameplays_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        self._ensure_gameplay_owner(tavern, user_id)
+        payload = data or {}
+        try:
+            gameplays = normalize_gameplay_definitions(payload.get("gameplays", []))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        tavern.gameplay_definitions = gameplays
+        self.tavern_store.update_tavern(tavern)
+        return {
+            "ok": True,
+            "tavern_id": tavern_id,
+            "gameplays": gameplays,
+        }
+
+    def _find_gameplay_definition(self, tavern: Any, gameplay_id: str, *, owner: bool = False) -> dict[str, Any]:
+        for gameplay in normalize_gameplay_definitions(tavern.gameplay_definitions):
+            if gameplay.get("id") != gameplay_id:
+                continue
+            if gameplay.get("status") == "published" or owner:
+                return gameplay
+            raise HTTPException(status_code=404, detail="玩法不存在或未发布")
+        raise HTTPException(status_code=404, detail="玩法不存在")
+
+    def _session_payload(self, session: GameplaySession, *, include_events: bool = True) -> dict[str, Any]:
+        payload = session.to_dict()
+        if not include_events:
+            payload.pop("events", None)
+        return payload
+
+    def _ensure_gameplay_session_access(self, tavern: Any, session: GameplaySession, user_id: str) -> None:
+        if user_id and tavern.owner_id == user_id:
+            return
+        if user_id and session.visitor_id == user_id:
+            return
+        raise HTTPException(status_code=403, detail="不能访问其他访客的玩法会话")
+
+    def list_gameplay_sessions_payload(
+        self,
+        tavern_id: str,
+        user_id: str = "",
+        *,
+        state: str = "",
+        visitor_id: str = "",
+    ) -> dict[str, Any]:
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        self._ensure_gameplay_tavern_visible(tavern, user_id)
+
+        owner = bool(user_id and tavern.owner_id == user_id)
+        requested_visitor_id = str(visitor_id or "").strip()
+        sessions = self.tavern_store.list_gameplay_sessions(tavern_id)
+        if not owner:
+            sessions = [session for session in sessions if session.visitor_id == user_id]
+        elif requested_visitor_id:
+            sessions = [session for session in sessions if session.visitor_id == requested_visitor_id]
+
+        normalized_state = str(state or "").strip()
+        if normalized_state == "active":
+            sessions = [session for session in sessions if session.state in {"started", "in_progress"}]
+        elif normalized_state:
+            sessions = [session for session in sessions if session.state == normalized_state]
+
+        return {
+            "tavern_id": tavern_id,
+            "sessions": [self._session_payload(session, include_events=False) for session in sessions],
+        }
+
+    def start_gameplay_session_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        if not user_id:
+            raise HTTPException(status_code=403, detail="缺少访客身份")
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        self._ensure_gameplay_tavern_visible(tavern, user_id)
+
+        payload = data or {}
+        gameplay_id = str(payload.get("gameplay_id") or payload.get("gameplayId") or "").strip()
+        if not gameplay_id:
+            raise HTTPException(status_code=400, detail="缺少玩法 ID")
+        owner = bool(user_id and tavern.owner_id == user_id)
+        gameplay = self._find_gameplay_definition(tavern, gameplay_id, owner=owner)
+        character_id = str(payload.get("character_id") or payload.get("characterId") or "").strip()
+        if not character_id and tavern.characters:
+            character_id = tavern.characters[0].id
+
+        for session in self.tavern_store.list_gameplay_sessions(tavern_id):
+            if (
+                session.visitor_id == user_id
+                and session.gameplay_id == gameplay_id
+                and session.state in {"started", "in_progress"}
+            ):
+                return {
+                    "ok": True,
+                    "resumed": True,
+                    "session": self._session_payload(session),
+                    "scene": scene_for_node(gameplay, session.current_node_id),
+                }
+
+        first_node_id = (gameplay.get("nodes") or [{"id": "start"}])[0].get("id", "start")
+        session = GameplaySession.new(
+            tavern_id=tavern_id,
+            gameplay_id=gameplay_id,
+            visitor_id=user_id,
+            character_id=character_id,
+            current_node_id=first_node_id,
+        )
+        session.add_event(new_event(
+            "started",
+            narration=scene_for_node(gameplay, first_node_id).get("narration", ""),
+            to_node_id=first_node_id,
+            source="system",
+        ))
+        self.tavern_store.save_gameplay_session(tavern_id, session)
+        return {
+            "ok": True,
+            "resumed": False,
+            "session": self._session_payload(session),
+            "scene": scene_for_node(gameplay, session.current_node_id),
+        }
+
+    def _ai_director_result(
+        self,
+        tavern: Any,
+        gameplay: dict[str, Any],
+        session: GameplaySession,
+        message: str,
+        choice_id: str,
+    ) -> dict[str, Any] | None:
+        llm_config = self.tavern_store.get_llm_config(tavern.id)
+        if not llm_config or not llm_config.is_configured():
+            return None
+        if str(llm_config.backend or "").lower() in {"rules", "rule_based", "public_welfare"}:
+            return None
+
+        def _complete(payload: dict[str, Any]) -> str:
+            client = create_client(_tavern_llm_config_to_client(llm_config))
+            prompt = [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是 FableMap 酒馆玩法的 AI Director。只返回 JSON，字段包括 "
+                        "action(stay/move/complete), next_node_id, event_type, narration, completed。"
+                        "不要索取隐私，不给医疗、法律或金融结论，不要求真实危险行动。"
+                    ),
+                },
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ]
+            return client.complete(prompt).content
+
+        try:
+            return AIDirector(_complete).advance(gameplay, session, message=message, choice_id=choice_id)
+        except Exception:
+            logger.exception("AI Director failed for gameplay session %s", session.id)
+            return None
+
+    def _apply_gameplay_result(
+        self,
+        gameplay: dict[str, Any],
+        session: GameplaySession,
+        result: dict[str, Any],
+    ) -> GameplaySession:
+        event = new_event(
+            result["event"].get("type", "event"),
+            narration=result["event"].get("narration", ""),
+            from_node_id=result["event"].get("from_node_id", session.current_node_id),
+            to_node_id=result.get("next_node_id") or result["event"].get("to_node_id", session.current_node_id),
+            choice_id=result["event"].get("choice_id", ""),
+            seed=result["event"].get("seed", ""),
+            source=result.get("source", result["event"].get("source", "")),
+            metadata=result["event"].get("metadata", {}),
+        )
+        session.turn_count += 1
+        session.current_node_id = result.get("next_node_id") or event.to_node_id or session.current_node_id
+        session.add_event(event)
+        if result.get("completed") or is_complete_node(gameplay, session.current_node_id):
+            session.state = "completed"
+            session.completion = completion_payload(gameplay, session, event.narration)
+        else:
+            session.state = "in_progress"
+        return session
+
+    def _choice_gameplay_result(
+        self,
+        gameplay: dict[str, Any],
+        session: GameplaySession,
+        choice_id: str,
+    ) -> dict[str, Any] | None:
+        node = node_by_id(gameplay, session.current_node_id) or {}
+        choice = next((item for item in node.get("choices", []) if item.get("id") == choice_id), None)
+        if not choice:
+            return None
+        next_node_id = choice.get("next_node_id") or session.current_node_id
+        completed = is_complete_node(gameplay, next_node_id, choice=choice)
+        event = new_event(
+            "completed" if completed else "node_changed",
+            narration=choice.get("label", ""),
+            from_node_id=session.current_node_id,
+            to_node_id=next_node_id,
+            choice_id=choice_id,
+            source="choice",
+        )
+        return {
+            "source": "choice",
+            "event": event.to_dict(),
+            "next_node_id": next_node_id,
+            "completed": completed,
+            "scene": scene_for_node(gameplay, next_node_id),
+        }
+
+    def advance_gameplay_session_payload(
+        self,
+        tavern_id: str,
+        session_id: str,
+        data: dict[str, Any],
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        session = self.tavern_store.get_gameplay_session(tavern_id, session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="玩法会话不存在")
+        self._ensure_gameplay_session_access(tavern, session, user_id)
+        if session.state in {"completed", "abandoned"}:
+            return {
+                "ok": True,
+                "source": "state",
+                "event": session.events[-1].to_dict() if session.events else {},
+                "session": self._session_payload(session),
+                "scene": {},
+            }
+
+        gameplay = self._find_gameplay_definition(tavern, session.gameplay_id, owner=bool(user_id and tavern.owner_id == user_id))
+        payload = data or {}
+        choice_id = str(payload.get("choice_id") or payload.get("choiceId") or "").strip()
+        message = str(payload.get("message") or "").strip()
+
+        result = self._choice_gameplay_result(gameplay, session, choice_id) if choice_id else None
+        if result is None and message:
+            result = self._ai_director_result(tavern, gameplay, session, message, choice_id)
+        if result is None:
+            result = fallback_result(gameplay, session)
+
+        session = self._apply_gameplay_result(gameplay, session, result)
+        self.tavern_store.save_gameplay_session(tavern_id, session)
+        return {
+            "ok": True,
+            "source": result.get("source", ""),
+            "event": session.events[-1].to_dict() if session.events else {},
+            "session": self._session_payload(session),
+            "scene": scene_for_node(gameplay, session.current_node_id) if session.state != "completed" else {},
+        }
+
+    def abandon_gameplay_session_payload(self, tavern_id: str, session_id: str, user_id: str = "") -> dict[str, Any]:
+        tavern = self.tavern_store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        session = self.tavern_store.get_gameplay_session(tavern_id, session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="玩法会话不存在")
+        self._ensure_gameplay_session_access(tavern, session, user_id)
+        session.state = "abandoned"
+        session.add_event(new_event("abandoned", narration="访客放弃了这局玩法。", source="system"))
+        self.tavern_store.save_gameplay_session(tavern_id, session)
+        return {"ok": True, "session": self._session_payload(session)}
 
     def test_world_info_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         """Deterministically test which WorldInfo entries a message would hit.
@@ -1475,6 +1797,7 @@ class WebService:
             "groups": tavern_payload.get("groups", []),
             "bookmarks": tavern_payload.get("bookmarks", []),
             "chat_templates": tavern_payload.get("chat_templates", []),
+            "gameplay_definitions": tavern_payload.get("gameplay_definitions", []),
             "output_rules": tavern_payload.get("output_rules") or default_output_rules(),
             "prompt_blocks": tavern_payload.get("prompt_blocks") or default_prompt_blocks(),
             "runtime_presets": custom_runtime_presets(tavern_payload.get("runtime_presets")),
@@ -1539,6 +1862,7 @@ class WebService:
             "groups": _package_list(package, tavern_payload, "groups"),
             "bookmarks": _package_list(package, tavern_payload, "bookmarks"),
             "chat_templates": _package_list(package, tavern_payload, "chat_templates"),
+            "gameplay_definitions": _package_list(package, tavern_payload, "gameplay_definitions"),
             "output_rules": _package_list(package, tavern_payload, "output_rules"),
             "prompt_blocks": _package_list(package, tavern_payload, "prompt_blocks"),
             "runtime_presets": _package_list(package, tavern_payload, "runtime_presets"),

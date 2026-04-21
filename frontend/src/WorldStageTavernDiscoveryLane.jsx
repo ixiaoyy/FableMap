@@ -44,6 +44,35 @@ function getDistanceLabel(tavern) {
   return tavern?._distance == null ? '距离待定位' : formatTavernDistance(tavern._distance)
 }
 
+function SkeletonTavernCard() {
+  return (
+    <div className="tavern-discovery-card tavern-discovery-card--skeleton">
+      <div className="skeleton-line skeleton-line--title" />
+      <div className="skeleton-line skeleton-line--text" />
+      <div className="skeleton-line skeleton-line--meta" />
+    </div>
+  )
+}
+
+function ShimmerLoader() {
+  return (
+    <div className="tavern-discovery-shimmer">
+      <div className="shimmer-line shimmer-line--short" />
+      <div className="shimmer-line shimmer-line--medium" />
+      <div className="shimmer-line shimmer-line--long" />
+    </div>
+  )
+}
+
+function LoadingOverlay() {
+  return (
+    <div className="tavern-discovery-loading-overlay" aria-live="polite">
+      <ShimmerLoader />
+      <span className="loading-text">正在扫描附近酒馆</span>
+    </div>
+  )
+}
+
 export default function WorldStageTavernDiscoveryLane({
   taverns,
   totalTaverns,
@@ -139,7 +168,11 @@ export default function WorldStageTavernDiscoveryLane({
         </button>
 
         <button type="button" className="secondary tavern-discovery-refresh" onClick={onRefreshTaverns} disabled={loading}>
-          {loading ? '扫描中...' : '刷新'}
+          {loading ? (
+            <span className="refresh-spinner">⟳</span>
+          ) : (
+            '↻ 刷新'
+          )}
         </button>
       </div>
 
@@ -163,24 +196,37 @@ export default function WorldStageTavernDiscoveryLane({
             onClick={onQuickStartTavern}
             disabled={quickStartLoading}
           >
-            {quickStartLoading ? '正在进入...' : '⚡ 立即试玩'}
+            {quickStartLoading ? (
+              <span className="btn-loading-text">正在进入...</span>
+            ) : (
+              '⚡ 立即试玩'
+            )}
           </button>
         </div>
       ) : null}
 
       {error ? (
         <div className="storyboard-placeholder-card tavern-discovery-empty tavern-discovery-empty--error">
+          <span className="empty-icon">⚠️</span>
           <strong>附近酒馆暂时没有连通</strong>
           <p>{error}</p>
+          <button type="button" className="secondary" onClick={onRefreshTaverns}>重试</button>
         </div>
       ) : loading ? (
-        <div className="storyboard-placeholder-card tavern-discovery-empty">
-          <strong>正在扫描附近酒馆</strong>
-          <p>附近入口连通后，可以直接选择酒馆并打开入场面板。</p>
+        <div className="tavern-discovery-loading">
+          <div className="loading-spinner">
+            <div className="spinner-ring" />
+          </div>
+          <p>正在扫描附近酒馆...</p>
+          <div className="skeleton-list">
+            <SkeletonTavernCard />
+            <SkeletonTavernCard />
+            <SkeletonTavernCard />
+          </div>
         </div>
       ) : visibleTaverns.length ? (
         <div className="tavern-discovery-results">
-          {visibleTaverns.map((tavern) => {
+          {visibleTaverns.map((tavern, index) => {
             const isActive = tavern.id === activeTavernId
             const characterCount = getCharacterCount(tavern)
             const playMode = inferTavernPlayMode(tavern)
@@ -191,6 +237,7 @@ export default function WorldStageTavernDiscoveryLane({
                 className={`tavern-discovery-card${isActive ? ' is-active' : ''}`}
                 onClick={() => onTavernClick?.(tavern.id, tavern)}
                 aria-pressed={isActive}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="tavern-discovery-card__top">
                   <strong>{tavern.name || '未命名酒馆'}</strong>
@@ -227,6 +274,7 @@ export default function WorldStageTavernDiscoveryLane({
         </div>
       ) : (
         <div className="storyboard-placeholder-card tavern-discovery-empty">
+          <span className="empty-icon">🏮</span>
           <strong>{totalTaverns ? '没有匹配的酒馆' : '附近还没有公开酒馆'}</strong>
           <p>{totalTaverns ? '可以放宽搜索词、入口或营业状态。' : '切换入口位置或扩大半径，再刷新附近酒馆。'}</p>
           {onQuickStartTavern ? (

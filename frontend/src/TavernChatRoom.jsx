@@ -5,6 +5,8 @@ import TavernMemoryPanel from './TavernMemoryPanel'
 import CharacterAvatar from './CharacterAvatar'
 import CharacterLookSummary from './CharacterLookSummary'
 import TavernMiniGamePanel from './TavernMiniGamePanel'
+import TavernGameplayLauncher from './TavernGameplayLauncher'
+import GameplaySessionPanel from './GameplaySessionPanel'
 import {
   buildGuildActionPrompt,
   GUILD_REPUTATION_TIERS,
@@ -686,6 +688,14 @@ export default function TavernChatRoom({
   const [visitorMemoryState, setVisitorMemoryState] = useState(entryState)
   const [createdMemories, setCreatedMemories] = useState([])
   const [groupSessionError, setGroupSessionError] = useState('')
+  const [gameplays, setGameplays] = useState(() => (
+    Array.isArray(tavern?.gameplay_definitions) ? tavern.gameplay_definitions : []
+  ))
+  const [gameplaySessions, setGameplaySessions] = useState([])
+  const [activeGameplaySession, setActiveGameplaySession] = useState(null)
+  const [gameplayScene, setGameplayScene] = useState(null)
+  const [gameplayBusy, setGameplayBusy] = useState(false)
+  const [gameplayError, setGameplayError] = useState('')
   const messagesEndRef = useRef(null)
   const tavernService = getDefaultTavernService()
   const groupChatEnabled = Boolean(tavern?.group_chat_enabled && characters.length > 1)
@@ -736,6 +746,14 @@ export default function TavernChatRoom({
   useEffect(() => {
     setVisitorMemoryState(entryState)
   }, [entryState])
+
+  useEffect(() => {
+    setGameplays(Array.isArray(tavern?.gameplay_definitions) ? tavern.gameplay_definitions : [])
+  }, [tavern?.id, tavern?.gameplay_definitions])
+
+  useEffect(() => {
+    loadGameplayState()
+  }, [roomId, visitorId])
 
   useEffect(() => {
     if (!guildEnabled) return
@@ -963,6 +981,114 @@ export default function TavernChatRoom({
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadGameplayState() {
+    if (!roomId || !visitorId) {
+      setGameplays([])
+      setGameplaySessions([])
+      setActiveGameplaySession(null)
+      setGameplayScene(null)
+      return
+    }
+    setGameplayError('')
+    try {
+      const [gameplayResult, sessionResult] = await Promise.all([
+        tavernService.getGameplays(roomId, visitorId),
+        tavernService.listGameplaySessions(roomId, { state: 'active' }, visitorId),
+      ])
+      const nextGameplays = Array.isArray(gameplayResult?.gameplays) ? gameplayResult.gameplays : []
+      const nextSessions = Array.isArray(sessionResult?.sessions) ? sessionResult.sessions : []
+      setGameplays(nextGameplays)
+      setGameplaySessions(nextSessions)
+      setActiveGameplaySession((current) => {
+        if (current && nextSessions.some((session) => session.id === current.id)) return current
+        return nextSessions[0] || null
+      })
+    } catch (err) {
+      setGameplayError(`玩法读取失败：${err.message}`)
+    }
+  }
+
+  function applyGameplayResult(result) {
+    if (result?.session) {
+      setActiveGameplaySession(result.session)
+      setGameplaySessions((prev) => {
+        const without = prev.filter((session) => session.id !== result.session.id)
+        return result.session.state === 'completed' || result.session.state === 'abandoned'
+          ? without
+          : [result.session, ...without]
+      })
+    }
+    setGameplayScene(result?.scene || null)
+  }
+
+  async function handleGameplayStart(gameplay) {
+    if (!roomId || !gameplay?.id || gameplayBusy) return
+    setGameplayBusy(true)
+    setGameplayError('')
+    try {
+      const characterId = selectedChar?.id || characters[0]?.id || ''
+      const result = await tavernService.startGameplaySession(
+        roomId,
+        { gameplayId: gameplay.id, characterId },
+        visitorId,
+      )
+      applyGameplayResult(result)
+    } catch (err) {
+      setGameplayError(`玩法开始失败：${err.message}`)
+    } finally {
+      setGameplayBusy(false)
+    }
+  }
+
+  async function handleGameplayResume(session) {
+    if (!roomId || !session?.gameplay_id || gameplayBusy) return
+    setGameplayBusy(true)
+    setGameplayError('')
+    try {
+      const result = await tavernService.startGameplaySession(
+        roomId,
+        { gameplayId: session.gameplay_id, characterId: session.character_id || selectedChar?.id || '' },
+        visitorId,
+      )
+      applyGameplayResult(result)
+    } catch (err) {
+      setGameplayError(`玩法恢复失败：${err.message}`)
+      setActiveGameplaySession(session)
+    } finally {
+      setGameplayBusy(false)
+    }
+  }
+
+  async function handleGameplayAdvance(data = {}) {
+    if (!roomId || !activeGameplaySession?.id || gameplayBusy) return
+    setGameplayBusy(true)
+    setGameplayError('')
+    try {
+      const result = await tavernService.advanceGameplaySession(roomId, activeGameplaySession.id, data, visitorId)
+      applyGameplayResult(result)
+    } catch (err) {
+      setGameplayError(`玩法推进失败：${err.message}`)
+    } finally {
+      setGameplayBusy(false)
+    }
+  }
+
+  async function handleGameplayAbandon() {
+    if (!roomId || !activeGameplaySession?.id || gameplayBusy) return
+    setGameplayBusy(true)
+    setGameplayError('')
+    try {
+      const result = await tavernService.abandonGameplaySession(roomId, activeGameplaySession.id, visitorId)
+      applyGameplayResult(result)
+      setGameplayScene(null)
+      await loadGameplayState()
+    } catch (err) {
+      setGameplayError(`玩法放弃失败：${err.message}`)
+    } finally {
+      setGameplayBusy(false)
     }
   }
 
@@ -1324,6 +1450,30 @@ export default function TavernChatRoom({
                 onAction={handleGuildAction}
               />
 
+              {gameplayError ? (
+                <div className="chat-degradation-banner" role="status" aria-live="polite">
+                  <strong>玩法暂时不可用</strong>
+                  <span>{gameplayError}</span>
+                </div>
+              ) : null}
+
+              <TavernGameplayLauncher
+                gameplays={gameplays}
+                activeSessions={gameplaySessions}
+                busy={gameplayBusy}
+                onStart={handleGameplayStart}
+                onResume={handleGameplayResume}
+              />
+
+              <GameplaySessionPanel
+                session={activeGameplaySession}
+                scene={gameplayScene}
+                busy={gameplayBusy}
+                onChoice={(choice) => handleGameplayAdvance({ choiceId: choice.id })}
+                onSubmit={(message) => handleGameplayAdvance({ message })}
+                onAbandon={handleGameplayAbandon}
+              />
+
               {/* Messages */}
               <div className="chat-messages-area">
                 {loading && (
@@ -1359,7 +1509,7 @@ export default function TavernChatRoom({
                       <ol>
                         <li>先点下方快捷句，不用自己想第一句话。</li>
                         <li>看到选项时，直接回复序号或你想做的动作。</li>
-                        <li>想换玩法，随时说“这里怎么玩”。</li>
+                        <li>想换玩法，随时说"这里怎么玩"。</li>
                       </ol>
                     </div>
                   </div>
