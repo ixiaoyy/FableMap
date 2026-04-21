@@ -4,10 +4,27 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import ApiSettings
 from .router import create_api_router
 from .service import WebService
+
+
+class SpaStaticFiles(StaticFiles):
+    """Serve built assets normally, but fall back to index.html for app routes."""
+
+    def __init__(self, *args, index_file, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.index_file = index_file
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404 and scope.get("method") in {"GET", "HEAD"} and "." not in path.rsplit("/", 1)[-1]:
+                return FileResponse(self.index_file)
+            raise
 
 
 def create_web_app(settings: ApiSettings) -> FastAPI:
@@ -36,6 +53,6 @@ def create_web_app(settings: ApiSettings) -> FastAPI:
         def get_frontend_index():
             return FileResponse(index_file)
 
-        app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+        app.mount("/", SpaStaticFiles(directory=frontend_dir, html=True, index_file=index_file), name="frontend")
 
     return app

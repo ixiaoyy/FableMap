@@ -452,6 +452,7 @@ def create_api_router(service: WebService) -> APIRouter:
         visitor_id: str = Body(...),
         visitor_name: str = Body(""),
         extra_context: list[dict] | None = Body(None),
+        display_message: str = Body(""),
     ) -> dict:
         """Send a chat message and get AI response"""
         user_id = _get_user_id(request)
@@ -463,6 +464,7 @@ def create_api_router(service: WebService) -> APIRouter:
             visitor_name,
             user_id,
             extra_context=extra_context,
+            display_message=display_message,
         )
 
     @router.post("/api/taverns/{tavern_id}/test-llm")
@@ -491,6 +493,7 @@ def create_api_router(service: WebService) -> APIRouter:
         message: str = Body(...),
         visitor_id: str = Body(...),
         visitor_name: str = Body(""),
+        display_message: str = Body(""),
     ) -> dict:
         """Send a group chat message and get responses from multiple characters."""
         user_id = _get_user_id(request)
@@ -500,6 +503,7 @@ def create_api_router(service: WebService) -> APIRouter:
             visitor_id=visitor_id,
             visitor_name=visitor_name,
             user_id=user_id,
+            display_message=display_message,
         )
 
     @router.get("/api/taverns/{tavern_id}/group-chat/history")

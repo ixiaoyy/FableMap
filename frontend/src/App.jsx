@@ -1,4 +1,5 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
+import { Navigate, NavLink, Route, Routes, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import AdminDebugPanel from './AdminDebugPanel'
 import TavernOwnerPanel from './TavernOwnerPanel'
 import WorldEntryPanel from './WorldEntryPanel'
@@ -22,12 +23,20 @@ import {
 import { useScrollToWorldStage } from './hooks/useScrollToWorldStage'
 import { useWorldSession } from './hooks/useWorldSession'
 import { buildAppPanelProps } from './services/appPanelProps'
-import { buildEntryStatusText, buildHeroMetrics, buildStageStatusViewModel } from './services/appShellViewModel'
+import { buildEntryStatusText, buildHeroMetrics } from './services/appShellViewModel'
 import { buildGuestNickname, resolveNewcomerTavern } from './services/newcomerTavern'
 import { getDefaultTavernService, getTavernAccessLabel, getTavernStatusLabel } from './services/tavernService'
 
 const MAX_TAVERN_MAP_MARKERS = 80
 const FIRST_RUN_MODE_STORAGE_KEY = 'fablemap_first_run_mode'
+
+function viewFromPath(pathname = '/') {
+  if (matchPath('/discover', pathname)) return 'map'
+  if (matchPath('/templates', pathname)) return 'templates'
+  if (matchPath('/owner', pathname)) return 'owner'
+  if (matchPath('/tavern/:tavernId', pathname)) return 'tavern'
+  return 'home'
+}
 
 function buildTavernSearchText(tavern) {
   const characters = Array.isArray(tavern?.characters) ? tavern.characters : []
@@ -96,8 +105,16 @@ function pickTavernsForMap(taverns, activeTavernId, limit = MAX_TAVERN_MAP_MARKE
   return [...visible.slice(0, Math.max(0, limit - 1)), activeTavern]
 }
 
+function navLinkClass({ isActive }) {
+  return isActive ? 'primary hero-nav-link' : 'secondary hero-nav-link'
+}
+
 export default function App() {
-  const [view, setView] = useState('map') // 'map' | 'owner' | 'templates'
+  const navigate = useNavigate()
+  const location = useLocation()
+  const view = viewFromPath(location.pathname)
+  const tavernRouteMatch = matchPath('/tavern/:tavernId', location.pathname)
+  const routeTavernId = tavernRouteMatch?.params?.tavernId || ''
   const stageRef = useRef(null)
   const [taverns, setTaverns] = useState([])
   const [activeTavernId, setActiveTavernId] = useState(null)
@@ -113,6 +130,8 @@ export default function App() {
   const [homeSettingsOpen, setHomeSettingsOpen] = useState(false)
   const [quickStartLoading, setQuickStartLoading] = useState(false)
   const [quickStartError, setQuickStartError] = useState('')
+  const [routeTavernLoading, setRouteTavernLoading] = useState(false)
+  const [routeTavernError, setRouteTavernError] = useState('')
 
   // Visitor ID — persisted across sessions
   const [visitorId] = useState(() => {
@@ -141,6 +160,10 @@ export default function App() {
     const savedTheme = localStorage.getItem('fablemap_theme') || 'dark'
     document.documentElement.setAttribute('data-theme', savedTheme)
   }, [])
+
+  useEffect(() => {
+    setHomeSettingsOpen(false)
+  }, [location.pathname])
   const {
     activePoiId,
     adminOpen,
@@ -273,6 +296,44 @@ export default function App() {
     }
   }, [form?.lat, form?.lon, form?.radius, tavernRefreshKey])
 
+  useEffect(() => {
+    if (view !== 'tavern') {
+      setRouteTavernError('')
+      setRouteTavernLoading(false)
+      if (enteredTavern) setEnteredTavern(null)
+      return
+    }
+    if (!routeTavernId || enteredTavern?.id === routeTavernId) return
+
+    let cancelled = false
+    async function loadRouteTavern() {
+      setRouteTavernLoading(true)
+      setRouteTavernError('')
+      try {
+        const service = getDefaultTavernService()
+        const tavern = taverns.find((item) => item.id === routeTavernId)
+          || await service.getTavern(routeTavernId, visitorId)
+        const entryState = await service.enterTavern(routeTavernId, '', visitorId)
+        if (cancelled) return
+        const entered = { ...tavern, entry_state: entryState }
+        setEnteredTavern(entered)
+        setActiveTavernId(routeTavernId)
+        setTaverns((prev) => [entered, ...prev.filter((item) => item.id !== routeTavernId)])
+      } catch (err) {
+        if (!cancelled) {
+          setRouteTavernError(err?.message || '无法进入这间酒馆')
+        }
+      } finally {
+        if (!cancelled) setRouteTavernLoading(false)
+      }
+    }
+
+    loadRouteTavern()
+    return () => {
+      cancelled = true
+    }
+  }, [view, routeTavernId, visitorId, enteredTavern?.id])
+
   const indexedTaverns = useMemo(() => {
     return taverns.map((tavern) => ({
       tavern,
@@ -303,6 +364,14 @@ export default function App() {
     [filteredTaverns, activeTavernId],
   )
 
+  function navigateTo(nextRoute, options = {}) {
+    const nextPath = typeof nextRoute === 'string' ? nextRoute : '/'
+    if (location.pathname !== nextPath) {
+      navigate(nextPath, { replace: Boolean(options.replace) })
+    }
+    setHomeSettingsOpen(false)
+  }
+
   function refreshTaverns() {
     setTavernRefreshKey((key) => key + 1)
   }
@@ -316,7 +385,7 @@ export default function App() {
 
   function completeFirstRun({ nickname, mode }) {
     persistFirstRunChoice(nickname, mode)
-    setView(mode === 'owner' ? 'owner' : 'map')
+    navigateTo(mode === 'owner' ? '/owner' : '/discover')
     if (mode === 'owner') {
       setOwnerCreateSignal((signal) => signal + 1)
     }
@@ -332,10 +401,10 @@ export default function App() {
       const entryState = await service.enterTavern(tavern.id, '', visitorId)
 
       persistFirstRunChoice(nickname, 'play')
-      setView('map')
       setEnteredTavern({ ...tavern, entry_state: entryState })
       setActiveTavernId(tavern.id)
       setTaverns((prev) => [tavern, ...prev.filter((item) => item.id !== tavern.id)])
+      navigateTo(`/tavern/${encodeURIComponent(tavern.id)}`)
       return { ...tavern, entry_state: entryState }
     } catch (err) {
       let message = err?.message || '新手酒馆暂时无法进入，请稍后重试或先刷新附近酒馆。'
@@ -360,23 +429,23 @@ export default function App() {
 
   function openDiscoverView() {
     setEnteredTavern(null)
-    setView('map')
+    navigateTo('/discover')
   }
 
   function openCreateTavern() {
     setEnteredTavern(null)
-    setView('owner')
+    navigateTo('/owner')
     setOwnerCreateSignal((signal) => signal + 1)
   }
 
   function openOwnerView() {
     setEnteredTavern(null)
-    setView('owner')
+    navigateTo('/owner')
   }
 
   function openTemplateView() {
     setEnteredTavern(null)
-    setView('templates')
+    navigateTo('/templates')
   }
 
   function handleTemplateInstalled(tavern) {
@@ -385,7 +454,14 @@ export default function App() {
       setActiveTavernId(tavern.id)
     }
     refreshTaverns()
-    setView('owner')
+    navigateTo('/owner')
+  }
+
+  function handleEnteredTavern(tavern) {
+    if (!tavern?.id) return
+    setEnteredTavern(tavern)
+    setActiveTavernId(tavern.id)
+    navigateTo(`/tavern/${encodeURIComponent(tavern.id)}`)
   }
 
   const entryStatusText = buildEntryStatusText({
@@ -405,13 +481,6 @@ export default function App() {
     totalTaverns: taverns.length,
     matchingTaverns: filteredTaverns.length,
     openTaverns: filteredTaverns.filter((tavern) => tavern.status === 'open').length,
-  })
-
-  const stageStatus = buildStageStatusViewModel({
-    autoEntering,
-    submitting,
-    result,
-    activePoiId,
   })
 
   const {
@@ -511,186 +580,212 @@ export default function App() {
   return (
     <div className="wrap app-shell page-enter map-first-app-shell world-app-shell">
       <header className="world-app-shell__hero panel">
-        <div className="world-app-shell__hero-copy">
-          <p className="mini-label">FableMap Tavern</p>
-          <h1>
-            {view === 'map'
-              ? '发现附近酒馆，进入会记住你的故事'
-              : view === 'templates'
-                ? '从模板安装一间酒馆，再放到真实地图上'
-                : '管理我的酒馆，或用向导开一间新店'}
-          </h1>
-          <p className="note muted world-app-shell__hero-note">
-            {view === 'map'
-              ? '先看附近有什么酒馆，再选择是否进入对话；角色、地点和回访记忆都会围绕真实地图展开。'
-              : view === 'templates'
-                ? '模板不是脱离地图的文游市场，而是一组可安装的酒馆包：角色、世界书和预设会随坐标落地。'
-                : '店主只需要关注酒馆、角色、AI 和访客回访；世界书、数据和调试能力都放在后续高级入口里。'}
-          </p>
-          <div className="hero-actions">
+        <nav className="hero-actions" aria-label="首页入口导航">
+          <NavLink
+            className={navLinkClass}
+            to="/discover"
+            onClick={() => setEnteredTavern(null)}
+          >
+            🔎 附近门牌
+          </NavLink>
+          <NavLink
+            className={navLinkClass}
+            to="/templates"
+            onClick={() => setEnteredTavern(null)}
+          >
+            📦 模板
+          </NavLink>
+          <button className="secondary" onClick={openCreateTavern}>
+            ✨ 开一间
+          </button>
+          <NavLink
+            className={navLinkClass}
+            to="/owner"
+            onClick={() => setEnteredTavern(null)}
+          >
+            🏮 后台
+          </NavLink>
+          {enteredTavern ? (
             <button
-              className="primary hero-instant-play"
-              onClick={handleQuickStartClick}
-              disabled={quickStartLoading}
-            >
-              {quickStartLoading ? '⚡ 正在进入...' : '⚡ 立即试玩'}
-            </button>
-            <button 
-              className={view === 'map' ? 'primary' : 'secondary'}
-              onClick={openDiscoverView}
-            >
-              🔎 发现酒馆
-            </button>
-            <button 
               className="secondary"
-              onClick={openCreateTavern}
+              onClick={() => {
+                setEnteredTavern(null)
+                navigateTo('/discover')
+              }}
             >
-              ✨ 创建酒馆
-            </button>
-            <button
-              className={view === 'owner' ? 'primary' : 'secondary'}
-              onClick={openOwnerView}
-            >
-              🏮 我的酒馆
-            </button>
-            <button
-              className={view === 'templates' ? 'primary' : 'secondary'}
-              onClick={openTemplateView}
-            >
-              📦 模板
-            </button>
-            <button
-              className={`secondary subtle${homeSettingsOpen ? ' active' : ''}`}
-              onClick={() => setHomeSettingsOpen((open) => !open)}
-              title="打开设置与高级入口"
-            >
-              ⚙️ 设置
-            </button>
-          </div>
-          {quickStartError ? (
-            <p className="quick-start-error" role="alert">{quickStartError}</p>
-          ) : null}
-          {homeSettingsOpen ? (
-            <div className="home-settings-panel" aria-label="设置与高级入口">
-              <div className="home-settings-row">
-                <span className="home-settings-label">主题</span>
-                <ThemeToggle compact />
-              </div>
-              <button type="button" className="button-link" onClick={resetFirstRunGuide}>
-                重新选择新手引导
-              </button>
-              <button
-                type="button"
-                className="button-link"
-                onClick={() => {
-                  setView('map')
-                  setAdvancedOpen((open) => !open)
-                }}
-              >
-                {advancedOpen ? '收起地图高级设置' : '打开地图高级设置'}
-              </button>
-              <button type="button" className="button-link" onClick={() => setAdminOpen((open) => !open)}>
-                {adminOpen ? '关闭调试后台' : '打开调试后台'}
-              </button>
-            </div>
-          ) : null}
-        </div>
-        <div className="world-app-shell__hero-metrics" aria-label="当前动作提示">
-          {heroMetrics.cards.map((card) => (
-            <article key={card.id} className="world-shell-metric-card">
-              <span className="world-shell-metric-card__label">{card.label}</span>
-              <strong>{card.value}</strong>
-              <p>{card.detail}</p>
-            </article>
-          ))}
-        </div>
-        {enteredTavern && (
-          <div className="world-app-shell__hero-actions">
-            <button className="secondary" onClick={() => setEnteredTavern(null)}>
               🚪 离开酒馆
             </button>
+          ) : null}
+          <button
+            className={`secondary subtle${homeSettingsOpen ? ' active' : ''}`}
+            onClick={() => setHomeSettingsOpen((open) => !open)}
+            title="设置与高级入口"
+          >
+            ⚙️
+          </button>
+        </nav>
+        {homeSettingsOpen ? (
+          <div className="home-settings-panel" aria-label="设置与高级入口">
+            <div className="home-settings-row">
+              <span className="home-settings-label">主题</span>
+              <ThemeToggle compact />
+            </div>
+            <button type="button" className="button-link" onClick={resetFirstRunGuide}>
+              重新选择新手引导
+            </button>
+            <button
+              type="button"
+              className="button-link"
+              onClick={() => {
+                navigateTo('/discover')
+                setAdvancedOpen((open) => !open)
+              }}
+            >
+              {advancedOpen ? '收起坐标与图层面板' : '展开坐标与图层面板'}
+            </button>
+            <button type="button" className="button-link" onClick={() => setAdminOpen((open) => !open)}>
+              {adminOpen ? '关闭调试后台' : '打开调试后台'}
+            </button>
           </div>
-        )}
+        ) : null}
+        {quickStartError ? (
+          <p className="quick-start-error" role="alert">{quickStartError}</p>
+        ) : null}
       </header>
 
-      {enteredTavern ? (
-        <div className="tavern-chat-view slide-up">
-          <TavernChatRoom
-            roomId={enteredTavern.id}
-            roomName={enteredTavern.name}
-            roomDescription={enteredTavern.description}
-            characters={enteredTavern.characters}
-            tavern={enteredTavern}
-            visitorId={visitorId}
-            visitorNickname={visitorNickname}
-            entryState={enteredTavern.entry_state}
-          />
-        </div>
-      ) : view === 'map' ? (
-        <>
-          <section className="world-app-shell__top-grid" aria-label="地点入口与切片摘要">
-            <WorldEntryPanel {...entryPanelProps} />
-            <WorldSliceResultPanel {...resultPanelProps} />
-          </section>
+      <Routes>
+        <Route
+          index
+          element={(
+            <main className="home-route-page" aria-label="首页入口">
+              <div className="home-quick-start">
+                <button
+                  className="primary hero-instant-play"
+                  onClick={handleQuickStartClick}
+                  disabled={quickStartLoading}
+                >
+                  {quickStartLoading ? '⚡ 正在开门...' : '⚡ 马上进去'}
+                </button>
+              </div>
+              <section className="home-route-grid">
+                <button type="button" className="home-route-card" onClick={openDiscoverView}>
+                  <span>01</span>
+                  <strong>附近门牌</strong>
+                  <p>打开地图，看附近有哪些酒馆亮着灯。</p>
+                </button>
+                <button type="button" className="home-route-card" onClick={openTemplateView}>
+                  <span>02</span>
+                  <strong>模板</strong>
+                  <p>先选气质，再把它放到真实坐标上。</p>
+                </button>
+                <button type="button" className="home-route-card" onClick={openOwnerView}>
+                  <span>03</span>
+                  <strong>后台</strong>
+                  <p>管理门牌、角色、开场和访客回访。</p>
+                </button>
+              </section>
+            </main>
+          )}
+        />
+        <Route
+          path="discover"
+          element={(
+            <>
+              {advancedOpen ? (
+                <section className="world-app-shell__top-grid world-app-shell__top-grid--drawer" aria-label="坐标与图层面板">
+                  <WorldEntryPanel {...entryPanelProps} />
+                  <WorldSliceResultPanel {...resultPanelProps} />
+                </section>
+              ) : null}
 
-          <div ref={stageRef} className="world-app-shell__stage">
-            <div className={`world-app-shell__stage-status${stageStatus.classNameSuffix}`} aria-live="polite">
-              <span className="mini-label">地点舞台</span>
-              <strong>{stageStatus.label}</strong>
-              <p>{stageStatus.title}</p>
-            </div>
-            <WorldStagePanel
-              {...mapStageProps}
-              taverns={mapTaverns}
-              discoveryTaverns={filteredTaverns}
-              totalTaverns={taverns.length}
-              totalMatchingTaverns={filteredTaverns.length}
-              tavernMarkerLimit={MAX_TAVERN_MAP_MARKERS}
-              tavernFetchLoading={tavernFetchLoading}
-              tavernFetchError={tavernFetchError}
-              tavernSearch={tavernSearch}
-              setTavernSearch={setTavernSearch}
-              tavernAccessFilter={tavernAccessFilter}
-              setTavernAccessFilter={setTavernAccessFilter}
-              tavernStatusFilter={tavernStatusFilter}
-              setTavernStatusFilter={setTavernStatusFilter}
-              tavernSortMode={tavernSortMode}
-              setTavernSortMode={setTavernSortMode}
-              onRefreshTaverns={refreshTaverns}
-              activeTavernId={activeTavernId}
-              onTavernClick={(id) => setActiveTavernId(id)}
-              onQuickStartTavern={handleQuickStartClick}
-              quickStartLoading={quickStartLoading}
-            />
-          </div>
+              <div ref={stageRef} className="world-app-shell__stage">
+                <WorldStagePanel
+                  {...mapStageProps}
+                  taverns={mapTaverns}
+                  discoveryTaverns={filteredTaverns}
+                  totalTaverns={taverns.length}
+                  totalMatchingTaverns={filteredTaverns.length}
+                  tavernMarkerLimit={MAX_TAVERN_MAP_MARKERS}
+                  tavernFetchLoading={tavernFetchLoading}
+                  tavernFetchError={tavernFetchError}
+                  tavernSearch={tavernSearch}
+                  setTavernSearch={setTavernSearch}
+                  tavernAccessFilter={tavernAccessFilter}
+                  setTavernAccessFilter={setTavernAccessFilter}
+                  tavernStatusFilter={tavernStatusFilter}
+                  setTavernStatusFilter={setTavernStatusFilter}
+                  tavernSortMode={tavernSortMode}
+                  setTavernSortMode={setTavernSortMode}
+                  onRefreshTaverns={refreshTaverns}
+                  activeTavernId={activeTavernId}
+                  onTavernClick={(id) => setActiveTavernId(id)}
+                  onQuickStartTavern={handleQuickStartClick}
+                  quickStartLoading={quickStartLoading}
+                />
+              </div>
 
-          {activeTavernId && (
-            <TavernEntryPanel 
-              tavernId={activeTavernId}
-              visitorId={visitorId}
-              onEnter={(tavern) => setEnteredTavern(tavern)}
-              onClose={() => setActiveTavernId(null)}
+              {activeTavernId && (
+                <TavernEntryPanel
+                  tavernId={activeTavernId}
+                  visitorId={visitorId}
+                  onEnter={handleEnteredTavern}
+                  onClose={() => setActiveTavernId(null)}
+                />
+              )}
+            </>
+          )}
+        />
+        <Route
+          path="templates"
+          element={(
+            <TavernTemplateGallery
+              ownerId={visitorId}
+              currentLat={form.lat}
+              currentLon={form.lon}
+              onInstalled={handleTemplateInstalled}
+              onOpenOwner={openOwnerView}
             />
           )}
-        </>
-      ) : view === 'templates' ? (
-        <>
-          <TavernTemplateGallery
-            ownerId={visitorId}
-            currentLat={form.lat}
-            currentLon={form.lon}
-            onInstalled={handleTemplateInstalled}
-            onOpenOwner={openOwnerView}
-          />
-        </>
-      ) : (
-        <TavernOwnerPanel
-          ownerId={visitorId}
-          createSignal={ownerCreateSignal}
-          createInitialLat={form.lat}
-          createInitialLon={form.lon}
         />
-      )}
+        <Route
+          path="owner"
+          element={(
+            <TavernOwnerPanel
+              ownerId={visitorId}
+              createSignal={ownerCreateSignal}
+              createInitialLat={form.lat}
+              createInitialLon={form.lon}
+            />
+          )}
+        />
+        <Route
+          path="tavern/:tavernId"
+          element={(
+            <div className="tavern-chat-view slide-up">
+              {enteredTavern ? (
+                <TavernChatRoom
+                  roomId={enteredTavern.id}
+                  roomName={enteredTavern.name}
+                  roomDescription={enteredTavern.description}
+                  characters={enteredTavern.characters}
+                  tavern={enteredTavern}
+                  visitorId={visitorId}
+                  visitorNickname={visitorNickname}
+                  entryState={enteredTavern.entry_state}
+                />
+              ) : (
+                <div className="panel route-loading-panel">
+                  <span className="mini-label">Tavern Room</span>
+                  <h2>{routeTavernLoading ? '正在推门...' : '这扇门暂时打不开'}</h2>
+                  {routeTavernError ? <p>{routeTavernError}</p> : <p>正在读取酒馆房间。</p>}
+                  {routeTavernError ? <button type="button" className="secondary" onClick={openDiscoverView}>回到附近门牌</button> : null}
+                </div>
+              )}
+            </div>
+          )}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       {adminOpen ? (
         <div className="world-app-shell__admin">

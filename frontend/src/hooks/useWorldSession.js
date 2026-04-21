@@ -35,7 +35,7 @@ export function useWorldSession({
   const [originHint, setOriginHint] = useState(restoredSession?.originHint || '默认先使用随仓库提供的样例数据，实时地图不可用时也能直接查看生成效果。')
   const [lastSessionAt] = useState(restoredSession?.lastUpdatedAt || '')
   const [autoEntering, setAutoEntering] = useState(false)
-  const [advancedOpen, setAdvancedOpen] = useState(Boolean(restoredSession?.result))
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [writebackForm, setWritebackForm] = useState(restoredWritebackSession?.writebackForm || initialWritebackForm)
   const [writebackSubmitting, setWritebackSubmitting] = useState(false)
   const [writebackResult, setWritebackResult] = useState(restoredWritebackSession?.writebackResult || null)

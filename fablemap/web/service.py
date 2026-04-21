@@ -2162,6 +2162,7 @@ class WebService:
         visitor_name: str = "",
         user_id: str = "",
         extra_context: list[dict[str, Any]] | None = None,
+        display_message: str = "",
     ) -> dict[str, Any]:
         """Send a chat message and get AI response"""
         from fablemap.tavern import ChatMessage as TavernChatMessage, VisitorState
@@ -2181,6 +2182,8 @@ class WebService:
 
         visitor_display_name = _normalize_visitor_name(visitor_name)
         prompt_user_name = visitor_display_name or visitor_id[:16] or "旅人"
+        display_message = str(display_message or "").strip()
+        saved_user_content = display_message or message
 
         # Find character
         character = next((c for c in tavern.characters if c.id == character_id), None)
@@ -2281,7 +2284,7 @@ class WebService:
                 visitor_id=visitor_id,
                 visitor_name=visitor_display_name,
                 role="user",
-                content=message,
+                content=saved_user_content,
                 timestamp=now,
             )
         )
@@ -2333,7 +2336,7 @@ class WebService:
                     visitor_id,
                     character_id,
                     character.name if character else "",
-                    message,
+                    saved_user_content,
                     response_text,
                     user_message_id=user_message_id,
                     assistant_message_id=assistant_message_id,
@@ -3014,6 +3017,7 @@ class WebService:
         visitor_id: str,
         visitor_name: str = "",
         user_id: str = "",
+        display_message: str = "",
     ) -> dict[str, Any]:
         """Send a group chat message and get responses from multiple characters."""
         from fablemap.group_chat import GroupChatManager, GroupMember
@@ -3062,6 +3066,8 @@ class WebService:
         manager.set_max_responses_per_turn(tavern.group_chat_config.get("max_responses_per_turn", 2))
 
         now = _utc_now_iso()
+        display_message = str(display_message or "").strip()
+        saved_user_content = display_message or message
 
         # Get persisted group-visible history before saving the current user
         # message. PromptBuilder receives the current message separately, so this
@@ -3103,7 +3109,7 @@ class WebService:
             character_id="_group",
             visitor_id=visitor_id,
             role="user",
-            content=message,
+            content=saved_user_content,
             timestamp=now,
             visitor_name=visitor_display_name,
             token_count=0,
@@ -3282,7 +3288,7 @@ class WebService:
                     visitor_id,
                     "",
                     "群聊",
-                    message,
+                    saved_user_content,
                     assistant_text,
                     user_message_id=current_user_message_id,
                     assistant_message_id=assistant_message_ids[0] if assistant_message_ids else "",

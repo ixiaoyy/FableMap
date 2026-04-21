@@ -398,8 +398,8 @@ function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, t
       {quickPrompts.length > 0 ? (
         <div className="chat-quick-actions" aria-label="快捷开始">
           <div className="chat-quick-actions__title">
-            <strong>不知道说什么？</strong>
-            <span>点一句就能开始，适合老人、小朋友和第一次来的访客。</span>
+            <strong>递一张小纸条</strong>
+            <span>不想打字太多，就从这里挑一句。</span>
           </div>
           <div className="chat-quick-actions__chips">
             {quickPrompts.slice(0, 5).map((prompt) => (
@@ -1092,18 +1092,20 @@ export default function TavernChatRoom({
     }
   }
 
-  async function handleSend(text) {
-    if (!text.trim() || sending || !selectedChar) return
+  async function handleSend(text, options = {}) {
+    const promptText = String(text || '').trim()
+    const displayText = String(options.displayText || promptText).trim()
+    if (!promptText || sending || !selectedChar) return
 
     if (groupChatEnabled) {
-      await handleGroupSend(text)
+      await handleGroupSend(promptText, { displayText })
       return
     }
 
     const userMsg = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: text.trim(),
+      content: displayText,
       timestamp: Date.now(),
       character: null,
     }
@@ -1114,9 +1116,10 @@ export default function TavernChatRoom({
       const result = await tavernService.sendChat(
         roomId,
         selectedChar.id,
-        text.trim(),
+        promptText,
         visitorId,
         visitorNickname,
+        displayText !== promptText ? { displayMessage: displayText } : {},
       )
       const responseText = result.response || '...'
       const replyId = `msg-${Date.now()}-r`
@@ -1188,14 +1191,15 @@ export default function TavernChatRoom({
     }
   }
 
-  async function handleGroupSend(text) {
+  async function handleGroupSend(text, options = {}) {
     const cleanText = text.trim()
     if (!cleanText || sending || characters.length === 0) return
+    const displayText = String(options.displayText || cleanText).trim()
 
     const userMsg = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: cleanText,
+      content: displayText,
       timestamp: Date.now(),
       character: null,
     }
@@ -1209,6 +1213,7 @@ export default function TavernChatRoom({
         visitorId,
         visitorNickname,
         visitorId,
+        displayText !== cleanText ? { displayMessage: displayText } : {},
       )
       const replyMessages = Array.isArray(result.messages)
         ? result.messages.map(mapGroupResponseMessage)
@@ -1285,7 +1290,9 @@ export default function TavernChatRoom({
       playModeLabel: playMode.label,
     })
     if (prompt) {
-      handleSend(prompt)
+      handleSend(prompt, {
+        displayText: `抽一张《${template.title}》玩法卡。`,
+      })
     }
   }
 
@@ -1484,33 +1491,40 @@ export default function TavernChatRoom({
 
                 {!loading && messages.length === 0 && (
                   <div className="chat-empty">
-                    <div className="empty-char-avatar">
-                      <CharacterAvatar
-                        character={selectedChar}
-                        size="large"
-                        expression={currentExpression}
-                        spritesOverride={sprites}
-                      />
+                    <div className="chat-empty__hero">
+                      <div className="empty-char-avatar">
+                        <CharacterAvatar
+                          character={selectedChar}
+                          size="large"
+                          expression={currentExpression}
+                          spritesOverride={sprites}
+                        />
+                      </div>
+                      <div className="chat-empty__copy">
+                        <span className="mini-label">桌灯亮着</span>
+                        <h4>{groupChatEnabled ? '群聊桌已经留好位置' : `今晚从 ${selectedChar.name} 这桌开始`}</h4>
+                        <p>
+                          {groupChatEnabled
+                            ? '先把一句话放到桌上，角色们会自然接过去。'
+                            : '打个招呼，或从下方抽一张玩法卡。'}
+                        </p>
+                      </div>
                     </div>
-                    <p>{groupChatEnabled ? '开始群聊吧' : `开始和 ${selectedChar.name} 对话吧`}</p>
                     {groupChatEnabled ? (
                       <div className="first-mes-quote">
-                        <span className="quote-label">群聊：</span>
-                        <span className="quote-text">向所有角色发一句话，让他们按群聊策略接话。</span>
+                        <span className="quote-label">桌边声音</span>
+                        <span className="quote-text">桌面还空着，等你放下一句。</span>
                       </div>
                     ) : selectedChar.first_mes && (
                       <div className="first-mes-quote">
-                        <span className="quote-label">开场白：</span>
+                        <span className="quote-label">{selectedChar.name} 说</span>
                         <span className="quote-text">{selectedChar.first_mes}</span>
                       </div>
                     )}
-                    <div className="chat-how-to-card">
-                      <strong>{playMode.icon} {playMode.label}：{playMode.summary}</strong>
-                      <ol>
-                        <li>先点下方快捷句，不用自己想第一句话。</li>
-                        <li>看到选项时，直接回复序号或你想做的动作。</li>
-                        <li>想换玩法，随时说"这里怎么玩"。</li>
-                      </ol>
+                    <div className="chat-start-strip" aria-label="可选开局氛围">
+                      <span>{playMode.icon} {playMode.label}</span>
+                      <span>闲聊一会儿</span>
+                      <span>抽一张玩法卡</span>
                     </div>
                   </div>
                 )}

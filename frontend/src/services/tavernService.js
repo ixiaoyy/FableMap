@@ -930,17 +930,22 @@ export function createTavernService(getBaseUrl) {
      * @param {string} userId
      * @returns {Promise<object>}
      */
-    async sendGroupChat(tavernId, message, visitorId, visitorName = '', userId = '') {
+    async sendGroupChat(tavernId, message, visitorId, visitorName = '', userId = '', options = {}) {
       const cleanVisitorName = String(visitorName || '').trim().slice(0, 24)
       const cleanVisitorId = String(visitorId || userId || '').trim()
+      const body = {
+        message,
+        visitor_id: cleanVisitorId,
+        visitor_name: cleanVisitorName,
+      }
+      const displayMessage = String(options.displayMessage || '').trim()
+      if (displayMessage) {
+        body.display_message = displayMessage
+      }
       const response = await fetch(`${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/group-chat`, {
         method: 'POST',
         headers: buildJsonHeaders(userId || cleanVisitorId),
-        body: JSON.stringify({
-          message,
-          visitor_id: cleanVisitorId,
-          visitor_name: cleanVisitorName,
-        }),
+        body: JSON.stringify(body),
       })
       return readJson(response)
     },
@@ -1202,6 +1207,10 @@ export function createTavernService(getBaseUrl) {
       }
       if (Array.isArray(options.extra_context)) {
         body.extra_context = options.extra_context
+      }
+      const displayMessage = String(options.displayMessage || '').trim()
+      if (displayMessage) {
+        body.display_message = displayMessage
       }
       const response = await fetch(
         `${getBaseUrl()}/api/taverns/${encodeURIComponent(tavernId)}/chat`,

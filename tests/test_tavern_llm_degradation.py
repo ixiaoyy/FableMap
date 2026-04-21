@@ -123,6 +123,47 @@ def test_visitor_name_is_used_in_prompt_and_persisted(monkeypatch):
         assert [message.visitor_name for message in history] == ["Mina", "Mina"]
 
 
+def test_display_message_is_persisted_while_full_prompt_reaches_llm(monkeypatch):
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        tavern = _create_open_tavern(service)
+        service.tavern_store.save_llm_config(
+            tavern.id,
+            LLMConfig(backend="openai", model="gpt-4o-mini", api_key="sk-test"),
+        )
+
+        captured = {}
+
+        class Response:
+            content = "我来主持，先给你三个安全选项。"
+            usage = {"total_tokens": 9}
+
+        class CapturingClient:
+            def complete(self, messages):
+                captured["messages"] = messages
+                return Response()
+
+        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+
+        hidden_prompt = "我想和你玩一局《线索调查》。\n请按内部主持规则开局。"
+        display_message = "开始《线索调查》：请直接开局。"
+        payload = service.tavern_chat_payload(
+            tavern_id=tavern.id,
+            character_id="char_degrade",
+            message=hidden_prompt,
+            display_message=display_message,
+            visitor_id="visitor_display",
+        )
+
+        assert payload["degraded"] is False
+        assert any(hidden_prompt in m.get("content", "") for m in captured["messages"])
+
+        history = service.tavern_store.get_chat_history(tavern.id, "visitor_display", "char_degrade")
+        assert history[0].role == "user"
+        assert history[0].content == display_message
+        assert hidden_prompt not in history[0].content
+
+
 def test_visitor_relationship_state_is_used_in_prompt(monkeypatch):
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)

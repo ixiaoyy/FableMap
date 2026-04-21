@@ -12,10 +12,11 @@ export default function TavernMiniGamePanel({
     <section className="tavern-mini-game-panel" aria-label="AI 主持小游戏">
       <div className="tavern-mini-game-panel__header">
         <div>
-          <strong>和 NPC 玩一局</strong>
-          <span>选择一个 3-10 分钟的老少皆宜小游戏。</span>
+          <span className="tavern-mini-game-panel__eyebrow">桌边小玩法</span>
+          <strong>抽一张玩法卡</strong>
+          <span>挑一个名字，今晚的故事就从这里拐弯。</span>
         </div>
-        <small>AI 主持 · 点选开局</small>
+        <small>短局 · 随时停</small>
       </div>
       <div className="tavern-mini-game-grid">
         {templates.map((template) => (
@@ -33,6 +34,7 @@ export default function TavernMiniGamePanel({
               <small>{template.duration}</small>
               <em>{template.summary}</em>
             </span>
+            <span className="tavern-mini-game-card__action">抽卡</span>
           </button>
         ))}
       </div>

@@ -1,11 +1,13 @@
 .tavern-mini-game-panel {
   margin: 12px 0;
-  padding: 12px;
-  border: 1px solid rgba(129, 140, 248, 0.22);
-  border-radius: 16px;
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  border-radius: 24px 24px 0 0;
   background:
-    radial-gradient(circle at top left, rgba(129, 140, 248, 0.18), transparent 32%),
-    rgba(15, 23, 42, 0.58);
+    radial-gradient(circle at 12% 0%, rgba(251, 191, 36, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(48, 27, 15, 0.72), rgba(15, 23, 42, 0.76) 48%),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.09), transparent 34%);
+  box-shadow: 0 -12px 36px rgba(2, 6, 23, 0.18);
 }
 
 .tavern-mini-game-panel__header {
@@ -18,11 +20,21 @@
 
 .tavern-mini-game-panel__header > div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
+}
+
+.tavern-mini-game-panel__eyebrow {
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .tavern-mini-game-panel__header strong {
   color: #f8fafc;
+  font-size: 18px;
+  letter-spacing: -0.02em;
 }
 
 .tavern-mini-game-panel__header span,
@@ -33,30 +45,35 @@
 
 .tavern-mini-game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .tavern-mini-game-card {
+  position: relative;
   display: flex;
   gap: 10px;
   width: 100%;
-  min-height: 84px;
-  padding: 10px;
+  min-height: 104px;
+  padding: 13px 12px 36px;
   text-align: left;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(250, 204, 21, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(29, 23, 18, 0.86), rgba(15, 23, 42, 0.82));
   color: #e2e8f0;
   cursor: pointer;
-  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  overflow: hidden;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
 
 .tavern-mini-game-card:hover:not(:disabled),
 .tavern-mini-game-card:focus-visible:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: rgba(251, 191, 36, 0.65);
-  background: rgba(30, 41, 59, 0.9);
+  transform: translateY(-2px);
+  border-color: rgba(251, 191, 36, 0.72);
+  background:
+    linear-gradient(180deg, rgba(67, 43, 20, 0.92), rgba(30, 41, 59, 0.88));
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.38);
 }
 
 .tavern-mini-game-card:disabled {
@@ -70,7 +87,8 @@
   flex: 0 0 30px;
   width: 30px;
   height: 30px;
-  border-radius: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.22);
   background: rgba(251, 191, 36, 0.14);
   font-size: 18px;
 }
@@ -91,10 +109,26 @@
 }
 
 .tavern-mini-game-card__body em {
-  color: #cbd5e1;
+  color: #d6d3d1;
   font-size: 11px;
   font-style: normal;
   line-height: 1.4;
+}
+
+.tavern-mini-game-card__action {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.16);
+  background: rgba(120, 53, 15, 0.30);
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 @media (max-width: 640px) {

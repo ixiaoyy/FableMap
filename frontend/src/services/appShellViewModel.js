@@ -36,20 +36,20 @@ export function buildHeroMetrics({
         {
           id: 'create',
           label: '开店路径',
-          value: '3 分钟向导',
-          detail: '地点 → 酒馆 → 角色 → AI → 开门，普通字段优先展示。',
+          value: '从门牌开始',
+          detail: '先把店开起来，再慢慢补细节。',
         },
         {
           id: 'manage',
           label: '店主后台',
-          value: '酒馆 / 角色 / AI / 访客',
-          detail: '经营核心默认可见，世界书和调试能力后续放入高级区。',
+          value: '吧台账本',
+          detail: '酒馆、角色和访客都收在这里。',
         },
         {
           id: 'memory',
           label: '回访价值',
-          value: '访客关系可追踪',
-          detail: '常客、最近会话和关系阶段会在记忆面板里逐步沉淀。',
+          value: '常客会留下痕迹',
+          detail: '回访时，故事不用每次从零开始。',
         },
       ],
     }
@@ -63,23 +63,23 @@ export function buildHeroMetrics({
         label: '附近酒馆',
         value: totalTaverns > 0 ? `${matchingTaverns} / ${totalTaverns} 间` : '等待发现',
         detail: openTaverns > 0
-          ? `${openTaverns} 间营业中，可从地图标记或列表卡片进入。`
-          : '刷新附近内容后，会显示可进入的公开酒馆。',
+          ? `${openTaverns} 盏灯亮着，挑一间进去。`
+          : '刷新后看看附近有没有灯亮。',
       },
       {
         id: 'location',
         label: '当前位置',
         value: originLabel,
         detail: mapReady
-          ? `地图已准备 · 当前显示 ${visibleLayerCount} / ${mapLayerOptions.length} 个图层`
-          : `${form.radius}m 范围 · ${form.mode === 'fixture' ? '离线样例' : '实时地图'}`,
+          ? `地图已铺开 · ${visibleLayerCount} / ${mapLayerOptions.length} 层亮着`
+          : `${form.radius}m 范围 · ${form.mode === 'fixture' ? '样例街区' : '真实街区'}`,
       },
       {
         id: 'memory',
         label: 'NPC 记忆',
         value: '入场后可查看',
         detail: result
-          ? `${result?.poi_count ?? 0} 个附近地点可作为酒馆锚点或探索入口。`
+          ? `${result?.poi_count ?? 0} 个地点正等着变成故事入口。`
           : entryStatusText,
       },
     ],
