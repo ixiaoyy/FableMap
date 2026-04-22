@@ -164,6 +164,7 @@ Application services may translate these boolean/domain results into `HTTPExcept
 | New `/api/v1/taverns/...` endpoint | `backend/src/fablemap_api/api/v1/taverns.py` route + `backend/src/fablemap_api/application/taverns.py` use case + `backend/src/fablemap_api/contracts/taverns.py` contract |
 | Migrated-product-core `/api/taverns/...` endpoint | `backend/src/fablemap_api/core/web/router.py` route + `backend/src/fablemap_api/core/web/service.py` payload method |
 | Tavern access/text/relationship policy | `backend/src/fablemap_api/domain/tavern_policy.py` + `backend/tests/test_tavern_policy.py`; application layer converts failures to HTTP errors |
+| Native v1 memory atom endpoints | `backend/src/fablemap_api/api/v1/taverns.py` routes + `backend/src/fablemap_api/application/taverns.py` use cases + `backend/src/fablemap_api/domain/memory_atom_policy.py` policy helpers + `backend/tests/test_v1_memory_atoms.py` |
 | Gameplay normalization/session behavior | `backend/src/fablemap_api/core/gameplay.py` and relevant enterprise/migrated-product-core application boundary methods |
 | LLM backend adapter | `backend/src/fablemap_api/core/llm_clients.py`, without logging secrets |
 | SillyTavern import/export behavior | `backend/src/fablemap_api/core/char_card_parser.py` and tavern character tests |
@@ -178,8 +179,118 @@ Application services may translate these boolean/domain results into `HTTPExcept
 2. `backend/src/fablemap_api/core/char_card_parser.py` isolates SillyTavern JSON/PNG card parsing and export helpers instead of spreading binary parsing through API code.
 3. `backend/src/fablemap_api/core/web/app.py` is small and compositional: app creation, exception response shape, router registration, and SPA static fallback.
 4. `backend/src/fablemap_api/domain/tavern_policy.py` is framework-independent and has focused tests for text normalization, owner/private access, memory visibility, and visitor relationship stages.
+5. `backend/src/fablemap_api/domain/memory_atom_policy.py` keeps memory-atom visibility/editability/filter/payload rules independent from FastAPI while v1 routes translate policy failures into stable HTTP errors.
 
 ---
+
+## Scenario: native `/api/v1/taverns/{id}/memory-atoms`
+
+### 1. Scope / Trigger
+
+Use this contract when migrating structured memory behavior from compatibility `/api/taverns/{id}/memory-atoms` into native `/api/v1`. This API is part of the tavern mainline's memory/writeback/revisit loop and must preserve private visitor boundaries.
+
+### 2. Signatures
+
+Routes live in `backend/src/fablemap_api/api/v1/taverns.py` and must stay thin:
+
+```python
+GET    /api/v1/taverns/{tavern_id}/memory-atoms
+POST   /api/v1/taverns/{tavern_id}/memory-atoms
+GET    /api/v1/taverns/{tavern_id}/memory-atoms/{memory_id}
+PUT    /api/v1/taverns/{tavern_id}/memory-atoms/{memory_id}
+DELETE /api/v1/taverns/{tavern_id}/memory-atoms/{memory_id}
+```
+
+Application methods live in `backend/src/fablemap_api/application/taverns.py`:
+
+```python
+list_memory_atoms(tavern_id, user_id="", scope="", dimension="", horizon="", visibility="", visitor_id="", character_id="", place_id="", limit=100) -> dict
+get_memory_atom(tavern_id, memory_id, user_id="") -> dict
+create_memory_atom(tavern_id, data, user_id="") -> dict
+update_memory_atom(tavern_id, memory_id, data, user_id="") -> dict
+delete_memory_atom(tavern_id, memory_id, user_id="") -> dict
+```
+
+Policy helpers live in `backend/src/fablemap_api/domain/memory_atom_policy.py`; they must not import FastAPI.
+
+### 3. Contracts
+
+Request body uses `MemoryAtomWriteRequest` in `backend/src/fablemap_api/contracts/taverns.py`. Supported fields mirror `MemoryAtom.to_dict()`:
+
+```text
+scope, dimension, horizon, subject, content, importance, confidence,
+source_message_ids, pinned, visibility, visitor_id, character_id,
+place_id, metadata
+```
+
+Response shapes:
+
+```python
+{"tavern_id": str, "memory_atoms": list[dict], "count": int, "filters": dict}
+{"tavern_id": str, "memory_atom": dict}
+{"ok": True, "tavern_id": str, "memory_atom": dict}
+{"ok": True, "tavern_id": str, "memory_id": str}
+```
+
+Frontend native clients belong in `frontend/app/lib/taverns.ts` and must use `/api/v1/taverns/.../memory-atoms`, not compatibility `/api/taverns/...`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Create without `X-User-Id` | `401 {"error": "创建记忆需要明确用户身份"}` |
+| Empty `content` | `400 {"error": "记忆内容不能为空"}` |
+| Private memory read by owner/other visitor | `403 {"error": "不能访问这条记忆"}` |
+| Private memory edited/deleted by owner/other visitor | `403 {"error": "不能修改/删除这条记忆"}` |
+| Public memory in public tavern | visible to anonymous users |
+| Owner memory | visible to owner and matching subject, not anonymous users |
+
+### 5. Good/Base/Bad Cases
+
+- Good: visitor creates `visibility="private"` + `scope="visitor_tavern"` without `visitor_id`; policy fills `visitor_id` and `subject` with current user.
+- Base: owner creates `visibility="public"` + `scope="tavern_public"`; anonymous list with `visibility=public` returns it.
+- Bad: owner tries to read a visitor private memory; must be 403, because private visitor memory is not owner-visible.
+
+### 6. Tests Required
+
+`backend/tests/test_v1_memory_atoms.py` must assert:
+
+- private visitor memory self-read/list/update/delete succeeds;
+- owner and other visitor cannot read/delete private visitor memory;
+- public memory is anonymous-visible;
+- owner memory is owner-visible and anonymous-forbidden.
+
+Run:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests --tb=short
+```
+
+If frontend native client methods changed, also run:
+
+```powershell
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+```
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+# Route contains permission logic and imports core web service.
+return request.app.state.compat_web_service.create_memory_atom_payload(...)
+```
+
+#### Correct
+
+```python
+# Route delegates to native application service; policy remains framework-free.
+return _taverns(request).create_memory_atom(tavern_id, data.to_payload(), _get_user_id(request))
+```
 
 ## Common mistakes
 

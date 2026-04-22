@@ -3,7 +3,7 @@
   "name": "refactor-project",
   "title": "brainstorm: project refactor",
   "description": "",
-  "status": "completed",
+  "status": "review",
   "dev_type": "fullstack",
   "scope": "destructive parity migration and current-core deletion",
   "package": null,
@@ -81,8 +81,10 @@
     "AGENTS.md",
     "backend/src/fablemap_api/domain/tavern_policy.py",
     "backend/tests/test_tavern_policy.py",
-    "backend/tests/conftest.py"
+    "backend/tests/conftest.py",
+    "backend/src/fablemap_api/domain/memory_atom_policy.py",
+    "backend/tests/test_v1_memory_atoms.py"
   ],
-  "notes": "Baseline committed as aba33f3. Continued migration by extracting v1 tavern domain policy helpers into backend/src/fablemap_api/domain/tavern_policy.py, adding backend/tests/test_tavern_policy.py and backend/tests/conftest.py. Validation passed: compileall backend/src, backend pytest 7 tests, full pytest 236 tests, git diff --check.",
+  "notes": "Baseline committed as aba33f3. Continued migration with native v1 memory-atoms: added domain/memory_atom_policy.py, v1 routes/application/contracts, frontend app/lib client methods, and backend/tests/test_v1_memory_atoms.py. Validation passed: compileall backend/src, backend pytest 9 tests, full pytest 238 tests, frontend typecheck/build/test, git diff --check.",
   "meta": {}
 }

@@ -21,6 +21,16 @@ from fablemap_api.core.llm_clients import LLMError, create_client
 from fablemap_api.core.memory import auto_create_memories_from_chat
 from fablemap_api.core.tavern import ChatMessage, Tavern, TavernService, TavernStore, VisitorState
 
+from ..domain.memory_atom_policy import (
+    can_edit_memory_atom,
+    can_view_memory_atom,
+    clamp_memory_limit,
+    memory_atom_filters,
+    memory_atom_from_payload,
+    memory_atom_matches_filters,
+    validate_memory_atom_create,
+    validate_memory_atom_update,
+)
 from ..domain.tavern_policy import (
     can_view_memory,
     can_view_tavern,
@@ -272,6 +282,118 @@ class TavernApplicationService:
             "offset": safe_offset,
             "limit": safe_limit,
         }
+
+    def list_memory_atoms(
+        self,
+        tavern_id: str,
+        *,
+        user_id: str = "",
+        scope: str = "",
+        dimension: str = "",
+        horizon: str = "",
+        visibility: str = "",
+        visitor_id: str = "",
+        character_id: str = "",
+        place_id: str = "",
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        filters = memory_atom_filters(
+            scope=scope,
+            dimension=dimension,
+            horizon=horizon,
+            visibility=visibility,
+            visitor_id=visitor_id,
+            character_id=character_id,
+            place_id=place_id,
+        )
+        max_items = clamp_memory_limit(limit)
+
+        atoms: list[dict[str, Any]] = []
+        for atom in self.store.list_memory_atoms(tavern_id):
+            if not can_view_memory_atom(atom, tavern, user_id):
+                continue
+            if not memory_atom_matches_filters(atom, **filters):
+                continue
+            atoms.append(atom.to_dict())
+            if len(atoms) >= max_items:
+                break
+
+        return {
+            "tavern_id": tavern_id,
+            "memory_atoms": atoms,
+            "count": len(atoms),
+            "filters": filters,
+        }
+
+    def get_memory_atom(self, tavern_id: str, memory_id: str, user_id: str = "") -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        atom = self.store.get_memory_atom(tavern_id, memory_id)
+        if not atom:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        if not can_view_memory_atom(atom, tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能访问这条记忆")
+        return {"tavern_id": tavern_id, "memory_atom": atom.to_dict()}
+
+    def create_memory_atom(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        if not user_id:
+            raise HTTPException(status_code=401, detail="创建记忆需要明确用户身份")
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        try:
+            atom = memory_atom_from_payload(data or {}, tavern_id=tavern_id, user_id=user_id, now=_utc_now_iso())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        reason = validate_memory_atom_create(atom, tavern, user_id)
+        if reason:
+            raise HTTPException(status_code=403, detail=reason)
+        created = self.store.save_memory_atom(tavern_id, atom)
+        return {"ok": True, "tavern_id": tavern_id, "memory_atom": created.to_dict()}
+
+    def update_memory_atom(
+        self,
+        tavern_id: str,
+        memory_id: str,
+        data: dict[str, Any],
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        existing = self.store.get_memory_atom(tavern_id, memory_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        if not can_edit_memory_atom(existing, tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能修改这条记忆")
+        try:
+            updated = memory_atom_from_payload(
+                data or {},
+                tavern_id=tavern_id,
+                user_id=user_id,
+                now=_utc_now_iso(),
+                existing=existing,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        reason = validate_memory_atom_update(updated, tavern, user_id)
+        if reason:
+            raise HTTPException(status_code=403, detail=reason)
+        saved = self.store.save_memory_atom(tavern_id, updated)
+        return {"ok": True, "tavern_id": tavern_id, "memory_atom": saved.to_dict()}
+
+    def delete_memory_atom(self, tavern_id: str, memory_id: str, user_id: str = "") -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        atom = self.store.get_memory_atom(tavern_id, memory_id)
+        if not atom:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        if not can_edit_memory_atom(atom, tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能删除这条记忆")
+        deleted = self.store.delete_memory_atom(tavern_id, memory_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="记忆不存在")
+        return {"ok": True, "tavern_id": tavern_id, "memory_id": memory_id}
 
     def list_gameplays(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
         tavern = self._get_tavern_or_404(tavern_id)

@@ -76,3 +76,20 @@ class GameplayWriteRequest(FlexibleBody):
 class GameplaySessionRequest(FlexibleBody):
     gameplay_id: str | None = None
     character_id: str | None = None
+
+
+class MemoryAtomWriteRequest(FlexibleBody):
+    scope: str | None = None
+    dimension: str | None = None
+    horizon: str | None = None
+    subject: str | None = None
+    content: str | None = None
+    importance: float | None = None
+    confidence: float | None = None
+    source_message_ids: list[str] | None = None
+    pinned: bool | None = None
+    visibility: str | None = None
+    visitor_id: str | None = None
+    character_id: str | None = None
+    place_id: str | None = None
+    metadata: dict[str, Any] | None = None

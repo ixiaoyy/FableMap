@@ -11,6 +11,7 @@ from ...contracts.taverns import (
     EnterTavernRequest,
     GameplaySessionRequest,
     GameplayWriteRequest,
+    MemoryAtomWriteRequest,
     TavernCreateRequest,
     TavernListResponse,
     TavernUpdateRequest,
@@ -165,6 +166,58 @@ def list_memories(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/{tavern_id}/memory-atoms")
+def list_memory_atoms(
+    request: Request,
+    tavern_id: str,
+    scope: str = "",
+    dimension: str = "",
+    horizon: str = "",
+    visibility: str = "",
+    visitor_id: str = "",
+    character_id: str = "",
+    place_id: str = "",
+    limit: int = 100,
+) -> dict[str, Any]:
+    return _taverns(request).list_memory_atoms(
+        tavern_id,
+        user_id=_get_user_id(request),
+        scope=scope,
+        dimension=dimension,
+        horizon=horizon,
+        visibility=visibility,
+        visitor_id=visitor_id,
+        character_id=character_id,
+        place_id=place_id,
+        limit=limit,
+    )
+
+
+@router.post("/{tavern_id}/memory-atoms")
+def create_memory_atom(request: Request, tavern_id: str, data: MemoryAtomWriteRequest) -> dict[str, Any]:
+    return _taverns(request).create_memory_atom(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.get("/{tavern_id}/memory-atoms/{memory_id}")
+def get_memory_atom(request: Request, tavern_id: str, memory_id: str) -> dict[str, Any]:
+    return _taverns(request).get_memory_atom(tavern_id, memory_id, _get_user_id(request))
+
+
+@router.put("/{tavern_id}/memory-atoms/{memory_id}")
+def update_memory_atom(
+    request: Request,
+    tavern_id: str,
+    memory_id: str,
+    data: MemoryAtomWriteRequest,
+) -> dict[str, Any]:
+    return _taverns(request).update_memory_atom(tavern_id, memory_id, data.to_payload(), _get_user_id(request))
+
+
+@router.delete("/{tavern_id}/memory-atoms/{memory_id}")
+def delete_memory_atom(request: Request, tavern_id: str, memory_id: str) -> dict[str, Any]:
+    return _taverns(request).delete_memory_atom(tavern_id, memory_id, _get_user_id(request))
 
 
 @router.get("/{tavern_id}/gameplays")

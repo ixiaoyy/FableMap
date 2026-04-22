@@ -574,3 +574,30 @@ Validation after this slice:
 * `py -3 -m pytest -q backend/tests --tb=short` — passed, 7 tests.
 * `py -3 -m pytest -q --tb=short` — passed, 236 tests.
 * `git diff --check` — passed; Git emitted LF→CRLF working-copy warnings for touched text files only.
+
+## Native v1 Memory Atoms Migration Iteration (2026-04-22)
+
+Continued migration by moving structured memory atom behavior into the native enterprise API surface:
+
+* Added `backend/src/fablemap_api/domain/memory_atom_policy.py` for framework-independent memory atom filters, payload normalization, visibility/editability, and create/update validation.
+* Added native v1 routes in `backend/src/fablemap_api/api/v1/taverns.py`:
+  * `GET /api/v1/taverns/{tavern_id}/memory-atoms`
+  * `POST /api/v1/taverns/{tavern_id}/memory-atoms`
+  * `GET /api/v1/taverns/{tavern_id}/memory-atoms/{memory_id}`
+  * `PUT /api/v1/taverns/{tavern_id}/memory-atoms/{memory_id}`
+  * `DELETE /api/v1/taverns/{tavern_id}/memory-atoms/{memory_id}`
+* Added `MemoryAtomWriteRequest` in `backend/src/fablemap_api/contracts/taverns.py`.
+* Added corresponding application methods in `backend/src/fablemap_api/application/taverns.py` without delegating to `core/web/service.py`.
+* Added native frontend API client methods/types in `frontend/app/lib/taverns.ts`.
+* Added `backend/tests/test_v1_memory_atoms.py` covering private visitor memory boundaries, owner/public visibility, update, and delete.
+* Updated backend directory-structure spec with executable v1 memory-atom contracts, error matrix, and test points.
+
+Validation after this slice:
+
+* `py -3 -m compileall -q backend/src` — passed.
+* `py -3 -m pytest -q backend/tests --tb=short` — passed, 9 tests.
+* `py -3 -m pytest -q --tb=short` — passed, 238 tests.
+* `npm --prefix frontend run typecheck` — passed.
+* `npm --prefix frontend run build` — passed.
+* `npm --prefix frontend test` — passed.
+* `git diff --check` — passed; Git emitted LF→CRLF working-copy warnings for touched text files only.

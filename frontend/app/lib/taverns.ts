@@ -57,6 +57,35 @@ export type ChatResponse = {
   tavern_status?: string
 }
 
+export type MemoryAtom = {
+  id: string
+  tavern_id: string
+  scope: string
+  dimension: string
+  horizon: string
+  subject: string
+  content: string
+  importance: number
+  confidence: number
+  source_message_ids: string[]
+  created_at: string
+  updated_at: string
+  pinned: boolean
+  visibility: string
+  visitor_id: string
+  character_id: string
+  place_id: string
+  created_by: string
+  metadata: Record<string, unknown>
+}
+
+export type MemoryAtomListResponse = {
+  tavern_id: string
+  memory_atoms: MemoryAtom[]
+  count: number
+  filters: Record<string, string>
+}
+
 function queryString(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -116,6 +145,43 @@ export function sendTavernChat(
   return readApiJson<ChatResponse>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/chat`,
     jsonInit("POST", data, data.visitor_id),
+  )
+}
+
+export function listMemoryAtoms(
+  tavernId: string,
+  filters: Record<string, string | number | undefined | null> = {},
+  userId = "",
+) {
+  return readApiJson<MemoryAtomListResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms${queryString(filters)}`,
+    { userId },
+  )
+}
+
+export function createMemoryAtom(tavernId: string, data: Partial<MemoryAtom>, userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<{ ok: boolean; tavern_id: string; memory_atom: MemoryAtom }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function updateMemoryAtom(
+  tavernId: string,
+  memoryId: string,
+  data: Partial<MemoryAtom>,
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<{ ok: boolean; tavern_id: string; memory_atom: MemoryAtom }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}`,
+    jsonInit("PUT", data, userId),
+  )
+}
+
+export function deleteMemoryAtom(tavernId: string, memoryId: string, userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<{ ok: boolean; tavern_id: string; memory_id: string }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}`,
+    jsonInit("DELETE", undefined, userId),
   )
 }
 
