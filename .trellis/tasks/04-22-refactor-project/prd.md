@@ -218,6 +218,39 @@ Create a Trellis architecture/design record for the target rewrite before coding
 * Module boundaries.
 * Data model and persistence strategy.
 * API contract strategy.
+
+## Migration Progress Notes (2026-04-22)
+
+### Destructive parity baseline
+
+* Root `fablemap/` and `frontend/src/` were retired after moving runnable product core into the enterprise layout:
+  * backend product core now lives under `backend/src/fablemap_api/core/`;
+  * React Router product parity source now lives under `frontend/app/product/`.
+* Baseline commit: `aba33f3`.
+
+### Native v1 extraction slices
+
+* Tavern policy extraction:
+  * `backend/src/fablemap_api/domain/tavern_policy.py`
+  * `backend/tests/test_tavern_policy.py`
+* Native v1 memory-atoms:
+  * `backend/src/fablemap_api/domain/memory_atom_policy.py`
+  * `/api/v1/taverns/{id}/memory-atoms` CRUD routes/application/contracts
+  * `frontend/app/lib/taverns.ts` native memory-atom client methods
+  * `backend/tests/test_v1_memory_atoms.py`
+  * Commit: `52c215b`.
+* Native v1 owner-config diagnostics/configuration:
+  * `backend/src/fablemap_api/domain/world_info_policy.py`
+  * `/api/v1/taverns/{id}/world-info/test`
+  * `/api/v1/taverns/{id}/output-rules`
+  * `/api/v1/taverns/{id}/prompt-blocks`
+  * `/api/v1/taverns/{id}/runtime-presets`
+  * `frontend/app/lib/taverns.ts` native owner-config client methods
+  * `backend/tests/test_v1_owner_config.py`
+
+### Current migration boundary
+
+The native `/api/v1` layer must continue to call `application/`, `domain/`, and reusable product-core domain modules, but must not delegate to `backend/src/fablemap_api/core/web/service.py` or `core/web/router.py`. Compatibility `/api/*` remains available only as a behavior source during migration.
 * Frontend routing/state/component strategy.
 * Migration policy from current demo code.
 * What current behavior/tests must be preserved.

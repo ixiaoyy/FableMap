@@ -86,6 +86,55 @@ export type MemoryAtomListResponse = {
   filters: Record<string, string>
 }
 
+export type WorldInfoTestResponse = {
+  tavern_id: string
+  message: string
+  entry_count: number
+  matched_count: number
+  matches: Record<string, unknown>[]
+  entries: Record<string, unknown>[]
+  scanned_recent_count: number
+  include_tavern_context: boolean
+}
+
+export type OutputRule = Record<string, unknown> & {
+  id?: string
+  name?: string
+  enabled?: boolean
+  kind?: string
+  pattern?: string
+  replacement?: string
+}
+
+export type PromptBlock = Record<string, unknown> & {
+  id?: string
+  name?: string
+  enabled?: boolean
+  type?: string
+  order?: number
+  template?: string
+  token_budget?: number
+}
+
+export type RuntimePreset = Record<string, unknown> & {
+  id?: string
+  name?: string
+  built_in?: boolean
+  llm_config?: Record<string, unknown>
+  prompt_blocks?: PromptBlock[]
+  output_rules?: OutputRule[]
+  memory_policy?: Record<string, unknown>
+}
+
+export type RuntimePresetsResponse = {
+  tavern_id: string
+  active_preset_id: string
+  presets: RuntimePreset[]
+  custom_presets: RuntimePreset[]
+  default_presets: RuntimePreset[]
+  memory_policy: Record<string, unknown>
+}
+
 function queryString(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -182,6 +231,118 @@ export function deleteMemoryAtom(tavernId: string, memoryId: string, userId = DE
   return readApiJson<{ ok: boolean; tavern_id: string; memory_id: string }>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}`,
     jsonInit("DELETE", undefined, userId),
+  )
+}
+
+export function testWorldInfo(
+  tavernId: string,
+  data: {
+    message?: string
+    recent_messages?: unknown[]
+    include_tavern_context?: boolean
+    world_info?: Record<string, unknown>[]
+  },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<WorldInfoTestResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/world-info/test`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function getOutputRules(tavernId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ tavern_id: string; rules: OutputRule[]; default_rules: OutputRule[] }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/output-rules`,
+    { userId },
+  )
+}
+
+export function saveOutputRules(tavernId: string, rules: OutputRule[], userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ ok: boolean; tavern_id: string; rules: OutputRule[]; tavern: Tavern }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/output-rules`,
+    jsonInit("PUT", { rules }, userId),
+  )
+}
+
+export function testOutputRules(
+  tavernId: string,
+  data: { text?: string; rules?: OutputRule[]; output_rules?: OutputRule[] },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<Record<string, unknown> & { tavern_id: string; text: string; changed: boolean }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/output-rules/test`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function getPromptBlocks(tavernId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ tavern_id: string; blocks: PromptBlock[]; default_blocks: PromptBlock[] }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/prompt-blocks`,
+    { userId },
+  )
+}
+
+export function savePromptBlocks(tavernId: string, blocks: PromptBlock[], userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ ok: boolean; tavern_id: string; blocks: PromptBlock[]; tavern: Tavern }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/prompt-blocks`,
+    jsonInit("PUT", { blocks }, userId),
+  )
+}
+
+export function previewPromptBlocks(
+  tavernId: string,
+  data: {
+    blocks?: PromptBlock[]
+    prompt_blocks?: PromptBlock[]
+    character_id?: string
+    message?: string
+    visitor_name?: string
+    visitor_visit_count?: number
+    visitor_relationship_stage?: string
+    visitor_relationship_strength?: number
+    visitor_message_count?: number
+  },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{
+    tavern_id: string
+    character_id: string
+    character_name: string
+    blocks: PromptBlock[]
+    messages: { role: string; content: string }[]
+    message_count: number
+  }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/prompt-blocks/preview`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function getRuntimePresets(tavernId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<RuntimePresetsResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/runtime-presets`,
+    { userId },
+  )
+}
+
+export function saveRuntimePresets(
+  tavernId: string,
+  data: { presets?: RuntimePreset[]; runtime_presets?: RuntimePreset[]; active_preset_id?: string },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<RuntimePresetsResponse & { ok: boolean; tavern: Tavern }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/runtime-presets`,
+    jsonInit("PUT", data, userId),
+  )
+}
+
+export function applyRuntimePreset(
+  tavernId: string,
+  data: { preset_id?: string; id?: string; preset?: RuntimePreset },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; tavern_id: string; active_preset_id: string; preset: RuntimePreset; tavern: Tavern }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/runtime-presets/apply`,
+    jsonInit("POST", data, userId),
   )
 }
 

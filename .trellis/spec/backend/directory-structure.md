@@ -292,6 +292,88 @@ return request.app.state.compat_web_service.create_memory_atom_payload(...)
 return _taverns(request).create_memory_atom(tavern_id, data.to_payload(), _get_user_id(request))
 ```
 
+## Scenario: native owner-config `/api/v1/taverns/{id}/...`
+
+### 1. Scope / Trigger
+
+Use this contract when migrating店主配置能力 from compatibility `/api/taverns/{id}/...` into native `/api/v1`. These endpoints are owner-only, deterministic where possible, and must not call LLM providers during diagnostics/previews.
+
+### 2. Signatures
+
+Routes live in `backend/src/fablemap_api/api/v1/taverns.py` and stay thin:
+
+```python
+POST /api/v1/taverns/{tavern_id}/world-info/test
+GET  /api/v1/taverns/{tavern_id}/output-rules
+PUT  /api/v1/taverns/{tavern_id}/output-rules
+POST /api/v1/taverns/{tavern_id}/output-rules/test
+GET  /api/v1/taverns/{tavern_id}/prompt-blocks
+PUT  /api/v1/taverns/{tavern_id}/prompt-blocks
+POST /api/v1/taverns/{tavern_id}/prompt-blocks/preview
+GET  /api/v1/taverns/{tavern_id}/runtime-presets
+PUT  /api/v1/taverns/{tavern_id}/runtime-presets
+POST /api/v1/taverns/{tavern_id}/runtime-presets/apply
+```
+
+Application methods live in `backend/src/fablemap_api/application/taverns.py`:
+
+```python
+test_world_info(tavern_id, data, user_id="") -> dict
+get_output_rules(tavern_id, user_id="") -> dict
+save_output_rules(tavern_id, data, user_id="") -> dict
+test_output_rules(tavern_id, data, user_id="") -> dict
+get_prompt_blocks(tavern_id, user_id="") -> dict
+save_prompt_blocks(tavern_id, data, user_id="") -> dict
+preview_prompt_blocks(tavern_id, data, user_id="") -> dict
+get_runtime_presets(tavern_id, user_id="") -> dict
+save_runtime_presets(tavern_id, data, user_id="") -> dict
+apply_runtime_preset(tavern_id, data, user_id="") -> dict
+```
+
+WorldInfo diagnostic matching lives in `backend/src/fablemap_api/domain/world_info_policy.py`; domain modules must not import FastAPI.
+
+### 3. Contracts
+
+- Request body models live in `backend/src/fablemap_api/contracts/taverns.py`: `WorldInfoTestRequest`, `OutputRulesWriteRequest`, `OutputRulesTestRequest`, `PromptBlocksWriteRequest`, `PromptBlocksPreviewRequest`, `RuntimePresetsWriteRequest`, and `RuntimePresetApplyRequest`.
+- Output/prompt/runtime normalization reuses migrated product-core modules: `core.output_rules`, `core.prompt_blocks`, `core.prompt_builder`, and `core.presets`.
+- Frontend native clients live in `frontend/app/lib/taverns.ts` and must call `/api/v1/taverns/...`, not compatibility `/api/taverns/...`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Non-owner user | `403 {"error": "你不是此酒馆的主人"}` |
+| WorldInfo test | deterministic hit diagnostics, no persistence, no LLM call |
+| Output rules test | returns transformed text plus applied/errors diagnostics |
+| Prompt-block preview without character | `400 {"error": "请先为酒馆添加角色"}` |
+| Runtime preset not found | `404 {"error": "运行预设不存在"}` |
+| Runtime preset apply | preserves existing owner API key only through private owner update path; presets themselves never persist `api_key` |
+
+### 5. Tests Required
+
+`backend/tests/test_v1_owner_config.py` must assert:
+
+- temporary WorldInfo payload matches expected keywords;
+- output rules round-trip and diagnostic test;
+- prompt blocks round-trip and preview;
+- runtime presets round-trip/apply and preset `api_key` stripping;
+- all owner-config endpoints reject non-owner callers.
+
+Run:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests --tb=short
+```
+
+If frontend native client methods changed, also run:
+
+```powershell
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+```
+
 ## Common mistakes
 
 - Adding API logic directly inside route handlers when it belongs in `WebService` or `TavernService`.

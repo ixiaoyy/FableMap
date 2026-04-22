@@ -12,9 +12,16 @@ from ...contracts.taverns import (
     GameplaySessionRequest,
     GameplayWriteRequest,
     MemoryAtomWriteRequest,
+    OutputRulesTestRequest,
+    OutputRulesWriteRequest,
+    PromptBlocksPreviewRequest,
+    PromptBlocksWriteRequest,
+    RuntimePresetApplyRequest,
+    RuntimePresetsWriteRequest,
     TavernCreateRequest,
     TavernListResponse,
     TavernUpdateRequest,
+    WorldInfoTestRequest,
 )
 
 router = APIRouter(prefix="/taverns", tags=["taverns"])
@@ -218,6 +225,56 @@ def update_memory_atom(
 @router.delete("/{tavern_id}/memory-atoms/{memory_id}")
 def delete_memory_atom(request: Request, tavern_id: str, memory_id: str) -> dict[str, Any]:
     return _taverns(request).delete_memory_atom(tavern_id, memory_id, _get_user_id(request))
+
+
+@router.post("/{tavern_id}/world-info/test")
+def test_world_info(request: Request, tavern_id: str, data: WorldInfoTestRequest) -> dict[str, Any]:
+    return _taverns(request).test_world_info(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.get("/{tavern_id}/output-rules")
+def get_output_rules(request: Request, tavern_id: str) -> dict[str, Any]:
+    return _taverns(request).get_output_rules(tavern_id, _get_user_id(request))
+
+
+@router.put("/{tavern_id}/output-rules")
+def save_output_rules(request: Request, tavern_id: str, data: OutputRulesWriteRequest) -> dict[str, Any]:
+    return _taverns(request).save_output_rules(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.post("/{tavern_id}/output-rules/test")
+def test_output_rules(request: Request, tavern_id: str, data: OutputRulesTestRequest) -> dict[str, Any]:
+    return _taverns(request).test_output_rules(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.get("/{tavern_id}/prompt-blocks")
+def get_prompt_blocks(request: Request, tavern_id: str) -> dict[str, Any]:
+    return _taverns(request).get_prompt_blocks(tavern_id, _get_user_id(request))
+
+
+@router.put("/{tavern_id}/prompt-blocks")
+def save_prompt_blocks(request: Request, tavern_id: str, data: PromptBlocksWriteRequest) -> dict[str, Any]:
+    return _taverns(request).save_prompt_blocks(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.post("/{tavern_id}/prompt-blocks/preview")
+def preview_prompt_blocks(request: Request, tavern_id: str, data: PromptBlocksPreviewRequest) -> dict[str, Any]:
+    return _taverns(request).preview_prompt_blocks(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.get("/{tavern_id}/runtime-presets")
+def get_runtime_presets(request: Request, tavern_id: str) -> dict[str, Any]:
+    return _taverns(request).get_runtime_presets(tavern_id, _get_user_id(request))
+
+
+@router.put("/{tavern_id}/runtime-presets")
+def save_runtime_presets(request: Request, tavern_id: str, data: RuntimePresetsWriteRequest) -> dict[str, Any]:
+    return _taverns(request).save_runtime_presets(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.post("/{tavern_id}/runtime-presets/apply")
+def apply_runtime_preset(request: Request, tavern_id: str, data: RuntimePresetApplyRequest) -> dict[str, Any]:
+    return _taverns(request).apply_runtime_preset(tavern_id, data.to_payload(), _get_user_id(request))
 
 
 @router.get("/{tavern_id}/gameplays")
