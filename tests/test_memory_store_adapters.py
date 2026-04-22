@@ -1,12 +1,12 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fablemap.memory import GraphMemoryStore, KeywordMemoryStore, MemoryAtom, VectorMemoryStore
+from fablemap_api.core.memory import GraphMemoryStore, KeywordMemoryStore, MemoryAtom, VectorMemoryStore
 
 
 def test_keyword_memory_store_wraps_json_tavern_store():
-    from fablemap.web.config import ApiSettings
-    from fablemap.web.service import WebService
+    from fablemap_api.core.web.config import ApiSettings
+    from fablemap_api.core.web.service import WebService
 
     with TemporaryDirectory() as tmpdir:
         service = WebService(

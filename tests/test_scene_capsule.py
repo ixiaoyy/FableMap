@@ -1,9 +1,9 @@
 """Tests for AIO6 SceneCapsuleGenerator"""
 import pytest
-from fablemap.behavior_compiler import MeaningVector
-from fablemap.city_persona import CityPersona, CityPersonaAgent
-from fablemap.lens_engine import LensOutput
-from fablemap.scene_capsule import (
+from fablemap_api.core.behavior_compiler import MeaningVector
+from fablemap_api.core.city_persona import CityPersona, CityPersonaAgent
+from fablemap_api.core.lens_engine import LensOutput
+from fablemap_api.core.scene_capsule import (
     CapsuleInput, CapsuleOutput, SceneCapsuleGenerator, evaluate_trigger
 )
 

@@ -1,7 +1,7 @@
 """Tests for AIO5 CityPersonaAgent"""
 import pytest
-from fablemap.behavior_compiler import MeaningVector
-from fablemap.city_persona import CityPersona, CityPersonaAgent
+from fablemap_api.core.behavior_compiler import MeaningVector
+from fablemap_api.core.city_persona import CityPersona, CityPersonaAgent
 
 
 @pytest.fixture

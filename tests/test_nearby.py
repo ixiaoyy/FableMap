@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from fablemap.nearby import main
+from fablemap_api.core.nearby import main
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"
@@ -70,10 +70,10 @@ class NearbyTests(unittest.TestCase):
         }
         stdout = io.StringIO()
         with TemporaryDirectory() as tmpdir, patch(
-            "fablemap.nearby.build_world",
+            "fablemap_api.core.nearby.build_world",
             return_value=fake_world,
-        ) as build_world_mock, patch("fablemap.nearby.write_world"), patch(
-            "fablemap.nearby.export_bundle",
+        ) as build_world_mock, patch("fablemap_api.core.nearby.write_world"), patch(
+            "fablemap_api.core.nearby.export_bundle",
             return_value=fake_bundle_result,
         ):
             output_dir = Path(tmpdir) / "nearby-output"

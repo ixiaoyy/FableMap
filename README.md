@@ -46,7 +46,7 @@ FableMap 赛博酒馆版使用全新的概念体系：
 
 仓库当前已具备赛博酒馆平台的最小可运行闭环：
 
-- 可通过 `python -m fablemap api` 启动后端
+- 可通过设置 `PYTHONPATH=backend/src` 后执行 `py -3 -m fablemap_api api` 启动后端
 - 地图展示酒馆标记（基于现有 WorldMap.jsx）
 - 酒馆详情面板 + ChatPanel 对话界面
 - `/api/taverns/*` 酒馆管理（已实现基于网格的 CRUD）
@@ -61,11 +61,11 @@ FableMap 赛博酒馆版使用全新的概念体系：
 
 当前已存在但**不再作为主线继续扩写**的部分：
 
-- [`frontend/src/WorldMap.jsx`](frontend/src/WorldMap.jsx) — 地图渲染（待整合酒馆标记）
-- [`frontend/src/worldMap/renderers.js`](frontend/src/worldMap/renderers.js)
-- [`frontend/src/worldMap/geometry.js`](frontend/src/worldMap/geometry.js)
-- [`frontend/src/mapAssets/manifest.js`](frontend/src/mapAssets/manifest.js)
-- [`frontend/src/mapAssets/iconMapping.js`](frontend/src/mapAssets/iconMapping.js)
+- [`frontend/app/product/WorldMap.jsx`](frontend/app/product/WorldMap.jsx) — 地图渲染（待整合酒馆标记）
+- [`frontend/app/product/worldMap/renderers.js`](frontend/app/product/worldMap/renderers.js)
+- [`frontend/app/product/worldMap/geometry.js`](frontend/app/product/worldMap/geometry.js)
+- [`frontend/app/product/mapAssets/manifest.js`](frontend/app/product/mapAssets/manifest.js)
+- [`frontend/app/product/mapAssets/iconMapping.js`](frontend/app/product/mapAssets/iconMapping.js)
 
 ## 快速开始
 
@@ -74,8 +74,9 @@ FableMap 赛博酒馆版使用全新的概念体系：
 pip install -r requirements.txt
 cd frontend && npm install && npm run build
 
-# 启动后端
-python -m fablemap api
+# 启动后端（PowerShell）
+$env:PYTHONPATH = "$PWD\backend\src"
+py -3 -m fablemap_api api
 
 # 访问
 http://127.0.0.1:8950/
@@ -83,7 +84,7 @@ http://127.0.0.1:8950/
 
 ## 核心模块
 
-### 后端 (`fablemap/`)
+### 后端 (`backend/src/fablemap_api/core/`)
 
 | 模块 | 用途 |
 |------|------|
@@ -96,7 +97,7 @@ http://127.0.0.1:8950/
 | `writeback.py` | 状态持久化 |
 | `web/router.py` | API 路由: `/api/taverns/*`, `/api/chat` |
 
-### 前端 (`frontend/src/`)
+### 前端 (`frontend/app/product/`)
 
 | 模块 | 用途 |
 |------|------|
@@ -107,11 +108,11 @@ http://127.0.0.1:8950/
 | `services/characterEngine.js` | 角色数据结构 |
 | `services/placeProtocol.js` | Place 协议 |
 | `services/apiClient.js` | API 客户端 |
-| `components/TavernMapPanel.jsx` | 酒馆地图面板 |
-| `components/TavernEntryPanel.jsx` | 酒馆入场（密码验证等） |
-| `components/TavernInterior.jsx` | 酒馆内部（角色列表 + ChatPanel） |
-| `components/ChatPanel.jsx` | 对话面板 |
-| `components/TavernOwnerPanel.jsx` | 店主管理面板 |
+| `WorldMap.jsx` | 酒馆地图面板 |
+| `TavernEntryPanel.jsx` | 酒馆入场（密码验证等） |
+| `TavernInterior.jsx` | 酒馆内部（角色列表 + ChatPanel） |
+| `ChatPanel.jsx` | 对话面板 |
+| `TavernOwnerPanel.jsx` | 店主管理面板 |
 | `hooks/useTavernSession.js` | 酒馆会话管理 |
 | `hooks/useTavernChat.js` | 酒馆对话 |
 

@@ -7,7 +7,7 @@ import unittest
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from fablemap.page import create_server
+from fablemap_api.core.page import create_server
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"

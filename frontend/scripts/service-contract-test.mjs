@@ -1,5 +1,5 @@
-import { createTavernService } from '../src/services/tavernService.js'
-import { NEWCOMER_TAVERN_ID, resolveNewcomerTavern } from '../src/services/newcomerTavern.js'
+import { createTavernService } from '../app/product/services/tavernService.js'
+import { NEWCOMER_TAVERN_ID, resolveNewcomerTavern } from '../app/product/services/newcomerTavern.js'
 
 const service = createTavernService(() => '')
 

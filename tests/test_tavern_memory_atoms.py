@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from fablemap.memory import MemoryAtom, auto_create_memories_from_chat, select_memory_atoms_for_prompt
+from fablemap_api.core.memory import MemoryAtom, auto_create_memories_from_chat, select_memory_atoms_for_prompt
 
 
 def test_memory_atom_normalizes_payload_defaults():
@@ -33,8 +33,8 @@ def test_memory_atom_normalizes_payload_defaults():
 
 def test_memory_atoms_crud_filters_and_private_visibility():
     from fastapi import HTTPException
-    from fablemap.web.config import ApiSettings
-    from fablemap.web.service import WebService
+    from fablemap_api.core.web.config import ApiSettings
+    from fablemap_api.core.web.service import WebService
 
     with TemporaryDirectory() as tmpdir:
         service = WebService(
@@ -185,8 +185,8 @@ def test_memory_atoms_crud_filters_and_private_visibility():
 
 
 def test_auto_memory_pipeline_extracts_scores_and_merges():
-    from fablemap.web.config import ApiSettings
-    from fablemap.web.service import WebService
+    from fablemap_api.core.web.config import ApiSettings
+    from fablemap_api.core.web.service import WebService
 
     with TemporaryDirectory() as tmpdir:
         service = WebService(
@@ -316,9 +316,9 @@ def test_select_memory_atoms_for_prompt_prioritizes_pin_horizon_relevance_and_fl
 
 
 def test_structured_memory_is_injected_into_chat_prompt(monkeypatch):
-    from fablemap.tavern import LLMConfig
-    from fablemap.web.config import ApiSettings
-    from fablemap.web.service import WebService
+    from fablemap_api.core.tavern import LLMConfig
+    from fablemap_api.core.web.config import ApiSettings
+    from fablemap_api.core.web.service import WebService
 
     with TemporaryDirectory() as tmpdir:
         service = WebService(
@@ -387,7 +387,7 @@ def test_structured_memory_is_injected_into_chat_prompt(monkeypatch):
                 captured["messages"] = messages
                 return Response()
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: CapturingClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern_id,

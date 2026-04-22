@@ -7,8 +7,8 @@ import pytest
 def test_chat_history_and_export_are_limited_to_visitor_or_owner():
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     with TemporaryDirectory() as tmpdir:
         app = create_web_app(

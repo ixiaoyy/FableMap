@@ -1,7 +1,7 @@
 """Protocol regression tests - prevent protocol drift"""
 import pytest
-from fablemap.orchestrator.rule_engine import RuleBasedOrchestrator
-from fablemap.orchestrator.schemas import OrchestratorOutput
+from fablemap_api.core.orchestrator.rule_engine import RuleBasedOrchestrator
+from fablemap_api.core.orchestrator.schemas import OrchestratorOutput
 
 def test_orchestrator_output_structure():
     """Guard A: Ensure orchestrator output structure is stable"""

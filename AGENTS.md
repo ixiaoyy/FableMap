@@ -34,19 +34,27 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 6. `docs/WORLD_SCHEMA.md`：数据模型与 Schema 约束。
 7. `docs/WHAT_NOT_TO_BUILD.md`：明确不做清单。
 8. `docs/AI参与开发协议.md`：AI 协作、认领、验证和变更说明规则。
-9. `easysdd/architecture/DESIGN.md`：easysdd 架构总入口。
-10. `easysdd/reference/shared-conventions.md`：easysdd 目录与元数据约定。
+9. `.trellis/workflow.md`：Trellis 会话、任务、上下文与验证流程。
+10. `.trellis/spec/`：按改动范围读取 backend / frontend / guides 下的开发规范。
 
 如果文档与聊天中的临时说法冲突，除非用户明确改口，否则以仓库内权威文档为准。
 
 ## 工作流要求
 
-- 新功能：优先走 easysdd feature 流程；小改动可按用户要求快速处理，但仍需明确范围和验收。
+- 新功能：优先走 Trellis task workflow；复杂或不清晰的需求先在 `.trellis/tasks/` 中完成 PRD / brainstorm，再实现。
 - Bug 修复：先复现 / 定位根因，再改代码；不要凭猜测大范围重构。
 - 中高风险任务开始前，需要明确：目标、允许修改范围、不可修改范围、依据文档、验证方式。
 - 一个改动尽量只做一类事情：协议变更、功能变更、内容变更不要混在一起。
-- 不要未经用户确认移动、删除或重命名既有 `docs/` 文档；easysdd 初始化后，旧文档仍是有效资料。
-- 每次功能/bug 级改动都要留下可追踪说明：优先使用 easysdd 文档；沿用旧流程时放入 `docs/changes/YYYY-MM-DD-slug.md`。
+- 不要未经用户确认移动、删除或重命名既有 `docs/` 文档。
+- 每次功能/bug/重构级改动都要留下可追踪说明：优先记录在对应 `.trellis/tasks/<task>/prd.md`、`task.json`、相关 `.trellis/spec/` 或必要的 `docs/changes/YYYY-MM-DD-slug.md`。
+
+## Trellis 工作流
+
+- 本仓库已切换为 Trellis 工作流；Trellis 是主要任务、规范、上下文和留痕系统，但不取代本文件的硬约束。
+- Codex / 兼容工具可读取 `.agents/skills/`、`.codex/agents/`；开始 Trellis 会话时使用 `start` skill / `/trellis:start`，并读取 `.trellis/workflow.md`。
+- `.trellis/spec/` 用于沉淀从现有权威文档和代码提炼出的开发规范；不得与上文权威文档冲突。
+- `.trellis/tasks/00-bootstrap-guidelines/` 是首次填充 Trellis 规范任务；填充时只归纳现有事实，不新增产品、Schema 或架构承诺。
+- Trellis 生成物和传统 `docs/` 并存；功能 / bug / 重构级改动优先按 Trellis task/spec 留痕。
 
 ## 禁止事项
 
@@ -63,16 +71,16 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 
 ### Python 后端
 
-- 主要代码位于 `fablemap/`，测试位于 `tests/`。
+- 兼容产品核心位于 `backend/src/fablemap_api/core/`，回归测试位于 `tests/`；企业级 v1 后端位于 `backend/src/fablemap_api/`，新后端测试位于 `backend/tests/`。
 - 优先保持标准库 + `requirements.txt` 中已有依赖；新增依赖必须先说明理由并获得确认。
 - API / Schema 改动必须同步相关测试与文档。
 - 持久化、对话历史、记忆写回相关逻辑要保持可落库、可回放、可测试。
 
-### React / Vite 前端
+### React Router / Vite 前端
 
-- 前端位于 `frontend/`，使用 React 18 + Vite + ESM。
+- 前端位于 `frontend/`；React Router Framework Mode + Vite + TypeScript 入口位于 `frontend/app/`，迁移后的产品兼容模块位于 `frontend/app/product/`。
 - 不要无批准引入大型 UI 框架、状态管理库或地图渲染依赖。
-- 组件改动应保持现有服务层边界：API 调用优先放在 `frontend/src/services/`，可复用逻辑优先放在 hooks / utility 模块。
+- 组件改动应保持服务层边界：新路由 API 调用优先放在 `frontend/app/lib/`；产品兼容模块 API 调用放在 `frontend/app/product/services/`；可复用逻辑优先放在 hooks / utility 模块。
 - 前端 UI 改动要考虑移动端和窄屏体验；涉及视觉/交互的改动应至少做 build，并在可行时浏览器人工验证。
 
 ### 数据与兼容
@@ -89,7 +97,7 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 
 ```powershell
 # Python 语法检查
-py -3 -m compileall -q fablemap
+py -3 -m compileall -q backend/src
 
 # 后端测试
 py -3 -m pytest -q --tb=short
@@ -104,7 +112,7 @@ npm --prefix .\frontend test
 验证选择规则：
 
 - 只改文档：检查目标文件内容与链接路径，通常无需跑全量测试。
-- 改 Python：至少运行 `py -3 -m compileall -q fablemap`；涉及行为时运行相关 pytest 或全量 pytest。
+- 改 Python：至少运行 `py -3 -m compileall -q backend/src`；涉及行为时运行相关 pytest 或全量 pytest。
 - 改前端：至少运行 `npm --prefix .\frontend run build`；涉及服务/规则脚本时运行 `npm --prefix .\frontend test`。
 - 改 API / 数据模型 / 协议：必须同步或补充测试，并更新对应文档。
 - 验证失败要如实报告失败命令、失败原因和下一步，不要包装成成功。

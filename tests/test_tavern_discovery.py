@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fablemap.tavern import Tavern, TavernCharacter, TavernService, TavernStore
+from fablemap_api.core.tavern import Tavern, TavernCharacter, TavernService, TavernStore
 
 
 def _tavern(

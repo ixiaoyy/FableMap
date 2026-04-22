@@ -1,9 +1,9 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fablemap.prompt_builder import ChatMessage, PromptBuildConfig, PromptBuilder
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.prompt_builder import ChatMessage, PromptBuildConfig, PromptBuilder
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 OWNER_ID = "owner_world_info_injection"

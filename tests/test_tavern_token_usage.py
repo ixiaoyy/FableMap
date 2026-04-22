@@ -1,7 +1,7 @@
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from fablemap.tavern import LLMConfig, Tavern, TavernService, TavernStore
+from fablemap_api.core.tavern import LLMConfig, Tavern, TavernService, TavernStore
 
 
 def test_token_usage_is_visible_and_survives_llm_config_update():

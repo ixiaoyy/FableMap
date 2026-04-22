@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from fablemap.demo import _FIXTURE_PATH, main
+from fablemap_api.core.demo import _FIXTURE_PATH, main
 
 
 _FIXTURE = str(_FIXTURE_PATH)

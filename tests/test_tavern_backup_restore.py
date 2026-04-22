@@ -5,9 +5,9 @@ import json
 import pytest
 from fastapi import HTTPException
 
-from fablemap.tavern import ChatMessage
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.tavern import ChatMessage
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 def _service(tmpdir: str) -> WebService:

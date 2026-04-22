@@ -1,10 +1,10 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fablemap.llm_clients import LLMError
-from fablemap.tavern import ChatMessage, LLMConfig, Tavern, TavernCharacter, VisitorState
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.llm_clients import LLMError
+from fablemap_api.core.tavern import ChatMessage, LLMConfig, Tavern, TavernCharacter, VisitorState
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 def _service(tmpdir: str) -> WebService:
@@ -46,7 +46,7 @@ def test_llm_failure_returns_degradation_payload_and_closes_tavern(monkeypatch):
             def complete(self, messages):
                 raise LLMError("upstream timeout")
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: BrokenClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: BrokenClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern.id,
@@ -104,7 +104,7 @@ def test_visitor_name_is_used_in_prompt_and_persisted(monkeypatch):
                 captured["messages"] = messages
                 return Response()
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: CapturingClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern.id,
@@ -143,7 +143,7 @@ def test_display_message_is_persisted_while_full_prompt_reaches_llm(monkeypatch)
                 captured["messages"] = messages
                 return Response()
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: CapturingClient())
 
         hidden_prompt = "我想和你玩一局《线索调查》。\n请按内部主持规则开局。"
         display_message = "开始《线索调查》：请直接开局。"
@@ -208,7 +208,7 @@ def test_visitor_relationship_state_is_used_in_prompt(monkeypatch):
                 captured["messages"] = messages
                 return Response()
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: CapturingClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern.id,

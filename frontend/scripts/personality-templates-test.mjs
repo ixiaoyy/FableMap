@@ -5,7 +5,7 @@ import {
   applyNpcPersonalityTemplateToDraft,
   filterNpcPersonalityTemplates,
   recommendNpcPersonalityTemplates,
-} from '../src/personalityTemplates.js'
+} from '../app/product/personalityTemplates.js'
 
 assert.ok(NPC_PERSONALITY_TEMPLATES.length >= 7)
 

@@ -1,7 +1,7 @@
 import pytest
 
-from fablemap.output_rules import apply_output_rules
-from fablemap.web.config import ApiSettings
+from fablemap_api.core.output_rules import apply_output_rules
+from fablemap_api.core.web.config import ApiSettings
 
 
 def test_apply_output_rules_removes_roleplay_breaking_prefixes_and_keeps_going_on_bad_regex():
@@ -28,7 +28,7 @@ def test_apply_output_rules_removes_roleplay_breaking_prefixes_and_keeps_going_o
 def test_output_rules_api_save_preview_and_authz(tmp_path):
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
+    from fablemap_api.core.web.app import create_web_app
 
     app = create_web_app(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
     headers = {"X-User-Id": "owner_output_rules"}

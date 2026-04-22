@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pytest
 
-from fablemap.memory_graph import WorldMemoryGraph, PlayerHomeRelation, GhostTrace
-from fablemap.city_persona import CityPersonaAgent, CityPersona
-from fablemap.behavior_compiler import MeaningVector
+from fablemap_api.core.memory_graph import WorldMemoryGraph, PlayerHomeRelation, GhostTrace
+from fablemap_api.core.city_persona import CityPersonaAgent, CityPersona
+from fablemap_api.core.behavior_compiler import MeaningVector
 
 
 class TestPlayerHome:

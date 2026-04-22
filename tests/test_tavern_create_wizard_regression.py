@@ -4,9 +4,9 @@ from tempfile import TemporaryDirectory
 import pytest
 from fastapi import HTTPException
 
-from fablemap.llm_clients import LLMError
-from fablemap.web.service import WebService
-from fablemap.web.config import ApiSettings
+from fablemap_api.core.llm_clients import LLMError
+from fablemap_api.core.web.service import WebService
+from fablemap_api.core.web.config import ApiSettings
 
 
 OWNER_ID = "owner_create_wizard"
@@ -138,7 +138,7 @@ def test_create_wizard_ai_config_status_and_direct_test(monkeypatch):
         assert remote_ai["status"] == "open"
         assert remote_ai["llm_config"]["api_key"] == "sk-create-wizard"
 
-        monkeypatch.setattr("fablemap.llm_clients.create_client", lambda config: GoodClient())
+        monkeypatch.setattr("fablemap_api.core.llm_clients.create_client", lambda config: GoodClient())
         test_success = service.test_llm_config_payload(
             {
                 "backend": "openai",
@@ -162,7 +162,7 @@ def test_create_wizard_ai_config_status_and_direct_test(monkeypatch):
         def broken_client(config):
             raise LLMError("upstream refused the key")
 
-        monkeypatch.setattr("fablemap.llm_clients.create_client", broken_client)
+        monkeypatch.setattr("fablemap_api.core.llm_clients.create_client", broken_client)
         test_failure = service.test_llm_config_payload(
             {
                 "backend": "openai",

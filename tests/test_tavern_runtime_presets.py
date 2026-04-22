@@ -1,7 +1,7 @@
 import pytest
 
-from fablemap.presets import default_runtime_presets, normalize_runtime_presets, safe_llm_preset_config
-from fablemap.web.config import ApiSettings
+from fablemap_api.core.presets import default_runtime_presets, normalize_runtime_presets, safe_llm_preset_config
+from fablemap_api.core.web.config import ApiSettings
 
 
 def test_runtime_presets_strip_secrets_and_include_default_bundles():
@@ -58,7 +58,7 @@ def test_runtime_presets_normalize_custom_payload():
 def test_runtime_presets_api_save_apply_export_and_authz(tmp_path):
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
+    from fablemap_api.core.web.app import create_web_app
 
     app = create_web_app(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
     headers = {"X-User-Id": "owner_runtime_presets"}

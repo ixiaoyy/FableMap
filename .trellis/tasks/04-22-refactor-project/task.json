@@ -1,0 +1,85 @@
+{
+  "id": "refactor-project",
+  "name": "refactor-project",
+  "title": "brainstorm: project refactor",
+  "description": "",
+  "status": "review",
+  "dev_type": "fullstack",
+  "scope": "destructive parity migration and current-core deletion",
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-22",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "backend/",
+    "frontend/app/",
+    "frontend/react-router.config.ts",
+    "frontend/app/ui/",
+    "frontend/app/shell/",
+    "frontend/app/routes/",
+    "frontend/app/lib/utils.ts",
+    "backend/src/fablemap_api/api/v1/taverns.py",
+    "backend/src/fablemap_api/application/taverns.py",
+    "backend/src/fablemap_api/contracts/taverns.py",
+    "backend/tests/test_api_smoke.py",
+    "frontend/app/lib/api-client.ts",
+    "frontend/app/lib/taverns.ts",
+    "frontend/app/routes/discover.tsx",
+    "frontend/app/routes/create.tsx",
+    "frontend/app/routes/tavern.tsx",
+    ".trellis/spec/backend/",
+    ".trellis/spec/frontend/",
+    ".trellis/spec/backend/directory-structure.md",
+    ".trellis/spec/backend/error-handling.md",
+    ".trellis/spec/frontend/index.md",
+    ".trellis/spec/frontend/quality-guidelines.md",
+    ".trellis/spec/frontend/type-safety.md",
+    "backend/src/fablemap_api/core/",
+    "backend/src/fablemap_api/__main__.py",
+    "frontend/app/product/",
+    "frontend/scripts/",
+    "tests/conftest.py",
+    "pytest.ini",
+    "README.md",
+    "AGENTS.md"
+  ],
+  "notes": "Destructive parity migration complete: root fablemap/ moved to backend/src/fablemap_api/core/ and deleted; frontend/src moved to frontend/app/product/ and deleted; tests/imports/scripts/specs updated; compileall, backend smoke, full pytest, frontend typecheck/build/test passed.",
+  "meta": {}
+}

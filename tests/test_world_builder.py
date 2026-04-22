@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import unittest
 
-from fablemap.world_builder import build_world
+from fablemap_api.core.world_builder import build_world
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"

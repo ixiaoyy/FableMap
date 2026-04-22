@@ -1,6 +1,6 @@
 import pytest
 
-from fablemap.gameplay import (
+from fablemap_api.core.gameplay import (
     AIDirector,
     GameplaySession,
     choose_fallback_event,

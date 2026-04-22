@@ -7,7 +7,7 @@ import {
   MINI_GAME_TEMPLATES,
   buildMiniGameStartPrompt,
   getMiniGameTemplates,
-} from '../src/tavernMiniGames.js'
+} from '../app/product/tavernMiniGames.js'
 
 assert.equal(MINI_GAME_TEMPLATES.length, 6)
 
@@ -67,18 +67,18 @@ assert.ok(cardPrompt.includes('象征'))
 assert.ok(cardPrompt.includes('不做命运断言'))
 
 const here = dirname(fileURLToPath(import.meta.url))
-const panelSource = readFileSync(join(here, '../src/TavernMiniGamePanel.jsx'), 'utf8')
+const panelSource = readFileSync(join(here, '../app/product/TavernMiniGamePanel.jsx'), 'utf8')
 assert.ok(panelSource.includes('return null'))
 assert.ok(panelSource.includes('templates.map'))
 assert.ok(panelSource.includes('onStart?.(template)'))
 assert.ok(panelSource.includes('disabled || sending'))
 
-const styleSource = readFileSync(join(here, '../src/tavernMiniGames.css'), 'utf8')
+const styleSource = readFileSync(join(here, '../app/product/tavernMiniGames.css'), 'utf8')
 assert.ok(styleSource.includes('.tavern-mini-game-panel'))
 assert.ok(styleSource.includes('.tavern-mini-game-grid'))
 assert.ok(styleSource.includes('.tavern-mini-game-card'))
 
-const chatRoomSource = readFileSync(join(here, '../src/TavernChatRoom.jsx'), 'utf8')
+const chatRoomSource = readFileSync(join(here, '../app/product/TavernChatRoom.jsx'), 'utf8')
 assert.ok(chatRoomSource.includes("from './tavernMiniGames'"))
 assert.ok(chatRoomSource.includes("from './TavernMiniGamePanel'"))
 assert.ok(chatRoomSource.includes('getMiniGameTemplates'))

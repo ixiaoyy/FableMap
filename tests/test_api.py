@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from fablemap.api import create_app
-from fablemap.api_service import build_health_payload, build_meta_payload, build_nearby_payload
-from fablemap.application.web_payloads import build_behavior_insights, build_orchestrate_payload, record_memory_graph_event
-from fablemap.nearby import generate_nearby_preview as real_generate_nearby_preview
-from fablemap.overpass import OverpassError
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.api import create_app
+from fablemap_api.core.api_service import build_health_payload, build_meta_payload, build_nearby_payload
+from fablemap_api.core.application.web_payloads import build_behavior_insights, build_orchestrate_payload, record_memory_graph_event
+from fablemap_api.core.nearby import generate_nearby_preview as real_generate_nearby_preview
+from fablemap_api.core.overpass import OverpassError
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"
@@ -59,11 +59,12 @@ class ApiTests(unittest.TestCase):
             frontend_root = root / "frontend"
             frontend_root.mkdir()
             (frontend_root / "index.html").write_text(FRONTEND_ROOT.joinpath("index.html").read_text(encoding="utf-8"), encoding="utf-8")
-            src_root = frontend_root / "src"
-            src_root.mkdir()
-            (src_root / "main.jsx").write_text(FRONTEND_ROOT.joinpath("src", "main.jsx").read_text(encoding="utf-8"), encoding="utf-8")
-            (src_root / "App.jsx").write_text(FRONTEND_ROOT.joinpath("src", "App.jsx").read_text(encoding="utf-8"), encoding="utf-8")
-            (src_root / "styles.css").write_text(FRONTEND_ROOT.joinpath("src", "styles.css").read_text(encoding="utf-8"), encoding="utf-8")
+            app_root = frontend_root / "app"
+            product_root = app_root / "product"
+            product_root.mkdir(parents=True)
+            (app_root / "root.tsx").write_text(FRONTEND_ROOT.joinpath("app", "root.tsx").read_text(encoding="utf-8"), encoding="utf-8")
+            (product_root / "App.jsx").write_text(FRONTEND_ROOT.joinpath("app", "product", "App.jsx").read_text(encoding="utf-8"), encoding="utf-8")
+            (app_root / "styles.css").write_text(FRONTEND_ROOT.joinpath("app", "styles.css").read_text(encoding="utf-8"), encoding="utf-8")
 
             app = create_app(
                 output_root=output_root,
@@ -72,11 +73,12 @@ class ApiTests(unittest.TestCase):
             )
             with TestClient(app) as client:
                 html = client.get("/").text
-                main_js = client.get("/src/main.jsx").text
-                app_js = client.get("/src/App.jsx").text
+                root_tsx = client.get("/app/root.tsx").text
+                app_js = client.get("/app/product/App.jsx").text
 
-        self.assertIn('type="module" src="/src/main.jsx"', html)
-        self.assertIn("ReactDOM.createRoot", main_js)
+        self.assertNotIn("/src/", html)
+        self.assertIn("React Router Framework entry", html)
+        self.assertIn("HydrateFallback", root_tsx)
         self.assertIn("useWorldSession", app_js)
         self.assertIn("WorldStagePanel", app_js)
 
@@ -146,7 +148,7 @@ class ApiTests(unittest.TestCase):
             return real_generate_nearby_preview(**kwargs)
 
         with TemporaryDirectory() as tmpdir, patch(
-            "fablemap.web.service.generate_nearby_preview",
+            "fablemap_api.core.web.service.generate_nearby_preview",
             side_effect=fake_generate_nearby_preview,
         ):
             output_root = Path(tmpdir) / ".fablemap-api"
@@ -453,7 +455,7 @@ class ApiServiceTests(unittest.TestCase):
 
 class WebPayloadTests(unittest.TestCase):
     def test_record_memory_graph_event_tracks_observe_dwell_and_mark(self) -> None:
-        from fablemap.memory_graph import WorldMemoryGraph
+        from fablemap_api.core.memory_graph import WorldMemoryGraph
 
         memory_graph = WorldMemoryGraph()
         record_memory_graph_event(
@@ -495,7 +497,7 @@ class WebPayloadTests(unittest.TestCase):
         self.assertEqual(history.emotions[0], "warm")
 
     def test_build_behavior_insights_uses_memory_graph_history(self) -> None:
-        from fablemap.memory_graph import WorldMemoryGraph
+        from fablemap_api.core.memory_graph import WorldMemoryGraph
 
         memory_graph = WorldMemoryGraph()
         event = {

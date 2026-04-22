@@ -1,6 +1,6 @@
 """Tests for AIO4 BehaviorCompiler"""
 import pytest
-from fablemap.behavior_compiler import (
+from fablemap_api.core.behavior_compiler import (
     BehaviorCompiler, BehaviorEvent, BehaviorTrace, MeaningVector, build_trace
 )
 

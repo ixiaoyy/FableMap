@@ -3,22 +3,22 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 def _web_service(tmpdir: str) -> WebService:
     return WebService(ApiSettings(output_root=Path(tmpdir), fixture_file=None, frontend_root=None))
 
 
-def test_web_service_legacy_tavern_wrappers_persist_extension_fields():
+def test_web_service_compatibility_tavern_wrappers_persist_extension_fields():
     with TemporaryDirectory() as tmpdir:
         service = _web_service(tmpdir)
         tavern = service.create_tavern_payload(
             {
                 "id": "tavern_router_compat",
                 "name": "Router Compat Tavern",
-                "description": "A tavern for legacy router compatibility.",
+                "description": "A tavern for compatibility router compatibility.",
                 "lat": 31.23,
                 "lon": 121.47,
             },
@@ -97,7 +97,7 @@ def test_character_card_world_info_import_is_attached_to_tavern():
 def test_world_info_hit_tester_matches_saved_and_temporary_entries():
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
+    from fablemap_api.core.web.app import create_web_app
 
     with TemporaryDirectory() as tmpdir:
         app = create_web_app(ApiSettings(output_root=Path(tmpdir), fixture_file=None, frontend_root=None))

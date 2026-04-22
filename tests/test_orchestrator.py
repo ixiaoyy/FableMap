@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-from fablemap.orchestrator.ai_engine import AIOrchestrator
-from fablemap.orchestrator.rule_engine import RuleBasedOrchestrator
+from fablemap_api.core.orchestrator.ai_engine import AIOrchestrator
+from fablemap_api.core.orchestrator.rule_engine import RuleBasedOrchestrator
 
 
 def test_observer_effect_calculation():

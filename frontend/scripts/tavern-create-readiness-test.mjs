@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 
-import { getWizardReadiness } from '../src/tavernCreateReadiness.js'
+import { getWizardReadiness } from '../app/product/tavernCreateReadiness.js'
 
 const incomplete = getWizardReadiness({
   lat: '200',

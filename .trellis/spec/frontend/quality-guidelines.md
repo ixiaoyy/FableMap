@@ -1,0 +1,101 @@
+# Frontend Quality Guidelines
+
+> Code quality standards for React/Vite frontend changes.
+
+---
+
+## Overview
+
+Frontend quality means preserving the tavern-first product direction, keeping API/service boundaries clear, staying mobile-aware, and verifying with Vite build and script tests when relevant.
+
+---
+
+## Required patterns
+
+- API calls go through `frontend/app/lib/` for new route modules or `frontend/app/product/services/` for product parity source.
+- Reusable stateful workflows go through `frontend/app/product/hooks/`.
+- Owner-editable payloads are normalized before save.
+- UI errors are readable and do not reveal secrets.
+- Tavern and gameplay UI must respect owner-authored content boundaries.
+- Mobile/narrow screens must remain usable for visual/interaction changes.
+
+---
+
+## Forbidden patterns
+
+- Adding additional large UI frameworks, state managers, or map rendering dependencies without approval.
+- Adding direct `fetch` calls in many components.
+- Logging or displaying owner `api_key`, private LLM config, password hashes, or visitor private memory to the wrong user.
+- Implementing platform-generated tavern/NPC/story content as if it were owner-authored.
+- Adding combat/level/equipment/ranking or visitor-to-visitor social features.
+- Editing `frontend/dist/` as source.
+- Mixing unrelated style refactors into feature/bug changes.
+
+---
+
+## Verification requirements
+
+For the target React Router Framework frontend, use:
+
+```powershell
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+npm --prefix frontend test
+```
+
+Generated React Router artifacts (`frontend/.react-router/`) and build output (`frontend/build/`) are not source and must stay ignored.
+
+For frontend changes, run the smallest real verification:
+
+```powershell
+# Build React/Vite frontend
+npm --prefix .\frontend run build
+
+# Service/rule/script tests
+npm --prefix .\frontend test
+```
+
+Current `frontend/package.json` test script runs:
+
+```text
+service-contract-test.mjs
+play-modes-test.mjs
+mini-games-test.mjs
+gameplay-test.mjs
+personality-templates-test.mjs
+tavern-create-readiness-test.mjs
+```
+
+If a change affects a specific script-tested service/rule, run `npm --prefix .\frontend test`; for visual/component-only changes, at least run build.
+
+---
+
+## Code review checklist
+
+- Does the UI support the current tavern chain rather than old map-game priorities?
+- Are API calls centralized in services?
+- Are owner/visitor identity boundaries still clear?
+- Are schema fields aligned with backend and `docs/WORLD_SCHEMA.md`?
+- Are loading, busy, empty, and error states visible?
+- Does it work on narrow screens?
+- Was the appropriate build/test command run and reported?
+
+---
+
+## Real examples to follow
+
+1. `frontend/app/lib/taverns.ts`: typed `/api/v1/taverns` methods and user ID headers for new route modules.
+2. `frontend/app/product/services/tavernService.js`: centralized product-parity service methods and user ID headers.
+3. `frontend/app/product/tavernCreateReadiness.js` with `frontend/scripts/tavern-create-readiness-test.mjs`: business/readiness rules tested outside components.
+4. `frontend/app/product/tavernMiniGames.js` with `frontend/scripts/mini-games-test.mjs`: static gameplay templates protected by script tests.
+5. `frontend/app/product/personalityTemplates.js` with `frontend/scripts/personality-templates-test.mjs`: template/filter logic covered without requiring the browser.
+
+---
+
+## Common mistakes
+
+- Running only backend tests after frontend service changes.
+- Changing UI labels/constants in several files instead of centralizing or reusing helpers.
+- Treating a Vite dev server manual check as a substitute for `npm --prefix .\frontend run build`.
+- Forgetting to update script tests when changing service contracts or rule helpers.
+- Shipping UI that works only with a configured external LLM, despite the project maintaining no-key/fallback demo flows.

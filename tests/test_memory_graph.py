@@ -1,6 +1,6 @@
 """Tests for memory graph"""
 import pytest
-from fablemap.memory_graph import WorldMemoryGraph
+from fablemap_api.core.memory_graph import WorldMemoryGraph
 
 def test_record_observation():
     graph = WorldMemoryGraph()

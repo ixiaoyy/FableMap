@@ -1,9 +1,9 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fablemap.default_taverns import DEFAULT_PUBLIC_WELFARE_TAVERN_IDS
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.default_taverns import DEFAULT_PUBLIC_WELFARE_TAVERN_IDS
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 def _service(tmpdir: str) -> WebService:

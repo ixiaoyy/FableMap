@@ -9,7 +9,7 @@
 | `fablemap/memory/core.py` | 新增自动提炼、候选打分、去重合并、Prompt 优先级选择和格式化函数；`fablemap.memory` 保持兼容 re-export |
 | `fablemap/web/service.py` | 聊天后自动写入 MemoryAtom；按 `memory_policy` 选择可见记忆注入 Prompt |
 | `fablemap/web/router.py` | 新增 `/api/taverns/{id}/memories` 轻量列表端点，支持筛选、分页、关键词和 pinned |
-| `fablemap/prompt_builder.py` | `PromptBuildConfig` 支持 `memory_atoms` / `memory_budget_tokens`，legacy 与 block 模式均可注入 |
+| `fablemap/prompt_builder.py` | `PromptBuildConfig` 支持 `memory_atoms` / `memory_budget_tokens`，compatibility 与 block 模式均可注入 |
 | `fablemap/prompt_blocks.py` | 默认段落增加“结构化记忆”，无记忆时自动跳过 |
 | `frontend/src/TavernMemoryPanel.jsx` | 访客记忆面板支持结构化记忆列表、手动添加、固定、删除、标错和新记忆提示 |
 | `frontend/src/TavernContextPanel.jsx` | 右侧上下文“记忆”页展示自动提炼记忆，并支持刷新、固定、删除和标错 |

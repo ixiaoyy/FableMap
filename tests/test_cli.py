@@ -6,9 +6,9 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from fablemap.cli import main
-from fablemap.overpass import OverpassError
-from fablemap.world_builder import build_world, write_world
+from fablemap_api.core.cli import main
+from fablemap_api.core.overpass import OverpassError
+from fablemap_api.core.world_builder import build_world, write_world
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"
@@ -51,9 +51,9 @@ class CliTests(unittest.TestCase):
             "landmarks": [],
         }
         with TemporaryDirectory() as tmpdir, patch(
-            "fablemap.cli.build_world",
+            "fablemap_api.core.cli.build_world",
             return_value=fake_world,
-        ) as build_world_mock, patch("fablemap.cli.write_world"):
+        ) as build_world_mock, patch("fablemap_api.core.cli.write_world"):
             output_path = Path(tmpdir) / "world.json"
             cache_dir = Path(tmpdir) / "cache"
             exit_code = main(
@@ -86,7 +86,7 @@ class CliTests(unittest.TestCase):
     def test_generate_returns_error_when_live_fetch_fails(self) -> None:
         stderr = io.StringIO()
         with TemporaryDirectory() as tmpdir, patch(
-            "fablemap.cli.build_world",
+            "fablemap_api.core.cli.build_world",
             side_effect=OverpassError("Overpass request failed due to network error on attempt 1/1 with timeout 5s: test outage"),
         ):
             output_path = Path(tmpdir) / "world.json"
@@ -145,7 +145,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result["preview"], str(output_dir / "bundle" / "index.html"))
 
     def test_page_subcommand_delegates_to_page_runner(self) -> None:
-        with patch("fablemap.page.run_page", return_value=0) as run_page_mock:
+        with patch("fablemap_api.core.page.run_page", return_value=0) as run_page_mock:
             exit_code = main(["page", "--port", "8765", "--no-open"])
         self.assertEqual(exit_code, 0)
         args = run_page_mock.call_args.args[0]
@@ -153,7 +153,7 @@ class CliTests(unittest.TestCase):
         self.assertTrue(args.no_open)
 
     def test_api_subcommand_delegates_to_api_runner(self) -> None:
-        with patch("fablemap.api.run_api", return_value=0) as run_api_mock:
+        with patch("fablemap_api.core.api.run_api", return_value=0) as run_api_mock:
             exit_code = main(["api", "--port", "8951", "--no-open"])
         self.assertEqual(exit_code, 0)
         args = run_api_mock.call_args.args[0]

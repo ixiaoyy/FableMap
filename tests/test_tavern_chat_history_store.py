@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fablemap.tavern import ChatMessage, TavernStore
+from fablemap_api.core.tavern import ChatMessage, TavernStore
 
 
 def _message(

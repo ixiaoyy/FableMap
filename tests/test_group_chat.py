@@ -1,4 +1,4 @@
-from fablemap.group_chat import GroupChatManager, GroupMember
+from fablemap_api.core.group_chat import GroupChatManager, GroupMember
 
 
 def test_group_chat_response_count_respects_configured_cap():
@@ -48,8 +48,8 @@ def test_group_chat_api_uses_response_cap(tmp_path):
 
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     app = create_web_app(
         ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
@@ -96,8 +96,8 @@ def test_group_chat_api_records_generated_responses_for_next_context(tmp_path):
 
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     app = create_web_app(
         ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
@@ -161,9 +161,9 @@ def test_group_chat_api_records_generated_responses_for_next_context(tmp_path):
 
 
 def test_tavern_chat_payload_injects_group_context_into_prompt(tmp_path, monkeypatch):
-    from fablemap.tavern import ChatMessage, LLMConfig, Tavern, TavernCharacter
-    from fablemap.web.config import ApiSettings
-    from fablemap.web.service import WebService
+    from fablemap_api.core.tavern import ChatMessage, LLMConfig, Tavern, TavernCharacter
+    from fablemap_api.core.web.config import ApiSettings
+    from fablemap_api.core.web.service import WebService
 
     service = WebService(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
     tavern = Tavern(
@@ -220,7 +220,7 @@ def test_tavern_chat_payload_injects_group_context_into_prompt(tmp_path, monkeyp
             captured["messages"] = messages
             return DummyResponse()
 
-    monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+    monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: CapturingClient())
 
     payload = service.tavern_chat_payload(
         tavern_id=tavern.id,
@@ -250,7 +250,7 @@ def test_tavern_chat_payload_injects_group_context_into_prompt(tmp_path, monkeyp
 
 
 def test_tavern_group_chat_config_is_normalized(tmp_path):
-    from fablemap.tavern import Tavern, TavernService, TavernStore
+    from fablemap_api.core.tavern import Tavern, TavernService, TavernStore
 
     store = TavernStore(tmp_path)
     service = TavernService(store)
@@ -291,8 +291,8 @@ def test_tavern_group_chat_routes_update_config_and_send_rules_backend(tmp_path)
 
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     app = create_web_app(
         ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
@@ -401,8 +401,8 @@ def test_tavern_group_chat_rejects_cross_visitor_access(tmp_path):
 
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     app = create_web_app(
         ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
@@ -485,8 +485,8 @@ def test_tavern_group_chat_round_robin_persists_across_turns(tmp_path):
 
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     app = create_web_app(
         ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
@@ -556,8 +556,8 @@ def test_tavern_group_chat_response_cooldown_suppresses_recent_speakers(tmp_path
 
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     app = create_web_app(
         ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None)
@@ -629,10 +629,10 @@ def test_tavern_group_chat_response_cooldown_suppresses_recent_speakers(tmp_path
 
 
 def test_tavern_group_chat_uses_prompt_builder_context_and_output_rules(tmp_path, monkeypatch):
-    from fablemap.memory import MemoryAtom
-    from fablemap.tavern import LLMConfig, Tavern, TavernCharacter, WorldInfoEntry
-    from fablemap.web.config import ApiSettings
-    from fablemap.web.service import WebService
+    from fablemap_api.core.memory import MemoryAtom
+    from fablemap_api.core.tavern import LLMConfig, Tavern, TavernCharacter, WorldInfoEntry
+    from fablemap_api.core.web.config import ApiSettings
+    from fablemap_api.core.web.service import WebService
 
     service = WebService(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
     tavern = Tavern(
@@ -718,7 +718,7 @@ def test_tavern_group_chat_uses_prompt_builder_context_and_output_rules(tmp_path
             captured["messages"] = messages
             return DummyResponse()
 
-    monkeypatch.setattr("fablemap.web.service.create_client", lambda config: CapturingClient())
+    monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: CapturingClient())
 
     payload = service.send_group_chat_payload(
         tavern_id=tavern.id,

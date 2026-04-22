@@ -1,8 +1,8 @@
 import pytest
 
-from fablemap.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks, truncate_to_budget
-from fablemap.prompt_builder import PromptBuildConfig, PromptBuilder
-from fablemap.web.config import ApiSettings
+from fablemap_api.core.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks, truncate_to_budget
+from fablemap_api.core.prompt_builder import PromptBuildConfig, PromptBuilder
+from fablemap_api.core.web.config import ApiSettings
 
 
 def _combined_prompt_text(prompt_result: dict) -> str:
@@ -90,7 +90,7 @@ def test_prompt_blocks_normalize_unknown_type_and_order():
 def test_prompt_blocks_api_defaults_save_preview_and_authz(tmp_path):
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
+    from fablemap_api.core.web.app import create_web_app
 
     app = create_web_app(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
     headers = {"X-User-Id": "owner_prompt_blocks"}

@@ -803,7 +803,7 @@ MemoryAtom {
 **实现记录 2026-04-18**
 
 - `select_memory_atoms_for_prompt()` 按 pinned > long > mid > short、角色相关性、scope、关键词命中、重要度、置信度和更新时间排序，并按 token 预算裁剪。
-- `PromptBuildConfig` 增加 `memory_atoms` / `memory_budget_tokens`，legacy PromptBuilder 与 Prompt Block 模式均能注入结构化记忆。
+- `PromptBuildConfig` 增加 `memory_atoms` / `memory_budget_tokens`，compatibility PromptBuilder 与 Prompt Block 模式均能注入结构化记忆。
 - 默认 Prompt Blocks 增加“结构化记忆”段落，无记忆时自动跳过。
 - Chat API 按酒馆 `memory_policy` 选择可见记忆并注入 Prompt。
 

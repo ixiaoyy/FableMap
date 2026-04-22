@@ -7,8 +7,8 @@ import {
   getGuildTier,
   inferTavernPlayMode,
   updateGuildProgress,
-} from '../src/tavernPlayModes.js'
-import { TAVERN_TEMPLATES } from '../src/tavernTemplates.js'
+} from '../app/product/tavernPlayModes.js'
+import { TAVERN_TEMPLATES } from '../app/product/tavernTemplates.js'
 
 const guildTavern = {
   name: '街角冒险者公会',

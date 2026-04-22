@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from fablemap.tavern import Tavern, TavernService, TavernStore
+from fablemap_api.core.tavern import Tavern, TavernService, TavernStore
 
 
 def _service_with_tavern():
@@ -148,8 +148,8 @@ def test_update_tavern_characters_payload_persists_sprites():
 def test_character_sprites_api_persists_through_web_service():
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
-    from fablemap.web.config import ApiSettings
+    from fablemap_api.core.web.app import create_web_app
+    from fablemap_api.core.web.config import ApiSettings
 
     with TemporaryDirectory() as tmpdir:
         app = create_web_app(

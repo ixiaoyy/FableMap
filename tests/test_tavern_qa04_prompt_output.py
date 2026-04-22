@@ -5,12 +5,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from fablemap.llm_clients import LLMError
-from fablemap.output_rules import apply_output_rules
-from fablemap.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks, truncate_to_budget
-from fablemap.tavern import LLMConfig, Tavern, TavernCharacter
-from fablemap.web.config import ApiSettings
-from fablemap.web.service import WebService
+from fablemap_api.core.llm_clients import LLMError
+from fablemap_api.core.output_rules import apply_output_rules
+from fablemap_api.core.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks, truncate_to_budget
+from fablemap_api.core.tavern import LLMConfig, Tavern, TavernCharacter
+from fablemap_api.core.web.config import ApiSettings
+from fablemap_api.core.web.service import WebService
 
 
 def _service(tmpdir: str) -> WebService:
@@ -106,7 +106,7 @@ def test_chat_api_with_tiny_memory_budget_never_exceeds_limit(monkeypatch):
             def complete(self, messages):
                 return DummyResponse()
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: DummyClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: DummyClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern.id,
@@ -164,7 +164,7 @@ def test_bad_output_regex_does_not_break_chat_and_message_is_still_saved(monkeyp
             def complete(self, messages):
                 return DummyResponse()
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: DummyClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: DummyClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern.id,
@@ -227,7 +227,7 @@ def test_degraded_response_is_persisted_to_chat_history(monkeypatch):
             def complete(self, messages):
                 raise LLMError("upstream unavailable")
 
-        monkeypatch.setattr("fablemap.web.service.create_client", lambda config: FailingClient())
+        monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda config: FailingClient())
 
         payload = service.tavern_chat_payload(
             tavern_id=tavern.id,
@@ -259,7 +259,7 @@ def test_qa04_api_level_comprehensive(monkeypatch):
     """API 级别端到端验证：Prompt Block 默认顺序 + 输出修正规则 API + 坏正则容错."""
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
-    from fablemap.web.app import create_web_app
+    from fablemap_api.core.web.app import create_web_app
 
     with TemporaryDirectory() as tmpdir:
         app = create_web_app(

@@ -5,8 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from fablemap.showcase import main
-from fablemap.world_builder import build_world, write_world
+from fablemap_api.core.showcase import main
+from fablemap_api.core.world_builder import build_world, write_world
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"

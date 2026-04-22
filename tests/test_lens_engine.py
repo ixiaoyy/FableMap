@@ -1,6 +1,6 @@
 """Tests for AIO2 Lens Engine"""
 import pytest
-from fablemap.lens_engine import LensEngine, VibeProfile, build_vibe_profile
+from fablemap_api.core.lens_engine import LensEngine, VibeProfile, build_vibe_profile
 
 
 @pytest.fixture
@@ -114,7 +114,7 @@ def test_lens_output_has_trigger_reason(engine):
 
 
 def test_orchestrator_includes_lens_output():
-    from fablemap.orchestrator.rule_engine import RuleBasedOrchestrator
+    from fablemap_api.core.orchestrator.rule_engine import RuleBasedOrchestrator
     orchestrator = RuleBasedOrchestrator()
     world_state = {
         "slice_id": "test_slice",

@@ -2,7 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from fablemap.cache import cache_key_for_request, cache_path_for_request, load_cached_json, write_cached_json
+from fablemap_api.core.cache import cache_key_for_request, cache_path_for_request, load_cached_json, write_cached_json
 
 
 class CacheTests(unittest.TestCase):
