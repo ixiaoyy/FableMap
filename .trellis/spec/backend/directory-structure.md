@@ -672,6 +672,85 @@ If frontend native client methods changed, also run:
 npm --prefix frontend run typecheck
 npm --prefix frontend run build
 ```
+
+## Scenario: native tokenizer / memory utility endpoints
+
+### 1. Scope / Trigger
+
+Use this contract when migrating compatibility utility routes that support prompt budgeting and local memory tooling into native `/api/v1`. These endpoints are deterministic helpers; they must not expose owner LLM credentials or create platform-authored tavern content.
+
+### 2. Signatures
+
+Routes live in `backend/src/fablemap_api/api/v1/taverns.py` under `utilities_router`:
+
+```python
+GET  /api/v1/tokenizers
+POST /api/v1/tokenizers/count
+POST /api/v1/tokenizers/count_messages
+POST /api/v1/memory/summarize
+POST /api/v1/memory/truncate
+POST /api/v1/memory/importance
+```
+
+Application methods live in `backend/src/fablemap_api/application/taverns.py`:
+
+```python
+list_tokenizers() -> dict
+count_tokens(data) -> dict
+count_message_tokens(data) -> dict
+summarize_memory(data) -> dict
+truncate_memory(data) -> dict
+score_memory_importance(data) -> dict
+```
+
+### 3. Contracts
+
+- Request body models live in `backend/src/fablemap_api/contracts/taverns.py`: `TokenCountRequest`, `TokenMessagesCountRequest`, `MemorySummarizeRequest`, `MemoryTruncateRequest`, and `MemoryImportanceRequest`.
+- Tokenizer routes reuse `core.token_counter.TokenCounter` and retain the compatibility response shape `{"count": int, "backend": str}`.
+- Memory routes reuse `core.memory.ChatSummarizer`, `HistoryTruncator`, and `ImportanceScorer`; summarization stays guarded with `501` until an explicit LLM client is injected.
+- Frontend native clients belong in `frontend/app/lib/taverns.ts` and must call `/api/v1/tokenizers...` and `/api/v1/memory...`, not compatibility `/api/...`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| List tokenizers | includes `cl100k_base`, `o200k_base`, `p50k_base`, `p50k_edit`, `r50k_base` |
+| Count text/messages | `200 {"count": int, "backend": requested_backend}` |
+| `messages` is not a list | `400/422` client error |
+| Summarize without injected LLM client | `501 {"error": "LLM client not configured for summarization"}` |
+| Truncate | returns retained `messages` and `count` |
+| Importance | returns `scores` with message indexes and `importance` values |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `POST /api/v1/tokenizers/count_messages` with OpenAI-style messages returns a positive count without requiring external services.
+- Base: `POST /api/v1/memory/truncate` with a tiny `max_tokens` budget returns a shorter message list plus `count`.
+- Bad: `POST /api/v1/memory/summarize` without an injected LLM client returns `501` instead of trying to call a provider or exposing credentials.
+
+### 6. Tests Required
+
+`backend/tests/test_v1_memory_tokenizer_utilities.py` must assert:
+
+- tokenizer list, text count, and message count responses;
+- memory truncate returns fewer messages when budget is tiny;
+- importance scoring preserves indexes and ranks more informative content higher;
+- summarize returns the current `501` guardrail.
+
+Run:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests/test_v1_memory_tokenizer_utilities.py --tb=short
+py -3 -m pytest -q backend/tests --tb=short
+```
+
+If frontend native client methods changed, also run:
+
+```powershell
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+```
+
 ## Common mistakes
 
 - Adding API logic directly inside route handlers when it belongs in `WebService` or `TavernService`.

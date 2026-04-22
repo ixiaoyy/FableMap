@@ -22,7 +22,7 @@ from fablemap_api.core.gameplay import (
 from fablemap_api.core.group_chat import GroupChatManager, GroupMember
 from fablemap_api.core.llm_clients import LLMConfig as ClientLLMConfig
 from fablemap_api.core.llm_clients import LLMError, create_client
-from fablemap_api.core.memory import auto_create_memories_from_chat
+from fablemap_api.core.memory import ChatSummarizer, HistoryTruncator, ImportanceScorer, auto_create_memories_from_chat
 from fablemap_api.core.output_rules import apply_output_rules, default_output_rules, normalize_output_rules
 from fablemap_api.core.presets import (
     combine_runtime_presets,
@@ -47,6 +47,7 @@ from fablemap_api.core.tavern import (
     VoiceConfig,
     WorldInfoEntry,
 )
+from fablemap_api.core.token_counter import TokenCounter
 
 from ..domain.expression_policy import infer_expression_keyword, normalize_sprite_map
 from ..domain.group_chat_policy import (
@@ -498,6 +499,80 @@ class TavernApplicationService:
         if not str(payload.get("message") or "").strip():
             raise HTTPException(status_code=400, detail="text is required")
         return self.test_world_info(tavern_id, payload, user_id)
+
+    def list_tokenizers(self) -> dict[str, Any]:
+        tokenizers = ["cl100k_base", "o200k_base", "p50k_base", "p50k_edit", "r50k_base"]
+        return {"tokenizers": tokenizers}
+
+    def count_tokens(self, data: dict[str, Any]) -> dict[str, Any]:
+        payload = data or {}
+        text = str(payload.get("text") or "")
+        backend = str(payload.get("backend") or "cl100k_base").strip() or "cl100k_base"
+        try:
+            counter = TokenCounter(backend)
+            return {"count": len(counter.encode(text)), "backend": backend}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    def count_message_tokens(self, data: dict[str, Any]) -> dict[str, Any]:
+        payload = data or {}
+        messages = payload.get("messages", [])
+        if not isinstance(messages, list):
+            raise HTTPException(status_code=400, detail="messages must be a list")
+        backend = str(payload.get("backend") or "cl100k_base").strip() or "cl100k_base"
+        try:
+            counter = TokenCounter(backend)
+            total = 0
+            for message in messages:
+                total += len(counter.encode(self._token_count_message_content(message)))
+            return {"count": total, "backend": backend}
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    def summarize_memory(self, data: dict[str, Any]) -> dict[str, Any]:
+        payload = data or {}
+        messages = payload.get("messages", [])
+        if not isinstance(messages, list):
+            raise HTTPException(status_code=400, detail="messages must be a list")
+        strategy = str(payload.get("strategy") or "incremental").strip() or "incremental"
+        previous_summary = str(payload.get("previous_summary") or "")
+        summarizer = ChatSummarizer(llm_client=None)
+        if not summarizer.llm_client:
+            raise HTTPException(status_code=501, detail="LLM client not configured for summarization")
+        try:
+            return {"summary": summarizer.summarize(messages, strategy, previous_summary)}
+        except Exception as exc:
+            logger.warning("Memory summarization failed: %s", exc)
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    def truncate_memory(self, data: dict[str, Any]) -> dict[str, Any]:
+        payload = data or {}
+        messages = payload.get("messages", [])
+        if not isinstance(messages, list):
+            raise HTTPException(status_code=400, detail="messages must be a list")
+        max_tokens = self._safe_int(payload.get("max_tokens"), 8192)
+        if max_tokens <= 0:
+            max_tokens = 8192
+        try:
+            truncator = HistoryTruncator()
+            truncated = truncator.truncate(messages, max_tokens)
+            return {"messages": truncated, "count": len(truncated)}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    def score_memory_importance(self, data: dict[str, Any]) -> dict[str, Any]:
+        payload = data or {}
+        messages = payload.get("messages", [])
+        if not isinstance(messages, list):
+            raise HTTPException(status_code=400, detail="messages must be a list")
+        scorer = ImportanceScorer()
+        try:
+            scores = [{"index": index, "importance": scorer.score(message)} for index, message in enumerate(messages)]
+            return {"scores": scores}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     def chat_history(
         self,
@@ -1728,6 +1803,16 @@ class TavernApplicationService:
 
     def _memory_visible(self, atom: Any, tavern: Tavern, user_id: str) -> bool:
         return can_view_memory(atom, tavern, user_id)
+
+    def _token_count_message_content(self, message: Any) -> str:
+        if not isinstance(message, dict):
+            raise HTTPException(status_code=400, detail="messages must contain objects")
+        content = message.get("content", "")
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict):
+                    content = item.get("text", str(item))
+        return str(content)
 
     def _safe_int(self, value: Any, fallback: int = 0) -> int:
         try:

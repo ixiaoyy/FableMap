@@ -199,6 +199,31 @@ class WorldInfoGlobalTestRequest(FlexibleBody):
     world_info: list[dict[str, Any]] | None = None
 
 
+class TokenCountRequest(FlexibleBody):
+    text: str | None = None
+    backend: str | None = None
+
+
+class TokenMessagesCountRequest(FlexibleBody):
+    messages: list[dict[str, Any]] | None = None
+    backend: str | None = None
+
+
+class MemorySummarizeRequest(FlexibleBody):
+    messages: list[dict[str, Any]] | None = None
+    strategy: str | None = None
+    previous_summary: str | None = None
+
+
+class MemoryTruncateRequest(FlexibleBody):
+    messages: list[dict[str, Any]] | None = None
+    max_tokens: int | str | None = None
+
+
+class MemoryImportanceRequest(FlexibleBody):
+    messages: list[dict[str, Any]] | None = None
+
+
 class OutputRulesWriteRequest(FlexibleBody):
     rules: list[dict[str, Any]] | None = None
     output_rules: list[dict[str, Any]] | None = None

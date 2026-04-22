@@ -731,3 +731,31 @@ Validation after this slice:
 * `git diff --cached --check` — passed after trimming doc EOF whitespace.
 
 Current main working tree still contains unrelated MySQL WIP and deleted reference PNGs; those files were intentionally not staged with this slice.
+
+## Native v1 Tokenizer / Memory Utility Migration Iteration (2026-04-22)
+
+Continued migration by moving low-risk prompt-budget and memory helper utilities into the native enterprise API surface:
+
+* Added native v1 routes:
+  * `GET /api/v1/tokenizers`
+  * `POST /api/v1/tokenizers/count`
+  * `POST /api/v1/tokenizers/count_messages`
+  * `POST /api/v1/memory/summarize`
+  * `POST /api/v1/memory/truncate`
+  * `POST /api/v1/memory/importance`
+* Added native application methods in `TavernApplicationService` without delegating to `core/web/service.py` or `core/web/router.py`; tokenizer/memory behavior reuses `core.token_counter` and `core.memory` providers during staged extraction.
+* Added request contracts in `backend/src/fablemap_api/contracts/taverns.py` and frontend typed clients/types in `frontend/app/lib/taverns.ts`.
+* Added `backend/tests/test_v1_memory_tokenizer_utilities.py` for tokenizer list/count, message-token count, memory truncation, importance scoring, and summarization guardrail.
+
+Validation after this slice:
+
+* `py -3 -m py_compile backend/src/fablemap_api/application/taverns.py backend/src/fablemap_api/contracts/taverns.py backend/src/fablemap_api/api/v1/taverns.py backend/tests/test_v1_memory_tokenizer_utilities.py` — passed.
+* Isolated clean worktree from `HEAD` + staged patch: `py -3 -m compileall -q backend/src` — passed.
+* Isolated clean worktree: `py -3 -m pytest -q backend/tests/test_v1_memory_tokenizer_utilities.py --tb=short` — passed, 2 tests.
+* Isolated clean worktree: `py -3 -m pytest -q backend/tests --tb=short` — passed, 33 tests.
+* Isolated clean worktree with existing built `frontend/dist` copied for legacy static-shell test: `py -3 -m pytest -q --tb=short` — passed, 262 tests.
+* `npm --prefix frontend run typecheck` — passed.
+* `npm --prefix frontend run build` — passed.
+* `npm --prefix frontend test` — passed.
+
+Current main working tree still contains unrelated MySQL WIP and deleted reference PNGs; those files were intentionally not staged with this slice.

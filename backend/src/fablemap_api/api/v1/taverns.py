@@ -19,7 +19,10 @@ from ...contracts.taverns import (
     GroupChatConfigRequest,
     GroupChatRequest,
     LLMConfigTestRequest,
+    MemoryImportanceRequest,
     MemoryAtomWriteRequest,
+    MemorySummarizeRequest,
+    MemoryTruncateRequest,
     OutputRulesTestRequest,
     OutputRulesWriteRequest,
     PromptBlocksPreviewRequest,
@@ -32,6 +35,8 @@ from ...contracts.taverns import (
     TavernListResponse,
     TavernPackageImportRequest,
     TavernUpdateRequest,
+    TokenCountRequest,
+    TokenMessagesCountRequest,
     VoiceConfigRequest,
     WorldInfoGlobalTestRequest,
     WorldInfoTestRequest,
@@ -137,6 +142,36 @@ def delete_world_info(request: Request, entry_id: str, data: WorldInfoWriteReque
 @utilities_router.post("/worldinfo/test")
 def test_world_info_global(request: Request, data: WorldInfoGlobalTestRequest) -> dict[str, Any]:
     return _taverns(request).test_world_info_global(data.to_payload(), _get_user_id(request))
+
+
+@utilities_router.get("/tokenizers")
+def list_tokenizers(request: Request) -> dict[str, Any]:
+    return _taverns(request).list_tokenizers()
+
+
+@utilities_router.post("/tokenizers/count")
+def count_tokens(request: Request, data: TokenCountRequest) -> dict[str, Any]:
+    return _taverns(request).count_tokens(data.to_payload())
+
+
+@utilities_router.post("/tokenizers/count_messages")
+def count_message_tokens(request: Request, data: TokenMessagesCountRequest) -> dict[str, Any]:
+    return _taverns(request).count_message_tokens(data.to_payload())
+
+
+@utilities_router.post("/memory/summarize")
+def summarize_memory(request: Request, data: MemorySummarizeRequest) -> dict[str, Any]:
+    return _taverns(request).summarize_memory(data.to_payload())
+
+
+@utilities_router.post("/memory/truncate")
+def truncate_memory(request: Request, data: MemoryTruncateRequest) -> dict[str, Any]:
+    return _taverns(request).truncate_memory(data.to_payload())
+
+
+@utilities_router.post("/memory/importance")
+def score_memory_importance(request: Request, data: MemoryImportanceRequest) -> dict[str, Any]:
+    return _taverns(request).score_memory_importance(data.to_payload())
 
 
 @router.get("/{tavern_id}")

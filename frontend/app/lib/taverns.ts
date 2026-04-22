@@ -268,6 +268,30 @@ export type WorldInfoEntry = Record<string, unknown> & {
   disable?: boolean
 }
 
+export type TokenizersResponse = {
+  tokenizers: string[]
+}
+
+export type TokenCountResponse = {
+  count: number
+  backend: string
+}
+
+export type MemoryUtilityMessage = {
+  role?: string
+  content?: unknown
+  [key: string]: unknown
+}
+
+export type MemoryTruncateResponse = {
+  messages: MemoryUtilityMessage[]
+  count: number
+}
+
+export type MemoryImportanceResponse = {
+  scores: { index: number; importance: number }[]
+}
+
 function queryString(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -576,6 +600,34 @@ export function testWorldInfoGlobal(
   userId = DEFAULT_OWNER_ID,
 ) {
   return readApiJson<WorldInfoTestResponse>("/api/v1/worldinfo/test", jsonInit("POST", data, userId))
+}
+
+export function listTokenizers() {
+  return readApiJson<TokenizersResponse>("/api/v1/tokenizers")
+}
+
+export function countTokens(data: { text?: string; backend?: string }) {
+  return readApiJson<TokenCountResponse>("/api/v1/tokenizers/count", jsonInit("POST", data))
+}
+
+export function countMessageTokens(data: { messages?: MemoryUtilityMessage[]; backend?: string }) {
+  return readApiJson<TokenCountResponse>("/api/v1/tokenizers/count_messages", jsonInit("POST", data))
+}
+
+export function summarizeMemory(data: {
+  messages?: MemoryUtilityMessage[]
+  strategy?: string
+  previous_summary?: string
+}) {
+  return readApiJson<{ summary: string }>("/api/v1/memory/summarize", jsonInit("POST", data))
+}
+
+export function truncateMemory(data: { messages?: MemoryUtilityMessage[]; max_tokens?: number }) {
+  return readApiJson<MemoryTruncateResponse>("/api/v1/memory/truncate", jsonInit("POST", data))
+}
+
+export function scoreMemoryImportance(data: { messages?: MemoryUtilityMessage[] }) {
+  return readApiJson<MemoryImportanceResponse>("/api/v1/memory/importance", jsonInit("POST", data))
 }
 
 export function testWorldInfo(
