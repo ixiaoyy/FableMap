@@ -759,3 +759,20 @@ Validation after this slice:
 * `npm --prefix frontend test` — passed.
 
 Current main working tree still contains unrelated MySQL WIP and deleted reference PNGs; those files were intentionally not staged with this slice.
+
+## Full Project Design Baseline (2026-04-22)
+
+Added `.trellis/tasks/04-22-refactor-project/full-project-design.md` as the next architecture baseline for the whole project. The design records:
+
+* canonical product constraints and non-goals;
+* current backend/frontend/data facts after native v1 and MySQL checkpoint work;
+* target front-back separated architecture;
+* backend/API/application/domain/repository/infrastructure boundaries;
+* frontend route/feature/lib/ui boundaries;
+* bounded contexts for taverns, characters, chat/runtime, owner config, memory, gameplay, packages, and utilities;
+* `/api/v1` canonical API strategy plus compatibility `/api/*` promote/quarantine/retire policy;
+* JSON/MySQL repository strategy and dependency decision risk;
+* compatibility core and `frontend/app/product` deletion checklists;
+* phased roadmap and validation matrix.
+
+This is a design/documentation-only baseline; no runtime code was changed in this design commit.
