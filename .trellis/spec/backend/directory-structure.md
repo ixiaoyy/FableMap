@@ -121,6 +121,27 @@ Use the existing suffix convention for migrated-product-core route responses. Fo
 
 Many modules use small private helpers such as `_utc_now_iso`, `_normalize_*`, `_clamp_*`, `_ensure_*`, and `_safe_*`. Prefer local private helpers for module-specific normalization. Extract shared utilities only when the same logic is genuinely reused across modules.
 
+### Native domain policy helpers
+
+Reusable, framework-independent tavern rules belong in `backend/src/fablemap_api/domain/`, not in FastAPI route modules. Current extracted contract:
+
+```python
+from fablemap_api.domain.tavern_policy import (
+    can_view_memory,
+    can_view_tavern,
+    clean_text,
+    is_tavern_owner,
+    relationship_stage_for,
+)
+```
+
+- `clean_text(value, max_length=...)` collapses user/provider text whitespace and truncates route-facing strings.
+- `relationship_stage_for(strength, visit_count)` maps visitor metrics to `stranger | acquaintance | regular | confidant`.
+- `is_tavern_owner(tavern, user_id)` and `can_view_tavern(tavern, user_id)` keep private tavern access rules out of routes.
+- `can_view_memory(atom, tavern, user_id)` keeps public/owner/subject/visitor memory visibility consistent.
+
+Application services may translate these boolean/domain results into `HTTPException`; domain modules must not import FastAPI.
+
 ---
 
 ## Naming conventions
@@ -142,6 +163,7 @@ Many modules use small private helpers such as `_utc_now_iso`, `_normalize_*`, `
 | New tavern field or store behavior | `backend/src/fablemap_api/core/tavern.py` + tests + `docs/WORLD_SCHEMA.md` if schema-level |
 | New `/api/v1/taverns/...` endpoint | `backend/src/fablemap_api/api/v1/taverns.py` route + `backend/src/fablemap_api/application/taverns.py` use case + `backend/src/fablemap_api/contracts/taverns.py` contract |
 | Migrated-product-core `/api/taverns/...` endpoint | `backend/src/fablemap_api/core/web/router.py` route + `backend/src/fablemap_api/core/web/service.py` payload method |
+| Tavern access/text/relationship policy | `backend/src/fablemap_api/domain/tavern_policy.py` + `backend/tests/test_tavern_policy.py`; application layer converts failures to HTTP errors |
 | Gameplay normalization/session behavior | `backend/src/fablemap_api/core/gameplay.py` and relevant enterprise/migrated-product-core application boundary methods |
 | LLM backend adapter | `backend/src/fablemap_api/core/llm_clients.py`, without logging secrets |
 | SillyTavern import/export behavior | `backend/src/fablemap_api/core/char_card_parser.py` and tavern character tests |
@@ -155,6 +177,7 @@ Many modules use small private helpers such as `_utc_now_iso`, `_normalize_*`, `
 1. `backend/src/fablemap_api/core/gameplay.py` keeps definition normalization, session/event dataclasses, deterministic fallback, completion payloads, and AI Director output validation in one domain file.
 2. `backend/src/fablemap_api/core/char_card_parser.py` isolates SillyTavern JSON/PNG card parsing and export helpers instead of spreading binary parsing through API code.
 3. `backend/src/fablemap_api/core/web/app.py` is small and compositional: app creation, exception response shape, router registration, and SPA static fallback.
+4. `backend/src/fablemap_api/domain/tavern_policy.py` is framework-independent and has focused tests for text normalization, owner/private access, memory visibility, and visitor relationship stages.
 
 ---
 

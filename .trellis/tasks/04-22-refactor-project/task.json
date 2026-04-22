@@ -3,7 +3,7 @@
   "name": "refactor-project",
   "title": "brainstorm: project refactor",
   "description": "",
-  "status": "review",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "destructive parity migration and current-core deletion",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-04-22",
-  "completedAt": null,
+  "completedAt": "2026-04-22",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 6,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -42,7 +42,7 @@
       "action": "record-session"
     }
   ],
-  "commit": null,
+  "commit": "aba33f3",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -78,8 +78,11 @@
     "tests/conftest.py",
     "pytest.ini",
     "README.md",
-    "AGENTS.md"
+    "AGENTS.md",
+    "backend/src/fablemap_api/domain/tavern_policy.py",
+    "backend/tests/test_tavern_policy.py",
+    "backend/tests/conftest.py"
   ],
-  "notes": "Destructive parity migration complete: root fablemap/ moved to backend/src/fablemap_api/core/ and deleted; frontend/src moved to frontend/app/product/ and deleted; tests/imports/scripts/specs updated; compileall, backend smoke, full pytest, frontend typecheck/build/test passed.",
+  "notes": "Baseline committed as aba33f3. Continued migration by extracting v1 tavern domain policy helpers into backend/src/fablemap_api/domain/tavern_policy.py, adding backend/tests/test_tavern_policy.py and backend/tests/conftest.py. Validation passed: compileall backend/src, backend pytest 7 tests, full pytest 236 tests, git diff --check.",
   "meta": {}
 }

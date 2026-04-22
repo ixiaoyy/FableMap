@@ -21,26 +21,18 @@ from fablemap_api.core.llm_clients import LLMError, create_client
 from fablemap_api.core.memory import auto_create_memories_from_chat
 from fablemap_api.core.tavern import ChatMessage, Tavern, TavernService, TavernStore, VisitorState
 
+from ..domain.tavern_policy import (
+    can_view_memory,
+    can_view_tavern,
+    clean_text,
+    is_tavern_owner,
+    relationship_stage_for,
+)
 from ..infrastructure.settings import ApiSettings
 
 
 def _utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _relationship_stage_for(strength: float, visit_count: int) -> str:
-    if strength >= 0.75 or visit_count >= 8:
-        return "confidant"
-    if strength >= 0.45 or visit_count >= 4:
-        return "regular"
-    if strength >= 0.15 or visit_count >= 2:
-        return "acquaintance"
-    return "stranger"
-
-
-def _clean_text(value: Any, *, max_length: int = 800) -> str:
-    text = " ".join(str(value or "").replace("\r\n", "\n").split())
-    return text[:max_length]
 
 
 class TavernApplicationService:
@@ -155,7 +147,7 @@ class TavernApplicationService:
         if not character:
             raise HTTPException(status_code=404, detail="角色不存在")
 
-        clean_message = _clean_text(message, max_length=1600)
+        clean_message = clean_text(message, max_length=1600)
         if not clean_message:
             raise HTTPException(status_code=400, detail="消息不能为空")
 
@@ -192,9 +184,9 @@ class TavernApplicationService:
             tavern_id=tavern_id,
             character_id=character_id,
             visitor_id=visitor_id,
-            visitor_name=_clean_text(visitor_name, max_length=24),
+            visitor_name=clean_text(visitor_name, max_length=24),
             role="user",
-            content=_clean_text(display_message or clean_message, max_length=1600),
+            content=clean_text(display_message or clean_message, max_length=1600),
             timestamp=now,
         )
         assistant_message = ChatMessage(
@@ -412,17 +404,17 @@ class TavernApplicationService:
         messages = [
             {"role": "system", "content": f"你是 FableMap 赛博酒馆「{tavern.name}」里的 NPC {character_name}。{character_prompt}"},
             *[
-                {"role": str(item.get("role") or "user"), "content": _clean_text(item.get("content"), max_length=800)}
+                {"role": str(item.get("role") or "user"), "content": clean_text(item.get("content"), max_length=800)}
                 for item in extra_context[-12:]
                 if isinstance(item, dict) and item.get("content")
             ],
             {"role": "user", "content": message},
         ]
-        return _clean_text(client.complete(messages).content, max_length=2400) or self._rules_response(character_name, message, tavern)
+        return clean_text(client.complete(messages).content, max_length=2400) or self._rules_response(character_name, message, tavern)
 
     def _rules_response(self, character_name: str, message: str, tavern: Tavern) -> str:
-        topic = _clean_text(message, max_length=80)
-        scene = _clean_text(tavern.scene_prompt or tavern.description, max_length=80)
+        topic = clean_text(message, max_length=80)
+        scene = clean_text(tavern.scene_prompt or tavern.description, max_length=80)
         suffix = f"这里的气味和灯光让我想到：{scene}" if scene else "我会把这句话记在今晚的吧台边。"
         return f"{character_name}望向你，轻声回应：“我听见了——{topic}。”{suffix}"
 
@@ -446,7 +438,7 @@ class TavernApplicationService:
             state.first_visit = now
         state.last_visit = now
         state.relationship_strength = min(1.0, float(state.relationship_strength or 0.0) + 0.05)
-        state.relationship_stage = _relationship_stage_for(state.relationship_strength, state.visit_count)
+        state.relationship_stage = relationship_stage_for(state.relationship_strength, state.visit_count)
         self.store.update_visitor_state(tavern_id, state)
         return state
 
@@ -457,22 +449,18 @@ class TavernApplicationService:
         return tavern
 
     def _is_owner(self, tavern: Tavern, user_id: str) -> bool:
-        return bool(user_id and tavern.owner_id and tavern.owner_id == user_id)
+        return is_tavern_owner(tavern, user_id)
 
     def _ensure_owner(self, tavern: Tavern, user_id: str) -> None:
         if tavern.owner_id and tavern.owner_id != user_id:
             raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
 
     def _ensure_visible(self, tavern: Tavern, user_id: str) -> None:
-        if tavern.access == "private" and not self._is_owner(tavern, user_id):
+        if not can_view_tavern(tavern, user_id):
             raise HTTPException(status_code=403, detail="此酒馆是私人的")
 
     def _memory_visible(self, atom: Any, tavern: Tavern, user_id: str) -> bool:
-        if atom.visibility == "public":
-            return True
-        if self._is_owner(tavern, user_id):
-            return True
-        return bool(user_id and user_id in {atom.visitor_id, atom.subject, atom.created_by})
+        return can_view_memory(atom, tavern, user_id)
 
     def _find_gameplay(self, tavern: Tavern, gameplay_id: str, user_id: str) -> dict[str, Any]:
         if not gameplay_id:

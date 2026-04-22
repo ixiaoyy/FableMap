@@ -1,12 +1,9 @@
 from pathlib import Path
-import sys
 
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from fablemap_api.main import create_app  # noqa: E402
-from fablemap_api.infrastructure.settings import ApiSettings  # noqa: E402
+from fablemap_api.main import create_app
+from fablemap_api.infrastructure.settings import ApiSettings
 
 
 def test_health_payload_exposes_enterprise_api_status() -> None:

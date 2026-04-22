@@ -558,3 +558,19 @@ Deletion evidence:
 * `Test-Path fablemap` — `False`.
 * `Test-Path frontend\src` — `False`.
 * Active code scan for `from fablemap`, `import fablemap`, `frontend/src`, `src/main`, `/src/` returned only an intentional `/src/` negative assertion in `tests/test_api.py` plus new-path documentation strings.
+
+## Native Domain Policy Extraction Iteration (2026-04-22)
+
+After committing the destructive parity baseline (`aba33f3`), continued migration with a small enterprise-layer slice:
+
+* Extracted reusable v1 tavern access/text/relationship rules from `backend/src/fablemap_api/application/taverns.py` into framework-independent `backend/src/fablemap_api/domain/tavern_policy.py`.
+* Kept HTTP error translation in the application layer; domain helpers return normalized values/booleans and do not import FastAPI.
+* Added `backend/tests/test_tavern_policy.py` for text normalization, private tavern visibility, memory visibility, and relationship-stage thresholds.
+* Updated backend directory-structure spec with the new domain policy contract and test location.
+
+Validation after this slice:
+
+* `py -3 -m compileall -q backend/src` — passed.
+* `py -3 -m pytest -q backend/tests --tb=short` — passed, 7 tests.
+* `py -3 -m pytest -q --tb=short` — passed, 236 tests.
+* `git diff --check` — passed; Git emitted LF→CRLF working-copy warnings for touched text files only.
