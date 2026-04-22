@@ -15,6 +15,7 @@ tmp_pytest*/
 manual_tmp_test/
 artifacts/pytest-tmp/
 artifacts/pytest-*/
+artifacts/dev-server/
 
 # Generated outputs
 .fablemap-api/

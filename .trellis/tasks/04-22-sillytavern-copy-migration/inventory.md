@@ -1,11 +1,11 @@
 # SillyTavern Copy Migration Inventory
 
-> Status: inventory baseline generated on 2026-04-23. Use this before implementation migration slices.
+> Status: copy deletion checkpoint passed in commit `8fdd837` on 2026-04-23. Remaining items are parent framework-refactor or separately scoped product decisions, not runtime dependencies on `sillytavern_copy/`.
 
 ## Source summary
 
-- Source root: `sillytavern_copy/`
-- Git tracked files: 964
+- Source root: `sillytavern_copy/` (deleted after native compatibility slices)
+- Historical git tracked files: 964
 - Root areas by tracked file count:
   - `public/`: 583
   - `default/`: 196
@@ -13,8 +13,8 @@
   - `.github/`: 25
   - `tests/`: 20
   - `docker/`: 3
-- Primary implementation-bearing areas: `src/`, `public/scripts/`, `default/content/`, `tests/`.
-- No active `git status` changes are currently reported under `sillytavern_copy/`; this inventory is based on tracked files.
+- Historical implementation-bearing areas: `src/`, `public/scripts/`, `default/content/`, `tests/`.
+- Current state: `git ls-files sillytavern_copy` returns `0`; runtime reference scan outside task/change docs returns no matches.
 
 ## Generated per-file checklist
 
@@ -68,27 +68,23 @@ Capability counts from the generated checklist:
 
 | Area | Source paths | Target native area | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Character card parse/export | `src/character-card-parser.js`, `src/charx.js`, `src/png/`, `src/endpoints/characters.js`, `public/scripts/char-data.js`, expression assets | `backend/domain`, `backend/contracts`, `api/v1/characters`, `frontend/features/character-assets` | in progress | Preserve SillyTavern compatibility and FableMap `TavernCharacter` schema. 2026-04-23 backend slices added support for standard V2/V3 `data` envelopes, world-info `secondary_keys`/`order` import compatibility, PNG metadata writing before `IEND`, `ccv3`-first PNG parsing, and base64 CharX zip/SFX `card.json` parsing. Continue with asset extraction/golden cases before deleting copy. |
-| World/lorebook | `src/endpoints/worldinfo.js`, `public/scripts/world-info.js`, lorebook templates | `api/v1/worldinfo`, `domain/world_info_policy.py`, `frontend/features/world-info` | in progress | Keep `WorldInfoEntry` semantics aligned with `docs/WORLD_SCHEMA.md`; owner-authored only. 2026-04-23 slice added SillyTavern lorebook aliases (`uid`, `key`, `keysecondary`, `secondary_keys`) plus `{"entries": {...}}` temporary test payload support. |
-| Prompt/preset/output rules | `default/content/presets/`, `public/scripts/PromptManager.js`, `public/scripts/preset-manager.js`, `public/scripts/sysprompt.js`, `config.yaml` | owner config contracts/application/routes/features | adapt | Owner-authored configuration only; no platform-generated tavern/NPC/story content. |
-| Chat runtime | `src/endpoints/chats.js`, `src/endpoints/groups.js`, `public/script.js`, `public/scripts/chats.js`, `public/scripts/group-chats.js` | `api/v1/chat`, chat/runtime services, `frontend/features/chat-runtime` | migrate/adapt | Must be tavern-scoped, owner-config aware, and preserve visitor history boundaries. |
-| Group chat | `src/endpoints/groups.js`, `public/scripts/group-chats.js` | native group chat runtime | migrate/adapt | Existing v1 group-chat slice is a baseline; audit parity before declaring migrated. |
-| Tokenizers | `src/tokenizers/`, `src/transformers.js`, `src/endpoints/tokenizers.js`, `public/scripts/tokenizers.js` | `api/v1/utilities`, tokenizer domain/application | in progress | Existing v1 tokenizer utility slice is a baseline. 2026-04-23 slice added SillyTavern-compatible tokenizer aliases (`claude`, `llama3`, `mistral`, `gemma`, etc.) and multi-part message text counting without introducing runtime dependency on `sillytavern_copy`. Continue with exact tokenizer asset strategy separately. |
-| Memory/vector/embedding | `src/vectors/`, memory extension files | memory/vector domain + infra | migrate/adapt | Sensitive visitor memory boundaries must hold; vector store must not leak private memory. |
-| LLM/provider integrations | `src/endpoints/openai.js`, `anthropic.js`, `google.js`, `openrouter.js`, `text-completions.js`, `chat-completions.js`, `request-proxy.js`, `secrets.js` | infrastructure/provider adapters | adapt | Owner-provided config only; no API key logging or response leakage. |
-| Voice / speech | `src/endpoints/speech.js`, audio frontend helpers | runtime voice routes + infrastructure adapters | adapt | Keep owner voice config, disabled-browser STT guardrails, and secret redaction. |
-| Assets/locales/default content | `public/img`, `public/locales`, `public/css`, `default/content/backgrounds`, default character/theme assets | FableMap-owned assets/fixtures/docs only if separately approved | reference-only/not-applicable | Do not import upstream product identity wholesale. |
-| Plugins/extensions/power-user platform | `plugins.js`, `src/plugin-loader.js`, `public/scripts/extensions/`, `quick-replies`, slash commands | none unless separately approved | not-applicable | Avoid creating a plugin platform or power-user clone scope inside FableMap. |
-| Upstream server/app shell | `server.js`, `src/server-*`, `src/middleware/`, `public/index.html`, `public/login.html` | not target architecture | not-applicable/delete | FableMap uses FastAPI + React Router/Vite; do not keep upstream runtime shell. |
-| CI/docker/editor metadata | `.github`, `.gemini`, `.vscode`, `docker`, root scripts/config | none | delete | Not part of FableMap runtime after migration. |
+| Character card parse/export | `src/character-card-parser.js`, `src/charx.js`, `src/png/`, `src/endpoints/characters.js`, `public/scripts/char-data.js`, expression assets | `backend/domain`, `backend/contracts`, `api/v1/characters`, frontend typed clients | native coverage present | Standard V2/V3 `data` envelopes, world-info aliases, PNG metadata before `IEND`, `ccv3` priority, base64 CharX zip/SFX `card.json`, sprites, and expressions are covered by `backend/tests/test_v1_character_assets.py`. UI feature extraction remains part of parent refactor. |
+| World/lorebook | `src/endpoints/worldinfo.js`, `public/scripts/world-info.js`, lorebook templates | `api/v1/worldinfo`, `domain/world_info_policy.py`, frontend typed clients | native coverage present | `uid`, `key`, `keysecondary`, `secondary_keys`, and `{"entries": {...}}` compatibility are covered by `backend/tests/test_v1_world_info_global.py`; owner-config world-info tests also cover tavern-scoped diagnostics. |
+| Prompt/preset/output rules | `default/content/presets/`, `public/scripts/PromptManager.js`, `public/scripts/preset-manager.js`, `public/scripts/sysprompt.js`, `config.yaml` | owner config contracts/application/routes/frontend client | native coverage present | Owner-authored config is covered by native output-rules, prompt-blocks, runtime-presets endpoints and `backend/tests/test_v1_owner_config.py`. Upstream preset content is not vendored. |
+| Chat runtime | `src/endpoints/chats.js`, `src/endpoints/groups.js`, `public/script.js`, `public/scripts/chats.js`, `public/scripts/group-chats.js` | `api/v1/chat`, chat/runtime services, frontend clients | native baseline present | Tavern-scoped chat/group-chat runtime exists without `sillytavern_copy`; broader app-shell parity remains out of scope. |
+| Group chat | `src/endpoints/groups.js`, `public/scripts/group-chats.js` | native group chat runtime | native coverage present | Native config/send/history/talkativeness behavior is covered by `backend/tests/test_v1_runtime_features.py`. |
+| Tokenizers | `src/tokenizers/`, `src/transformers.js`, `src/endpoints/tokenizers.js`, `public/scripts/tokenizers.js` | `api/v1/utilities`, tokenizer domain/application | native coverage present | SillyTavern-compatible tokenizer aliases and multi-part message text counting are covered by `backend/tests/test_v1_memory_tokenizer_utilities.py`. Exact upstream tokenizer model assets are not vendored. |
+| Memory/vector/embedding | `src/vectors/`, memory extension files | memory/vector domain + infra | partial native coverage; provider matrix deferred | Visitor memory atoms and deterministic memory utilities are covered. Upstream vector-provider parity is a separate product/infrastructure decision because private visitor memory boundaries must be designed per provider. |
+| LLM/provider integrations | `src/endpoints/openai.js`, `anthropic.js`, `google.js`, `openrouter.js`, `text-completions.js`, `chat-completions.js`, `request-proxy.js`, `secrets.js` | infrastructure/provider adapters + owner LLM config | partial native coverage; provider matrix deferred | Owner config, runtime probes, private MySQL credential access, and token usage are covered. Provider-specific upstream matrix expansion is not required for copy deletion. |
+| Voice / speech | `src/endpoints/speech.js`, audio frontend helpers | runtime voice routes + infrastructure adapters | native coverage present | Voice config, disabled TTS/STT guardrails, and secret handling are covered by `backend/tests/test_v1_runtime_features.py`. |
+| Assets/locales/default content | `public/img`, `public/locales`, `public/css`, `default/content/backgrounds`, default character/theme assets | none unless separately approved | retired/reference-only | Upstream assets and default content were deleted with the copy to avoid importing upstream product identity wholesale. |
+| Plugins/extensions/power-user platform | `plugins.js`, `src/plugin-loader.js`, `public/scripts/extensions/`, `quick-replies`, slash commands | none unless separately approved | not-applicable | Not part of the coordinate-anchored FableMap tavern mainline; no native runtime dependency retained. |
+| Upstream server/app shell | `server.js`, `src/server-*`, `src/middleware/`, `public/index.html`, `public/login.html` | not target architecture | retired | FableMap uses FastAPI + React Router/Vite; upstream runtime shell was deleted. |
+| CI/docker/editor metadata | `.github`, `.gemini`, `.vscode`, `docker`, root scripts/config | none | deleted | Copy-only tooling/metadata was removed with the copy. |
 
-## Next migration order
+## Deletion gate
 
-1. Audit parity for already-native baseline areas: character cards/assets, worldinfo, tokenizers, group chat, voice/runtime.
-2. Promote missing owner-config prompt/preset behavior into native contracts/application/routes/features.
-3. Decide memory/vector/embedding scope separately because it touches private visitor memory and infrastructure adapters.
-4. Mark plugin/extensions/admin/image/static-shell areas as explicit `not-applicable` unless the user approves a separate product decision.
-5. After all `migrate/adapt` items are implemented or deliberately retired, run the deletion gate:
+The deletion gate passed for commit `8fdd837`:
 
 ```powershell
 git grep -n "sillytavern_copy" -- . ':!.trellis/tasks/04-22-sillytavern-copy-migration/*'
@@ -96,3 +92,11 @@ py -3 -m pytest -q --tb=short
 npm --prefix .\frontend run build
 npm --prefix .\frontend test
 ```
+
+## Remaining parent-refactor order
+
+1. Split the large native tavern application service by bounded context.
+2. Split tavern contracts by API domain.
+3. Create `frontend/app/features/*` and migrate UI workflows out of `frontend/app/product/*`.
+4. Decide vector/embedding provider parity as a separate product/infrastructure task.
+5. Decide provider-specific LLM matrix expansion as a separate product/infrastructure task.

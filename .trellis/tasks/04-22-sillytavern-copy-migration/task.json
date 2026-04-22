@@ -3,7 +3,7 @@
   "name": "sillytavern-copy-migration",
   "title": "SillyTavern copy full framework migration",
   "description": "Migrate every required implementation from sillytavern_copy into the new FableMap native framework, prove parity, and delete sillytavern_copy as the final goal.",
-  "status": "in_progress",
+  "status": "review",
   "dev_type": "fullstack",
   "scope": "full SillyTavern copy migration to native framework and deletion readiness",
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 3,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -42,7 +42,7 @@
       "action": "record-session"
     }
   ],
-  "commit": null,
+  "commit": "8fdd837",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -71,9 +71,10 @@
     ".trellis/tasks/04-22-refactor-project/framework-refactor-plan.md",
     ".trellis/tasks/04-22-sillytavern-copy-migration/prd.md",
     ".trellis/tasks/04-22-sillytavern-copy-migration/inventory.md",
-    ".trellis/tasks/04-22-sillytavern-copy-migration/per-file-inventory.md"
+    ".trellis/tasks/04-22-sillytavern-copy-migration/per-file-inventory.md",
+    ".trellis/tasks/04-22-sillytavern-copy-migration/acceptance.md"
   ],
-  "notes": "High-priority child of 04-22-refactor-project. Goal: audit all implementations in sillytavern_copy, reimplement required SillyTavern-compatible capabilities in the FableMap native framework, record non-migrated reasons, and delete sillytavern_copy after parity and validation. Initial observed baseline: 964 git-tracked files; about 1210 files excluding node_modules/.git. Inventory baseline generated on 2026-04-23: inventory.md now summarizes source areas, capability counts, classification counts, and next migration order; per-file-inventory.md contains a 964-file checklist generated from git ls-files sillytavern_copy. Backend character-card implementation slices on 2026-04-23: parsing now accepts standard SillyTavern V2/V3 data envelopes, preserves world-info secondary/order compatibility, writes PNG metadata before IEND, reads ccv3 PNG metadata before chara, and accepts base64 CharX zip/SFX archives through card.json. Tokenizer slice added SillyTavern-compatible aliases and multi-part message text counting. World/lorebook slice added SillyTavern entry aliases and entries-object test support. Focused v1 tests pass.",
+  "notes": "High-priority child of 04-22-refactor-project. Goal: audit all implementations in sillytavern_copy, reimplement required SillyTavern-compatible capabilities in the FableMap native framework, record non-migrated reasons, and delete sillytavern_copy after parity and validation. Initial observed baseline: 964 git-tracked files; about 1210 files excluding node_modules/.git. Inventory baseline generated on 2026-04-23: inventory.md now summarizes source areas, capability counts, classification counts, and next migration order; per-file-inventory.md contains a 964-file checklist generated from git ls-files sillytavern_copy. Backend character-card implementation slices on 2026-04-23: parsing now accepts standard SillyTavern V2/V3 data envelopes, preserves world-info secondary/order compatibility, writes PNG metadata before IEND, reads ccv3 PNG metadata before chara, and accepts base64 CharX zip/SFX archives through card.json. Tokenizer slice added SillyTavern-compatible aliases and multi-part message text counting. World/lorebook slice added SillyTavern entry aliases and entries-object test support. Deletion checkpoint committed as 8fdd837 on 2026-04-23: sillytavern_copy tracked files removed, runtime reference scan returned no matches outside task/change docs, focused backend tests passed, full pytest passed, frontend build/test passed. acceptance.md records remaining parent-refactor work separately from copy deletion. Task moved to review pending human acceptance and session recording.",
   "meta": {
     "priority_focus": "sillytavern_copy_deletion",
     "deletion_target": "sillytavern_copy/",
@@ -157,6 +158,28 @@
       "validation": [
         "py -3 -m compileall -q backend/src",
         "py -3 -m pytest -q backend/tests/test_v1_world_info_global.py --tb=short"
+      ]
+    },
+    "deletion_checkpoint": {
+      "completed_at": "2026-04-23",
+      "commit": "8fdd837",
+      "results": [
+        "sillytavern_copy directory removed from tracked files",
+        "git ls-files sillytavern_copy returned 0",
+        "runtime reference scan returned no matches outside task/change docs",
+        "py -3 -m compileall -q backend/src passed",
+        "focused backend tests passed: 27 passed",
+        "py -3 -m pytest -q --tb=short passed: 283 passed",
+        "npm --prefix .\\frontend run build passed",
+        "npm --prefix .\\frontend test passed",
+        "git diff --check and git diff --cached --check passed"
+      ],
+      "remaining_parent_work": [
+        "split large TavernApplicationService by bounded context",
+        "split tavern contracts by API domain",
+        "create frontend/app/features and move product-compatible UI workflows out of frontend/app/product",
+        "decide vector/embedding provider parity separately",
+        "decide provider-specific LLM matrix expansion separately"
       ]
     }
   }
