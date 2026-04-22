@@ -674,3 +674,32 @@ Validation after this slice:
 * `npm --prefix frontend run build` — passed.
 * `npm --prefix frontend test` — passed.
 * `git diff --check` — passed; Git emitted the existing LF→CRLF working-copy warning for this PRD only.
+
+## Native v1 Character Assets Migration Iteration (2026-04-22)
+
+Continued migration by moving character presentation/card utilities into the native enterprise API surface:
+
+* Added `backend/src/fablemap_api/domain/expression_policy.py` for framework-independent keyword expression inference and sprite-map normalization.
+* Added native v1 routes:
+  * `GET /api/v1/expressions`
+  * `POST /api/v1/expression/infer`
+  * `GET|PUT /api/v1/taverns/{id}/characters/{character_id}/sprites`
+  * `POST /api/v1/characters/parse`
+  * `POST /api/v1/characters/export`
+* Added native application methods in `TavernApplicationService` without delegating to `core/web/service.py` or `core/web/router.py`; reusable migrated core constants/parser (`core.tavern`, `core.char_card_parser`) remain behavior providers during staged extraction.
+* Added request contracts in `backend/src/fablemap_api/contracts/taverns.py` and frontend client/types in `frontend/app/lib/taverns.ts`.
+* Added `backend/tests/test_v1_character_assets.py` for expression catalog/inference, sprite permissions/round-trip, and SillyTavern V3 parse/export.
+
+Validation after this slice:
+
+* `py -3 -m py_compile backend/src/fablemap_api/application/taverns.py backend/src/fablemap_api/contracts/taverns.py backend/src/fablemap_api/api/v1/taverns.py backend/src/fablemap_api/api/v1/router.py backend/src/fablemap_api/domain/expression_policy.py backend/tests/test_v1_character_assets.py` — passed.
+* Isolated clean worktree from `HEAD` + staged patch: `py -3 -m compileall -q backend/src` — passed.
+* Isolated clean worktree: `py -3 -m pytest -q backend/tests/test_v1_character_assets.py --tb=short` — passed, 2 tests.
+* Isolated clean worktree: `py -3 -m pytest -q backend/tests --tb=short` — passed, 29 tests.
+* Isolated clean worktree with existing built `frontend/dist` copied for legacy static-shell test: `py -3 -m pytest -q --tb=short` — passed, 258 tests.
+* `npm --prefix frontend run typecheck` — passed.
+* `npm --prefix frontend run build` — passed.
+* `npm --prefix frontend test` — passed.
+* `git diff --cached --check` — passed.
+
+Current main working tree still contains unrelated MySQL WIP and deleted reference PNGs; those files were intentionally not staged with this slice.

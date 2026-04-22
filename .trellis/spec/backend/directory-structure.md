@@ -523,6 +523,81 @@ npm --prefix frontend run typecheck
 npm --prefix frontend run build
 ```
 
+## Scenario: native character expression / sprite / card utility endpoints
+
+### 1. Scope / Trigger
+
+Use this contract when migrating compatibility utilities for SillyTavern-compatible character presentation and card tooling into native `/api/v1`: expression catalogs, expression inference, per-character sprite maps, standalone character-card parsing, and character-card export. These endpoints preserve owner-authored NPC/card data; they must not generate tavern content or introduce platform token billing.
+
+### 2. Signatures
+
+Routes live in `backend/src/fablemap_api/api/v1/taverns.py` and stay thin:
+
+```python
+GET  /api/v1/expressions
+POST /api/v1/expression/infer
+GET  /api/v1/taverns/{tavern_id}/characters/{character_id}/sprites
+PUT  /api/v1/taverns/{tavern_id}/characters/{character_id}/sprites
+POST /api/v1/characters/parse
+POST /api/v1/characters/export
+```
+
+Application methods live in `backend/src/fablemap_api/application/taverns.py`:
+
+```python
+list_expressions() -> dict
+infer_expression(data) -> dict
+get_character_sprites(tavern_id, character_id, user_id="") -> dict
+update_character_sprites(tavern_id, character_id, data, user_id="") -> dict
+parse_character_card_payload(data) -> dict
+export_character_card_payload(data) -> dict
+```
+
+Expression keyword fallback and sprite-map normalization live in `backend/src/fablemap_api/domain/expression_policy.py`; domain modules must not import FastAPI.
+
+### 3. Contracts
+
+- Request body models live in `backend/src/fablemap_api/contracts/taverns.py`: `ExpressionInferRequest`, `SpriteMapWriteRequest`, `CharacterCardParseRequest`, and `CharacterCardExportRequest`.
+- Expression catalog returns the canonical `STANDARD_EXPRESSIONS`, `EXPRESSION_CATEGORIES`, and `count` from migrated product core.
+- Expression inference may use owner-configured tavern LLM when available, but rules/public-welfare backends fall back to deterministic keyword inference; API keys must not be logged or returned.
+- Sprite reads are tavern-visible; sprite writes are owner-only and keep only non-empty expression-to-URL mappings.
+- Character-card parse/export delegates to migrated SillyTavern parser behavior and returns normalized character fields plus `world_info`, `sprites`, and `source_format`.
+- Frontend native clients belong in `frontend/app/lib/taverns.ts` and must call `/api/v1/...`, not compatibility `/api/...`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Missing character | `404 {"error": "角色不存在"}` |
+| Visitor updates sprites | `403 {"error": "你不是此酒馆的主人"}` |
+| Empty inference text | `400 {"error": "text is required"}` |
+| Rules/public-welfare inference | deterministic keyword result, no external LLM call |
+| Invalid character-card payload | `400` with parser error, no partial persistence |
+
+### 5. Tests Required
+
+`backend/tests/test_v1_character_assets.py` must assert:
+
+- expression catalog shape and deterministic keyword inference;
+- character sprite read/write round-trip, owner-only update, and empty URL filtering;
+- SillyTavern V3 card parse preserves sprites/world_info/source format;
+- character-card export returns V3 `spec`/`spec_version` and sprite map.
+
+Run:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests/test_v1_character_assets.py --tb=short
+py -3 -m pytest -q backend/tests --tb=short
+```
+
+If frontend native client methods changed, also run:
+
+```powershell
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+```
 ## Common mistakes
 
 - Adding API logic directly inside route handlers when it belongs in `WebService` or `TavernService`.

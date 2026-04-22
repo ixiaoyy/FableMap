@@ -9,6 +9,7 @@ export type TavernCharacter = {
   description?: string
   first_mes?: string
   avatar?: string
+  sprites?: Record<string, string>
   talkativeness?: number
   tags?: string[]
 }
@@ -215,6 +216,42 @@ export type TavernPackage = Record<string, unknown> & {
   world_info?: Record<string, unknown>[]
 }
 
+export type ExpressionCatalog = {
+  expressions: string[]
+  categories: Record<string, string[]>
+  count: number
+}
+
+export type ExpressionInferResponse = {
+  expression: string
+  source: "llm" | "keyword" | string
+  text: string
+}
+
+export type CharacterSpriteMapResponse = {
+  character_id: string
+  character_name: string
+  sprites: Record<string, string>
+  sprite_map: Record<string, string | null>
+  default_expression: string
+  default_url?: string | null
+}
+
+export type ParsedCharacterCard = {
+  name: string
+  description?: string
+  personality?: string
+  scenario?: string
+  system_prompt?: string
+  first_mes?: string
+  mes_example?: string
+  alternate_greetings?: string[]
+  tags?: string[]
+  sprites?: Record<string, string>
+  world_info?: Record<string, unknown>[]
+  source_format?: string
+}
+
 function queryString(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -286,6 +323,55 @@ export function importCharacterCard(tavernId: string, card: Record<string, unkno
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/characters/import`,
     jsonInit("POST", card, userId),
   )
+}
+
+export function getExpressions() {
+  return readApiJson<ExpressionCatalog>("/api/v1/expressions")
+}
+
+export function inferExpression(
+  data: {
+    text: string
+    character_name?: string
+    tavern_id?: string
+    character_id?: string
+  },
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<ExpressionInferResponse>("/api/v1/expression/infer", jsonInit("POST", data, userId))
+}
+
+export function getCharacterSprites(tavernId: string, characterId: string, userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<CharacterSpriteMapResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(characterId)}/sprites`,
+    { userId },
+  )
+}
+
+export function saveCharacterSprites(
+  tavernId: string,
+  characterId: string,
+  sprites: Record<string, string>,
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; character_id: string; sprites: Record<string, string> }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/characters/${encodeURIComponent(characterId)}/sprites`,
+    jsonInit("PUT", { sprites }, userId),
+  )
+}
+
+export function parseCharacterCard(
+  data: { json?: Record<string, unknown>; base64?: string } & Record<string, unknown>,
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<ParsedCharacterCard>("/api/v1/characters/parse", jsonInit("POST", data, userId))
+}
+
+export function exportCharacterCard(
+  data: { character?: ParsedCharacterCard | Record<string, unknown>; format?: string } & Record<string, unknown>,
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<Record<string, unknown>>("/api/v1/characters/export", jsonInit("POST", data, userId))
 }
 
 export function getTavernChatHistory(tavernId: string, visitorId = DEFAULT_VISITOR_ID, characterId = "") {

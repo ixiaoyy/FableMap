@@ -6,11 +6,14 @@ from fastapi import APIRouter, Body, Request, Response
 
 from ...application.taverns import TavernApplicationService
 from ...contracts.taverns import (
+    CharacterCardExportRequest,
+    CharacterCardParseRequest,
     CharacterImportRequest,
     CharacterTalkativenessRequest,
     CharacterWriteRequest,
     ChatRequest,
     EnterTavernRequest,
+    ExpressionInferRequest,
     GameplaySessionRequest,
     GameplayWriteRequest,
     GroupChatConfigRequest,
@@ -23,6 +26,7 @@ from ...contracts.taverns import (
     PromptBlocksWriteRequest,
     RuntimePresetApplyRequest,
     RuntimePresetsWriteRequest,
+    SpriteMapWriteRequest,
     TTSRequest,
     TavernCreateRequest,
     TavernListResponse,
@@ -35,6 +39,7 @@ from ...contracts.taverns import (
 router = APIRouter(prefix="/taverns", tags=["taverns"])
 packages_router = APIRouter(prefix="/tavern-packages", tags=["tavern-packages"])
 llm_router = APIRouter(prefix="/llm", tags=["llm"])
+utilities_router = APIRouter(tags=["utilities"])
 
 
 def _taverns(request: Request) -> TavernApplicationService:
@@ -87,6 +92,26 @@ def test_llm_config(request: Request, data: LLMConfigTestRequest) -> dict[str, A
     return _taverns(request).test_llm_config(data.to_payload())
 
 
+@utilities_router.get("/expressions")
+def list_expressions(request: Request) -> dict[str, Any]:
+    return _taverns(request).list_expressions()
+
+
+@utilities_router.post("/expression/infer")
+def infer_expression(request: Request, data: ExpressionInferRequest) -> dict[str, Any]:
+    return _taverns(request).infer_expression(data.to_payload())
+
+
+@utilities_router.post("/characters/parse")
+def parse_character_card(request: Request, data: CharacterCardParseRequest) -> dict[str, Any]:
+    return _taverns(request).parse_character_card_payload(data.to_payload())
+
+
+@utilities_router.post("/characters/export")
+def export_character_card(request: Request, data: CharacterCardExportRequest) -> dict[str, Any]:
+    return _taverns(request).export_character_card_payload(data.to_payload())
+
+
 @router.get("/{tavern_id}")
 def get_tavern(request: Request, tavern_id: str) -> dict[str, Any]:
     return _taverns(request).get_tavern(tavern_id, _get_user_id(request))
@@ -134,6 +159,26 @@ def add_character(request: Request, tavern_id: str, data: CharacterWriteRequest)
 @router.post("/{tavern_id}/characters/import")
 def import_character_card(request: Request, tavern_id: str, data: CharacterImportRequest) -> dict[str, Any]:
     return _taverns(request).import_character_card(tavern_id, data.to_payload(), _get_user_id(request))
+
+
+@router.get("/{tavern_id}/characters/{character_id}/sprites")
+def get_character_sprites(request: Request, tavern_id: str, character_id: str) -> dict[str, Any]:
+    return _taverns(request).get_character_sprites(tavern_id, character_id, _get_user_id(request))
+
+
+@router.put("/{tavern_id}/characters/{character_id}/sprites")
+def update_character_sprites(
+    request: Request,
+    tavern_id: str,
+    character_id: str,
+    data: SpriteMapWriteRequest,
+) -> dict[str, Any]:
+    return _taverns(request).update_character_sprites(
+        tavern_id,
+        character_id,
+        data.to_payload(),
+        _get_user_id(request),
+    )
 
 
 @router.put("/{tavern_id}/characters/{character_id}")

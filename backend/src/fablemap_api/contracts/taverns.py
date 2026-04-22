@@ -11,7 +11,7 @@ class FlexibleBody(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     def to_payload(self) -> dict[str, Any]:
-        payload = self.model_dump(exclude_none=True)
+        payload = self.model_dump(exclude_none=True, by_alias=True)
         payload.update(self.model_extra or {})
         return payload
 
@@ -64,6 +64,27 @@ class CharacterImportRequest(FlexibleBody):
     data: dict[str, Any] | None = None
     spec: str | None = None
     spec_version: str | None = None
+
+
+class SpriteMapWriteRequest(FlexibleBody):
+    sprites: dict[str, Any] | None = None
+
+
+class ExpressionInferRequest(FlexibleBody):
+    text: str | None = None
+    character_name: str | None = None
+    tavern_id: str | None = None
+    character_id: str | None = None
+
+
+class CharacterCardParseRequest(FlexibleBody):
+    json_payload: dict[str, Any] | None = Field(default=None, alias="json")
+    base64: str | None = None
+
+
+class CharacterCardExportRequest(FlexibleBody):
+    character: dict[str, Any] | None = None
+    format: str | None = None
 
 
 class ChatRequest(BaseModel):
