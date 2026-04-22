@@ -207,7 +207,7 @@ def migrate_taverns(db: Database, taverns_data: dict[str, dict[str, Any]]) -> in
                         character_id=atom_dict.get("character_id", ""),
                         place_id=atom_dict.get("place_id", ""),
                         created_by=atom_dict.get("created_by", ""),
-                        metadata=atom_dict.get("metadata", {}),
+                        metadata_=atom_dict.get("metadata", {}),
                     )
                     session.add(atom_model)
 

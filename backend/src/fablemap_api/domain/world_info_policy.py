@@ -17,6 +17,32 @@ def world_info_keywords(value: Any) -> list[str]:
     return []
 
 
+def world_info_primary_keywords(entry: dict[str, Any]) -> list[str]:
+    return world_info_keywords(entry.get("keys", entry.get("key")))
+
+
+def world_info_secondary_keywords(entry: dict[str, Any]) -> list[str]:
+    return world_info_keywords(
+        entry.get("keys_secondary", entry.get("secondary_keys", entry.get("keysecondary")))
+    )
+
+
+def world_info_entry_id(entry: dict[str, Any], fallback: str = "") -> str:
+    return str(entry.get("id") or entry.get("uid") or fallback).strip()
+
+
+def world_info_source_entries(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        entries = value.get("entries")
+        if isinstance(entries, list):
+            return entries
+        if isinstance(entries, dict):
+            return list(entries.values())
+    return []
+
+
 def world_info_order(entry: dict[str, Any]) -> int:
     try:
         return int(entry.get("order", entry.get("insertion_order", 100)))
@@ -41,8 +67,8 @@ def world_info_depth(entry: dict[str, Any]) -> int:
 
 
 def world_info_title(entry: dict[str, Any]) -> str:
-    keys = world_info_keywords(entry.get("keys"))
-    secondary = world_info_keywords(entry.get("keys_secondary"))
+    keys = world_info_primary_keywords(entry)
+    secondary = world_info_secondary_keywords(entry)
     if entry.get("constant") and not keys:
         return "常驻设定"
     return str((keys or secondary or [entry.get("id") or "未命名条目"])[0])
@@ -77,8 +103,8 @@ def test_world_info_entries(
         else:
             recent_parts.append(str(item))
 
-    source_entries = payload.get("world_info")
-    if not isinstance(source_entries, list):
+    source_entries = world_info_source_entries(payload.get("world_info"))
+    if not source_entries:
         source_entries = tavern_world_info
 
     entries: list[dict[str, Any]] = []
@@ -87,8 +113,8 @@ def test_world_info_entries(
         if not entry:
             continue
 
-        keys = world_info_keywords(entry.get("keys"))
-        keys_secondary = world_info_keywords(entry.get("keys_secondary"))
+        keys = world_info_primary_keywords(entry)
+        keys_secondary = world_info_secondary_keywords(entry)
         depth = world_info_depth(entry)
         entry_parts = [*base_parts, *(recent_parts[-depth:] if depth else [])]
         search_text = "\n".join(part for part in entry_parts if part).casefold()
@@ -119,7 +145,7 @@ def test_world_info_entries(
         order = world_info_order(entry)
         entries.append(
             {
-                "id": entry.get("id") or f"world_info_{index}",
+                "id": world_info_entry_id(entry, f"world_info_{index}"),
                 "title": world_info_title(entry),
                 "matched": matched,
                 "keyword_matched": keyword_matched,

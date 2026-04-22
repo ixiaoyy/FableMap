@@ -37,6 +37,7 @@ from fablemap_api.infrastructure.mysql_store import MySQLTavernStore, create_mys
 def db() -> Database:
     """创建使用 SQLite 内存数据库的 Database 实例"""
     engine = create_engine("sqlite:///:memory:", echo=False)
+    Base.metadata.create_all(bind=engine)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db_instance = Database.__new__(Database)
     db_instance.engine = engine
@@ -74,16 +75,17 @@ class TestDatabase:
 
     def test_session_scope_rollback(self, db: Database):
         """测试 session_scope 异常回滚"""
-        with db.session_scope() as session:
-            tavern = TavernModel(
-                id="test_002",
-                name="测试酒馆2",
-                lat=35.6581,
-                lon=139.7016,
-                created_at=datetime.utcnow(),
-            )
-            session.add(tavern)
-            raise Exception("模拟错误")
+        with pytest.raises(Exception):
+            with db.session_scope() as session:
+                tavern = TavernModel(
+                    id="test_002",
+                    name="测试酒馆2",
+                    lat=35.6581,
+                    lon=139.7016,
+                    created_at=datetime.utcnow(),
+                )
+                session.add(tavern)
+                raise Exception("模拟错误")
 
         # 验证回滚
         with db.session_scope() as session:
@@ -132,6 +134,7 @@ class TestTavernCRUD:
             tavern = Tavern(
                 id=f"tavern_{i:03d}",
                 name=f"酒馆 {i}",
+                description="",
                 lat=35.6581 + i * 0.001,
                 lon=139.7016,
                 owner_id="owner_001",
@@ -150,6 +153,7 @@ class TestTavernCRUD:
         tavern = Tavern(
             id="tavern_update",
             name="原始名称",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -177,6 +181,7 @@ class TestTavernCRUD:
         tavern = Tavern(
             id="tavern_delete",
             name="待删除酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -211,6 +216,7 @@ class TestCharacterCRUD:
         tavern = Tavern(
             id="tavern_chars",
             name="角色测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -231,6 +237,7 @@ class TestCharacterCRUD:
         tavern = Tavern(
             id="tavern_add_char",
             name="添加角色酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -244,6 +251,7 @@ class TestCharacterCRUD:
             id="char_new",
             tavern_id="tavern_add_char",
             name="新角色",
+            description="",
         )
         tavern.characters.append(new_character)
         store.update_tavern(tavern)
@@ -265,6 +273,7 @@ class TestVisitorState:
         tavern = Tavern(
             id="tavern_visitor",
             name="访客测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -308,6 +317,7 @@ class TestVisitorState:
         tavern = Tavern(
             id="tavern_list_visitors",
             name="列表访客酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -340,6 +350,7 @@ class TestChatMessages:
         tavern = Tavern(
             id="tavern_chat",
             name="聊天测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -391,6 +402,7 @@ class TestLLMConfig:
         tavern = Tavern(
             id="tavern_llm",
             name="LLM 测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -427,6 +439,7 @@ class TestLLMConfig:
         tavern = Tavern(
             id="tavern_token",
             name="Token 测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -461,6 +474,7 @@ class TestMemoryAtoms:
         tavern = Tavern(
             id="tavern_memory",
             name="记忆测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -501,6 +515,7 @@ class TestMemoryAtoms:
         tavern = Tavern(
             id="tavern_list_memories",
             name="列表记忆酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",
@@ -546,6 +561,7 @@ class TestWorldInfo:
         tavern = Tavern(
             id="tavern_worldinfo",
             name="世界知识测试酒馆",
+            description="",
             lat=35.6581,
             lon=139.7016,
             owner_id="owner_001",

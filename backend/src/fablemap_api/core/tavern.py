@@ -1103,6 +1103,12 @@ class TavernService:
     def __init__(self, store: TavernStore):
         self.store = store
 
+    def _get_private_llm_config(self, tavern_id: str) -> LLMConfig | None:
+        private_getter = getattr(self.store, "get_llm_config_private", None)
+        if callable(private_getter):
+            return private_getter(tavern_id)
+        return self.store.get_llm_config(tavern_id)
+
     def list_taverns(
         self,
         lat: float | None = None,
@@ -1265,7 +1271,7 @@ class TavernService:
         llm_data = data.get("llm_config")
         if llm_data:
             preserved_token_usage = self.store.get_token_usage(tavern_id) or tavern.llm_config.token_used
-            stored_llm_config = self.store.get_llm_config(tavern_id)
+            stored_llm_config = self._get_private_llm_config(tavern_id)
             llm_config = LLMConfig.from_dict(
                 {
                     **llm_data,

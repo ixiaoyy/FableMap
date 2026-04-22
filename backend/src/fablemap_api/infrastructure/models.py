@@ -72,7 +72,7 @@ class TavernModel(Base):
     __table_args__ = (
         Index("idx_owner_id", "owner_id"),
         Index("idx_access", "access"),
-        Index("idx_location", "lat, lon"),
+        Index("idx_location", "lat", "lon"),
         Index("idx_status", "status"),
     )
 
@@ -198,7 +198,7 @@ class MemoryAtomModel(Base):
     character_id = Column(String(64), nullable=True)
     place_id = Column(String(64), nullable=True)
     created_by = Column(String(64), nullable=True)
-    metadata = Column(JSON, default=dict)
+    metadata_ = Column("metadata", JSON, default=dict)
 
     # 关系
     tavern = relationship("TavernModel", back_populates="memory_atoms")

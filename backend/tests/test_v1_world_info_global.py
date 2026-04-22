@@ -143,3 +143,57 @@ def test_v1_worldinfo_global_respects_private_tavern_visibility(tmp_path: Path) 
 
     visitor_scoped = client.get("/api/v1/worldinfo", headers={"X-User-Id": VISITOR_ID}, params={"tavern_id": tavern_id})
     assert visitor_scoped.status_code == 403
+
+
+def test_v1_worldinfo_accepts_sillytavern_lorebook_aliases(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    tavern_id = _create_tavern(client)
+
+    created = client.post(
+        "/api/v1/worldinfo",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "tavern_id": tavern_id,
+            "uid": 42,
+            "key": ["Silver Bell"],
+            "keysecondary": "river, moon",
+            "content": "Silver Bell lore imported from a SillyTavern-style entry.",
+            "order": 12,
+            "depth": 2,
+        },
+    )
+
+    assert created.status_code == 200
+    entry = created.json()["entry"]
+    assert entry["id"] == "42"
+    assert entry["keys"] == ["Silver Bell"]
+    assert entry["keys_secondary"] == ["river", "moon"]
+    assert entry["order"] == 12
+
+    tested = client.post(
+        "/api/v1/worldinfo/test",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "tavern_id": tavern_id,
+            "text": "The Silver Bell rings by the river.",
+            "world_info": {
+                "entries": {
+                    "7": {
+                        "uid": 7,
+                        "key": ["Silver Bell"],
+                        "keysecondary": ["river"],
+                        "content": "Temporary SillyTavern lorebook entry.",
+                        "order": 3,
+                    }
+                }
+            },
+        },
+    )
+
+    assert tested.status_code == 200
+    payload = tested.json()
+    assert payload["matched_count"] == 1
+    assert payload["matches"][0]["id"] == "7"
+    assert payload["matches"][0]["keys"] == ["Silver Bell"]
+    assert payload["matches"][0]["keys_secondary"] == ["river"]
+    assert payload["matches"][0]["order"] == 3

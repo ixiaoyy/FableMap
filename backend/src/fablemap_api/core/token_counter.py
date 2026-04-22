@@ -17,6 +17,49 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+TIKTOKEN_ENCODINGS = ("cl100k_base", "o200k_base", "p50k_base", "p50k_edit", "r50k_base")
+SILLYTAVERN_COMPAT_TOKENIZERS = (
+    "claude",
+    "llama",
+    "llama3",
+    "mistral",
+    "nerdstash",
+    "nerdstash_v2",
+    "yi",
+    "gemma",
+    "jamba",
+    "qwen2",
+    "command-r",
+    "command-a",
+    "nemo",
+    "deepseek",
+)
+SUPPORTED_TOKENIZERS = (*TIKTOKEN_ENCODINGS, *SILLYTAVERN_COMPAT_TOKENIZERS)
+
+
+def normalize_tokenizer_backend(value: str | None = None) -> str:
+    """Map SillyTavern/OpenAI-style tokenizer names to native counter names."""
+    backend = str(value or "").strip().lower().replace("_", "-")
+    if not backend:
+        return "cl100k_base"
+
+    direct = {item.lower().replace("_", "-"): item for item in SUPPORTED_TOKENIZERS}
+    if backend in direct:
+        return direct[backend]
+
+    if any(item in backend for item in ("gpt-5", "o1", "o3", "o4-mini", "gpt-4o", "chatgpt-4o")):
+        return "o200k_base"
+    if "gpt-4" in backend or "gpt-3.5" in backend:
+        return "cl100k_base"
+    if "code" in backend or "codex" in backend:
+        return "p50k_base"
+
+    for name in SILLYTAVERN_COMPAT_TOKENIZERS:
+        if name in backend:
+            return name
+
+    return "cl100k_base"
+
 # ─── Encodings registry ────────────────────────────────────────────────────────
 
 
@@ -27,10 +70,11 @@ class TokenCounter:
     """
 
     def __init__(self, backend: str = "cl100k_base"):
-        self.backend = backend
+        self.requested_backend = backend
+        self.backend = normalize_tokenizer_backend(backend)
         self._encoder = None
         self._sentencepiece_model = None
-        self._init_encoder(backend)
+        self._init_encoder(self.backend)
 
     def _init_encoder(self, backend: str) -> None:
         """Initialize the appropriate encoder."""
@@ -63,7 +107,7 @@ class TokenCounter:
         # Try sentencepiece
         try:
             import sentencepiece
-            model_path = self._get_sentencepiece_model_path()
+            model_path = self._get_sentencepiece_model_path(backend)
             if model_path:
                 self._sentencepiece_model = sentencepiece.SentencePieceProcessor()
                 self._sentencepiece_model.Load(str(model_path))
@@ -73,11 +117,25 @@ class TokenCounter:
             pass
 
         # Fallback: no encoder
-        self.backend = "fallback"
+        self.backend = backend
         logger.warning("No tokenizer available, using character-based estimation")
 
-    def _get_sentencepiece_model_path(self) -> Optional[Path]:
+    def _get_sentencepiece_model_path(self, backend: str) -> Optional[Path]:
         """Find an available sentencepiece model."""
+        model_files = {
+            "llama": "llama.model",
+            "mistral": "mistral.model",
+            "nerdstash": "nerdstash.model",
+            "nerdstash_v2": "nerdstash_v2.model",
+            "yi": "yi.model",
+            "gemma": "gemma.model",
+            "jamba": "jamba.model",
+            "sentencepiece": "tokenizer.model",
+        }
+        model_name = model_files.get(backend)
+        if not model_name:
+            return None
+
         # Check common locations
         candidates = [
             Path.home() / ".cache" / "fablemap" / "tokenizers",
@@ -85,12 +143,9 @@ class TokenCounter:
             Path(".") / "tokenizers",
         ]
         for directory in candidates:
-            sp_file = directory / "tokenizer.model"
+            sp_file = directory / model_name
             if sp_file.exists():
                 return sp_file
-            # Check for any .model file
-            for model in directory.glob("*.model"):
-                return model
         return None
 
     def encode(self, text: str) -> list[int]:
@@ -147,22 +202,25 @@ def get_tokenizer_for_backend(backend: str, model: str = "") -> TokenCounter:
     """
     Get the appropriate token counter for a given LLM backend.
     """
+    model_name = str(model or "").lower()
+    backend_name = str(backend or "").lower()
+
     # OpenAI models
-    if "gpt-4o" in model or "gpt-4-turbo" in model or "chatgpt-4o" in model:
+    if any(item in model_name for item in ("gpt-5", "o1", "o3", "o4-mini", "gpt-4o", "gpt-4-turbo", "chatgpt-4o")):
         return TokenCounter("o200k_base")
-    elif "gpt-4" in model or "gpt-3.5" in model:
+    elif "gpt-4" in model_name or "gpt-3.5" in model_name:
         return TokenCounter("cl100k_base")
 
     # Claude (uses BPE similar to GPT-4)
-    if "claude" in backend.lower():
-        return TokenCounter("cl100k_base")
+    if "claude" in backend_name or "claude" in model_name:
+        return TokenCounter("claude")
 
     # Code models
-    if any(x in model for x in ["code", "codex"]):
+    if any(x in model_name for x in ["code", "codex"]):
         return TokenCounter("p50k_base")
 
     # Default to cl100k_base
-    return TokenCounter("cl100k_base")
+    return TokenCounter(normalize_tokenizer_backend(backend_name or model_name))
 
 
 # ─── Utilities ──────────────────────────────────────────────────────────────────

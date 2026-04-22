@@ -149,3 +149,81 @@ If a change cannot be handled by backward-compatible readers, stop and design an
 - Storing gameplay sessions in public Tavern payloads.
 - Writing one-off migration scripts or destructive data rewrites without a design/review step.
 - Assuming JSON files are valid; existing code intentionally handles decode errors in selected paths.
+
+---
+
+## Scenario: MySQL LLM Config Privacy And Token Usage
+
+### 1. Scope / Trigger
+
+Use this contract when maintaining `backend/src/fablemap_api/infrastructure/mysql_store.py` or any application path that reads owner LLM configuration from the MySQL-backed store. MySQL persistence stores private owner credentials in `LLMConfigModel`, but normal store reads must not expose `api_key` into tavern payloads or tests.
+
+### 2. Signatures
+
+```python
+MySQLTavernStore.save_llm_config(tavern_id: str, config: LLMConfig) -> None
+MySQLTavernStore.get_llm_config(tavern_id: str) -> LLMConfig | None
+MySQLTavernStore.get_llm_config_private(tavern_id: str) -> LLMConfig | None
+MySQLTavernStore.add_token_usage(tavern_id: str, tokens: int) -> None
+MySQLTavernStore.get_token_usage(tavern_id: str) -> int
+```
+
+Application/runtime code that genuinely calls an LLM should use a private-config helper that prefers `get_llm_config_private` when the store exposes it and falls back to `get_llm_config` for JSON `TavernStore`.
+
+### 3. Contracts
+
+- `get_llm_config` returns `LLMConfig` with `api_key=""` and preserves non-secret fields such as `backend`, `model`, `base_url`, sampling options, and `token_used`.
+- `get_llm_config_private` returns the same config with `api_key` included for internal runtime use only.
+- `TavernService.update_tavern` must preserve an existing private key when a same-backend update payload omits `api_key`.
+- `add_token_usage` accepts only positive integer-like values, creates a token-only `LLMConfigModel` row when a tavern exists but no config row exists, and also mirrors `token_used` into `TavernModel.voice_config["llm_config"]` for compatibility.
+- `get_token_usage` returns the maximum known usage from `LLMConfigModel.token_used` and the compatibility `voice_config["llm_config"]["token_used"]` mirror.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Saved config contains `api_key` | `get_llm_config(...).api_key == ""` |
+| Runtime code needs provider key | private helper returns `get_llm_config_private(...)` when available |
+| Token usage added before LLM config exists | `get_token_usage(...)` returns the added total |
+| Token usage receives `0`, negative, or non-numeric input | no state change |
+| Legacy voice-config mirror contains larger count | `get_token_usage(...)` returns the larger mirror count |
+| Same-backend LLM update omits `api_key` | existing private key is preserved |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `TavernApplicationService._get_runtime_llm_config` calls `get_llm_config_private` on MySQL stores and JSON `get_llm_config` on file stores.
+- Base: `store.get_llm_config("tavern").to_dict_private()` in tests still has an empty key because the normal read is public-safe.
+- Bad: API/application code calls `store.get_llm_config` and assumes the returned object always has an owner credential.
+
+### 6. Tests Required
+
+`backend/tests/test_mysql_infrastructure.py` must assert:
+
+- `save_llm_config` followed by `get_llm_config` redacts `api_key`;
+- `add_token_usage` and `get_token_usage` round-trip totals when no `LLMConfigModel` row existed first;
+- MySQL table creation succeeds through SQLAlchemy metadata.
+
+Run:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests/test_mysql_infrastructure.py --tb=short
+py -3 -m pytest -q backend/tests --tb=short
+```
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+llm_config = store.get_llm_config(tavern_id)
+client = create_client(ClientLLMConfig(api_key=llm_config.api_key, ...))
+```
+
+#### Correct
+
+```python
+private_getter = getattr(store, "get_llm_config_private", None)
+llm_config = private_getter(tavern_id) if callable(private_getter) else store.get_llm_config(tavern_id)
+client = create_client(ClientLLMConfig(api_key=llm_config.api_key, ...))
+```

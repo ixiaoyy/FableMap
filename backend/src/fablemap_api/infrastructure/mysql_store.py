@@ -148,18 +148,30 @@ class MySQLTavernStore:
             disable=bool(model.disable),
         )
 
-    def _to_llm_config(self, model: LLMConfigModel) -> LLMConfig:
+    def _to_llm_config(self, model: LLMConfigModel, *, include_api_key: bool = False) -> LLMConfig:
         """将 LLMConfigModel 转换为 LLMConfig"""
         return LLMConfig(
             backend=model.backend or "openai",
             model=model.model or "gpt-4o-mini",
-            api_key=model.api_key or "",
+            api_key=(model.api_key or "") if include_api_key else "",
             base_url=model.base_url or "",
             temperature=model.temperature or 0.8,
             max_tokens=model.max_tokens or 512,
             top_p=model.top_p or 1.0,
             token_used=model.token_used or 0,
         )
+
+    @staticmethod
+    def _token_usage_from_voice_config(tavern_model: TavernModel | None) -> int:
+        if not tavern_model or not isinstance(tavern_model.voice_config, dict):
+            return 0
+        llm_config_data = tavern_model.voice_config.get("llm_config", {})
+        if not isinstance(llm_config_data, dict):
+            return 0
+        try:
+            return int(llm_config_data.get("token_used", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
 
     def _to_voice_config(self, data: dict[str, Any]) -> VoiceConfig:
         """将字典转换为 VoiceConfig"""
@@ -222,7 +234,7 @@ class MySQLTavernStore:
             character_id=model.character_id or "",
             place_id=model.place_id or "",
             created_by=model.created_by or "",
-            metadata=deepcopy(model.metadata) if model.metadata else {},
+            metadata=deepcopy(model.metadata_) if model.metadata_ else {},
         )
 
     # ── Tavern CRUD ──────────────────────────────
@@ -476,6 +488,14 @@ class MySQLTavernStore:
 
     # ── Voice Config ─────────────────────────────
 
+    def get_llm_config_private(self, tavern_id: str) -> LLMConfig | None:
+        """Get internal LLM config including api_key."""
+        with self.db.session_scope() as session:
+            model = session.query(LLMConfigModel).filter(LLMConfigModel.tavern_id == tavern_id).first()
+            if model:
+                return self._to_llm_config(model, include_api_key=True)
+            return None
+
     def save_voice_config(self, tavern_id: str, config: VoiceConfig) -> None:
         """保存语音配置"""
         with self.db.session_scope() as session:
@@ -588,7 +608,7 @@ class MySQLTavernStore:
                 model.character_id = atom.character_id
                 model.place_id = atom.place_id
                 model.created_by = atom.created_by
-                model.metadata = atom.metadata
+                model.metadata_ = atom.metadata
             else:
                 model = MemoryAtomModel(
                     id=atom.id,
@@ -609,7 +629,7 @@ class MySQLTavernStore:
                     character_id=atom.character_id,
                     place_id=atom.place_id,
                     created_by=atom.created_by,
-                    metadata=atom.metadata,
+                    metadata_=atom.metadata,
                 )
                 session.add(model)
 
@@ -853,24 +873,38 @@ class MySQLTavernStore:
 
     def add_token_usage(self, tavern_id: str, tokens: int) -> None:
         """添加 token 使用量"""
-        if tokens <= 0:
+        try:
+            token_delta = int(tokens)
+        except (TypeError, ValueError):
+            return
+        if token_delta <= 0:
             return
 
         with self.db.session_scope() as session:
             model = session.query(LLMConfigModel).filter(LLMConfigModel.tavern_id == tavern_id).first()
+            tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if model:
-                model.token_used = (model.token_used or 0) + tokens
+                model.token_used = (model.token_used or 0) + token_delta
+            elif tavern_model:
+                model = LLMConfigModel(
+                    tavern_id=tavern_id,
+                    token_used=token_delta,
+                )
+                session.add(model)
 
             # 同时更新 tavern 表
-            tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if tavern_model:
-                voice_config = tavern_model.voice_config or {}
+                voice_config = deepcopy(tavern_model.voice_config) if isinstance(tavern_model.voice_config, dict) else {}
                 if not isinstance(voice_config, dict):
                     voice_config = {}
                 llm_config_data = voice_config.get("llm_config", {})
                 if not isinstance(llm_config_data, dict):
                     llm_config_data = {}
-                llm_config_data["token_used"] = (llm_config_data.get("token_used", 0) or 0) + tokens
+                try:
+                    current_usage = int(llm_config_data.get("token_used", 0) or 0)
+                except (TypeError, ValueError):
+                    current_usage = 0
+                llm_config_data["token_used"] = current_usage + token_delta
                 voice_config["llm_config"] = llm_config_data
                 tavern_model.voice_config = voice_config
 
@@ -878,9 +912,9 @@ class MySQLTavernStore:
         """获取 token 使用量"""
         with self.db.session_scope() as session:
             model = session.query(LLMConfigModel).filter(LLMConfigModel.tavern_id == tavern_id).first()
-            if model and model.token_used:
-                return model.token_used
-            return 0
+            config_usage = int(model.token_used or 0) if model else 0
+            tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
+            return max(config_usage, self._token_usage_from_voice_config(tavern_model))
 
 
 def create_mysql_tables(database: Database) -> None:

@@ -16,10 +16,12 @@ PNG embedding: writes metadata back into PNG tEXt chunks.
 from __future__ import annotations
 
 import base64
+import io
 import json
 import logging
 import re
 import struct
+import zipfile
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +32,7 @@ logger = logging.getLogger(__name__)
 # ─── PNG Constants ────────────────────────────────────────────────────────────────
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+ZIP_SIGNATURE = b"PK\x03\x04"
 
 
 # ─── Data Models ────────────────────────────────────────────────────────────────
@@ -201,7 +204,6 @@ def write_character_card_to_png(
     # Add tEXt chunks before IEND
     new_chunks = []
     for ct, cd in rebuilt_chunks:
-        new_chunks.append((ct, cd))
         if ct == "IEND":
             # Insert our tEXt chunks before IEND
             # V2: 'chara' keyword, base64 encoded
@@ -221,6 +223,7 @@ def write_character_card_to_png(
                 v3_b64 = base64.b64encode(v3_json.encode("utf-8")).decode("ascii")
                 tEXt_data = b"ccv3\x00" + v3_b64.encode("latin-1")
                 new_chunks.append(("tEXt", tEXt_data))
+        new_chunks.append((ct, cd))
 
     # Reconstruct PNG
     result = bytearray(PNG_SIGNATURE)
@@ -246,6 +249,8 @@ def read_character_card_from_png(image_data: bytes) -> Optional[dict]:
     Returns the JSON dict or None.
     """
     raw_chunks = _read_png_chunks(image_data)
+    text_by_keyword: dict[str, str] = {}
+
     for chunk_type, chunk_data in raw_chunks:
         if chunk_type not in ("tEXt", "iTXt", "zTXt"):
             continue
@@ -253,26 +258,53 @@ def read_character_card_from_png(image_data: bytes) -> Optional[dict]:
         keyword = _get_tEXt_keyword(chunk_data)
         if keyword.lower() in ("ccv3", "chara", "ch!"):
             text = _extract_tEXt_text(chunk_data, chunk_type)
-            if text:
-                try:
-                    # Try base64 decode first
-                    try:
-                        decoded = base64.b64decode(text)
-                        # Try zlib decompress
-                        try:
-                            decoded = zlib.decompress(decoded)
-                        except Exception:
-                            pass
-                        json_str = decoded.decode("utf-8")
-                    except Exception:
-                        json_str = text
+            if text and keyword.lower() not in text_by_keyword:
+                text_by_keyword[keyword.lower()] = text
 
-                    data = json.loads(json_str)
-                    return data
-                except json.JSONDecodeError:
-                    continue
+    for keyword in ("ccv3", "chara", "ch!"):
+        text = text_by_keyword.get(keyword)
+        if not text:
+            continue
+        try:
+            # Try base64 decode first
+            try:
+                decoded = base64.b64decode(text)
+                # Try zlib decompress
+                try:
+                    decoded = zlib.decompress(decoded)
+                except Exception:
+                    pass
+                json_str = decoded.decode("utf-8")
+            except Exception:
+                json_str = text
+
+            data = json.loads(json_str)
+            return data
+        except json.JSONDecodeError:
+            continue
 
     return None
+
+
+def read_character_card_from_charx(charx_data: bytes) -> Optional[dict]:
+    """Read card.json from a CharX ZIP archive."""
+    zip_start = bytes(charx_data).find(ZIP_SIGNATURE)
+    if zip_start < 0:
+        return None
+
+    try:
+        archive_data = bytes(charx_data)[zip_start:]
+        with zipfile.ZipFile(io.BytesIO(archive_data)) as archive:
+            card_name = next(
+                (name for name in archive.namelist() if name.replace("\\", "/").lower() == "card.json"),
+                None,
+            )
+            if not card_name:
+                return None
+            data = json.loads(archive.read(card_name).decode("utf-8"))
+            return data if isinstance(data, dict) else None
+    except (OSError, UnicodeDecodeError, ValueError, zipfile.BadZipFile):
+        return None
 
 
 def _extract_tEXt_text(chunk_data: bytes, chunk_type: str = "tEXt") -> str:
@@ -328,69 +360,85 @@ class CharacterCardParser:
         """Parse SillyTavern V2 or V3 JSON format."""
         char = ParsedCharacter()
 
-        # Detect V3
-        spec = data.get("spec", "")
+        payload = data
+        if isinstance(data.get("data"), dict) and ("spec" in data or "spec_version" in data):
+            payload = data["data"]
+
+        # Detect V3. Standard SillyTavern cards can keep spec metadata on the
+        # outer envelope while fields live under data.
+        spec = str(data.get("spec") or payload.get("spec") or "")
+        spec_version = str(
+            data.get("spec_version")
+            or payload.get("spec_version")
+            or ("3.0" if spec == "chara_card_v3" else "2.0")
+        )
         if spec == "chara_card_v3":
             char.spec = "chara_card_v3"
-            char.spec_version = str(data.get("spec_version", "3.0"))
-        else:
-            char.spec_version = str(data.get("spec_version", "2.0"))
+        char.spec_version = spec_version
 
         char.source_format = f"sillytavern_{char.spec_version}"
 
         # Map all standard fields
         for src_key, dst_key in self.V2_FIELDS.items():
-            if src_key in data:
-                setattr(char, dst_key, data[src_key])
+            if src_key in payload:
+                setattr(char, dst_key, payload[src_key])
 
         # Handle name variations
-        char.name = data.get("name", data.get("char_name", ""))
+        char.name = payload.get("name", payload.get("char_name", ""))
 
         # Handle first_mes variations
-        char.first_mes = data.get("first_mes", data.get("first_message", ""))
+        char.first_mes = payload.get("first_mes", payload.get("first_message", ""))
 
         # Handle mes_example variations
-        char.mes_example = data.get("mes_example", data.get("example_messages", ""))
+        char.mes_example = payload.get("mes_example", payload.get("example_messages", ""))
 
         # Handle tags
-        tags = data.get("tags", [])
+        tags = payload.get("tags", [])
         if isinstance(tags, list):
             char.tags = [str(t) for t in tags]
 
         # Handle alternate_greetings
-        ag = data.get("alternate_greetings", [])
+        ag = payload.get("alternate_greetings", [])
         if isinstance(ag, list):
             char.alternate_greetings = [str(x) for x in ag]
 
         # Handle sprites
-        sprites_data = data.get("sprite", data.get("sprites", {}))
+        sprites_data = payload.get("sprite", payload.get("sprites", {}))
         if isinstance(sprites_data, str) and sprites_data:
             char.sprites = {"neutral": sprites_data}
         elif isinstance(sprites_data, dict):
             char.sprites = {k: str(v) for k, v in sprites_data.items()}
 
         # Handle avatar
-        avatar = data.get("avatar", "")
+        avatar = payload.get("avatar", "")
         if avatar:
             char.avatar_url = avatar
 
         # Handle world_info / character_book
-        char.world_info = self._parse_world_info(data.get("character_book", {}))
+        character_book = payload.get("character_book")
+        if not character_book:
+            character_book = payload.get("world_info", {})
+        char.world_info = self._parse_world_info(character_book)
 
         # Handle extensions
-        char.extensions = data.get("extensions", {})
+        payload_extensions = payload.get("extensions", {})
+        char.extensions = dict(payload_extensions) if isinstance(payload_extensions, dict) else {}
         if not char.extensions:
             # SillyTavern may store extensions at top level
-            for key in data:
+            for key in payload:
                 if key not in self.V2_FIELDS and key not in (
                     "spec", "spec_version", "name", "description", "avatar", "sprite",
                     "character_book", "tags", "alternate_greetings", "post_history_instructions",
                     "depth_prompt", "chat_ranking", "扫一扫",
                 ):
-                    char.extensions[key] = data[key]
+                    char.extensions[key] = payload[key]
+
+        envelope_extensions = data.get("extensions", {})
+        if payload is not data and isinstance(envelope_extensions, dict):
+            char.extensions = {**envelope_extensions, **char.extensions}
 
         # chat_ranking default
-        if "chat_ranking" not in data:
+        if "chat_ranking" not in payload:
             char.chat_ranking = True
 
         return char
@@ -421,10 +469,15 @@ class CharacterCardParser:
         """Auto-detect format and parse."""
         # Bytes = PNG
         if isinstance(data, (bytes, bytearray)):
-            result = self.parse_png(data)
-            if result:
-                return result
-            raise ValueError("Could not parse PNG as character card")
+            data_bytes = bytes(data)
+            if data_bytes.startswith(PNG_SIGNATURE):
+                result = self.parse_png(data_bytes)
+                if result:
+                    return result
+            charx_card = read_character_card_from_charx(data_bytes)
+            if charx_card:
+                return self._parse_charx(charx_card)
+            raise ValueError("Could not parse bytes as character card PNG or CharX archive")
 
         # Path = file
         if isinstance(data, (str, Path)):
@@ -434,6 +487,8 @@ class CharacterCardParser:
                 if result:
                     return result
                 raise ValueError(f"Could not parse {path} as character card")
+            if path.suffix.lower() == ".charx":
+                return self.parse_auto(path.read_bytes())
             else:
                 return self.parse_auto(json.loads(Path(data).read_text("utf-8")))
 
@@ -471,17 +526,24 @@ class CharacterCardParser:
         if not character_book:
             return entries
 
-        cb_entries = character_book.get("entries", [])
+        if isinstance(character_book, list):
+            cb_entries = character_book
+        elif isinstance(character_book, dict):
+            cb_entries = character_book.get("entries", [])
+        else:
+            return entries
+
         if isinstance(cb_entries, list):
             for idx, entry in enumerate(cb_entries):
+                insertion_order = entry.get("insertion_order", entry.get("order", 50))
                 entries.append({
                     "id": entry.get("id", f"wi_{idx}"),
                     "keys": entry.get("keys", []),
-                    "keys_secondary": entry.get("keys_secondary", []),
+                    "keys_secondary": entry.get("keys_secondary", entry.get("secondary_keys", [])),
                     "content": entry.get("content", ""),
                     "constant": entry.get("constant", False),
                     "selective": entry.get("selective", True),
-                    "insertion_order": entry.get("insertion_order", 50),
+                    "insertion_order": insertion_order,
                     "depth": entry.get("depth", 4),
                     "probability": entry.get("probability", 100),
                     "disable": entry.get("disable", not entry.get("enabled", True)),

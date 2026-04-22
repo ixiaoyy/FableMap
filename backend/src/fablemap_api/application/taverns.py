@@ -39,6 +39,7 @@ from fablemap_api.core.tavern import (
     EXPRESSION_CATEGORIES,
     STANDARD_EXPRESSIONS,
     ChatMessage,
+    LLMConfig,
     Tavern,
     TavernService,
     TavernSpriteSet,
@@ -47,7 +48,7 @@ from fablemap_api.core.tavern import (
     VoiceConfig,
     WorldInfoEntry,
 )
-from fablemap_api.core.token_counter import TokenCounter
+from fablemap_api.core.token_counter import SUPPORTED_TOKENIZERS, TokenCounter, normalize_tokenizer_backend
 
 from ..domain.expression_policy import infer_expression_keyword, normalize_sprite_map
 from ..domain.group_chat_policy import (
@@ -83,10 +84,12 @@ from ..domain.tavern_policy import (
 )
 from ..domain.world_info_policy import (
     test_world_info_entries,
+    world_info_entry_id,
     world_info_depth,
-    world_info_keywords,
     world_info_order,
+    world_info_primary_keywords,
     world_info_probability,
+    world_info_secondary_keywords,
 )
 from ..infrastructure.settings import ApiSettings
 
@@ -110,6 +113,12 @@ class TavernApplicationService:
     def __init__(self, store: TavernStore):
         self.store = store
         self.taverns = TavernService(store)
+
+    def _get_runtime_llm_config(self, tavern_id: str) -> LLMConfig | None:
+        private_getter = getattr(self.store, "get_llm_config_private", None)
+        if callable(private_getter):
+            return private_getter(tavern_id)
+        return self.store.get_llm_config(tavern_id)
 
     @classmethod
     def from_settings(cls, settings: ApiSettings) -> "TavernApplicationService":
@@ -353,7 +362,7 @@ class TavernApplicationService:
         tavern_id = str(payload.get("tavern_id") or "").strip()
         character_name = clean_text(payload.get("character_name"), max_length=80)
         if tavern_id:
-            llm_config = self.store.get_llm_config(tavern_id)
+            llm_config = self._get_runtime_llm_config(tavern_id)
             external_backend = str(llm_config.backend or "").lower() if llm_config else ""
             if llm_config and llm_config.is_configured() and external_backend not in {
                 "rules",
@@ -401,13 +410,10 @@ class TavernApplicationService:
                 source = payload["json"]
             elif "base64" in payload:
                 decoded = base64.b64decode(str(payload.get("base64") or ""))
-                if decoded.startswith(b"\x89PNG"):
-                    from fablemap_api.core.char_card_parser import CharacterCardParser
+                if decoded.startswith(b"\x89PNG") or b"PK\x03\x04" in decoded:
+                    from fablemap_api.core.char_card_parser import parse_character_card as parse_card
 
-                    parsed = CharacterCardParser().parse_png(decoded)
-                    if parsed is None:
-                        raise ValueError("Could not parse PNG as character card")
-                    return self._parsed_character_payload(parsed)
+                    return self._parsed_character_payload(parse_card(decoded))
                 source = json.loads(decoded.decode("utf-8"))
 
             from fablemap_api.core.char_card_parser import parse_character_card as parse_card
@@ -501,13 +507,12 @@ class TavernApplicationService:
         return self.test_world_info(tavern_id, payload, user_id)
 
     def list_tokenizers(self) -> dict[str, Any]:
-        tokenizers = ["cl100k_base", "o200k_base", "p50k_base", "p50k_edit", "r50k_base"]
-        return {"tokenizers": tokenizers}
+        return {"tokenizers": list(SUPPORTED_TOKENIZERS)}
 
     def count_tokens(self, data: dict[str, Any]) -> dict[str, Any]:
         payload = data or {}
         text = str(payload.get("text") or "")
-        backend = str(payload.get("backend") or "cl100k_base").strip() or "cl100k_base"
+        backend = normalize_tokenizer_backend(str(payload.get("backend") or "cl100k_base"))
         try:
             counter = TokenCounter(backend)
             return {"count": len(counter.encode(text)), "backend": backend}
@@ -519,7 +524,7 @@ class TavernApplicationService:
         messages = payload.get("messages", [])
         if not isinstance(messages, list):
             raise HTTPException(status_code=400, detail="messages must be a list")
-        backend = str(payload.get("backend") or "cl100k_base").strip() or "cl100k_base"
+        backend = normalize_tokenizer_backend(str(payload.get("backend") or "cl100k_base"))
         try:
             counter = TokenCounter(backend)
             total = 0
@@ -626,7 +631,7 @@ class TavernApplicationService:
         if tavern.status != "open":
             return self._degraded_chat(character_id, character.name, tavern.status, "酒馆正在歇业", "店主暂时关闭了这间酒馆。")
 
-        llm_config = self.store.get_llm_config(tavern_id)
+        llm_config = self._get_runtime_llm_config(tavern_id)
         if not llm_config or not llm_config.is_configured():
             return self._degraded_chat(character_id, character.name, "closed", "AI 后端还没配置", "这间酒馆还没有可用的模型配置。")
 
@@ -1218,7 +1223,7 @@ class TavernApplicationService:
         self._ensure_owner(tavern, user_id)
         payload = data or {}
         if not payload:
-            llm_config = self.store.get_llm_config(tavern_id)
+            llm_config = self._get_runtime_llm_config(tavern_id)
             payload = llm_config.to_dict_private() if llm_config and hasattr(llm_config, "to_dict_private") else {}
         return self.test_llm_config(payload)
 
@@ -1290,7 +1295,7 @@ class TavernApplicationService:
         if tavern.status != "open":
             return {"messages": [], "error": "酒馆正在歇业", "degraded": True}
 
-        llm_config = self.store.get_llm_config(tavern_id)
+        llm_config = self._get_runtime_llm_config(tavern_id)
         if not llm_config or not llm_config.is_configured():
             return {"messages": [], "error": "AI 后端还没配置", "degraded": True}
 
@@ -1526,7 +1531,7 @@ class TavernApplicationService:
         voice_config = self.store.get_voice_config(tavern_id)
         if not voice_config or not voice_config.enabled:
             raise HTTPException(status_code=400, detail="语音未启用")
-        llm_config = self.store.get_llm_config(tavern_id)
+        llm_config = self._get_runtime_llm_config(tavern_id)
         api_key = llm_config.api_key if llm_config else ""
         base_url = llm_config.base_url if llm_config else ""
         try:
@@ -1688,13 +1693,13 @@ class TavernApplicationService:
         entry_id: str = "",
     ) -> WorldInfoEntry:
         payload = data or {}
-        resolved_id = str(entry_id or payload.get("id") or f"wi_{uuid.uuid4().hex[:12]}").strip()
+        resolved_id = str(entry_id or world_info_entry_id(payload) or f"wi_{uuid.uuid4().hex[:12]}").strip()
         return WorldInfoEntry(
             id=resolved_id,
             tavern_id=tavern_id,
-            keys=world_info_keywords(payload.get("keys")),
+            keys=world_info_primary_keywords(payload),
             content=str(payload.get("content") or ""),
-            keys_secondary=world_info_keywords(payload.get("keys_secondary")),
+            keys_secondary=world_info_secondary_keywords(payload),
             selective=normalize_bool(payload.get("selective", True)),
             constant=normalize_bool(payload.get("constant", False)),
             depth=world_info_depth(payload),
@@ -1809,9 +1814,21 @@ class TavernApplicationService:
             raise HTTPException(status_code=400, detail="messages must contain objects")
         content = message.get("content", "")
         if isinstance(content, list):
+            parts: list[str] = []
             for item in content:
                 if isinstance(item, dict):
-                    content = item.get("text", str(item))
+                    if item.get("text") is not None:
+                        parts.append(str(item.get("text") or ""))
+                    elif item.get("content") is not None:
+                        parts.append(str(item.get("content") or ""))
+                elif item is not None:
+                    parts.append(str(item))
+            return "\n".join(part for part in parts if part)
+        if isinstance(content, dict):
+            if content.get("text") is not None:
+                return str(content.get("text") or "")
+            if content.get("content") is not None:
+                return str(content.get("content") or "")
         return str(content)
 
     def _safe_int(self, value: Any, fallback: int = 0) -> int:

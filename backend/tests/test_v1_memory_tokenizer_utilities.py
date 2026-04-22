@@ -18,6 +18,9 @@ def test_v1_tokenizer_utilities_count_text_and_messages(tmp_path: Path) -> None:
     listed = client.get("/api/v1/tokenizers")
     assert listed.status_code == 200
     assert "cl100k_base" in listed.json()["tokenizers"]
+    assert "claude" in listed.json()["tokenizers"]
+    assert "llama3" in listed.json()["tokenizers"]
+    assert "mistral" in listed.json()["tokenizers"]
 
     counted = client.post("/api/v1/tokenizers/count", json={"text": "FableMap cyber tavern", "backend": "cl100k_base"})
     assert counted.status_code == 200
@@ -37,6 +40,33 @@ def test_v1_tokenizer_utilities_count_text_and_messages(tmp_path: Path) -> None:
     assert message_counted.status_code == 200
     assert message_counted.json()["backend"] == "cl100k_base"
     assert message_counted.json()["count"] > 0
+
+    alias_counted = client.post("/api/v1/tokenizers/count", json={"text": "FableMap cyber tavern", "backend": "claude-3-opus"})
+    assert alias_counted.status_code == 200
+    assert alias_counted.json()["backend"] == "claude"
+    assert alias_counted.json()["count"] > 0
+
+    joined_counted = client.post("/api/v1/tokenizers/count", json={"text": "first segment\nsecond segment", "backend": "claude"})
+    multi_part_message_counted = client.post(
+        "/api/v1/tokenizers/count_messages",
+        json={
+            "backend": "claude",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "first segment"},
+                        {"type": "image_url", "image_url": {"url": "ignored-for-token-count"}},
+                        {"type": "text", "text": "second segment"},
+                    ],
+                },
+            ],
+        },
+    )
+    assert joined_counted.status_code == 200
+    assert multi_part_message_counted.status_code == 200
+    assert multi_part_message_counted.json()["backend"] == "claude"
+    assert multi_part_message_counted.json()["count"] == joined_counted.json()["count"]
 
 
 def test_v1_memory_utilities_truncate_importance_and_summarize_guard(tmp_path: Path) -> None:
