@@ -1,4 +1,4 @@
-# FableMap 图片资源规范 v1.0
+# FableMap 图片资源规范 v1.1
 
 ## 概述
 
@@ -25,7 +25,7 @@
 
 #### 角色原型清单
 
-每个原型需要生成 2 张变体（共 10 张）：
+每个原型需要生成 2 张变体（共 12 张）：
 
 | 原型 | 命名 | 描述 Prompt | 变体 A 描述 | 变体 B 描述 |
 |------|------|------------|------------|------------|
@@ -57,6 +57,7 @@ frontend/app/assets/npc-style-cast/portraits/
 #### 加载逻辑
 
 - canonical runtime 路径：`frontend/app/assets/npc-style-cast/portraits/`
+- runtime copy 为优化后的 `256×256` PNG，供 `TavernNpcStage` 直接静态导入
 - `TavernNpcStage` 在无 owner 图像时，根据角色文本 / tags / appearance preset / style 偏好解析 archetype
 - 变体使用稳定哈希选择（避免每次渲染随机跳变）
 - 优先级保持：`sprites.neutral` → `avatar` → `image_url` → project fallback portrait
@@ -154,10 +155,11 @@ frontend/public/faction-emblems/
 ### 角色头像通用模板
 
 ```
-A portrait of a [character description], fantasy RPG style,
-clean lineart with subtle shading, [lighting: warm/cold/dramatic],
-transparent background or solid dark background (#1a1a2e),
-[intimate portrait / half-body portrait],
+A finished original anime / game-style tavern NPC portrait of [character description],
+clean lineart with soft cel shading, [lighting: warm / neon / dramatic tavern light],
+waist-up or bust framing, visible tavern interior background with at least two cues
+(bar counter, mugs, shelves, lanterns, menu board, bottles, map-table, terminal glow),
+no transparent background, no logo, no watermark, no existing IP,
 [intentional imperfections, hand-crafted feel]
 ```
 
@@ -177,10 +179,10 @@ transparent background or solid dark background (#1a1a2e),
 ## 实现检查清单
 
 ### 角色头像
-- [ ] 生成 10 张角色头像 PNG（256×256）
-- [ ] 存入 `frontend/public/character-portraits/`
+- [ ] 生成 12 张角色头像 PNG（256×256）
+- [ ] 存入 `frontend/app/assets/npc-style-cast/portraits/`
 - [ ] 验证文件名和命名规范
-- [ ] 前端 ChatPanel CharacterHeader 加载并显示头像
+- [ ] `TavernNpcStage` 在无 owner 图像时加载并显示头像
 
 ### 地点氛围图
 - [ ] 生成 10 张地点氛围图（512×288）

@@ -1,72 +1,64 @@
-import { MessageCircle, Store, WandSparkles } from "lucide-react"
 import { Link } from "react-router"
 
-import { ProductShell } from "../shell/product-shell"
-import { Button } from "../ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
+import referenceImage from "../assets/homepage-reference/neon-cyber-tavern-reference.png"
 
-const cards = [
-  { icon: Store, title: "真实地点开店", text: "酒馆必须挂接真实坐标，地图是空间锚点，不做无锚点自由空间。" },
-  { icon: MessageCircle, title: "AI NPC 对话", text: "AI 只作为 NPC 对话与体验引擎，酒馆内容仍由店主创作和确认。" },
-  { icon: WandSparkles, title: "记忆与回访", text: "对话、玩法和写回记录沉淀为可回访体验，而不是一次性 demo。" },
+type Hotspot = {
+  to: string
+  label: string
+  className: string
+}
+
+const hotspots: Hotspot[] = [
+  { to: "/", label: "FableMap 首页", className: "left-[3.5%] top-[2.4%] h-[5%] w-[25%]" },
+  { to: "/discover", label: "导航：探索", className: "left-[30.6%] top-[4.7%] h-[4.4%] w-[7.2%]" },
+  { to: "/discover", label: "导航：酒馆", className: "left-[39%] top-[4.7%] h-[4.4%] w-[7.2%]" },
+  { to: "/discover", label: "导航：NPC", className: "left-[47.1%] top-[4.7%] h-[4.4%] w-[7.2%]" },
+  { to: "/discover", label: "导航：记忆", className: "left-[55.5%] top-[4.7%] h-[4.4%] w-[7.2%]" },
+  { to: "/create", label: "导航：社区", className: "left-[63.6%] top-[4.7%] h-[4.4%] w-[7.2%]" },
+  { to: "/create", label: "右上按钮：登录", className: "left-[74.2%] top-[4.3%] h-[4.7%] w-[8.8%]" },
+  { to: "/discover", label: "右上按钮：进入酒馆", className: "left-[84.2%] top-[4.3%] h-[4.9%] w-[12.5%]" },
+  { to: "/discover", label: "首屏按钮：进入酒馆", className: "left-[6.1%] top-[31.1%] h-[5%] w-[17.1%]" },
+  { to: "/discover", label: "首屏按钮：探索地图", className: "left-[24.2%] top-[31.1%] h-[5%] w-[19.6%]" },
+  { to: "/discover", label: "热门酒馆列表", className: "left-[4.7%] top-[48.2%] h-[19.2%] w-[89.7%]" },
+  { to: "/discover", label: "AI NPC 对话区", className: "left-[4.7%] top-[70.2%] h-[15.4%] w-[47.4%]" },
+  { to: "/discover", label: "你的记忆区", className: "left-[54.5%] top-[70.2%] h-[15.4%] w-[40.7%]" },
+  { to: "/discover", label: "底部价值条", className: "left-[4.7%] top-[89%] h-[8.4%] w-[89.7%]" },
 ]
+
+function HotspotLink({ to, label, className }: Hotspot) {
+  return (
+    <Link
+      to={to}
+      aria-label={label}
+      className={`absolute block rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#040713] ${className}`}
+    />
+  )
+}
 
 export default function HomeRoute() {
   return (
-    <ProductShell eyebrow="Real places, living taverns">
-      <section className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-7">
-          <div className="space-y-5">
-            <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-100">FableMap Enterprise Frontend</p>
-            <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-[-0.07em] text-white sm:text-7xl">
-              把真实地点变成可进入、可回访的赛博酒馆。
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-violet-100/72">
-              新前端使用 React Router Framework Mode、Tailwind CSS 和 Radix/shadcn 风格的自有组件系统，面向消费者和创作者体验，而不是后台模板。
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link to="/discover">开始探索</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link to="/create">开一间酒馆</Link>
-            </Button>
-          </div>
+    <main className="min-h-screen bg-[#030512] px-3 py-4 text-white sm:px-6 sm:py-8">
+      <h1 className="sr-only">FableMap 霓虹赛博酒馆首页参考版</h1>
+      <p className="sr-only">当前首页直接使用用户确认的参考图，保持相同布局与相同图片内容。</p>
+      <nav className="sr-only" aria-label="Homepage quick routes">
+        <Link to="/discover">发现酒馆</Link>
+        <Link to="/create">开一间酒馆</Link>
+      </nav>
+
+      <div className="mx-auto w-full max-w-[729px]">
+        <div className="relative">
+          <img
+            src={referenceImage}
+            alt="FableMap 霓虹赛博酒馆首页参考图"
+            className="block h-auto w-full"
+            decoding="async"
+            loading="eager"
+          />
+          {hotspots.map((hotspot) => (
+            <HotspotLink key={hotspot.label} {...hotspot} />
+          ))}
         </div>
-
-        <Card className="bg-gradient-to-br from-violet-400/18 to-cyan-300/10">
-          <CardHeader>
-            <CardTitle>产品体验，不是后台</CardTitle>
-            <CardDescription>店主工具、访客入口、NPC 对话都围绕 FableMap 自有视觉和交互。</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="explorer">
-              <TabsList>
-                <TabsTrigger value="explorer">探索者</TabsTrigger>
-                <TabsTrigger value="keeper">店主</TabsTrigger>
-              </TabsList>
-              <TabsContent value="explorer" className="leading-7 text-violet-100/72">
-                浏览真实地图上的酒馆，进入公共或密码酒馆，与 AI NPC 对话并形成回访记忆。
-              </TabsContent>
-              <TabsContent value="keeper" className="leading-7 text-violet-100/72">
-                选择地点、配置角色卡、设定 LLM 与访问规则，发布属于自己的赛博酒馆。
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
-        {cards.map((item) => (
-          <Card key={item.title} className="min-h-52">
-            <item.icon className="mb-5 h-7 w-7 text-cyan-200" />
-            <CardTitle className="text-lg">{item.title}</CardTitle>
-            <CardDescription className="mt-3">{item.text}</CardDescription>
-          </Card>
-        ))}
-      </section>
-    </ProductShell>
+      </div>
+    </main>
   )
 }

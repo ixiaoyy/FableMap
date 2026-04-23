@@ -9,7 +9,13 @@ const navItems = [
   { to: "/create", label: "开店" },
 ]
 
-export function ProductShell({ eyebrow, children }: { eyebrow: string; children: React.ReactNode }) {
+export function ProductShell({
+  eyebrow,
+  children,
+}: {
+  eyebrow: string
+  children: React.ReactNode
+}) {
   return (
     <main className="mx-auto min-h-screen w-[min(1120px,calc(100vw-32px))] px-4 py-7 text-violet-50 sm:px-0">
       <header className="mb-14 flex flex-col gap-4 sm:mb-20 sm:flex-row sm:items-center sm:justify-between" aria-label="FableMap navigation">

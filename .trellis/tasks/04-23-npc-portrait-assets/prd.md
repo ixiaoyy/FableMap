@@ -153,3 +153,41 @@
 * `npm --prefix .\frontend run typecheck` — passed
 * `npm --prefix .\frontend run build` — passed
 * `npm --prefix .\frontend test` — not rerun（本任务未改 service/rule scripts）
+
+## Resume Checkpoint (2026-04-23)
+
+* 已完成 portrait 体积复核并做运行时优化：
+  * 原始 workspace copy 为 `1254×1254` PNG，12 张合计约 `28.33 MB`
+  * 现已收敛为 canonical runtime `256×256` PNG，12 张合计约 `1.49 MB`
+  * 不改文件名、不改 fallback 顺序、不改 archetype / variant 解析逻辑
+* 已补齐 `docs/IMAGE_ASSETS_SPEC.md` 内残留的旧口径：
+  * 修正 `10 张` → `12 张`
+  * 修正旧 `frontend/public/character-portraits/` 路径 → `frontend/app/assets/npc-style-cast/portraits/`
+  * 修正角色头像 prompt，明确必须是 tavern interior portrait，不能是透明背景占位图
+* 当前剩余收尾：
+  * 浏览器人工视觉检查（确认 256×256 运行时资产在实际 UI 中无明显失真）
+  * 任务最终关闭前再做一次完整收口说明
+
+## Validation (resume checkpoint, 2026-04-23)
+
+* `npm --prefix .\frontend run typecheck` — passed
+* `npm --prefix .\frontend run build` — passed
+* build 产物观察：NPC portrait asset copy 从约 `28.33 MB` 降到约 `1.49 MB`
+
+## Runtime Checkpoint (Trellis phase 4, 2026-04-23)
+
+* 已按本地运行链路做一轮 runtime smoke check：
+  * 启动命令：`$env:PYTHONPATH='backend/src'; py -3 -m fablemap_api api --frontend-root frontend/build/client --no-open`
+  * 本地入口：`http://127.0.0.1:8950/`
+  * `curl.exe --noproxy '*' http://127.0.0.1:8950/api/meta` — 200
+  * `curl.exe --noproxy '*' http://127.0.0.1:8950/` — 200
+  * `curl.exe --noproxy '*' http://127.0.0.1:8950/api/taverns` — 200
+* 当前默认公益酒馆样例可命中 fallback 路径：
+  * `阿槐 / 小舟 / 闻笺 / 安澜` 等角色均无 `sprites.neutral`、无 `avatar`、无 `image_url`
+  * 但保留 `appearance.active_preset_id`，符合 `portraitCatalog.ts` 的 archetype/style 匹配输入
+* 已验证优化后的运行时资源可被后端静态服务：
+  * `/assets/merchant-a-7J-kr0-g.png` — 200，`130109` bytes
+  * `/assets/spirit-a-hJEtvjGi.png` — 200，`143574` bytes
+* 说明：
+  * 命令行 HTTP 检查需显式 `--noproxy '*'`，否则会被本机代理链路拦到 `502`
+  * 这轮仍不等价于浏览器人工视觉验收；剩余收尾仍是实际 UI 视觉检查
