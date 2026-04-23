@@ -3,7 +3,7 @@
   "name": "npc-portrait-assets",
   "title": "NPC形象素材",
   "description": "",
-  "status": "completed",
+  "status": "in_progress",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-04-23",
-  "completedAt": "2026-04-23",
+  "completedAt": null,
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 6,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -51,8 +51,9 @@
     "frontend/app/features/tavern-npc-stage/index.tsx",
     "frontend/app/features/tavern-npc-stage/portraitCatalog.ts",
     "frontend/app/assets/npc-style-cast/README.md",
+    "frontend/app/assets/npc-style-cast/portraits/",
     "docs/IMAGE_ASSETS_SPEC.md"
   ],
-  "notes": "Canonical fallback portrait assets now live under frontend/app/assets/npc-style-cast/portraits/. Added 12 tavern-themed portraits covering merchant/guardian/healer/scholar/wanderer/spirit with deterministic variant selection. TavernNpcStage keeps owner-authored image priority (sprites.neutral > avatar > image_url > project fallback portrait) and no longer crops the old tavern-npc-style-cast style board as runtime fallback. Validation passed: npm --prefix .\\frontend run typecheck, build, and test.",
+  "notes": "2026-04-23 pause checkpoint. Chose Approach A and fixed the canonical runtime asset path at frontend/app/assets/npc-style-cast/portraits/. Landed 12 tavern-themed portraits covering merchant/guardian/healer/scholar/wanderer/spirit, added portraitCatalog.ts for archetype matching + deterministic variant selection, and rewired TavernNpcStage so owner-authored images still win (sprites.neutral > avatar > image_url > project fallback portrait) without cropping tavern-npc-style-cast.png anymore. Fresh validation for this checkpoint: npm --prefix .\\frontend run typecheck, npm --prefix .\\frontend run build. Frontend script tests were not rerun for this pause checkpoint because the task did not change service/rule scripts. Resume from phase 4 with browser visual QA + asset-size review before final closeout.",
   "meta": {}
 }
