@@ -1,0 +1,58 @@
+{
+  "id": "npc-portrait-assets",
+  "name": "npc-portrait-assets",
+  "title": "NPC形象素材",
+  "description": "",
+  "status": "completed",
+  "dev_type": "frontend",
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-23",
+  "completedAt": "2026-04-23",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "frontend/app/features/tavern-npc-stage/index.tsx",
+    "frontend/app/features/tavern-npc-stage/portraitCatalog.ts",
+    "frontend/app/assets/npc-style-cast/README.md",
+    "docs/IMAGE_ASSETS_SPEC.md"
+  ],
+  "notes": "Canonical fallback portrait assets now live under frontend/app/assets/npc-style-cast/portraits/. Added 12 tavern-themed portraits covering merchant/guardian/healer/scholar/wanderer/spirit with deterministic variant selection. TavernNpcStage keeps owner-authored image priority (sprites.neutral > avatar > image_url > project fallback portrait) and no longer crops the old tavern-npc-style-cast style board as runtime fallback. Validation passed: npm --prefix .\\frontend run typecheck, build, and test.",
+  "meta": {}
+}

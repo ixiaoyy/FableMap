@@ -1,17 +1,21 @@
 # NPC Style Cast Assets
 
-`tavern-npc-style-cast.png` is the current project-local raster reference sheet for `features/tavern-npc-stage/`.
+`frontend/app/assets/npc-style-cast/` now contains the project-bound NPC fallback portrait assets for `features/tavern-npc-stage/`.
 
 Usage contract:
 
-- The sheet is split into a 2x2 grid:
-  - top-left: warm cyber tavern guide.
-  - top-right: neon night tavern host.
-  - bottom-left: pastel cafe-tavern attendant.
-  - bottom-right: fantasy town tavern keeper.
-- `tavern-npc-stage` uses the sheet as a visual fallback only when a character does not provide owner-authored `sprites.neutral`, `avatar`, or `image_url`.
+- Canonical runtime assets live under `portraits/`:
+  - `merchant-a.png`, `merchant-b.png`
+  - `guardian-a.png`, `guardian-b.png`
+  - `healer-a.png`, `healer-b.png`
+  - `scholar-a.png`, `scholar-b.png`
+  - `wanderer-a.png`, `wanderer-b.png`
+  - `spirit-a.png`, `spirit-b.png`
+- `features/tavern-npc-stage/portraitCatalog.ts` resolves fallback portraits by archetype + deterministic variant.
+- `TavernNpcStage` uses these portrait assets only when a character does not provide owner-authored `sprites.neutral`, `avatar`, or `image_url`.
+- `tavern-npc-style-cast.png` is retained as an earlier style reference sheet, not the canonical runtime fallback.
 - The asset must remain tavern-themed: visible bar/counter, mugs, shelves, lanterns, menu boards, map-table, bottles, or equivalent tavern interior cues.
 - Do not replace this with abstract placeholders, circles, square dummy avatars, generic empty portraits, or non-tavern character art.
 - Do not use copyrighted IP, franchise-specific UI, logos, or living-artist style imitation.
 
-The original generated file remains in the Codex generated-images directory; this workspace copy is the project-bound asset.
+The original generated files remain in the Codex generated-images directory; the workspace copies under `portraits/` are the project-bound assets.

@@ -10,7 +10,7 @@
 
 ### 1. 角色头像（Character Portraits）
 
-**用途**：在聊天气泡中展示当前对话角色的形象
+**用途**：在 TavernNpcStage / 角色展示区 / 未来聊天头部中展示当前对话角色的形象
 
 **优先级**：🔴 高 — 直接提升聊天体验代入感
 
@@ -19,9 +19,9 @@
 | 属性 | 值 |
 |------|-----|
 | 尺寸 | 256×256 px |
-| 格式 | PNG（支持透明背景）|
-| 风格 | Fantasy RPG 风格，侧面/四分之三侧面，简洁干净 |
-| 背景 | 透明或纯色（如深色 `#1a1a2e`）|
+| 格式 | PNG |
+| 风格 | 原创 anime / game-style tavern NPC portrait，半身或腰部以上 |
+| 背景 | 酒馆内景，不是透明背景，不是纯色占位 |
 
 #### 角色原型清单
 
@@ -32,14 +32,14 @@
 | merchant（商人） | `merchant-a.png` / `merchant-b.png` | 狡黠的中年商人，戴着羽毛帽，披着毛皮披风，手里拿着天平或钱袋，表情机敏 | 微笑正面 | 皱眉侧面 |
 | guardian（守卫） | `guardian-a.png` / `guardian-b.png` | 身披重甲的魁梧守卫，手持长剑或长戟，姿态威严 | 站立正视 | 持剑侧身 |
 | healer（疗愈者） | `healer-a.png` / `healer-b.png` | 身着白袍的疗愈师，戴着兜帽，手持发光的草药或法杖，周身有柔和光晕 | 低眉垂目 | 张开双臂 |
-| scholar（学者） | `scholar-a.png` / `schber-b.png` | 戴着圆框眼镜的老年学者，披着深色斗篷，手持古籍或羽毛笔 | 沉思凝视 | 执笔书写 |
-| wanderer（流浪者） | `wanderer-a.png` / `wanderer-b.png` | 神秘的流浪者，遮住半张脸，披着破旧斗篷，背着行囊 | 背影远眺 | 正面蒙面 |
-| spirit（精灵） | `spirit-a.png` / `spirit-b.png` | 半透明的都市精灵，小型生物，发光，身体由光点组成 | 飘浮微笑 | 聚集能量 |
+| scholar（学者） | `scholar-a.png` / `scholar-b.png` | 戴着圆框眼镜的资深学者/书记员，披着深色斗篷，手持古籍或羽毛笔 | 沉思凝视 | 执笔书写 |
+| wanderer（流浪者） | `wanderer-a.png` / `wanderer-b.png` | 神秘的流浪者，披着旧斗篷，背着行囊或旅包，像刚走进酒馆歇脚的长途旅人 | 阴影角落 | 半侧蒙面 |
+| spirit（精灵） | `spirit-a.png` / `spirit-b.png` | 人形酒馆灵体 / 精灵招待员，半透明发光，仍明确处于酒馆内部 | 举杯微笑 | 聚集能量 |
 
 #### 存放位置
 
 ```
-frontend/public/character-portraits/
+frontend/app/assets/npc-style-cast/portraits/
 ├── merchant-a.png
 ├── merchant-b.png
 ├── guardian-a.png
@@ -56,9 +56,10 @@ frontend/public/character-portraits/
 
 #### 加载逻辑
 
-- 前端根据 `character.archetype` 选择对应头像文件
-- 变体随机选择（a 或 b）或根据 `character.mood` 决定
-- 路径拼接：`/character-portraits/${archetype}-${variant}.png`
+- canonical runtime 路径：`frontend/app/assets/npc-style-cast/portraits/`
+- `TavernNpcStage` 在无 owner 图像时，根据角色文本 / tags / appearance preset / style 偏好解析 archetype
+- 变体使用稳定哈希选择（避免每次渲染随机跳变）
+- 优先级保持：`sprites.neutral` → `avatar` → `image_url` → project fallback portrait
 
 ---
 

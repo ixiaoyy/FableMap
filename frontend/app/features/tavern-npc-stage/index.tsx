@@ -1,9 +1,14 @@
 import type { CSSProperties } from "react"
 
-import npcStyleCastSheet from "../../assets/npc-style-cast/tavern-npc-style-cast.png"
 import type { Tavern, TavernCharacter } from "../../lib/taverns"
 import { cn } from "../../lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card"
+import {
+  getNpcAppearanceIds,
+  normalizeNpcSearchText,
+  resolveNpcPortraitMatch,
+  type NpcPortraitArchetype,
+} from "./portraitCatalog"
 
 type NpcVisualStyle = {
   id: string
@@ -18,7 +23,7 @@ type NpcVisualStyle = {
   backdrop: string
   body: string
   badge: string
-  artPosition: string
+  preferredArchetypes: NpcPortraitArchetype[]
   keywords: string[]
   appearanceIds: string[]
 }
@@ -37,7 +42,7 @@ const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
     backdrop: "radial-gradient(circle at 20% 15%, rgba(248, 199, 106, 0.28), transparent 34%), linear-gradient(135deg, rgba(42, 22, 11, 0.94), rgba(10, 8, 16, 0.94))",
     body: "linear-gradient(160deg, #7c3f1d 0%, #2a160b 58%, #153b3b 100%)",
     badge: "烛",
-    artPosition: "0% 0%",
+    preferredArchetypes: ["merchant", "scholar", "healer"],
     keywords: ["暖", "木", "酒馆", "茶", "档案", "服务", "向导", "管理员", "社区", "修补", "小舟", "阿槐", "闻笺"],
     appearanceIds: ["museum-docent", "archive-curator", "tea-storyteller", "dusty-bookshop", "city-photographer"],
   },
@@ -54,7 +59,7 @@ const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
     backdrop: "radial-gradient(circle at 78% 18%, rgba(34, 211, 238, 0.32), transparent 32%), linear-gradient(135deg, rgba(4, 8, 20, 0.96), rgba(30, 12, 54, 0.94))",
     body: "linear-gradient(160deg, #082f49 0%, #111827 46%, #581c87 100%)",
     badge: "霓",
-    artPosition: "100% 0%",
+    preferredArchetypes: ["guardian", "wanderer", "merchant"],
     keywords: ["霓虹", "赛博", "夜", "雨", "电台", "站台", "机修", "都市", "街", "安澜"],
     appearanceIds: ["rain-clerk", "night-platform", "neon-maintainer"],
   },
@@ -71,7 +76,7 @@ const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
     backdrop: "radial-gradient(circle at 22% 18%, rgba(249, 168, 212, 0.28), transparent 32%), linear-gradient(135deg, rgba(44, 24, 78, 0.9), rgba(11, 53, 48, 0.88))",
     body: "linear-gradient(160deg, #f9a8d4 0%, #93c5fd 45%, #16a34a 100%)",
     badge: "便",
-    artPosition: "0% 100%",
+    preferredArchetypes: ["healer", "spirit", "scholar"],
     keywords: ["校园", "学校", "咖啡", "治愈", "温柔", "新手", "花", "园丁", "便签"],
     appearanceIds: ["school-evening", "school-ceremony", "greenhouse-guide"],
   },
@@ -88,7 +93,7 @@ const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
     backdrop: "radial-gradient(circle at 76% 24%, rgba(167, 243, 208, 0.28), transparent 34%), linear-gradient(135deg, rgba(22, 78, 99, 0.9), rgba(58, 24, 83, 0.88))",
     body: "linear-gradient(160deg, #166534 0%, #0f766e 44%, #7e22ce 100%)",
     badge: "叶",
-    artPosition: "100% 100%",
+    preferredArchetypes: ["spirit", "wanderer", "scholar"],
     keywords: ["幻想", "小镇", "童话", "渡口", "潮", "占卜", "森林", "奇谈", "星"],
     appearanceIds: ["ferry-keeper", "fortune-reader"],
   },
@@ -103,22 +108,6 @@ interface TavernNpcStageProps {
   onSelectCharacter?: (character: TavernCharacter) => void
 }
 
-function toSearchText(value: unknown): string {
-  if (Array.isArray(value)) return value.map(toSearchText).join(" ")
-  return typeof value === "string" ? value.toLowerCase() : ""
-}
-
-function getAppearanceIds(character: TavernCharacter): string[] {
-  const appearance = character.appearance || {}
-  const ids = [
-    appearance.active_preset_id,
-    appearance.active,
-    ...(Array.isArray(appearance.wardrobe_ids) ? appearance.wardrobe_ids : []),
-    ...(Array.isArray(appearance.wardrobe) ? appearance.wardrobe : []),
-  ]
-  return ids.filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
-}
-
 function avatarUrlFor(character: TavernCharacter): string {
   return (
     character.sprites?.neutral
@@ -130,14 +119,14 @@ function avatarUrlFor(character: TavernCharacter): string {
 }
 
 function resolveNpcStyle(character: TavernCharacter, tavern: Tavern, index: number): NpcVisualStyle {
-  const appearanceIds = getAppearanceIds(character)
+  const appearanceIds = getNpcAppearanceIds(character)
   const text = [
     character.name,
     character.description,
     character.personality,
     character.scenario,
     character.first_mes,
-    toSearchText(character.tags || []),
+    normalizeNpcSearchText(character.tags || []),
     tavern.name,
     tavern.description,
     tavern.scene_prompt,
@@ -151,13 +140,24 @@ function resolveNpcStyle(character: TavernCharacter, tavern: Tavern, index: numb
   )
 }
 
-function NpcPortrait({ character, style }: { character: TavernCharacter; style: NpcVisualStyle }) {
+function NpcPortrait({
+  character,
+  tavern,
+  style,
+  index,
+}: {
+  character: TavernCharacter
+  tavern: Tavern
+  style: NpcVisualStyle
+  index: number
+}) {
   const avatar = avatarUrlFor(character)
   const frameStyle = {
     "--npc-accent": style.accent,
     "--npc-secondary": style.secondary,
     "--npc-body": style.body,
   } as CSSProperties
+  const fallbackPortrait = resolveNpcPortraitMatch(character, tavern, style.preferredArchetypes, index)
 
   if (avatar) {
     return (
@@ -179,13 +179,13 @@ function NpcPortrait({ character, style }: { character: TavernCharacter; style: 
       className="relative mx-auto h-44 w-full overflow-hidden rounded-[1.75rem] border border-white/18 shadow-[0_0_34px_rgba(34,211,238,0.16)]"
       role="img"
       aria-label={`${character.name || "NPC"} 的${style.title}酒馆主题人像`}
-      style={{
-        ...frameStyle,
-        backgroundImage: `url(${npcStyleCastSheet})`,
-        backgroundPosition: style.artPosition,
-        backgroundSize: "200% 200%",
-      }}
+      style={frameStyle}
     >
+      <img
+        src={fallbackPortrait.src}
+        alt={character.name || "NPC 主题人像"}
+        className="h-full w-full object-cover"
+      />
       <div className="absolute inset-0 bg-gradient-to-t from-black/42 via-transparent to-white/0" />
       <span className="absolute bottom-3 right-3 rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[0.62rem] font-black text-white">
         {style.badge}
@@ -254,7 +254,7 @@ export function TavernNpcStage({
                   )}
                   style={{ backgroundImage: style.surface }}
                 >
-                  <NpcPortrait character={character} style={style} />
+                  <NpcPortrait character={character} tavern={tavern} style={style} index={index} />
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <strong className="text-base text-white">{character.name || "未命名 NPC"}</strong>
