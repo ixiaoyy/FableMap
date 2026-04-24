@@ -45,9 +45,7 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [
-    "04-24-heguang-visual-design"
-  ],
+  "children": [],
   "parent": null,
   "relatedFiles": [
     "backend/src/fablemap_api/core/default_taverns.py",
