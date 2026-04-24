@@ -51,3 +51,54 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Polish tavern UI and add Heguang NPC
+
+**Date**: 2026-04-24
+**Task**: Polish tavern UI and add Heguang NPC
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Area | Summary |
+|------|---------|
+| Frontend | Polished native homepage/discover/create/tavern/product-shell UI around cyber tavern imagery and added homepage module assets. |
+| Backend | Added public-welfare NPC「和光」to `pw_community_repair` and seed repair logic that appends missing built-in child records for platform-owned default taverns without overwriting store edits. |
+| Tests | Added coverage for 和光 presence and default seed repair behavior. |
+| Workspace | Archived completed Trellis tasks: 04-22-refactor-project, 04-24-heguang-visual-design, 04-24-homepage-layout-polish, 04-24-official-welfare-heguang-npc. |
+
+Verification:
+- `git diff --check` passed.
+- Secret scan over changed/untracked text files found no private-key/API-token patterns.
+- `py -3 -m compileall -q backend/src` passed.
+- `npm --prefix .\frontend test` passed.
+- `npm --prefix .\frontend run build` passed.
+- `py -3 -m pytest -q --tb=short` first failed because local `HTTP_PROXY/HTTPS_PROXY=http://127.0.0.1:7890` intercepted localhost page tests with HTTP 502; rerun with proxy variables cleared and `NO_PROXY=127.0.0.1,localhost` passed: 353 passed, 6 warnings.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ee49284` | (see git log) |
+| `b9330d7` | (see git log) |
+| `250b654` | (see git log) |
+| `ea37bc2` | (see git log) |
+| `793ddbf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
