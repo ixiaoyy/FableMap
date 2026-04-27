@@ -44,6 +44,7 @@ class TavernModel(Base):
     password_hash = Column(String(128), default="")
     status = Column(SQLEnum("open", "closed", name="status_type"), default="closed")
     roleplay_mode = Column(String(32), default="ai_only")
+    layout_style = Column(String(32), nullable=False, default="lobby")
     scene_prompt = Column(Text, default="")
     visit_count = Column(Integer, default=0)
     group_chat_enabled = Column(Boolean, default=False)

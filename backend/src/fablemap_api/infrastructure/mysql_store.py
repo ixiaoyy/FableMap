@@ -93,6 +93,7 @@ class MySQLTavernStore:
             password_hash=model.password_hash or "",
             status=model.status or "closed",
             roleplay_mode=model.roleplay_mode or "ai_only",
+            layout_style=model.layout_style or "lobby",
             characters=characters,
             character_claims=deepcopy(model.character_claims) if model.character_claims else [],
             world_info=world_info,
@@ -298,6 +299,7 @@ class MySQLTavernStore:
                 password_hash=tavern.password_hash,
                 status=tavern.status,
                 roleplay_mode=tavern.roleplay_mode,
+                layout_style=tavern.layout_style,
                 scene_prompt=tavern.scene_prompt,
                 visit_count=tavern.visit_count,
                 group_chat_enabled=tavern.group_chat_enabled,
@@ -376,6 +378,7 @@ class MySQLTavernStore:
             model.password_hash = tavern.password_hash
             model.status = tavern.status
             model.roleplay_mode = tavern.roleplay_mode
+            model.layout_style = tavern.layout_style
             model.scene_prompt = tavern.scene_prompt
             model.visit_count = tavern.visit_count
             model.group_chat_enabled = tavern.group_chat_enabled

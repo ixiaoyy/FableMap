@@ -179,6 +179,7 @@ interface Tavern {
   // ── 运营状态 ──────────────────────
   status: 'open' | 'closed';    // open = LLM 可用，closed = LLM 不可用
   roleplay_mode: 'ai_only' | 'hybrid'; // 纯 AI 或店主审批的玩家混合扮演
+  layout_style: 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'; // 酒馆页默认体验布局
 
   // ── 酒馆内容 ──────────────────────
   characters: TavernCharacter[];  // 酒馆内的 NPC 列表

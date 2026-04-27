@@ -20,6 +20,8 @@ export type TavernCharacter = {
 
 export type RoleplayMode = "ai_only" | "hybrid"
 
+export type TavernLayoutStyle = "lobby" | "npc-chat" | "quest-play" | "hybrid-room"
+
 export type RoleplayClaimStatus = "pending" | "approved" | "rejected" | "revoked"
 
 export type RoleplayClaim = {
@@ -45,6 +47,7 @@ export type Tavern = {
   owner_id?: string
   scene_prompt?: string
   roleplay_mode?: RoleplayMode | string
+  layout_style?: TavernLayoutStyle | string
   character_claims?: RoleplayClaim[]
   visit_count?: number
   characters?: TavernCharacter[]

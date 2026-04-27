@@ -1,0 +1,110 @@
+export const TAVERN_LAYOUTS = [
+  {
+    id: "lobby",
+    title: "酒馆大厅型",
+    navLabel: "大厅",
+    eyebrow: "Lobby layout",
+    icon: "home",
+    description: "把地图位置、今日公告、房间入口和店内行动放在同一个沉浸式大厅里。",
+    accent: "amber",
+    actions: [
+      { title: "吧台", text: "点单 · 喝一杯", icon: "martini", targetLayout: "npc-chat" },
+      { title: "故事墙", text: "浏览 · 写故事", icon: "book", targetLayout: "quest-play" },
+      { title: "NPC 角落", text: "组织 · 聊天", icon: "users", targetLayout: "npc-chat" },
+      { title: "访客簿", text: "写下足迹", icon: "pen", targetLayout: "hybrid-room" },
+      { title: "记忆柜", text: "碎片 · 回溯", icon: "archive" },
+      { title: "店规", text: "守则 · 约定", icon: "scroll" },
+    ],
+  },
+  {
+    id: "npc-chat",
+    title: "NPC 会话型",
+    navLabel: "NPC",
+    eyebrow: "NPC conversation layout",
+    icon: "user",
+    description: "左侧是可筛选 NPC 名单，右侧给当前角色和对话区最大空间。",
+    accent: "cyan",
+    actions: [
+      { title: "点一杯酒", text: "放松一下", icon: "martini" },
+      { title: "询问传闻", text: "打听消息", icon: "message" },
+      { title: "留下记忆", text: "记录此刻", icon: "pen", targetLayout: "hybrid-room" },
+    ],
+  },
+  {
+    id: "quest-play",
+    title: "任务 / 玩法型",
+    navLabel: "任务",
+    eyebrow: "Quest board layout",
+    icon: "clipboard",
+    description: "突出委托板、线索、推理分支和下一步行动，适合轻文字玩法。",
+    accent: "violet",
+    actions: [
+      { title: "询问老板", text: "了解更多情况", icon: "message", targetLayout: "npc-chat" },
+      { title: "检查后门", text: "后巷通向何处？", icon: "door" },
+      { title: "查看地图", text: "定位关键地点", icon: "map", targetLayout: "lobby" },
+      { title: "提交推理", text: "整合线索推断", icon: "network" },
+    ],
+  },
+  {
+    id: "hybrid-room",
+    title: "混合房间型",
+    navLabel: "店内事件",
+    eyebrow: "Hybrid room layout",
+    icon: "bell",
+    description: "用室内热点、事件流、任务/记忆入口组合出可探索房间。",
+    accent: "emerald",
+    actions: [
+      { title: "切到聊天", text: "回到 NPC 对话", icon: "message", targetLayout: "npc-chat" },
+      { title: "查看任务", text: "检查委托进度", icon: "clipboard", targetLayout: "quest-play" },
+      { title: "写入记忆", text: "保存当前发现", icon: "pen" },
+    ],
+  },
+]
+
+const CLAIM_STATUSES = ["approved", "pending", "rejected", "revoked"]
+
+export function normalizeTavernLayoutStyle(value) {
+  const layoutStyle = typeof value === "string" ? value.trim() : ""
+  return TAVERN_LAYOUTS.some((layout) => layout.id === layoutStyle) ? layoutStyle : "lobby"
+}
+
+function finiteNumber(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function formatCoordinate(value, suffix) {
+  const parsed = finiteNumber(value)
+  if (parsed === null) return ""
+  return `${parsed.toFixed(5)}°${suffix}`
+}
+
+export function countClaimsByStatus(claims = []) {
+  const counts = { approved: 0, pending: 0, rejected: 0, revoked: 0 }
+  if (!Array.isArray(claims)) return counts
+
+  claims.forEach((claim) => {
+    const status = typeof claim?.status === "string" ? claim.status : ""
+    if (CLAIM_STATUSES.includes(status)) {
+      counts[status] += 1
+    }
+  })
+  return counts
+}
+
+export function buildTavernLayoutStats(tavern, characters = [], claims = []) {
+  const lat = formatCoordinate(tavern?.lat, "N")
+  const lon = formatCoordinate(tavern?.lon, "E")
+  const tavernCharacters = Array.isArray(tavern?.characters) ? tavern.characters : []
+  const safeCharacters = Array.isArray(characters) ? characters : []
+
+  return {
+    location: lat && lon ? `${lat} · ${lon}` : "坐标未设置",
+    accessStatus: `${tavern?.status || "unknown"} · ${tavern?.access || "public"}`,
+    characterCount: safeCharacters.length || tavernCharacters.length,
+    worldInfoCount: Array.isArray(tavern?.world_info) ? tavern.world_info.length : 0,
+    gameplayCount: Array.isArray(tavern?.gameplay_definitions) ? tavern.gameplay_definitions.length : 0,
+    visitCount: Number.isFinite(Number(tavern?.visit_count)) ? Number(tavern.visit_count) : 0,
+    claims: countClaimsByStatus(claims),
+  }
+}

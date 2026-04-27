@@ -111,6 +111,84 @@ Do **not** silently change enum semantics (`access`, `status`, gameplay states, 
 
 ---
 
+## Scenario: Tavern Layout Style Persistence Contract
+
+### 1. Scope / Trigger
+
+Use this contract when maintaining the Tavern page layout preference field across backend, persistence, API contracts, and frontend route modules. The field is a presentation preference for the tavern detail page, not owner-authored tavern content generation.
+
+### 2. Signatures
+
+```python
+Tavern.layout_style: str
+TavernService.create_tavern(data: dict[str, Any], owner_id: str = "") -> dict[str, Any]
+TavernService.update_tavern(tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]
+TavernCreateRequest.layout_style: str | None
+TavernUpdateRequest.layout_style: str | None
+```
+
+```typescript
+type TavernLayoutStyle = "lobby" | "npc-chat" | "quest-play" | "hybrid-room"
+type Tavern = { layout_style?: TavernLayoutStyle | string }
+```
+
+### 3. Contracts
+
+- Persistent key is `layout_style`.
+- Allowed values are `lobby`, `npc-chat`, `quest-play`, and `hybrid-room`.
+- Missing, blank, non-string, or unsupported values normalize to `lobby`.
+- `Tavern.to_dict()`, `to_dict_private()`, and `to_dict_public()` include normalized `layout_style`.
+- JSON `TavernStore` and `MySQLTavernStore` must round-trip the value.
+- Frontend layout config lives in `frontend/app/lib/tavern-layouts.js`; route components should initialize local active layout from `tavern.layout_style` through `normalizeTavernLayoutStyle`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Create without `layout_style` | response includes `layout_style: "lobby"` |
+| Create/update with `quest-play` | value persists and appears in later GET |
+| Create/update with unknown value | normalized response and storage use `lobby` |
+| Legacy JSON missing field | `Tavern.from_dict(...)` returns `layout_style == "lobby"` |
+| MySQL row missing/empty value | domain object falls back to `lobby` |
+
+### 5. Good/Base/Bad Cases
+
+- Good: Add a new layout by updating backend allowed values, frontend `TAVERN_LAYOUTS`, frontend type, `docs/WORLD_SCHEMA.md`, and tests in one change.
+- Base: UI-only temporary tab switches may remain local state; only the default layout preference is persisted.
+- Bad: Persisting free-form layout names from a component, or adding a backend field without updating `WORLD_SCHEMA` and frontend types.
+
+### 6. Tests Required
+
+Run and assert:
+
+```powershell
+py -3 -m pytest -q backend/tests/test_v1_tavern_layout_style.py --tb=short
+py -3 -m pytest -q backend/tests/test_mysql_infrastructure.py::TestTavernCRUD::test_layout_style_round_trip --tb=short
+npm --prefix .\frontend test
+```
+
+The v1 API test must assert create defaults, valid create/update round-trip, visitor GET visibility, and invalid fallback. The MySQL test must assert create/get/update/get round-trip. The frontend script must assert layout IDs and normalizer fallback.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+tavern.layout_style = data["layout_style"]
+```
+
+This stores unsupported UI strings and can make old clients render unknown layouts.
+
+#### Correct
+
+```python
+tavern.layout_style = _normalize_tavern_layout_style(data.get("layout_style"))
+```
+
+Normalization keeps JSON, MySQL, API responses, and frontend route initialization backward-compatible.
+
+---
+
 ## Migrations
 
 There is no formal migration runner. Compatibility is handled by:

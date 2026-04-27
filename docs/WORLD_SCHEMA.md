@@ -48,6 +48,7 @@ interface Tavern {
   // ── 运营状态 ──────────────────────
   status: 'open' | 'closed';    // open = LLM 可用，closed = LLM 不可用
   roleplay_mode: 'ai_only' | 'hybrid'; // NPC 驱动模式：纯 AI 或店主审批的玩家混合扮演
+  layout_style: 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'; // 酒馆页默认体验布局
 
   // ── 酒馆内容 ──────────────────────
   characters: TavernCharacter[];  // 酒馆内的 NPC 列表
@@ -57,6 +58,12 @@ interface Tavern {
   scene_prompt?: string;          // 场景氛围提示词（附加上下文）
 }
 ```
+
+约束：
+
+- `layout_style` 只决定酒馆详情页的默认展示结构，不生成或改写酒馆内容。
+- 缺失或不支持的 `layout_style` 必须兼容读取为 `lobby`。
+- 合法值为：`lobby`（大厅型）、`npc-chat`（NPC 会话型）、`quest-play`（任务/玩法型）、`hybrid-room`（混合房间型）。
 
 ---
 
@@ -395,6 +402,7 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ## 版本历史
 
+- v0.4 (2026-04-27): 增加 `layout_style`，用于持久化酒馆页默认布局样式，缺省为 `lobby`。
 - v0.3 (2026-04-21): 增加 `gameplay_definitions`、`GameplayDefinition`、`GameplaySession`、`GameplayEvent`，明确玩法会话与公开 Tavern payload 的边界。
 - v0.2 (2026-04-14): 按赛博酒馆平台方向重写，替换为 Tavern/TavernCharacter/LLMConfig 模型。旧 Schema 降级为历史参考。
 - v0.1 (2026-03-10): 初始版本，基于 AI 生成叙事引擎方向。

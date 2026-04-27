@@ -35,6 +35,7 @@ UserId = str
 
 ROLEPLAY_MODES = {"ai_only", "hybrid"}
 ROLEPLAY_CLAIM_STATUSES = {"pending", "approved", "rejected", "revoked"}
+TAVERN_LAYOUT_STYLES = {"lobby", "npc-chat", "quest-play", "hybrid-room"}
 
 
 # ─────────────────────────────────────────
@@ -441,6 +442,7 @@ class Tavern:
     password_hash: str = ""
     status: str = "closed"  # 'open' | 'closed'
     roleplay_mode: str = "ai_only"  # 'ai_only' | 'hybrid'
+    layout_style: str = "lobby"  # 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'
     characters: list[TavernCharacter] = field(default_factory=list)
     character_claims: list[dict[str, Any]] = field(default_factory=list)
     world_info: list[WorldInfoEntry] = field(default_factory=list)
@@ -460,6 +462,10 @@ class Tavern:
     group_chat_enabled: bool = False  # 是否启用群聊模式
     group_chat_config: dict[str, Any] = field(default_factory=dict)  # { strategy, max_responses_per_turn, min_interval, ... }
 
+    def __post_init__(self) -> None:
+        self.roleplay_mode = _normalize_roleplay_mode(self.roleplay_mode)
+        self.layout_style = _normalize_tavern_layout_style(self.layout_style)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
@@ -474,6 +480,7 @@ class Tavern:
             "password_hash": self.password_hash,
             "status": self.status,
             "roleplay_mode": self.roleplay_mode,
+            "layout_style": self.layout_style,
             "characters": [c.to_dict() for c in self.characters],
             "character_claims": deepcopy(self.character_claims),
             "world_info": [w.to_dict() for w in self.world_info],
@@ -534,6 +541,7 @@ class Tavern:
             password_hash=d.get("password_hash", ""),
             status=d.get("status", "closed"),
             roleplay_mode=_normalize_roleplay_mode(d.get("roleplay_mode", "ai_only")),
+            layout_style=_normalize_tavern_layout_style(d.get("layout_style", "lobby")),
             characters=characters,
             character_claims=_normalize_character_claims(d.get("character_claims", [])),
             world_info=world_info,
@@ -1235,6 +1243,7 @@ class TavernService:
             password_hash="",
             status="closed",
             roleplay_mode=_normalize_roleplay_mode(data.get("roleplay_mode", "ai_only")),
+            layout_style=_normalize_tavern_layout_style(data.get("layout_style", "lobby")),
             character_claims=_normalize_character_claims(data.get("character_claims", [])),
             gameplay_definitions=_normalize_metadata_list(data.get("gameplay_definitions", [])),
             output_rules=_normalize_metadata_list(data.get("output_rules", [])),
@@ -1297,6 +1306,8 @@ class TavernService:
             tavern.status = data["status"]
         if "roleplay_mode" in data:
             tavern.roleplay_mode = _normalize_roleplay_mode(data.get("roleplay_mode"))
+        if "layout_style" in data:
+            tavern.layout_style = _normalize_tavern_layout_style(data.get("layout_style"))
         if "character_claims" in data:
             tavern.character_claims = _normalize_character_claims(data.get("character_claims"))
         if "characters" in data and isinstance(data["characters"], list):
@@ -1653,6 +1664,11 @@ def _normalize_group_chat_config(value: Any) -> dict[str, Any]:
 def _normalize_roleplay_mode(value: Any) -> str:
     mode = str(value or "ai_only").strip().lower()
     return mode if mode in ROLEPLAY_MODES else "ai_only"
+
+
+def _normalize_tavern_layout_style(value: Any) -> str:
+    layout_style = str(value or "lobby").strip().lower()
+    return layout_style if layout_style in TAVERN_LAYOUT_STYLES else "lobby"
 
 
 def _normalize_character_claim_status(value: Any) -> str:

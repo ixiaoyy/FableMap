@@ -177,6 +177,33 @@ class TestTavernCRUD:
         assert retrieved.name == "新名称"
         assert retrieved.status == "closed"
 
+    def test_layout_style_round_trip(self, store: MySQLTavernStore):
+        """测试酒馆布局样式持久化"""
+        from fablemap_api.core.tavern import Tavern
+
+        tavern = Tavern(
+            id="tavern_layout_style",
+            name="布局样式酒馆",
+            description="",
+            lat=35.6581,
+            lon=139.7016,
+            owner_id="owner_001",
+            created_at="2026-04-22T10:00:00Z",
+            layout_style="npc-chat",
+        )
+        store.create_tavern(tavern)
+
+        retrieved = store.get_tavern("tavern_layout_style")
+        assert retrieved is not None
+        assert retrieved.layout_style == "npc-chat"
+
+        retrieved.layout_style = "hybrid-room"
+        store.update_tavern(retrieved)
+
+        updated = store.get_tavern("tavern_layout_style")
+        assert updated is not None
+        assert updated.layout_style == "hybrid-room"
+
     def test_delete_tavern(self, store: MySQLTavernStore):
         """测试删除酒馆"""
         from fablemap_api.core.tavern import Tavern

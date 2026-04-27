@@ -42,6 +42,7 @@ class TavernCreateRequest(FlexibleBody):
     password: str | None = None
     scene_prompt: str | None = None
     roleplay_mode: str | None = None
+    layout_style: str | None = None
     llm_config: dict[str, Any] | None = None
 
 
@@ -56,6 +57,7 @@ class TavernUpdateRequest(FlexibleBody):
     status: str | None = None
     scene_prompt: str | None = None
     roleplay_mode: str | None = None
+    layout_style: str | None = None
     llm_config: dict[str, Any] | None = None
 
 
