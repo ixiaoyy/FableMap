@@ -4,9 +4,27 @@ import { useMemo, useState } from "react"
 
 import tavernNeonImage from "../assets/homepage-reference/modules/tavern-neon.png"
 import tavernNightImage from "../assets/homepage-reference/modules/tavern-night.png"
-import { errorMessage, listTaverns, type TavernListResponse } from "../lib/taverns"
+import { TavernPreviewModal } from "../components/tavern-preview-modal"
+import { DISCOVERABLE_PLACE_TYPES, derivePlaceTypeDisplay, placeTypeMatchesTavern } from "../lib/place-types.js"
+import { errorMessage, listTaverns, type Tavern, type TavernCharacter, type TavernListResponse } from "../lib/taverns"
 import { ProductShell } from "../shell/product-shell"
 import { Button } from "../ui/button"
+
+// Helper functions for character rendering
+function characterAvatar(character: TavernCharacter) {
+  if (!character) return ""
+  return (
+    character.sprites?.neutral
+    || character.avatar
+    || character.image_url
+    || Object.values(character.sprites || {}).find(Boolean)
+    || ""
+  )
+}
+
+function initialFor(value = "?") {
+  return value.trim().slice(0, 1).toUpperCase() || "?"
+}
 
 const previewCards = [
   { image: tavernNightImage, title: "夜间开放", text: "从真实坐标进入店主创作的赛博酒馆。" },
@@ -39,6 +57,7 @@ function tavernMatchesFilter(
   tavern: TavernListResponse["taverns"][number],
   filters: {
     search: string
+    activePlaceTypes: Set<string>
     activeCategories: Set<string>
     publicOnly: boolean
     openOnly: boolean
@@ -47,6 +66,13 @@ function tavernMatchesFilter(
   // Name search — case-insensitive includes
   if (filters.search && !tavern.name.toLowerCase().includes(filters.search.toLowerCase())) {
     return false
+  }
+  // Place type filter — derived from existing public Tavern fields, not a persisted schema field
+  if (filters.activePlaceTypes.size > 0) {
+    const matches = Array.from(filters.activePlaceTypes).some((placeTypeId) =>
+      placeTypeMatchesTavern(tavern, placeTypeId),
+    )
+    if (!matches) return false
   }
   // Category filter — match any active category
   if (filters.activeCategories.size > 0) {
@@ -68,6 +94,11 @@ type DiscoverLoaderData = {
   error: string
 }
 
+type TavernWithTimeStatus = Tavern & {
+  is_open?: boolean
+  local_time_display?: string
+}
+
 export async function clientLoader(): Promise<DiscoverLoaderData> {
   try {
     return { result: await listTaverns(), error: "" }
@@ -80,15 +111,25 @@ export default function DiscoverRoute() {
   const { result, error } = useLoaderData<typeof clientLoader>()
 
   const [search, setSearch] = useState("")
+  const [activePlaceTypes, setActivePlaceTypes] = useState<Set<string>>(new Set())
   const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set())
   const [publicOnly, setPublicOnly] = useState(false)
   const [openOnly, setOpenOnly] = useState(false)
+  const [previewTavern, setPreviewTavern] = useState<Tavern | null>(null)
 
   const filteredTaverns = useMemo(() => {
     return result.taverns.filter((tavern) =>
-      tavernMatchesFilter(tavern, { search, activeCategories, publicOnly, openOnly }),
+      tavernMatchesFilter(tavern, { search, activePlaceTypes, activeCategories, publicOnly, openOnly }),
     )
-  }, [result.taverns, search, activeCategories, publicOnly, openOnly])
+  }, [result.taverns, search, activePlaceTypes, activeCategories, publicOnly, openOnly])
+
+  function togglePlaceType(placeTypeId: string) {
+    setActivePlaceTypes((prev) => {
+      const next = new Set(prev)
+      next.has(placeTypeId) ? next.delete(placeTypeId) : next.add(placeTypeId)
+      return next
+    })
+  }
 
   function toggleCategory(label: string) {
     setActiveCategories((prev) => {
@@ -100,12 +141,13 @@ export default function DiscoverRoute() {
 
   function clearFilters() {
     setSearch("")
+    setActivePlaceTypes(new Set())
     setActiveCategories(new Set())
     setPublicOnly(false)
     setOpenOnly(false)
   }
 
-  const hasFilters = search || activeCategories.size > 0 || publicOnly || openOnly
+  const hasFilters = search || activePlaceTypes.size > 0 || activeCategories.size > 0 || publicOnly || openOnly
 
   return (
     <ProductShell eyebrow="Discover">
@@ -160,24 +202,52 @@ export default function DiscoverRoute() {
               ) : null}
             </div>
 
+            {/* Place type chips */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-violet-100/48">地点类型</p>
+              <div className="flex flex-wrap gap-2">
+                {DISCOVERABLE_PLACE_TYPES.map((type) => {
+                  const active = activePlaceTypes.has(type.id)
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => togglePlaceType(type.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                        active
+                          ? "border-cyan-300/40 bg-cyan-300/12 text-cyan-100"
+                          : "border-white/10 text-violet-100/60 hover:border-cyan-300/30 hover:text-cyan-100"
+                      }`}
+                      title={type.description}
+                    >
+                      <span aria-hidden="true">{type.icon}</span>
+                      {type.shortLabel || type.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Category chips */}
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => {
-                const active = activeCategories.has(cat.label)
-                return (
-                  <button
-                    key={cat.label}
-                    onClick={() => toggleCategory(cat.label)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                      active
-                        ? cat.color
-                        : "border-white/10 text-violet-100/60 hover:border-white/25 hover:text-white/80"
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                )
-              })}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-violet-100/48">内容标签</p>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((cat) => {
+                  const active = activeCategories.has(cat.label)
+                  return (
+                    <button
+                      key={cat.label}
+                      onClick={() => toggleCategory(cat.label)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                        active
+                          ? cat.color
+                          : "border-white/10 text-violet-100/60 hover:border-white/25 hover:text-white/80"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Search input */}
@@ -245,34 +315,111 @@ export default function DiscoverRoute() {
 
             <div className="grid gap-3">
               {filteredTaverns.length ? (
-                filteredTaverns.map((tavern, index) => (
-                  <Link
-                    key={tavern.id}
-                    to={`/tavern/${encodeURIComponent(tavern.id)}`}
-                    className="group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950/78 p-4 transition hover:-translate-y-0.5 hover:border-cyan-300/55 hover:bg-cyan-300/10"
-                  >
+                filteredTaverns.map((tavern, index) => {
+                  const tavernWithTimeStatus = tavern as TavernWithTimeStatus
+                  const isClosed = tavernWithTimeStatus.is_open === false
+                  const placeType = derivePlaceTypeDisplay(tavern)
+                  return (
+                    <button
+                      key={tavern.id}
+                      type="button"
+                      onClick={() => setPreviewTavern(tavern)}
+                      className={`group relative w-full overflow-hidden rounded-[1.75rem] border bg-slate-950/78 p-4 text-left transition hover:-translate-y-0.5 ${
+                        isClosed
+                          ? "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                          : "border-white/10 hover:border-cyan-300/55 hover:bg-cyan-300/10"
+                      }`}
+                    >
+                    {/* 熄灯效果 - 黑色半透明遮罩 */}
+                    {isClosed && (
+                      <div className="pointer-events-none absolute inset-0 z-10 bg-black/50" />
+                    )}
                     <div className="absolute right-5 top-5 text-5xl font-black text-white/[0.025]">{String(index + 1).padStart(2, "0")}</div>
                     <div className="relative flex items-start gap-4">
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/12 text-cyan-100">
-                        <Store className="h-5 w-5" />
+                      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border text-cyan-100 ${
+                        isClosed ? "border-white/10 bg-white/5" : "border-cyan-300/20 bg-cyan-300/12"
+                      }`}>
+                        <Store className={`h-5 w-5 ${isClosed ? "text-white/30" : ""}`} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <h3 className="font-black text-white group-hover:text-cyan-100">{tavern.name}</h3>
-                          <span className="w-fit rounded-full border border-fuchsia-300/18 bg-fuchsia-300/10 px-2.5 py-1 text-xs font-bold text-fuchsia-100">
-                            {tavern.access || "public"}
-                          </span>
+                          <h3 className={`font-black group-hover:text-cyan-100 ${isClosed ? "text-white/50" : "text-white"}`}>{tavern.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${
+                                isClosed
+                                  ? "border-white/10 bg-white/5 text-white/40"
+                                  : "border-cyan-300/18 bg-cyan-300/10 text-cyan-100"
+                              }`}
+                              title={placeType.description}
+                            >
+                              <span aria-hidden="true">{placeType.icon}</span>
+                              {placeType.shortLabel || placeType.label}
+                            </span>
+                            {/* 时间状态徽章 */}
+                            {tavernWithTimeStatus.local_time_display && (
+                              <span className={`w-fit rounded-full border px-2 py-1 text-xs font-bold ${
+                                isClosed
+                                  ? "border-white/10 bg-white/5 text-white/40"
+                                  : "border-emerald-300/18 bg-emerald-300/10 text-emerald-100"
+                              }`}>
+                                {isClosed ? "已打烊" : "营业中"} · {tavernWithTimeStatus.local_time_display}
+                              </span>
+                            )}
+                            <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${
+                              isClosed ? "border-white/10 bg-white/5 text-white/40" : "border-fuchsia-300/18 bg-fuchsia-300/10 text-fuchsia-100"
+                            }`}>
+                              {tavern.access || "public"}
+                            </span>
+                          </div>
                         </div>
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-violet-100/65">
+                        <p className={`mt-2 line-clamp-2 text-sm leading-6 ${isClosed ? "text-white/25" : "text-violet-100/65"}`}>
                           {tavern.description || "店主还没有写下酒馆简介。"}
                         </p>
-                        <p className="mt-3 text-xs text-violet-100/45">
-                          {Number(tavern.lat).toFixed(4)}, {Number(tavern.lon).toFixed(4)} · {tavern.status || "unknown"}
+                        {/* Character previews */}
+                        {tavern.characters && tavern.characters.length > 0 && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <div className="flex -space-x-2">
+                              {tavern.characters.slice(0, 4).map((character, charIndex) => {
+                                const avatar = characterAvatar(character)
+                                return avatar ? (
+                                  <img
+                                    key={character.id || charIndex}
+                                    src={avatar}
+                                    alt={character.name || "角色"}
+                                    className="h-8 w-8 rounded-full border-2 border-slate-950 object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
+                                ) : (
+                                  <span
+                                    key={character.id || charIndex}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-950 bg-gradient-to-br from-cyan-300/20 to-fuchsia-300/20 text-xs font-bold text-white"
+                                  >
+                                    {initialFor(character.name)}
+                                  </span>
+                                )
+                              })}
+                              {tavern.characters.length > 4 && (
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-950 bg-slate-800 text-xs font-bold text-violet-100">
+                                  +{tavern.characters.length - 4}
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-xs ${isClosed ? "text-white/25" : "text-violet-100/55"}`}>
+                              {tavern.characters.slice(0, 2).map((c) => c.name || "未命名").join(" · ")}
+                              {tavern.characters.length > 2 ? " · ..." : ""}
+                            </span>
+                          </div>
+                        )}
+                        <p className={`mt-2 text-xs ${isClosed ? "text-white/20" : "text-violet-100/45"}`}>
+                          {Number(tavern.lat).toFixed(4)}, {Number(tavern.lon).toFixed(4)}
                         </p>
                       </div>
                     </div>
-                  </Link>
-                ))
+                  </button>
+                )
+                })
               ) : (
                 <div className="grid min-h-80 place-items-center rounded-[1.75rem] border border-white/10 bg-white/[0.04] text-center">
                   <div className="max-w-sm space-y-3 px-6">
@@ -286,6 +433,14 @@ export default function DiscoverRoute() {
           </div>
         </section>
       </section>
+
+      {/* Tavern Preview Modal */}
+      {previewTavern && (
+        <TavernPreviewModal
+          tavern={previewTavern}
+          onClose={() => setPreviewTavern(null)}
+        />
+      )}
     </ProductShell>
   )
 }
