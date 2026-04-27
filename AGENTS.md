@@ -47,6 +47,8 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 - 一个改动尽量只做一类事情：协议变更、功能变更、内容变更不要混在一起。
 - 不要未经用户确认移动、删除或重命名既有 `docs/` 文档。
 - 每次功能/bug/重构级改动都要留下可追踪说明：优先记录在对应 `.trellis/tasks/<task>/prd.md`、`task.json`、相关 `.trellis/spec/` 或必要的 `docs/changes/YYYY-MM-DD-slug.md`。
+- 任何要被项目引用或验收的 AI 生成图片，不能只停留在 `%USERPROFILE%\.codex\generated_images\`、临时目录或聊天预览里；必须在完成前复制/转换到仓库内的规范资源路径（如 `frontend/public/...`、`frontend/app/assets/...`、`artifacts/...`），并让代码/文档引用仓库内路径。
+- 图片类任务完成前必须核对 `.codex/generated_images` 中本轮生成物是否已进入当前项目；未搬入的生成图要明确标记为废稿/参考图，或搬入合适的项目目录。
 
 ## Trellis 工作流
 
@@ -82,6 +84,7 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 - 不要无批准引入大型 UI 框架、状态管理库或地图渲染依赖。
 - 组件改动应保持服务层边界：新路由 API 调用优先放在 `frontend/app/lib/`；产品兼容模块 API 调用放在 `frontend/app/product/services/`；可复用逻辑优先放在 hooks / utility 模块。
 - 前端 UI 改动要考虑移动端和窄屏体验；涉及视觉/交互的改动应至少做 build，并在可行时浏览器人工验证。
+- 前端图片资源改动必须遵守 `docs/IMAGE_ASSETS_SPEC.md` 与 `.trellis/spec/frontend/image-asset-guidelines.md`：生成图先落到项目资源目录，再更新引用和验证，不允许报告“已替换”但实际仍引用旧图。
 
 ### 数据与兼容
 
@@ -112,6 +115,7 @@ npm --prefix .\frontend test
 验证选择规则：
 
 - 只改文档：检查目标文件内容与链接路径，通常无需跑全量测试。
+- 只改图片资源：检查目标图片文件路径、尺寸/格式、hash 或修改时间；如果前端会加载该资源，运行 `npm --prefix .\frontend run build`。
 - 改 Python：至少运行 `py -3 -m compileall -q backend/src`；涉及行为时运行相关 pytest 或全量 pytest。
 - 改前端：至少运行 `npm --prefix .\frontend run build`；涉及服务/规则脚本时运行 `npm --prefix .\frontend test`。
 - 改 API / 数据模型 / 协议：必须同步或补充测试，并更新对应文档。

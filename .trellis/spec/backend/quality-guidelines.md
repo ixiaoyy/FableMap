@@ -32,6 +32,10 @@ Most backend behavior has pytest coverage in `tests/`. New or changed behavior s
 - World info/prompt/output rules: `tests/test_tavern_world_info_injection.py`, `tests/test_tavern_prompt_blocks.py`, `tests/test_tavern_output_rules.py`
 - Core engines: `tests/test_writeback...`, `tests/test_orchestrator.py`, etc.
 
+### New NPC completion requires art payload tests
+
+If a backend/default-seed task adds a formal NPC role, do not claim the NPC is complete with text fields alone. The focused test must assert that the character payload includes `avatar` or `sprites.neutral`, required expression sprite semantics, and that project-local asset files exist. See `../frontend/npc-art-guidelines.md` for the cross-layer NPC completion contract.
+
 ### Keep route/service/store boundaries
 
 - `router.py`: HTTP method/path/parameters and thin delegation.

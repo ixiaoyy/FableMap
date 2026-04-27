@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from ...contracts.characters import (
     CharacterCardExportRequest,
     CharacterCardParseRequest,
+    CharacterDraftRequest,
     CharacterImportRequest,
     CharacterWriteRequest,
     ExpressionInferRequest,
@@ -41,6 +42,11 @@ def export_character_card(request: Request, data: CharacterCardExportRequest) ->
 @router.get("/{tavern_id}/characters")
 def list_characters(request: Request, tavern_id: str) -> dict[str, Any]:
     return taverns_service(request).list_characters(tavern_id, get_user_id(request))
+
+
+@router.post("/{tavern_id}/characters/ai-draft")
+def generate_character_draft(request: Request, tavern_id: str, data: CharacterDraftRequest) -> dict[str, Any]:
+    return taverns_service(request).generate_character_draft(tavern_id, data.to_payload(), get_user_id(request))
 
 
 @router.post("/{tavern_id}/characters")

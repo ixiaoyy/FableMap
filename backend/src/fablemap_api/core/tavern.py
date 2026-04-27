@@ -23,6 +23,7 @@ from fablemap_api.core.default_taverns import (
     default_public_welfare_taverns,
 )
 from fablemap_api.core.memory import MemoryAtom
+from fablemap_api.core.time_context import build_time_context
 
 # ─────────────────────────────────────────
 # 类型别名
@@ -36,6 +37,27 @@ UserId = str
 ROLEPLAY_MODES = {"ai_only", "hybrid"}
 ROLEPLAY_CLAIM_STATUSES = {"pending", "approved", "rejected", "revoked"}
 TAVERN_LAYOUT_STYLES = {"lobby", "npc-chat", "quest-play", "hybrid-room"}
+PLACE_TYPES = {
+    "tavern",
+    "cafe",
+    "milk-tea-shop",
+    "restaurant",
+    "convenience-store",
+    "bookstore",
+    "school",
+    "home",
+}
+HOME_MEMBER_TYPES = {"conversational_character", "silent_member", "display_object"}
+HOME_MEMBER_SPEECH_MODES = {"character", "silent", "display"}
+PLACE_RELATIONSHIP_TYPES = {
+    "school_enrollment",
+    "care_link",
+    "membership",
+    "work_affiliation",
+    "story_link",
+}
+PLACE_RELATIONSHIP_STATUSES = {"pending", "approved", "rejected", "revoked"}
+GENDER_VALUES = {"unspecified", "female", "male", "nonbinary", "other"}
 
 
 # ─────────────────────────────────────────
@@ -174,6 +196,7 @@ class TavernCharacter:
     description: str = ""
     personality: str = ""
     scenario: str = ""
+    gender: str = "unspecified"
     system_prompt: str = ""
     first_mes: str = ""
     mes_example: str = ""
@@ -192,6 +215,7 @@ class TavernCharacter:
             "description": self.description,
             "personality": self.personality,
             "scenario": self.scenario,
+            "gender": _normalize_gender(self.gender),
             "system_prompt": self.system_prompt,
             "first_mes": self.first_mes,
             "mes_example": self.mes_example,
@@ -220,6 +244,7 @@ class TavernCharacter:
             description=d.get("description", ""),
             personality=d.get("personality", ""),
             scenario=d.get("scenario", ""),
+            gender=_normalize_gender(d.get("gender")),
             system_prompt=d.get("system_prompt", ""),
             first_mes=d.get("first_mes", ""),
             mes_example=d.get("mes_example", ""),
@@ -394,6 +419,7 @@ class VisitorState:
     """访客状态 — 访客与酒馆的关系"""
     visitor_id: str
     tavern_id: str
+    gender: str = "unspecified"
     visit_count: int = 0
     first_visit: str | None = None
     last_visit: str | None = None
@@ -404,6 +430,7 @@ class VisitorState:
         return {
             "visitor_id": self.visitor_id,
             "tavern_id": self.tavern_id,
+            "gender": _normalize_gender(self.gender),
             "visit_count": self.visit_count,
             "first_visit": self.first_visit,
             "last_visit": self.last_visit,
@@ -419,6 +446,7 @@ class VisitorState:
         return cls(
             visitor_id=d["visitor_id"],
             tavern_id=d.get("tavern_id", ""),
+            gender=_normalize_gender(d.get("gender", d.get("visitor_gender"))),
             visit_count=d.get("visit_count", 0),
             first_visit=d.get("first_visit"),
             last_visit=d.get("last_visit"),
@@ -443,6 +471,7 @@ class Tavern:
     status: str = "closed"  # 'open' | 'closed'
     roleplay_mode: str = "ai_only"  # 'ai_only' | 'hybrid'
     layout_style: str = "lobby"  # 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'
+    place_type: str = "tavern"  # 'tavern' | 'cafe' | ... | 'home'
     characters: list[TavernCharacter] = field(default_factory=list)
     character_claims: list[dict[str, Any]] = field(default_factory=list)
     world_info: list[WorldInfoEntry] = field(default_factory=list)
@@ -461,10 +490,20 @@ class Tavern:
     visit_count: int = 0
     group_chat_enabled: bool = False  # 是否启用群聊模式
     group_chat_config: dict[str, Any] = field(default_factory=dict)  # { strategy, max_responses_per_turn, min_interval, ... }
+    # 时间系统字段
+    timezone: str | None = None  # IANA 时区，不填则从 lat/lon 推断
+    operating_hours: dict[str, Any] = field(default_factory=dict)  # 营业时间配置
+    home_members: list[dict[str, Any]] = field(default_factory=list)
+    place_relationships: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.roleplay_mode = _normalize_roleplay_mode(self.roleplay_mode)
         self.layout_style = _normalize_tavern_layout_style(self.layout_style)
+        self.place_type = _normalize_place_type(self.place_type)
+        if self.place_type == "home":
+            self.access = _normalize_home_access(self.access)
+        self.home_members = _normalize_home_members(self.home_members, self.id)
+        self.place_relationships = _normalize_place_relationships(self.place_relationships)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -481,6 +520,7 @@ class Tavern:
             "status": self.status,
             "roleplay_mode": self.roleplay_mode,
             "layout_style": self.layout_style,
+            "place_type": self.place_type,
             "characters": [c.to_dict() for c in self.characters],
             "character_claims": deepcopy(self.character_claims),
             "world_info": [w.to_dict() for w in self.world_info],
@@ -499,6 +539,11 @@ class Tavern:
             "visit_count": self.visit_count,
             "group_chat_enabled": self.group_chat_enabled,
             "group_chat_config": deepcopy(self.group_chat_config),
+            # 时间系统字段
+            "timezone": self.timezone,
+            "operating_hours": deepcopy(self.operating_hours),
+            "home_members": deepcopy(self.home_members),
+            "place_relationships": deepcopy(self.place_relationships),
         }
 
     def to_dict_private(self, user_id: str) -> dict[str, Any]:
@@ -520,6 +565,8 @@ class Tavern:
             for claim in self.character_claims
             if str(claim.get("status") or "") == "approved"
         ]
+        result.pop("home_members", None)
+        result.pop("place_relationships", None)
         return result
 
     @classmethod
@@ -542,6 +589,7 @@ class Tavern:
             status=d.get("status", "closed"),
             roleplay_mode=_normalize_roleplay_mode(d.get("roleplay_mode", "ai_only")),
             layout_style=_normalize_tavern_layout_style(d.get("layout_style", "lobby")),
+            place_type=_normalize_place_type(d.get("place_type", "tavern")),
             characters=characters,
             character_claims=_normalize_character_claims(d.get("character_claims", [])),
             world_info=world_info,
@@ -560,6 +608,10 @@ class Tavern:
             visit_count=d.get("visit_count", 0),
             group_chat_enabled=_normalize_bool(d.get("group_chat_enabled", False)),
             group_chat_config=_normalize_group_chat_config(d.get("group_chat_config", {})),
+            timezone=d.get("timezone"),
+            operating_hours=deepcopy(d.get("operating_hours", {})) if isinstance(d.get("operating_hours"), dict) else {},
+            home_members=_normalize_home_members(d.get("home_members", []), str(d.get("id") or "")),
+            place_relationships=_normalize_place_relationships(d.get("place_relationships", [])),
         )
 
 
@@ -736,6 +788,19 @@ class TavernStore:
                     result.append(tavern)
                 continue
             result.append(tavern)
+        return result
+
+    def list_all_taverns(self) -> list[Tavern]:
+        """Internal full scan including private Home records for relationship resolution."""
+        data = self._load_taverns()
+        result: list[Tavern] = []
+        for value in data.values():
+            if not isinstance(value, dict):
+                continue
+            try:
+                result.append(Tavern.from_dict(value))
+            except (KeyError, TypeError, ValueError):
+                continue
         return result
 
     def get_tavern(self, tavern_id: str) -> Tavern | None:
@@ -1167,6 +1232,29 @@ class TavernService:
     def __init__(self, store: TavernStore):
         self.store = store
 
+    def _enrich_time_status(self, tavern_dict: dict[str, Any], tavern: Tavern) -> None:
+        time_ctx = build_time_context(
+            lat=tavern.lat,
+            lon=tavern.lon,
+            timezone_str=tavern.timezone,
+            operating_hours=tavern.operating_hours,
+        )
+        local_time_display = time_ctx.local_time.strftime("%H:%M")
+        tavern_dict.update({
+            "timezone": time_ctx.timezone,
+            "local_time_display": local_time_display,
+            "is_open": time_ctx.is_open,
+            "time_status": {
+                "timezone": time_ctx.timezone,
+                "local_time_display": local_time_display,
+                "is_open": time_ctx.is_open,
+                "local_date": time_ctx.local_time.strftime("%Y-%m-%d"),
+                "local_season": time_ctx.season,
+                "local_day_of_week": time_ctx.day_of_week,
+                "local_hour": time_ctx.local_hour,
+            },
+        })
+
     def _get_private_llm_config(self, tavern_id: str) -> LLMConfig | None:
         private_getter = getattr(self.store, "get_llm_config_private", None)
         if callable(private_getter):
@@ -1192,6 +1280,8 @@ class TavernService:
         for t in taverns:
             if owner_id and t.owner_id != owner_id:
                 continue
+            if t.place_type == "home" and not (owner_id and t.owner_id == owner_id):
+                continue
             if access and t.access != access:
                 continue
             if normalized_status and t.status != normalized_status:
@@ -1199,13 +1289,16 @@ class TavernService:
             if normalized_query and not _matches_tavern_query(t, normalized_query):
                 continue
 
-            tavern_dict = t.to_dict_public()
+            tavern_dict = t.to_dict_private(owner_id) if owner_id and t.owner_id == owner_id else t.to_dict_public()
             tavern_dict["_distance"] = None
             if lat is not None and lon is not None:
                 dist = _haversine_distance(lat, lon, t.lat, t.lon)
                 tavern_dict["_distance"] = dist
                 if dist > radius:
                     continue
+
+            # 添加时间状态信息
+            self._enrich_time_status(tavern_dict, t)
 
             result.append(tavern_dict)
 
@@ -1221,14 +1314,27 @@ class TavernService:
         if tavern.access == "private" and tavern.owner_id != user_id:
             raise HTTPException(status_code=403, detail="此酒馆是私人的")
 
+        # 添加时间状态信息
+        tavern_dict = tavern.to_dict_private(user_id) if tavern.owner_id and tavern.owner_id == user_id else tavern.to_dict_public()
+        self._enrich_time_status(tavern_dict, tavern)
+        if tavern.place_type == "school":
+            tavern_dict["school_members"] = self.list_school_members(tavern_id, user_id=user_id)["members"]
+            if tavern.owner_id and tavern.owner_id == user_id:
+                tavern_dict["pending_school_enrollments"] = self._school_relationships(tavern_id, statuses={"pending"})
         if tavern.owner_id and tavern.owner_id == user_id:
-            return tavern.to_dict_private(user_id)
-        return tavern.to_dict_public()
+            tavern_dict["target_place_relationships"] = self._target_relationships(tavern_id)
+            tavern_dict["pending_place_relationships"] = self._target_relationships(tavern_id, statuses={"pending"})
+
+        return tavern_dict
 
     def create_tavern(self, data: dict[str, Any], owner_id: str = "") -> dict[str, Any]:
         """创建酒馆"""
         tavern_id = data.get("id") or f"tavern_{uuid.uuid4().hex[:12]}"
         now = _utc_now_iso()
+        place_type = _require_valid_place_type(data["place_type"]) if "place_type" in data else "tavern"
+        access = data.get("access", "public")
+        if place_type == "home":
+            access = _normalize_home_access(access)
 
         tavern = Tavern(
             id=tavern_id,
@@ -1239,11 +1345,12 @@ class TavernService:
             address=data.get("address", ""),
             owner_id=owner_id or data.get("owner_id", ""),
             created_at=now,
-            access=data.get("access", "public"),
+            access=access,
             password_hash="",
             status="closed",
             roleplay_mode=_normalize_roleplay_mode(data.get("roleplay_mode", "ai_only")),
             layout_style=_normalize_tavern_layout_style(data.get("layout_style", "lobby")),
+            place_type=place_type,
             character_claims=_normalize_character_claims(data.get("character_claims", [])),
             gameplay_definitions=_normalize_metadata_list(data.get("gameplay_definitions", [])),
             output_rules=_normalize_metadata_list(data.get("output_rules", [])),
@@ -1254,6 +1361,10 @@ class TavernService:
             scene_prompt=data.get("scene_prompt", ""),
             group_chat_enabled=_normalize_bool(data.get("group_chat_enabled", False)),
             group_chat_config=_normalize_group_chat_config(data.get("group_chat_config", {})),
+            timezone=data.get("timezone"),
+            operating_hours=deepcopy(data.get("operating_hours", {})) if isinstance(data.get("operating_hours"), dict) else {},
+            home_members=_normalize_home_members(data.get("home_members", []), tavern_id),
+            place_relationships=_normalize_place_relationships(data.get("place_relationships", [])),
         )
 
         # 处理密码
@@ -1298,8 +1409,6 @@ class TavernService:
             tavern.lon = float(data["lon"])
         if "address" in data:
             tavern.address = data["address"]
-        if "access" in data:
-            tavern.access = data["access"]
         if "scene_prompt" in data:
             tavern.scene_prompt = data["scene_prompt"]
         if "status" in data:
@@ -1308,8 +1417,18 @@ class TavernService:
             tavern.roleplay_mode = _normalize_roleplay_mode(data.get("roleplay_mode"))
         if "layout_style" in data:
             tavern.layout_style = _normalize_tavern_layout_style(data.get("layout_style"))
+        if "place_type" in data:
+            tavern.place_type = _require_valid_place_type(data.get("place_type"))
+            if tavern.place_type == "home":
+                tavern.access = _normalize_home_access(tavern.access)
+        if "access" in data:
+            tavern.access = _normalize_home_access(data["access"]) if tavern.place_type == "home" else data["access"]
         if "character_claims" in data:
             tavern.character_claims = _normalize_character_claims(data.get("character_claims"))
+        if "home_members" in data:
+            tavern.home_members = _normalize_home_members(data.get("home_members"), tavern.id)
+        if "place_relationships" in data:
+            tavern.place_relationships = _normalize_place_relationships(data.get("place_relationships"))
         if "characters" in data and isinstance(data["characters"], list):
             tavern.characters = [
                 _character_from_payload(character_data, tavern_id)
@@ -1333,6 +1452,10 @@ class TavernService:
             tavern.group_chat_enabled = _normalize_bool(data.get("group_chat_enabled"))
         if "group_chat_config" in data:
             tavern.group_chat_config = _normalize_group_chat_config(data.get("group_chat_config"))
+        if "timezone" in data:
+            tavern.timezone = data.get("timezone")
+        if "operating_hours" in data:
+            tavern.operating_hours = deepcopy(data["operating_hours"]) if isinstance(data["operating_hours"], dict) else {}
 
         # 处理密码更新
         if "password" in data:
@@ -1388,7 +1511,223 @@ class TavernService:
         self.store.delete_tavern(tavern_id)
         return {"ok": True, "tavern_id": tavern_id}
 
-    def enter_tavern(self, tavern_id: str, password: str = "", user_id: str = "") -> dict[str, Any]:
+    def add_home_member(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        tavern = self.store.get_tavern(tavern_id)
+        if not tavern:
+            raise HTTPException(status_code=404, detail="酒馆不存在")
+        if tavern.owner_id and tavern.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是此 Home 的主人")
+        if tavern.place_type != "home":
+            raise HTTPException(status_code=400, detail="只有 Home 可以添加家庭成员")
+
+        member_payload = {
+            **data,
+            "id": data.get("id") or f"member_{uuid.uuid4().hex[:12]}",
+            "home_id": tavern_id,
+            "created_at": data.get("created_at") or _utc_now_iso(),
+        }
+        members = _normalize_home_members([member_payload], tavern_id)
+        if not members:
+            raise HTTPException(status_code=400, detail="家庭成员名称不能为空")
+        member = members[0]
+        tavern.home_members.append(member)
+        tavern.home_members = _normalize_home_members(tavern.home_members, tavern_id)
+        self.store.update_tavern(tavern)
+        return {"ok": True, "tavern_id": tavern_id, "member": member, "members": deepcopy(tavern.home_members)}
+
+    def create_school_enrollment(self, home_tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        school_tavern_id = str(data.get("school_tavern_id") or data.get("target_tavern_id") or "").strip()
+        school = self.store.get_tavern(school_tavern_id)
+        if not school:
+            raise HTTPException(status_code=404, detail="学校地点不存在")
+        if school.place_type != "school":
+            raise HTTPException(status_code=400, detail="目标地点不是学校")
+        return self.create_place_relationship(
+            home_tavern_id,
+            {
+                **data,
+                "target_tavern_id": school_tavern_id,
+                "relation_type": "school_enrollment",
+                "target_role": data.get("target_role") or "school",
+                "source_role": data.get("source_role") or "student",
+            },
+            user_id,
+        )
+
+    def create_place_relationship(self, home_tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        home = self.store.get_tavern(home_tavern_id)
+        if not home:
+            raise HTTPException(status_code=404, detail="Home 不存在")
+        if home.owner_id and home.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是此 Home 的主人")
+        if home.place_type != "home":
+            raise HTTPException(status_code=400, detail="只能从 Home 发起地点关系")
+
+        member_id = str(data.get("member_id") or "").strip()
+        target_tavern_id = str(data.get("target_tavern_id") or data.get("school_tavern_id") or "").strip()
+        relation_type = _require_valid_place_relationship_type(data.get("relation_type") or "school_enrollment")
+        member = next((item for item in home.home_members if item.get("id") == member_id), None)
+        if not member:
+            raise HTTPException(status_code=404, detail="家庭成员不存在")
+        target = self.store.get_tavern(target_tavern_id)
+        if not target:
+            raise HTTPException(status_code=404, detail="目标地点不存在")
+        if relation_type == "school_enrollment" and target.place_type != "school":
+            raise HTTPException(status_code=400, detail="学生-学校关系的目标地点必须是学校")
+
+        status = "approved" if target.owner_id and target.owner_id == home.owner_id else "pending"
+        relationship = {
+            "id": f"rel_{uuid.uuid4().hex[:12]}",
+            "relation_type": relation_type,
+            "source_tavern_id": home.id,
+            "source_member_id": member_id,
+            "target_tavern_id": target.id,
+            "status": status,
+            "display_name": str(data.get("display_name") or member.get("display_name") or member.get("name") or "").strip()[:80],
+            "visibility": "target_summary",
+            "requested_by": user_id,
+            "created_at": _utc_now_iso(),
+            "source_role": str(data.get("source_role") or "").strip()[:60],
+            "target_role": str(data.get("target_role") or "").strip()[:60],
+        }
+        if status == "approved":
+            relationship["decided_by"] = target.owner_id or user_id
+            relationship["decided_at"] = relationship["created_at"]
+        note = str(data.get("note") or "").strip()
+        if note:
+            relationship["note"] = note[:240]
+
+        relationship = {key: value for key, value in relationship.items() if value != ""}
+        home.place_relationships.append(relationship)
+        home.place_relationships = _normalize_place_relationships(home.place_relationships)
+        self.store.update_tavern(home)
+        return {"ok": True, "relationship": relationship}
+
+    def decide_place_relationship(
+        self,
+        target_tavern_id: str,
+        relationship_id: str,
+        data: dict[str, Any],
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        target = self.store.get_tavern(target_tavern_id)
+        if not target:
+            raise HTTPException(status_code=404, detail="目标地点不存在")
+        if target.owner_id and target.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="你不是目标地点的主人")
+
+        next_status = _normalize_place_relationship_status(data.get("status"))
+        if next_status == "pending":
+            raise HTTPException(status_code=400, detail="审批结果不能是 pending")
+
+        source_tavern, relationship = self._find_relationship(relationship_id, target_tavern_id=target_tavern_id)
+        if not relationship:
+            raise HTTPException(status_code=404, detail="关系记录不存在")
+
+        relationship["status"] = next_status
+        relationship["decided_by"] = user_id
+        relationship["decided_at"] = _utc_now_iso()
+        note = str(data.get("note") or "").strip()
+        if note:
+            relationship["note"] = note[:240]
+        source_tavern.place_relationships = _normalize_place_relationships(source_tavern.place_relationships)
+        self.store.update_tavern(source_tavern)
+        return {"ok": True, "relationship": relationship}
+
+    def list_school_members(self, school_tavern_id: str, user_id: str = "") -> dict[str, Any]:
+        school = self.store.get_tavern(school_tavern_id)
+        if not school:
+            raise HTTPException(status_code=404, detail="学校地点不存在")
+        if school.access == "private" and school.owner_id != user_id:
+            raise HTTPException(status_code=403, detail="此学校地点是私人的")
+        members = []
+        for home, relationship in self._school_relationships_with_sources(school_tavern_id, statuses={"approved"}):
+            member = next((item for item in home.home_members if item.get("id") == relationship.get("source_member_id")), None)
+            if not member:
+                continue
+            members.append({
+                "relationship_id": relationship.get("id", ""),
+                "home_tavern_id": home.id,
+                "member_id": member.get("id", ""),
+                "display_name": relationship.get("display_name") or member.get("display_name") or member.get("name", ""),
+                "member_type": member.get("member_type", "silent_member"),
+                "avatar": member.get("avatar", ""),
+                "speech_mode": member.get("speech_mode", "silent"),
+            })
+        members.sort(key=lambda item: (str(item.get("display_name") or ""), str(item.get("relationship_id") or "")))
+        return {"tavern_id": school_tavern_id, "members": members, "count": len(members)}
+
+    def _all_taverns_for_relationships(self) -> list[Tavern]:
+        getter = getattr(self.store, "list_all_taverns", None)
+        if callable(getter):
+            return getter()
+        return self.store.list_taverns(include_private=True)
+
+    def _find_relationship(
+        self,
+        relationship_id: str,
+        target_tavern_id: str = "",
+    ) -> tuple[Tavern | None, dict[str, Any] | None]:
+        for tavern in self._all_taverns_for_relationships():
+            for relationship in tavern.place_relationships:
+                if relationship.get("id") != relationship_id:
+                    continue
+                if target_tavern_id and relationship.get("target_tavern_id") != target_tavern_id:
+                    continue
+                return tavern, relationship
+        return None, None
+
+    def _target_relationships(self, target_tavern_id: str, statuses: set[str] | None = None) -> list[dict[str, Any]]:
+        return [
+            deepcopy(relationship)
+            for _, relationship in self._target_relationships_with_sources(target_tavern_id, statuses=statuses)
+        ]
+
+    def _target_relationships_with_sources(
+        self,
+        target_tavern_id: str,
+        statuses: set[str] | None = None,
+    ) -> list[tuple[Tavern, dict[str, Any]]]:
+        matches: list[tuple[Tavern, dict[str, Any]]] = []
+        for tavern in self._all_taverns_for_relationships():
+            for relationship in tavern.place_relationships:
+                if relationship.get("target_tavern_id") != target_tavern_id:
+                    continue
+                if statuses and relationship.get("status") not in statuses:
+                    continue
+                matches.append((tavern, relationship))
+        return matches
+
+    def _school_relationships(self, school_tavern_id: str, statuses: set[str] | None = None) -> list[dict[str, Any]]:
+        return [
+            deepcopy(relationship)
+            for _, relationship in self._school_relationships_with_sources(school_tavern_id, statuses=statuses)
+        ]
+
+    def _school_relationships_with_sources(
+        self,
+        school_tavern_id: str,
+        statuses: set[str] | None = None,
+    ) -> list[tuple[Tavern, dict[str, Any]]]:
+        matches: list[tuple[Tavern, dict[str, Any]]] = []
+        for tavern in self._all_taverns_for_relationships():
+            for relationship in tavern.place_relationships:
+                if relationship.get("relation_type") != "school_enrollment":
+                    continue
+                if relationship.get("target_tavern_id") != school_tavern_id:
+                    continue
+                if statuses and relationship.get("status") not in statuses:
+                    continue
+                matches.append((tavern, relationship))
+        return matches
+
+    def enter_tavern(
+        self,
+        tavern_id: str,
+        password: str = "",
+        user_id: str = "",
+        visitor_gender: str = "",
+    ) -> dict[str, Any]:
         """进入酒馆（验证密码）"""
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
@@ -1417,6 +1756,8 @@ class TavernService:
             if not visitor_state.first_visit:
                 visitor_state.first_visit = now
             visitor_state.last_visit = now
+            if visitor_gender:
+                visitor_state.gender = _normalize_gender(visitor_gender)
             visitor_state.relationship_stage = _visitor_relationship_stage(
                 visitor_state.relationship_strength,
                 visitor_state.visit_count,
@@ -1477,6 +1818,8 @@ class TavernService:
         for key in ("name", "description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
             if key in data:
                 setattr(char, key, data[key])
+        if "gender" in data:
+            char.gender = _normalize_gender(data.get("gender"))
         if "alternate_greetings" in data:
             char.alternate_greetings = _normalize_string_list(data["alternate_greetings"])
         if "tags" in data:
@@ -1546,6 +1889,7 @@ def _parse_sillytavern_card(card: dict[str, Any]) -> dict[str, Any]:
         "description": data.get("description", ""),
         "personality": data.get("personality", ""),
         "scenario": data.get("scenario", ""),
+        "gender": data.get("gender", ""),
         "system_prompt": data.get("system_prompt", ""),
         "first_mes": data.get("first_mes", ""),
         "mes_example": data.get("mes_example", ""),
@@ -1618,6 +1962,47 @@ def _normalize_sprite_map(value: Any) -> dict[str, str]:
     return sprite_map
 
 
+def _normalize_gender(value: Any) -> str:
+    """Normalize visitor/NPC gender into the canonical WORLD_SCHEMA enum."""
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return "unspecified"
+    normalized = raw.replace("_", "-").replace(" ", "-")
+    aliases = {
+        "unspecified": "unspecified",
+        "unknown": "unspecified",
+        "none": "unspecified",
+        "not-specified": "unspecified",
+        "未说明": "unspecified",
+        "不透露": "unspecified",
+        "保密": "unspecified",
+        "female": "female",
+        "woman": "female",
+        "girl": "female",
+        "f": "female",
+        "女": "female",
+        "女性": "female",
+        "女生": "female",
+        "male": "male",
+        "man": "male",
+        "boy": "male",
+        "m": "male",
+        "男": "male",
+        "男性": "male",
+        "男生": "male",
+        "nonbinary": "nonbinary",
+        "non-binary": "nonbinary",
+        "nb": "nonbinary",
+        "非二元": "nonbinary",
+        "非二元性别": "nonbinary",
+        "other": "other",
+        "其他": "other",
+        "其它": "other",
+    }
+    gender = aliases.get(normalized, normalized)
+    return gender if gender in GENDER_VALUES else "unspecified"
+
+
 def _normalize_talkativeness(value: Any) -> float:
     try:
         parsed = float(value)
@@ -1669,6 +2054,134 @@ def _normalize_roleplay_mode(value: Any) -> str:
 def _normalize_tavern_layout_style(value: Any) -> str:
     layout_style = str(value or "lobby").strip().lower()
     return layout_style if layout_style in TAVERN_LAYOUT_STYLES else "lobby"
+
+
+def _normalize_place_type(value: Any) -> str:
+    place_type = str(value or "tavern").strip().lower().replace("_", "-")
+    return place_type if place_type in PLACE_TYPES else "tavern"
+
+
+def _require_valid_place_type(value: Any) -> str:
+    place_type = str(value or "").strip().lower().replace("_", "-")
+    if place_type in PLACE_TYPES:
+        return place_type
+    raise HTTPException(status_code=400, detail="地点类型不受支持")
+
+
+def _normalize_home_access(value: Any) -> str:
+    access = str(value or "private").strip().lower()
+    return access if access in {"private", "password"} else "private"
+
+
+def _normalize_home_member_type(value: Any) -> str:
+    member_type = str(value or "silent_member").strip().lower()
+    return member_type if member_type in HOME_MEMBER_TYPES else "silent_member"
+
+
+def _normalize_home_member_speech_mode(value: Any, member_type: str) -> str:
+    speech_mode = str(value or "").strip().lower()
+    if member_type == "conversational_character":
+        return "character" if speech_mode in {"", "character"} else "character"
+    if member_type == "display_object":
+        return "display"
+    return "silent"
+
+
+def _normalize_home_members(value: Any, home_id: str = "") -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    members: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        member_id = str(item.get("id") or "").strip()
+        name = str(item.get("name") or item.get("display_name") or "").strip()
+        if not name:
+            continue
+        if not member_id:
+            member_id = f"member_{uuid.uuid4().hex[:12]}"
+        if member_id in seen_ids:
+            continue
+        seen_ids.add(member_id)
+        member_type = _normalize_home_member_type(item.get("member_type"))
+        speech_mode = _normalize_home_member_speech_mode(item.get("speech_mode"), member_type)
+        member: dict[str, Any] = {
+            "id": member_id,
+            "home_id": str(item.get("home_id") or home_id or "").strip(),
+            "name": name[:80],
+            "display_name": str(item.get("display_name") or name).strip()[:80],
+            "member_type": member_type,
+            "speech_mode": speech_mode,
+            "description": str(item.get("description") or "").strip()[:500],
+            "avatar": str(item.get("avatar") or "").strip(),
+            "created_at": str(item.get("created_at") or "").strip(),
+        }
+        character_id = str(item.get("character_id") or "").strip()
+        if member_type == "conversational_character" and character_id:
+            member["character_id"] = character_id
+        metadata = item.get("metadata")
+        if isinstance(metadata, dict):
+            member["metadata"] = deepcopy(metadata)
+        members.append(member)
+    return members
+
+
+def _normalize_place_relationship_status(value: Any) -> str:
+    status = str(value or "pending").strip().lower()
+    return status if status in PLACE_RELATIONSHIP_STATUSES else "pending"
+
+
+def _normalize_place_relationship_type(value: Any) -> str:
+    relation_type = str(value or "school_enrollment").strip().lower().replace("-", "_")
+    return relation_type if relation_type in PLACE_RELATIONSHIP_TYPES else "school_enrollment"
+
+
+def _require_valid_place_relationship_type(value: Any) -> str:
+    relation_type = str(value or "").strip().lower().replace("-", "_")
+    if relation_type in PLACE_RELATIONSHIP_TYPES:
+        return relation_type
+    raise HTTPException(status_code=400, detail="关系类型不受支持")
+
+
+def _normalize_place_relationships(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    relationships: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        relationship_id = str(item.get("id") or "").strip()
+        source_tavern_id = str(item.get("source_tavern_id") or item.get("home_tavern_id") or "").strip()
+        source_member_id = str(item.get("source_member_id") or item.get("member_id") or "").strip()
+        target_tavern_id = str(item.get("target_tavern_id") or item.get("school_tavern_id") or "").strip()
+        if not relationship_id:
+            relationship_id = f"rel_{uuid.uuid4().hex[:12]}"
+        if not source_tavern_id or not source_member_id or not target_tavern_id or relationship_id in seen_ids:
+            continue
+        seen_ids.add(relationship_id)
+        relationship: dict[str, Any] = {
+            "id": relationship_id,
+            "relation_type": _normalize_place_relationship_type(item.get("relation_type")),
+            "source_tavern_id": source_tavern_id,
+            "source_member_id": source_member_id,
+            "target_tavern_id": target_tavern_id,
+            "status": _normalize_place_relationship_status(item.get("status")),
+            "display_name": str(item.get("display_name") or "").strip()[:80],
+            "visibility": str(item.get("visibility") or "target_summary").strip()[:40],
+            "requested_by": str(item.get("requested_by") or "").strip(),
+            "decided_by": str(item.get("decided_by") or "").strip(),
+            "created_at": str(item.get("created_at") or "").strip(),
+            "decided_at": str(item.get("decided_at") or "").strip(),
+            "note": str(item.get("note") or "").strip()[:240],
+            "source_role": str(item.get("source_role") or "").strip()[:60],
+            "target_role": str(item.get("target_role") or "").strip()[:60],
+        }
+        relationships.append({key: value for key, value in relationship.items() if value != ""})
+    return relationships
 
 
 def _normalize_character_claim_status(value: Any) -> str:
@@ -1759,6 +2272,7 @@ def _character_from_payload(data: dict[str, Any], tavern_id: str) -> TavernChara
         description=data.get("description", ""),
         personality=data.get("personality", ""),
         scenario=data.get("scenario", ""),
+        gender=_normalize_gender(data.get("gender")),
         system_prompt=data.get("system_prompt", ""),
         first_mes=data.get("first_mes", ""),
         mes_example=data.get("mes_example", ""),
@@ -1807,6 +2321,7 @@ def _matches_tavern_query(tavern: Tavern, query: str) -> bool:
         tavern.address,
         tavern.access,
         tavern.status,
+        tavern.place_type,
         tavern.scene_prompt,
     ]
 
@@ -1816,6 +2331,7 @@ def _matches_tavern_query(tavern: Tavern, query: str) -> bool:
             character.description,
             character.personality,
             character.scenario,
+            character.gender,
             *character.tags,
         ])
 

@@ -1,3 +1,5 @@
+import { normalizeGender } from '../../lib/gender.js'
+
 /**
  * FableMap Tavern Service — 兼容层 (Legacy)
  *
@@ -516,11 +518,14 @@ export function createTavernService(getBaseUrl) {
      * @param {string} userId
      * @returns {Promise<object>}
      */
-    async enterTavern(tavernId, password = '', userId = '') {
-      const params = password ? `?password=${encodeURIComponent(password)}` : ''
+    async enterTavern(tavernId, password = '', userId = '', visitorGender = '') {
       const response = await fetch(
-        `${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/enter${params}`,
-        { method: 'POST', headers: buildHeaders(userId) }
+        `${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/enter`,
+        {
+          method: 'POST',
+          headers: buildJsonHeaders(userId),
+          body: JSON.stringify({ password, visitor_gender: normalizeGender(visitorGender) }),
+        }
       )
       return readJson(response)
     },
@@ -954,6 +959,7 @@ export function createTavernService(getBaseUrl) {
         message,
         visitor_id: cleanVisitorId,
         visitor_name: cleanVisitorName,
+        visitor_gender: normalizeGender(options.visitorGender || options.visitor_gender),
       }
       const displayMessage = String(options.displayMessage || '').trim()
       if (displayMessage) {
@@ -1219,6 +1225,7 @@ export function createTavernService(getBaseUrl) {
         message,
         visitor_id: visitorId,
         visitor_name: cleanVisitorName,
+        visitor_gender: normalizeGender(options.visitorGender || options.visitor_gender),
       }
       if (Array.isArray(options.extra_context)) {
         body.extra_context = options.extra_context

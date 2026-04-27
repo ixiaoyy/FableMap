@@ -1,0 +1,63 @@
+{
+  "id": "npc-one-to-one-public-bond",
+  "name": "npc-one-to-one-public-bond",
+  "title": "brainstorm: NPC 一对一永久关系与公开身份",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-27",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Brainstorm in progress. Pending decisions are tracked in prd.md: final relationship taxonomy, capacity rules, approval owner, eligibility trigger, visibility/privacy, conflict handling, permanence governance, and MVP owner-configuration boundary. bond/结缘 and contract/契约 are candidate labels only, not final relationship types.",
+  "meta": {
+    "pending_decisions_tracked": true,
+    "candidate_relationship_labels_only": [
+      "bond/结缘",
+      "contract/契约",
+      "exclusive_bond/专属羁绊",
+      "companion/伴侣",
+      "guardian/守护者",
+      "apprentice/学徒"
+    ]
+  }
+}

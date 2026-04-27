@@ -146,6 +146,59 @@ npm --prefix .\frontend run build
 npm --prefix .\frontend test
 ```
 
+## Scenario: Place/Home payload boundaries
+
+When route components create or display Place/Home data, shared types and runtime normalizers belong in `frontend/app/lib/taverns.ts`, `frontend/app/lib/place-types.js`, and `frontend/app/lib/place-home.js`.
+
+```typescript
+type PlaceType = "tavern" | "cafe" | "milk-tea-shop" | "restaurant" | "convenience-store" | "bookstore" | "school" | "home"
+type HomeMemberType = "conversational_character" | "silent_member" | "display_object"
+type PlaceRelationshipType = "school_enrollment" | "care_link" | "membership" | "work_affiliation" | "story_link"
+type PlaceRelationshipStatus = "pending" | "approved" | "rejected" | "revoked"
+```
+
+Contracts:
+
+- Use persisted `tavern.place_type` when present; keyword inference is only a fallback for old payloads.
+- Do not include `home` in public discovery filter chips.
+- Normalize Home create payloads through `normalizeCreatePlacePayload(...)` so public access becomes private before POST.
+- Normalize Home member drafts so `silent_member` and `display_object` cannot drift into conversational speech modes.
+- Components must call service helpers (`addHomeMember`, `createPlaceRelationship`, `createSchoolEnrollment`, `decidePlaceRelationship`) instead of ad hoc `fetch`.
+- UI copy must make the pending approval boundary visible; cross-owner Place relationships are not publicly shown until approved by the target Place owner.
+- Student-school is only the `school_enrollment` relationship type; generic relationship drafts must use `target_tavern_id` + `relation_type`, while `school_tavern_id` is legacy compatibility.
+
+Required verification after changing these clients or route components:
+
+```powershell
+npm --prefix .\frontend test
+npm --prefix .\frontend run typecheck
+npm --prefix .\frontend run build
+```
+
+## Scenario: Visitor/NPC gender payload boundaries
+
+When route components create/display visitor or NPC gender, shared constants and runtime normalizers belong in `frontend/app/lib/gender.js`, with v1 API types in `frontend/app/lib/taverns.ts`.
+
+```typescript
+type Gender = "unspecified" | "female" | "male" | "nonbinary" | "other"
+```
+
+Contracts:
+
+- Use `normalizeGender(...)` before sending owner-authored NPC `gender` or visitor `visitor_gender`.
+- NPC payload key is `gender`; visitor request key is `visitor_gender`; returned `VisitorStatePayload` uses `gender`.
+- Missing/unknown values display as `未说明` and submit as `unspecified`.
+- Do not add `home`/discovery filters, social matching, or global visitor profiles from gender.
+- Character editor and tavern chat UI should use `GENDER_OPTIONS` rather than duplicating labels.
+
+Required verification after changing these clients or route components:
+
+```powershell
+npm --prefix .\frontend test
+npm --prefix .\frontend run typecheck
+npm --prefix .\frontend run build
+```
+
 ## Common mistakes
 
 - Trusting localStorage data without defaults.

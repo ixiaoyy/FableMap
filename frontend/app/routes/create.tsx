@@ -5,6 +5,8 @@ import { useNavigate, useSearchParams } from "react-router"
 import tavernStreetImage from "../assets/homepage-reference/modules/tavern-street.png"
 import merchantPortrait from "../assets/npc-style-cast/portraits/merchant-a.png"
 import { readCreatePrefill } from "../lib/creator-conversion.js"
+import { normalizeCreatePlacePayload } from "../lib/place-home.js"
+import { PLACE_TYPES } from "../lib/place-types.js"
 import { addCharacter, createTavern, DEFAULT_OWNER_ID, errorMessage } from "../lib/taverns"
 import { ProductShell } from "../shell/product-shell"
 import { Button } from "../ui/button"
@@ -25,6 +27,7 @@ export default function CreateRoute() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [createdId, setCreatedId] = useState("")
+  const [placeType, setPlaceType] = useState("tavern")
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -36,17 +39,18 @@ export default function CreateRoute() {
     setCreatedId("")
     try {
       const created = await createTavern(
-        {
+        normalizeCreatePlacePayload({
           name: String(form.get("name") || "").trim() || "未命名酒馆",
           description: String(form.get("description") || "").trim(),
           lat: Number(form.get("lat") || 0),
           lon: Number(form.get("lon") || 0),
           address: String(form.get("address") || "").trim(),
           access: String(form.get("access") || "public"),
+          place_type: String(form.get("place_type") || "tavern"),
           roleplay_mode: String(form.get("roleplay_mode") || "ai_only"),
           scene_prompt: String(form.get("scene_prompt") || "").trim(),
           llm_config: { backend: "rules", model: "rules" },
-        },
+        }),
         ownerId,
       )
       if (characterName) {
@@ -99,11 +103,14 @@ export default function CreateRoute() {
               </label>
               <label className="space-y-1.5 text-sm">
                 <span className="text-violet-100/65">访问方式</span>
-                <select name="access" defaultValue="public" className="w-full rounded-2xl border border-white/12 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-300/60">
+                <select name="access" defaultValue={placeType === "home" ? "private" : "public"} className="w-full rounded-2xl border border-white/12 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-300/60">
                   <option value="public">public</option>
                   <option value="private">private</option>
                   <option value="password">password</option>
                 </select>
+                {placeType === "home" ? (
+                  <span className="block text-xs leading-5 text-amber-100/70">Home 会按受控空间保存；public 会自动收敛为 private。</span>
+                ) : null}
               </label>
               <label className="space-y-1.5 text-sm">
                 <span className="text-violet-100/65">Roleplay</span>
@@ -113,6 +120,25 @@ export default function CreateRoute() {
                 </select>
               </label>
             </div>
+
+            <label className="space-y-1.5 text-sm">
+              <span className="text-violet-100/65">地点类型</span>
+              <select
+                name="place_type"
+                value={placeType}
+                onChange={(event) => setPlaceType(event.target.value)}
+                className="w-full rounded-2xl border border-white/12 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-300/60"
+              >
+                {PLACE_TYPES.map((type: { id: string; label: string; icon?: string }) => (
+                  <option key={type.id} value={type.id}>
+                    {type.icon ? `${type.icon} ` : ""}{type.label}
+                  </option>
+                ))}
+              </select>
+              <span className="block text-xs leading-5 text-violet-100/48">
+                `tavern` 仍是默认兼容类型；Home 默认不进入公开发现。
+              </span>
+            </label>
 
             <label className="space-y-1.5 text-sm">
               <span className="text-violet-100/65">酒馆名称</span>

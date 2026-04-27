@@ -2,6 +2,7 @@ import { History, Send } from "lucide-react"
 import { useMemo, useState, type FormEvent } from "react"
 
 import { buildRevisitCue } from "../../lib/revisit-summary.js"
+import { GENDER_OPTIONS, genderLabel, normalizeGender } from "../../lib/gender.js"
 import { DEFAULT_VISITOR_ID, enterTavern, errorMessage, sendTavernChat, type ChatMessage, type Tavern, type TavernCharacter, type VisitorStatePayload } from "../../lib/taverns"
 import { Button } from "../../ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card"
@@ -46,6 +47,7 @@ function RevisitCuePanel({ cue }: { cue: ReturnType<typeof buildRevisitCue> }) {
 export function TavernChat({ tavern, character }: TavernChatProps) {
   const [visitorId, setVisitorId] = useState(DEFAULT_VISITOR_ID)
   const [visitorName, setVisitorName] = useState("测试旅人")
+  const [visitorGender, setVisitorGender] = useState("unspecified")
   const [message, setMessage] = useState("")
   const [lines, setLines] = useState<ChatMessage[]>([])
   const [visitorState, setVisitorState] = useState<VisitorStatePayload | null>(null)
@@ -62,7 +64,7 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
     setError("")
     setNotice("")
     try {
-      const result = await enterTavern(tavern.id, "", visitorId)
+      const result = await enterTavern(tavern.id, "", visitorId, visitorGender)
       setVisitorState(result.visitor_state ?? null)
       setNotice(result.first_mes || "已进入酒馆。")
     } catch (err) {
@@ -87,6 +89,7 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
         character_id: character.id,
         visitor_id: visitorId,
         visitor_name: visitorName,
+        visitor_gender: visitorGender,
         message: userLine.content,
       })
       setLines((current) => [...current, { role: "assistant", content: result.response, character_id: character.id }])
@@ -112,7 +115,7 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <label className="space-y-1 text-sm">
             <span className="text-violet-100/65">访客 ID</span>
             <input
@@ -132,7 +135,24 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
               className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300/60"
             />
           </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-violet-100/65">性别</span>
+            <select
+              value={visitorGender}
+              onChange={(event) => setVisitorGender(normalizeGender(event.target.value))}
+              className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-3 text-white outline-none focus:border-cyan-300/60"
+            >
+              {GENDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        {visitorState?.gender ? (
+          <p className="text-xs text-violet-100/60">当前访客性别：{genderLabel(visitorState.gender)}</p>
+        ) : null}
         <Button type="button" variant="secondary" disabled={busy} onClick={handleEnter}>
           进入酒馆
         </Button>

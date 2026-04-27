@@ -13,8 +13,8 @@ FableMap 是一个**赛博酒馆 UGC 平台**。
 ## 核心理念
 
 - **真实地图是空间锚点**：酒馆必须坐落在真实地图上，访客可以在现实中回访虚拟酒馆所在的位置
-- **主人主权**：酒馆的内容、角色、氛围、访问规则完全由店主决定
-- **AI 即灵魂**：酒馆内的 NPC 由 AI 驱动，能和访客自然对话
+- **主人主权**：酒馆的内容、角色、氛围、访问规则最终由店主确认和决定
+- **AI 即灵魂**：酒馆内的 NPC 由 AI 驱动，能和访客自然对话；平台可辅助生成未发布的 AI 草稿，但不能绕过店主确认自动上线
 - **Token 即燃料**：酒馆的运营燃料是 LLM token，由店主自行承担
 - **开源可移植**：角色卡格式兼容 SillyTavern，数据可导出，不锁定用户
 
@@ -27,7 +27,7 @@ FableMap 是一个**赛博酒馆 UGC 平台**。
 两种用户角色：
 
 - **探索者 (Explorer)**：打开地图 → 浏览酒馆 → 进入感兴趣的酒馆 → 和 AI NPC 聊天 / 调查线索 / 接委托做轻文字任务
-- **店主 (Tavernkeeper)**：打开地图 → 选择地点 → 创建酒馆 → 添加角色 → 配置 LLM → 开门迎客
+- **店主 (Tavernkeeper)**：打开地图 → 选择地点 → 创建酒馆 → 添加角色或审核 AI 草稿 → 配置 LLM → 开门迎客
 
 ## 核心概念映射
 
@@ -129,6 +129,11 @@ http://127.0.0.1:8950/
 | POST | `/api/taverns/{id}/characters` | 添加角色 |
 | PUT | `/api/taverns/{id}/characters/{cid}` | 更新角色 |
 | DELETE | `/api/taverns/{id}/characters/{cid}` | 删除角色 |
+| POST | `/api/v1/taverns/{id}/home-members` | Home 添加家庭成员（默认沉默边界） |
+| POST | `/api/v1/taverns/{id}/relationships` | 发起 Home 成员到目标地点的受控关系（学生-学校只是 relation_type 之一） |
+| POST | `/api/v1/taverns/{id}/relationships/school-enrollments` | 发起 Home 成员入学关系（兼容快捷入口） |
+| PUT | `/api/v1/taverns/{id}/relationships/{relationship_id}` | 目标地点 owner 审批关系 |
+| GET | `/api/v1/taverns/{id}/school-members` | 学校成员摘要 |
 | POST | `/api/taverns/{id}/chat` | 发送消息并获取 AI 回复 |
 | GET | `/api/taverns/{id}/chat` | 获取对话历史 |
 | POST | `/api/taverns/{id}/enter` | 进入酒馆（验证密码） |

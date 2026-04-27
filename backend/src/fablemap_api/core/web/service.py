@@ -1510,10 +1510,10 @@ class WebService:
             raise HTTPException(status_code=500, detail=f"语音转写失败: {e}")
 
     def enter_tavern_payload(
-        self, tavern_id: str, password: str = "", user_id: str = ""
+        self, tavern_id: str, password: str = "", user_id: str = "", visitor_gender: str = ""
     ) -> dict[str, Any]:
         """Enter a tavern (verify password)"""
-        return self.tavern_service.enter_tavern(tavern_id, password, user_id)
+        return self.tavern_service.enter_tavern(tavern_id, password, user_id, visitor_gender)
 
     def list_tavern_visitors_payload(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
         """List visitor states for a tavern. Owner-only."""
@@ -2099,11 +2099,12 @@ class WebService:
         visitor_id: str,
         visitor_name: str = "",
         user_id: str = "",
+        visitor_gender: str = "",
         extra_context: list[dict[str, Any]] | None = None,
         display_message: str = "",
     ) -> dict[str, Any]:
         """Send a chat message and get AI response"""
-        from fablemap_api.core.tavern import ChatMessage as TavernChatMessage, VisitorState
+        from fablemap_api.core.tavern import ChatMessage as TavernChatMessage, VisitorState, _normalize_gender
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
@@ -2253,6 +2254,8 @@ class WebService:
             if not visitor_state.first_visit:
                 visitor_state.first_visit = now
             visitor_state.last_visit = now
+            if visitor_gender:
+                visitor_state.gender = _normalize_gender(visitor_gender)
             visitor_state.relationship_strength = min(
                 1.0,
                 float(visitor_state.relationship_strength or 0.0) + 0.05,

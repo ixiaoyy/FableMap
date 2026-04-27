@@ -1,4 +1,4 @@
-# FableMap 世界 Schema v0.2
+# FableMap 世界 Schema v0.8
 
 > **状态**：本文档已更新以反映赛博酒馆平台的数据模型。旧 `world` Schema 作为历史参考保留。新的核心数据模型为 `Tavern`、`TavernCharacter`、`LLMConfig` 等。
 
@@ -49,6 +49,7 @@ interface Tavern {
   status: 'open' | 'closed';    // open = LLM 可用，closed = LLM 不可用
   roleplay_mode: 'ai_only' | 'hybrid'; // NPC 驱动模式：纯 AI 或店主审批的玩家混合扮演
   layout_style: 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'; // 酒馆页默认体验布局
+  place_type: PlaceType;         // 地点类型；缺省 tavern，Home 默认私密
 
   // ── 酒馆内容 ──────────────────────
   characters: TavernCharacter[];  // 酒馆内的 NPC 列表
@@ -56,10 +57,131 @@ interface Tavern {
   world_info: WorldInfoEntry[];   // 世界知识（关键词注入）
   gameplay_definitions: GameplayDefinition[]; // 店主配置的结构化玩法定义
   scene_prompt?: string;          // 场景氛围提示词（附加上下文）
+
+  // ── 时间系统 (v0.6) ──────────────
+  timezone?: string;             // IANA 时区（如 'Asia/Shanghai'），不填则从 lat/lon 推断
+  operating_hours: OperatingHours; // 营业时间配置
+
+  // ── Place/Home MVP (v0.7) ─────────
+  home_members: HomeMember[];        // 仅 Home 使用；owner/private payload 可见
+  place_relationships: PlaceRelationship[]; // 从本地点发起的跨地点关系记录
+}
+
+/**
+ * 营业时间配置 (v0.6)
+ */
+type OperatingHours =
+  | { mode: 'always_open' }  // 默认，始终营业
+  | {
+      mode: 'scheduled';
+      open_at: string;         // "09:00"
+      close_at: string;        // "22:00" 或 "26:00" 表示次日凌晨
+      enabled_days: number[];  // 0=周一, 6=周日，如 [0,1,2,3,4] 表示工作日
+    };
+
+/**
+ * 时间状态信息（API 响应时计算）
+ */
+interface TavernTimeStatus {
+  timezone: string;              // IANA 时区
+  local_time_display: string;    // "22:47"
+  is_open: boolean;             // 当前是否营业
+}
+
+
+type PlaceType =
+  | 'tavern'
+  | 'cafe'
+  | 'milk-tea-shop'
+  | 'restaurant'
+  | 'convenience-store'
+  | 'bookstore'
+  | 'school'
+  | 'home';
+
+type Gender =
+  | 'unspecified'
+  | 'female'
+  | 'male'
+  | 'nonbinary'
+  | 'other';
+```
+
+约束：
+
+- `place_type` 缺省为 `tavern`，旧数据读取时必须向后兼容。
+- `home` 是保留地点类型，默认 `access='private'`，不进入公开发现列表。
+- 非 Home 的公开地点仍按原 Tavern 访问控制展示。
+- 非法 `place_type` 不得静默存储到新数据；创建/更新 API 必须拒绝或归一化为文档定义的有限枚举。
+
+---
+
+## 三、Place / Home / Member / Relationship（v0.7）
+
+`Place` 是当前 Tavern 兼容层上的概念扩展，不是脱离真实地图的新自由空间。MVP 中所有 Place/Home 仍复用 `Tavern` 的 `id/lat/lon/owner_id/access/status` 等字段。
+
+```typescript
+interface HomeMember {
+  id: string;                         // member_<hex>
+  home_id: string;                    // 所属 Home Tavern.id
+  name: string;                       // 主人确认的展示名
+  display_name?: string;              // 学校/列表中显示的昵称
+  member_type: 'conversational_character' | 'silent_member' | 'display_object';
+  speech_mode: 'character' | 'silent' | 'display';
+  description?: string;               // 主人确认的展示描述
+  avatar?: string;                    // 项目内资源路径或 URL
+  character_id?: string;              // 仅 conversational_character 可绑定 TavernCharacter
+  created_at: string;
+  metadata?: Record<string, unknown>;
+}
+
+type PlaceRelationshipType =
+  | 'school_enrollment'     // 学生-学校关系；学校成员摘要的来源
+  | 'care_link'             // 照护 / 托管关系
+  | 'membership'            // 成员归属关系
+  | 'work_affiliation'      // 工作 / 志愿关系
+  | 'story_link';           // 主人确认的叙事关联
+
+interface PlaceRelationship {
+  id: string;                         // rel_<hex>
+  relation_type: PlaceRelationshipType;
+  source_tavern_id: string;           // 当前 MVP 为 Home Tavern.id
+  source_member_id: string;           // HomeMember.id
+  target_tavern_id: string;           // 目标 Place/Tavern.id
+  status: 'pending' | 'approved' | 'rejected' | 'revoked';
+  display_name?: string;              // 目标地点 owner 可见摘要昵称
+  visibility: 'target_summary';
+  source_role?: string;               // 如 student/home_member，由 source owner 确认
+  target_role?: string;               // 如 school/care_place，由 source owner 提议
+  requested_by: string;               // Home owner user_id
+  decided_by?: string;                // target place owner user_id
+  created_at: string;
+  decided_at?: string;
+  note?: string;
+}
+
+interface SchoolMemberSummary {
+  relationship_id: string;
+  home_tavern_id: string;
+  member_id: string;
+  display_name: string;
+  member_type: HomeMember['member_type'];
+  speech_mode: HomeMember['speech_mode'];
+  avatar?: string;
 }
 ```
 
 约束：
+
+- Home 必须有真实 `lat/lon`；公开展示可隐藏或模糊，但不能是无锚点自由空间。
+- `silent_member` 与 `display_object` 默认不进入 NPC 对话链路；被问到时产品层应按沉默对象处理，不能平台自动补全人格。
+- 只有 `conversational_character` 且主人显式绑定 / 配置 `character_id` 时，才可作为可对话角色参与 TavernCharacter 流程。
+- `school_enrollment` 只是 PlaceRelationshipType 的一种；同主人 Home → target Place 可自动 `approved`，跨主人必须先 `pending`，由目标地点 owner 批准。
+- 只有 `relation_type='school_enrollment'` 且目标地点为 `place_type='school'` 的已批准关系，才投影为 `SchoolMemberSummary`。
+- 学校成员摘要不得采集或展示真实未成年人身份信息；只展示主人确认的昵称 / 虚构身份。
+- Relationship 是地点治理记录，不是好友、私信、动态墙或全局社交图谱；不得开放任意访客写入或公开浏览完整关系图。
+
+布局约束：
 
 - `layout_style` 只决定酒馆详情页的默认展示结构，不生成或改写酒馆内容。
 - 缺失或不支持的 `layout_style` 必须兼容读取为 `lobby`。
@@ -67,7 +189,7 @@ interface Tavern {
 
 ---
 
-## 三、CharacterClaim（玩家扮演 NPC 认领）
+## 四、CharacterClaim（玩家扮演 NPC 认领）
 
 `CharacterClaim` 记录某个玩家申请 / 获准扮演某个既有 NPC 的状态。它是酒馆内的治理记录，不是跨酒馆私信、好友关系或全局在线状态。
 
@@ -93,7 +215,7 @@ interface CharacterClaim {
 
 ---
 
-## 四、TavernCharacter（酒馆角色）
+## 五、TavernCharacter（酒馆角色）
 
 酒馆角色是酒馆内的 AI NPC。格式兼容 SillyTavern Character Card V2。
 
@@ -111,6 +233,7 @@ interface TavernCharacter {
   description: string;           // 角色描述（给主人看）
   personality: string;           // 性格设定
   scenario: string;             // 场景设定（AI 的舞台指令）
+  gender: Gender;                // NPC 性别；缺省 unspecified，不由平台自动推断
 
   // ── AI 对话核心 ───────────────────
   system_prompt: string;         // 系统提示词（AI 的角色扮演指令）
@@ -139,9 +262,42 @@ interface TavernSpriteSet {
 }
 ```
 
+约束：
+
+- `gender` 是自声明 / 店主填写的有限枚举字段；缺失或旧数据读取时必须兼容为 `unspecified`。
+- 访客 `gender` 仅绑定当前 `tavern_id + visitor_id` 的 `VisitorState`，不得扩展为全局用户资料、匹配推荐或公开社交筛选。
+- 平台不得从姓名、头像、对话或 AI 草稿中自动推断 / 覆盖游客或 NPC 性别。
+
 ---
 
-## 五、WorldInfoEntry（世界知识条目）
+## 六、AI 草稿（非持久 Schema）
+
+`AI 草稿` 是平台辅助店主创作 NPC 的临时状态，不是新的持久化 Schema。MVP 中，平台只生成未发布的角色卡字段草稿：
+
+```typescript
+interface NpcDraftPreview {
+  name: string;
+  description: string;
+  personality: string;
+  scenario: string;
+  system_prompt: string;
+  first_mes: string;
+  mes_example: string;
+  tags: string[];
+}
+```
+
+约束：
+
+- 店主确认前，AI 草稿不得进入公开 `Tavern` payload。
+- 店主确认前，AI 草稿不得覆盖已有 `TavernCharacter`。
+- 店主确认前，AI 草稿不得随酒馆包导出。
+- 店主确认后，草稿按现有 `TavernCharacter` 字段保存；AI 草稿本身不新增持久字段。
+- 若未来要保存草稿历史、审核状态或多版本草稿，必须另行设计持久化模型并更新本文档。
+
+---
+
+## 七、WorldInfoEntry（世界知识条目）
 
 世界知识条目用于在对话中注入背景信息。当用户消息包含特定关键词时，对应的条目内容会被追加到 system prompt 中。
 
@@ -171,7 +327,7 @@ interface WorldInfoEntry {
 
 ---
 
-## 六、LLMConfig（LLM 配置）
+## 八、LLMConfig（LLM 配置）
 
 LLM 配置由酒馆主人提供，用于驱动酒馆内的 AI 对话。API Key 和敏感信息仅主人可见。
 
@@ -200,7 +356,7 @@ interface LLMConfig {
 
 ---
 
-## 七、VisitorState（访客状态）
+## 九、VisitorState（访客状态）
 
 记录访客与特定酒馆的关系状态。
 
@@ -211,6 +367,7 @@ interface LLMConfig {
 interface VisitorState {
   visitor_id: string;           // 访客 user_id
   tavern_id: string;            // 酒馆 id
+  gender: Gender;                // 访客自声明性别；缺省 unspecified，酒馆内作用域
 
   visit_count: number;          // 访问次数
   first_visit?: string;         // 首次访问时间
@@ -225,7 +382,7 @@ interface VisitorState {
 
 ---
 
-## 八、ChatMessage（对话消息）
+## 十、ChatMessage（对话消息）
 
 对话历史记录。
 
@@ -251,7 +408,7 @@ interface ChatMessage {
 
 ---
 
-## 九、Gameplay（酒馆玩法）
+## 十一、Gameplay（酒馆玩法）
 
 Gameplay 是酒馆内容的一部分：`GameplayDefinition` 随 Tavern 导出 / 导入；访客运行时进度进入 `GameplaySession`，不混入 `ChatMessage`，也不进入公开 Tavern payload。
 
@@ -349,7 +506,7 @@ interface GameplayEvent {
 
 ---
 
-## 十、SillyTavern 角色卡字段映射
+## 十二、SillyTavern 角色卡字段映射
 
 SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
@@ -366,9 +523,11 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 | `data.character_book.entries` | `world_info` |
 | `data.alternate_greetings` | `alternate_greetings` |
 
+说明：`gender` 是 FableMap 扩展字段，不属于 SillyTavern Character Card V2 标准映射；导入旧角色卡时缺省为 `unspecified`，若导入 payload 显式提供 `gender` 则按上方 `Gender` 枚举归一化。
+
 ---
 
-## 十一、旧世界 Schema（历史参考）
+## 十三、旧世界 Schema（历史参考）
 
 以下为旧的 world Schema，保留为历史参考。新的赛博酒馆平台不再使用这套概念体系。
 
@@ -402,6 +561,10 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ## 版本历史
 
+- v0.8 (2026-04-27): 增加 `Gender` 枚举、`TavernCharacter.gender` 与 `VisitorState.gender`；游客性别为 tavern-scoped 自声明字段，NPC 性别为店主填写字段，旧数据默认 `unspecified`，不得自动推断或用于公开社交筛选。
+- v0.7 (2026-04-27): 增加 Place/Home MVP Schema：`place_type`、`HomeMember`、可扩展 `PlaceRelationshipType`/`PlaceRelationship`、学校成员摘要与 Home 默认私密 / 跨主人审批边界；`school_enrollment` 是关系类型之一而非唯一关系。
+- v0.6 (2026-04-27): 增加时间系统：`timezone`、`operating_hours`、`OperatingHours` 类型、`TavernTimeStatus` 接口。支持基于地理位置的时区推断和精确到分钟的营业时间管理。
+- v0.5 (2026-04-27): 增加 AI 草稿边界说明；AI 草稿是未发布临时状态，确认后才映射为现有 TavernCharacter，MVP 不新增持久 Schema。
 - v0.4 (2026-04-27): 增加 `layout_style`，用于持久化酒馆页默认布局样式，缺省为 `lobby`。
 - v0.3 (2026-04-21): 增加 `gameplay_definitions`、`GameplayDefinition`、`GameplaySession`、`GameplayEvent`，明确玩法会话与公开 Tavern payload 的边界。
 - v0.2 (2026-04-14): 按赛博酒馆平台方向重写，替换为 Tavern/TavernCharacter/LLMConfig 模型。旧 Schema 降级为历史参考。

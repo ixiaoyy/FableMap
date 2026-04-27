@@ -181,3 +181,30 @@ MVP 不开放任意自定义类型，先做有限枚举和模板。
 - 不新增 `Place` / `Home` / `Member` / `Relationship` Schema 字段。
 - 不改前后端代码。
 - 不创建公开学校成员同步功能。
+
+## 11. 子任务完成边界补记（2026-04-27）
+
+`04-27-place-type-discovery-mvp` 已完成的是 **多地点类型在发现页的前端派生展示与筛选切片**，不是完整的 Place / Home / Relationship Graph 实现。父方向仍按本文件的分阶段路线推进，不能因为该子任务完成就把以下内容视为已交付。
+
+### 子任务实际已交付
+
+- 从现有公开 Tavern payload 推断有限地点类型。
+- 发现页地点类型筛选 chips、卡片徽章。
+- Tavern 预览弹窗地点类型徽章。
+- Home 类型作为保留类型可识别但不进入公开发现筛选。
+- 前端脚本测试、`npm --prefix .\frontend test`、typecheck、build 验证记录在子任务 `task.json.meta.verification`。
+
+### 仍未交付 / 不得冒充完成
+
+- 后端 `place_type` / Place / Home / Member / Relationship 持久 Schema。
+- `docs/WORLD_SCHEMA.md` 或全局产品文档中的 Schema 承诺更新。
+- Tavern 创建 / 更新 payload 的地点类型写入。
+- Home MVP：坐标隐私、访问策略、Home 形象、成员展示。
+- 家庭成员：孩子 / 宠物 / 非生物成员的权限、表达能力与安全边界实现。
+- 学校同步 / 跨地点关系图：enrollment 审批、公开成员列表、隐私展示规则。
+
+### 后续执行规则
+
+- “完成”必须绑定具体 Trellis 任务与该任务验收标准；不能把产品方向、父任务路线或 Deferred 列表自动算作已完成。
+- 若后续要推进上述未交付项，先建立独立 Trellis 任务并写清楚 non-goals、Schema/API 变更边界与验证方式。
+- 对外汇报必须分开列出：本轮已做、明确未做、需要用户确认 / 新任务承接。

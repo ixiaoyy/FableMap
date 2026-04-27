@@ -12,6 +12,7 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     visitor_id: str = ""
     visitor_name: str = ""
+    visitor_gender: str = ""
     extra_context: list[dict[str, Any]] | None = None
     display_message: str = ""
 
@@ -26,6 +27,7 @@ class GroupChatRequest(BaseModel):
     message: str = Field(min_length=1)
     visitor_id: str = ""
     visitor_name: str = ""
+    visitor_gender: str = ""
     display_message: str = ""
 
 

@@ -1135,6 +1135,7 @@ export default function TavernChatRoom({
           message: promptText,
           visitor_id: visitorId,
           visitor_name: visitorNickname,
+          visitor_gender: visitorMemoryState?.gender || entryState?.gender || 'unspecified',
         },
       )
       const responseText = result.response || '...'
@@ -1227,6 +1228,7 @@ export default function TavernChatRoom({
         message: cleanText,
         visitor_id: visitorId,
         visitor_name: visitorNickname,
+        visitor_gender: visitorMemoryState?.gender || entryState?.gender || 'unspecified',
         display_message: displayText !== cleanText ? displayText : undefined,
       })
       const replyMessages = Array.isArray(result.messages)

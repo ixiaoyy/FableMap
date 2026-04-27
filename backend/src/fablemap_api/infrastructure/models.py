@@ -45,6 +45,7 @@ class TavernModel(Base):
     status = Column(SQLEnum("open", "closed", name="status_type"), default="closed")
     roleplay_mode = Column(String(32), default="ai_only")
     layout_style = Column(String(32), nullable=False, default="lobby")
+    place_type = Column(String(32), nullable=False, default="tavern")
     scene_prompt = Column(Text, default="")
     visit_count = Column(Integer, default=0)
     group_chat_enabled = Column(Boolean, default=False)
@@ -62,6 +63,12 @@ class TavernModel(Base):
     active_preset_id = Column(String(64), default="")
     memory_policy = Column(JSON, default=dict)
     voice_config = Column(JSON, default=dict)
+    home_members = Column(JSON, default=list)
+    place_relationships = Column(JSON, default=list)
+
+    # 时间系统字段
+    timezone = Column(String(64), nullable=True)  # IANA 时区，不填则自动推断
+    operating_hours = Column(JSON, default=dict)  # 营业时间配置
 
     # 关系
     characters = relationship("CharacterModel", back_populates="tavern", cascade="all, delete-orphan")
@@ -75,6 +82,7 @@ class TavernModel(Base):
     __table_args__ = (
         Index("idx_owner_id", "owner_id"),
         Index("idx_access", "access"),
+        Index("idx_place_type", "place_type"),
         Index("idx_location", "lat", "lon"),
         Index("idx_status", "status"),
     )
@@ -91,6 +99,7 @@ class CharacterModel(Base):
     description = Column(Text, default="")
     personality = Column(Text, default="")
     scenario = Column(Text, default="")
+    gender = Column(String(32), default="unspecified")
     system_prompt = Column(Text, default="")
     first_mes = Column(Text, default="")
     mes_example = Column(Text, default="")
@@ -138,6 +147,7 @@ class VisitorModel(Base):
     id = Column(String(64), primary_key=True)
     tavern_id = Column(String(64), ForeignKey("taverns.id", ondelete="CASCADE"), nullable=False)
     visitor_id = Column(String(64), nullable=False)
+    gender = Column(String(32), default="unspecified")
     visit_count = Column(Integer, default=0)
     first_visit = Column(DateTime, nullable=True)
     last_visit = Column(DateTime, nullable=True)

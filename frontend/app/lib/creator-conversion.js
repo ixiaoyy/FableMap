@@ -22,17 +22,27 @@ function safeQueryCoordinate(value, fallback) {
   return parsed === null ? fallback : parsed.toFixed(6)
 }
 
+// Build a link to the creator's public profile page
+export function buildCreatorProfileLink(ownerId = "") {
+  const safeId = toText(ownerId)
+  if (!safeId) return "/discover"
+  return `/creator/${encodeURIComponent(safeId)}`
+}
+
+// Build a link to create a new tavern (with optional prefilled data)
 export function buildCreatorConversionLink(tavern = {}) {
   const params = new URLSearchParams()
   const lat = coordinateParam(tavern.lat)
   const lon = coordinateParam(tavern.lon)
   const address = toText(tavern.address)
   const sourceTavernId = toText(tavern.id)
+  const sourceOwnerId = toText(tavern.owner_id)
 
   if (lat) params.set("lat", lat)
   if (lon) params.set("lon", lon)
   if (address) params.set("address", address)
   if (sourceTavernId) params.set("source_tavern", sourceTavernId)
+  if (sourceOwnerId) params.set("source_creator", sourceOwnerId)
 
   const query = params.toString()
   return query ? `/create?${query}` : "/create"
@@ -41,12 +51,14 @@ export function buildCreatorConversionLink(tavern = {}) {
 export function readCreatePrefill(searchParams = new URLSearchParams()) {
   const get = (key) => (typeof searchParams.get === "function" ? searchParams.get(key) : "")
   const sourceTavernId = toText(get("source_tavern"))
+  const sourceOwnerId = toText(get("source_creator"))
 
   return {
     lat: safeQueryCoordinate(get("lat"), DEFAULT_CREATE_LAT),
     lon: safeQueryCoordinate(get("lon"), DEFAULT_CREATE_LON),
     address: toText(get("address")),
     sourceTavernId,
-    hasSource: Boolean(sourceTavernId),
+    sourceOwnerId,
+    hasSource: Boolean(sourceTavernId || sourceOwnerId),
   }
 }

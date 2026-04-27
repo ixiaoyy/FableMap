@@ -94,6 +94,7 @@ class MySQLTavernStore:
             status=model.status or "closed",
             roleplay_mode=model.roleplay_mode or "ai_only",
             layout_style=model.layout_style or "lobby",
+            place_type=model.place_type or "tavern",
             characters=characters,
             character_claims=deepcopy(model.character_claims) if model.character_claims else [],
             world_info=world_info,
@@ -112,6 +113,10 @@ class MySQLTavernStore:
             visit_count=model.visit_count or 0,
             group_chat_enabled=bool(model.group_chat_enabled),
             group_chat_config=deepcopy(model.group_chat_config) if model.group_chat_config else {},
+            timezone=model.timezone,
+            operating_hours=deepcopy(model.operating_hours) if model.operating_hours else {},
+            home_members=deepcopy(model.home_members) if model.home_members else [],
+            place_relationships=deepcopy(model.place_relationships) if model.place_relationships else [],
         )
 
     def _to_character(self, model: CharacterModel) -> TavernCharacter:
@@ -124,6 +129,7 @@ class MySQLTavernStore:
             description=model.description or "",
             personality=model.personality or "",
             scenario=model.scenario or "",
+            gender=model.gender or "unspecified",
             system_prompt=model.system_prompt or "",
             first_mes=model.first_mes or "",
             mes_example=model.mes_example or "",
@@ -195,6 +201,7 @@ class MySQLTavernStore:
         return VisitorState(
             visitor_id=model.visitor_id,
             tavern_id=model.tavern_id,
+            gender=model.gender or "unspecified",
             visit_count=model.visit_count or 0,
             first_visit=model.first_visit.strftime("%Y-%m-%dT%H:%M:%SZ") if model.first_visit else None,
             last_visit=model.last_visit.strftime("%Y-%m-%dT%H:%M:%SZ") if model.last_visit else None,
@@ -264,6 +271,12 @@ class MySQLTavernStore:
 
             return taverns
 
+    def list_all_taverns(self) -> list[Tavern]:
+        """Internal full scan including private Home records for relationship resolution."""
+        with self.db.session_scope() as session:
+            models = session.query(TavernModel).all()
+            return [self._to_tavern(m) for m in models]
+
     def get_tavern(self, tavern_id: str) -> Tavern | None:
         """获取酒馆"""
         with self.db.session_scope() as session:
@@ -300,6 +313,7 @@ class MySQLTavernStore:
                 status=tavern.status,
                 roleplay_mode=tavern.roleplay_mode,
                 layout_style=tavern.layout_style,
+                place_type=tavern.place_type,
                 scene_prompt=tavern.scene_prompt,
                 visit_count=tavern.visit_count,
                 group_chat_enabled=tavern.group_chat_enabled,
@@ -315,6 +329,10 @@ class MySQLTavernStore:
                 active_preset_id=tavern.active_preset_id,
                 memory_policy=tavern.memory_policy,
                 voice_config=tavern.voice_config.to_dict() if hasattr(tavern.voice_config, "to_dict") else {},
+                home_members=tavern.home_members,
+                place_relationships=tavern.place_relationships,
+                timezone=tavern.timezone,
+                operating_hours=tavern.operating_hours,
             )
             session.add(model)
             session.flush()
@@ -328,6 +346,7 @@ class MySQLTavernStore:
                     description=char.description,
                     personality=char.personality,
                     scenario=char.scenario,
+                    gender=char.gender,
                     system_prompt=char.system_prompt,
                     first_mes=char.first_mes,
                     mes_example=char.mes_example,
@@ -379,6 +398,7 @@ class MySQLTavernStore:
             model.status = tavern.status
             model.roleplay_mode = tavern.roleplay_mode
             model.layout_style = tavern.layout_style
+            model.place_type = tavern.place_type
             model.scene_prompt = tavern.scene_prompt
             model.visit_count = tavern.visit_count
             model.group_chat_enabled = tavern.group_chat_enabled
@@ -394,6 +414,10 @@ class MySQLTavernStore:
             model.active_preset_id = tavern.active_preset_id
             model.memory_policy = tavern.memory_policy
             model.voice_config = tavern.voice_config.to_dict() if hasattr(tavern.voice_config, "to_dict") else {}
+            model.home_members = tavern.home_members
+            model.place_relationships = tavern.place_relationships
+            model.timezone = tavern.timezone
+            model.operating_hours = tavern.operating_hours
 
             # 删除旧角色，重新插入
             session.query(CharacterModel).filter(CharacterModel.tavern_id == tavern.id).delete()
@@ -405,6 +429,7 @@ class MySQLTavernStore:
                     description=char.description,
                     personality=char.personality,
                     scenario=char.scenario,
+                    gender=char.gender,
                     system_prompt=char.system_prompt,
                     first_mes=char.first_mes,
                     mes_example=char.mes_example,
@@ -551,6 +576,7 @@ class MySQLTavernStore:
 
             if model:
                 model.visit_count = state.visit_count
+                model.gender = state.gender
                 model.first_visit = _parse_datetime(state.first_visit)
                 model.last_visit = _parse_datetime(state.last_visit)
                 model.relationship_strength = state.relationship_strength
@@ -560,6 +586,7 @@ class MySQLTavernStore:
                     id=f"visitor_{uuid.uuid4().hex[:12]}",
                     tavern_id=tavern_id,
                     visitor_id=state.visitor_id,
+                    gender=state.gender,
                     visit_count=state.visit_count,
                     first_visit=_parse_datetime(state.first_visit),
                     last_visit=_parse_datetime(state.last_visit),

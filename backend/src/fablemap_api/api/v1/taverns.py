@@ -4,7 +4,16 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from ...contracts.taverns import EnterTavernRequest, TavernCreateRequest, TavernListResponse, TavernUpdateRequest
+from ...contracts.taverns import (
+    EnterTavernRequest,
+    HomeMemberWriteRequest,
+    PlaceRelationshipRequest,
+    RelationshipDecisionRequest,
+    SchoolEnrollmentRequest,
+    TavernCreateRequest,
+    TavernListResponse,
+    TavernUpdateRequest,
+)
 from .common import get_user_id, taverns_service
 
 router = APIRouter(prefix="/taverns", tags=["taverns"])
@@ -61,10 +70,46 @@ def delete_tavern(request: Request, tavern_id: str) -> dict[str, Any]:
     return taverns_service(request).delete_tavern(tavern_id, get_user_id(request))
 
 
+@router.post("/{tavern_id}/home-members")
+def add_home_member(request: Request, tavern_id: str, data: HomeMemberWriteRequest) -> dict[str, Any]:
+    return taverns_service(request).add_home_member(tavern_id, data.to_payload(), get_user_id(request))
+
+
+@router.get("/{tavern_id}/school-members")
+def list_school_members(request: Request, tavern_id: str) -> dict[str, Any]:
+    return taverns_service(request).list_school_members(tavern_id, get_user_id(request))
+
+
+@router.post("/{tavern_id}/relationships/school-enrollments")
+def create_school_enrollment(request: Request, tavern_id: str, data: SchoolEnrollmentRequest) -> dict[str, Any]:
+    return taverns_service(request).create_school_enrollment(tavern_id, data.to_payload(), get_user_id(request))
+
+
+@router.post("/{tavern_id}/relationships")
+def create_place_relationship(request: Request, tavern_id: str, data: PlaceRelationshipRequest) -> dict[str, Any]:
+    return taverns_service(request).create_place_relationship(tavern_id, data.to_payload(), get_user_id(request))
+
+
+@router.put("/{tavern_id}/relationships/{relationship_id}")
+def decide_place_relationship(
+    request: Request,
+    tavern_id: str,
+    relationship_id: str,
+    data: RelationshipDecisionRequest,
+) -> dict[str, Any]:
+    return taverns_service(request).decide_place_relationship(
+        tavern_id,
+        relationship_id,
+        data.to_payload(),
+        get_user_id(request),
+    )
+
+
 @router.post("/{tavern_id}/enter")
 def enter_tavern(request: Request, tavern_id: str, data: EnterTavernRequest | None = None) -> dict[str, Any]:
     return taverns_service(request).enter_tavern(
         tavern_id,
         password=data.password if data else "",
         user_id=get_user_id(request),
+        visitor_gender=data.visitor_gender if data else "",
     )

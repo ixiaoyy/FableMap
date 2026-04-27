@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import CharacterLookSummary from './CharacterLookSummary'
+import { GENDER_OPTIONS, genderLabel, normalizeGender } from '../lib/gender.js'
 import {
   CHARACTER_LOOK_PRESETS,
   normalizeCharacterAppearance,
@@ -93,6 +94,7 @@ function normalizeCharacterDraft(character = {}) {
     description: toText(character.description),
     personality: toText(character.personality),
     scenario: toText(character.scenario),
+    gender: normalizeGender(character.gender),
     system_prompt: toText(character.system_prompt),
     first_mes: toText(character.first_mes),
     mes_example: toText(character.mes_example),
@@ -111,6 +113,7 @@ export function createEmptyCharacterDraft() {
     description: '',
     personality: '',
     scenario: '',
+    gender: 'unspecified',
     system_prompt: '',
     first_mes: '',
     mes_example: '',
@@ -127,6 +130,7 @@ export function normalizeCharacterPayload(draft) {
     description: draft.description.trim(),
     personality: draft.personality.trim(),
     scenario: draft.scenario.trim(),
+    gender: normalizeGender(draft.gender),
     system_prompt: draft.system_prompt.trim(),
     first_mes: draft.first_mes.trim(),
     mes_example: draft.mes_example.trim(),
@@ -199,6 +203,7 @@ export default function CharacterEditor({
       tone,
       boundary,
       tags,
+      gender: normalizeGender(draft.gender),
       talkativenessPercent: Math.round(normalizeTalkativeness(draft.talkativeness) * 100),
     }
   }, [draft])
@@ -411,6 +416,7 @@ export default function CharacterEditor({
         </div>
         <blockquote>{preview.firstMes}</blockquote>
         <div className="character-preview-card__meta">
+          <p><b>性别：</b>{genderLabel(preview.gender)}</p>
           <p><b>口吻：</b>{preview.tone}</p>
           <p><b>边界：</b>{preview.boundary}</p>
         </div>
@@ -439,6 +445,20 @@ export default function CharacterEditor({
             disabled={disabled}
             placeholder="守门人, 老友, 神秘"
           />
+        </label>
+        <label>
+          <span>性别</span>
+          <select
+            value={draft.gender}
+            onChange={(event) => updateField('gender', normalizeGender(event.target.value))}
+            disabled={disabled}
+          >
+            {GENDER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 

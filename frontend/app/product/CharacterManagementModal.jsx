@@ -1,11 +1,17 @@
 import { useRef, useState } from 'react'
 import { parseCharacterCard, extractCharacterCardFromPng } from './services/tavernService'
-import { addCharacter, deleteCharacter, importCharacterCard, listCharacters, updateCharacter } from '../lib/taverns'
+import { addCharacter, deleteCharacter, generateCharacterDraft, importCharacterCard, listCharacters, updateCharacter } from '../lib/taverns'
 import CharacterEditor, { createEmptyCharacterDraft, normalizeCharacterPayload } from './CharacterEditor'
 import CharacterAvatar from './CharacterAvatar'
 import CharacterLookSummary from './CharacterLookSummary'
 import SystemCharacterPresetPicker from './SystemCharacterPresetPicker'
 import { createCharacterDraftFromPreset } from './systemCharacterPresets'
+import {
+  DEFAULT_AI_DRAFT_FORBIDDEN,
+  DEFAULT_AI_DRAFT_STYLE_TAGS,
+  createAiCharacterDraftRequest,
+  draftResponseToEditorDraft,
+} from './aiCharacterDrafts'
 
 /**
  * CharacterManagementModal — 酒馆角色管理面板
@@ -37,6 +43,13 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   const [importError, setImportError] = useState('')
   const fileInputRef = useRef(null)
 
+  // AI 草稿状态（只生成编辑器草稿，保存仍走 addCharacter）
+  const [drafting, setDrafting] = useState(false)
+  const [draftError, setDraftError] = useState('')
+  const [aiDraftStyleText, setAiDraftStyleText] = useState(DEFAULT_AI_DRAFT_STYLE_TAGS.join(', '))
+  const [aiDraftForbiddenText, setAiDraftForbiddenText] = useState(DEFAULT_AI_DRAFT_FORBIDDEN.join(', '))
+  const [aiDraftTone, setAiDraftTone] = useState('温暖、短句、有酒馆陪伴感')
+
   // 拉取最新角色列表
   async function refreshCharacters() {
     try {
@@ -63,6 +76,29 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
       ...createCharacterDraftFromPreset(preset),
     })
     setEditorError('')
+  }
+
+  async function handleGenerateAiDraft() {
+    setDrafting(true)
+    setDraftError('')
+    setEditorError('')
+    try {
+      const response = await generateCharacterDraft(
+        tavern.id,
+        createAiCharacterDraftRequest({
+          styleTagsText: aiDraftStyleText,
+          forbiddenText: aiDraftForbiddenText,
+          tone: aiDraftTone,
+        }),
+        ownerId,
+      )
+      setEditingChar('new')
+      setEditorDraft(draftResponseToEditorDraft(response, createEmptyCharacterDraft()))
+    } catch (err) {
+      setDraftError(`生成失败：${err.message}`)
+    } finally {
+      setDrafting(false)
+    }
   }
 
   // 点击角色列表中的「编辑」
@@ -282,6 +318,51 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
           <div className="char-mgmt-editor-area">
             {!editingChar ? (
               <div className="char-mgmt-editor-placeholder char-mgmt-editor-placeholder--picker">
+                <section className="char-mgmt-ai-draft">
+                  <div className="character-editor-section-heading">
+                    <span>生成 AI 草稿</span>
+                    <small>只放进右侧编辑器；店主保存后才会成为正式角色。</small>
+                  </div>
+                  <div className="form-grid">
+                    <label>
+                      <span>风格标签</span>
+                      <input
+                        value={aiDraftStyleText}
+                        onChange={(event) => setAiDraftStyleText(event.target.value)}
+                        disabled={drafting || saving || importing || deleting}
+                        placeholder="猫娘, 傲娇, 酒保"
+                      />
+                    </label>
+                    <label>
+                      <span>语气</span>
+                      <input
+                        value={aiDraftTone}
+                        onChange={(event) => setAiDraftTone(event.target.value)}
+                        disabled={drafting || saving || importing || deleting}
+                        placeholder="温暖、短句、有酒馆陪伴感"
+                      />
+                    </label>
+                  </div>
+                  <label className="character-editor-full">
+                    <span>禁忌方向</span>
+                    <textarea
+                      value={aiDraftForbiddenText}
+                      onChange={(event) => setAiDraftForbiddenText(event.target.value)}
+                      disabled={drafting || saving || importing || deleting}
+                      rows={2}
+                      placeholder="不要露骨，不要现实名人，不要真实私人地址"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={handleGenerateAiDraft}
+                    disabled={drafting || saving || importing || deleting}
+                  >
+                    {drafting ? '生成中...' : '生成 AI 草稿'}
+                  </button>
+                  {draftError && <div className="char-mgmt-error">{draftError}</div>}
+                </section>
                 <SystemCharacterPresetPicker
                   title="快速起一个新角色"
                   description="系统会先帮你填好角色原型，点一下就能继续在右侧编辑并保存。"

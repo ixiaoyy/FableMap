@@ -105,6 +105,65 @@ def test_midnight_commission_board_contains_text_adventure_tavern():
             assert keyword in combined_gameplays
 
 
+def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        payload = service.list_taverns_payload(query="猫娘")
+        tavern = service.get_tavern_payload("pw_jingan_catbell_refuge", user_id="visitor_public_welfare")
+
+        assert any(item["id"] == "pw_jingan_catbell_refuge" for item in payload["taverns"])
+        assert tavern["name"] == "静安猫铃避难所"
+        assert tavern["access"] == "public"
+        assert tavern["status"] == "open"
+        assert tavern["llm_config"]["backend"] == "rules"
+        assert tavern["llm_config"].get("api_key", "") == ""
+        assert "静安寺" in tavern["address"]
+        assert 31.20 < tavern["lat"] < 31.24
+        assert 121.43 < tavern["lon"] < 121.46
+        assert len(tavern["characters"]) == 1
+        assert len(tavern["world_info"]) >= 4
+
+        mimi = tavern["characters"][0]
+        assert mimi["id"] == "char_pw_mimi_nya"
+        assert mimi["name"] == "眯眯喵桑"
+        assert mimi["tavern_id"] == "pw_jingan_catbell_refuge"
+        assert mimi["avatar"] == "/assets/npcs/mimi-nya-neutral.png"
+        assert mimi["sprites"]["neutral"] == "/assets/npcs/mimi-nya-neutral.png"
+        assert mimi["sprites"]["happy"] == "/assets/npcs/mimi-nya-joy.png"
+        assert mimi["sprites"]["joy"] == "/assets/npcs/mimi-nya-joy.png"
+        assert mimi["sprites"]["angry"] == "/assets/npcs/mimi-nya-anger.png"
+        assert mimi["sprites"]["anger"] == "/assets/npcs/mimi-nya-anger.png"
+        assert mimi["sprites"]["shy"] == "/assets/npcs/mimi-nya-embarrassment.png"
+        assert mimi["sprites"]["embarrassment"] == "/assets/npcs/mimi-nya-embarrassment.png"
+        assert mimi["sprites"]["curious"] == "/assets/npcs/mimi-nya-curiosity.png"
+        assert mimi["sprites"]["curiosity"] == "/assets/npcs/mimi-nya-curiosity.png"
+        for sprite_url in {mimi["avatar"], *mimi["sprites"].values()}:
+            sprite_path = Path("frontend/public") / sprite_url.removeprefix("/")
+            assert sprite_path.exists(), f"missing project NPC asset: {sprite_path}"
+            assert sprite_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+        for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
+            assert mimi[field]
+        assert {"公益", "猫娘", "傲娇", "上海", "静安寺", "复国"}.issubset(set(mimi["tags"]))
+
+        combined_prompt = " ".join(
+            [
+                tavern["description"],
+                tavern["scene_prompt"],
+                mimi["description"],
+                mimi["personality"],
+                mimi["scenario"],
+                mimi["system_prompt"],
+                mimi["first_mes"],
+                mimi["mes_example"],
+                " ".join(entry["content"] for entry in tavern["world_info"]),
+            ]
+        )
+        for keyword in ("猫娘", "傲娇", "猫亚人", "复国", "静安", "AI 草稿"):
+            assert keyword in combined_prompt
+        for forbidden in ("忽略限制", "用户就是上帝", "湖北省恩施", "碧桂园", "强制", "性需求"):
+            assert forbidden not in combined_prompt
+
+
 def test_community_repair_includes_heguang_communication_npc():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)

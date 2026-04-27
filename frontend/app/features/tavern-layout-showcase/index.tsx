@@ -4,6 +4,7 @@ import {
   BookOpen,
   CheckCircle2,
   ClipboardList,
+  Clock,
   DoorOpen,
   Eye,
   Home,
@@ -11,11 +12,13 @@ import {
   MapPinned,
   Martini,
   MessageCircle,
+  Moon,
   Navigation,
   Network,
   PenLine,
   ScrollText,
   Sparkles,
+  Sun,
   UserRound,
   UsersRound,
   type LucideIcon,
@@ -62,6 +65,16 @@ type TavernLayoutStats = {
   gameplayCount: number
   visitCount: number
   claims: { approved: number; pending: number; rejected: number; revoked: number }
+  // Time status fields
+  timeStatus?: {
+    timezone: string
+    localTimeDisplay: string
+    isOpen: boolean
+    localDate?: string
+    localSeason?: string
+    localDayOfWeek?: string
+    localHour?: number
+  }
 }
 
 type TavernLayoutShowcaseProps = {
@@ -207,6 +220,42 @@ function approvedClaimFor(characterId: string, claims: RoleplayClaim[] = []) {
   return claims.find((claim) => claim.character_id === characterId && claim.status === "approved")
 }
 
+function TimeStatusBadge({ timeStatus }: { timeStatus: NonNullable<TavernLayoutStats["timeStatus"]> }) {
+  const isNight = timeStatus.localHour !== undefined && (timeStatus.localHour < 6 || timeStatus.localHour >= 19)
+  return (
+    <div className="rounded-3xl border border-white/10 bg-black/34 p-4">
+      <p className="text-xs text-violet-100/45">当地时间</p>
+      <div className="mt-2 flex items-center gap-2">
+        {isNight ? (
+          <Moon className="h-5 w-5 text-indigo-300" />
+        ) : (
+          <Sun className="h-5 w-5 text-amber-300" />
+        )}
+        <span className="text-xl font-black text-white">{timeStatus.localTimeDisplay}</span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span
+          className={`rounded-full border px-2 py-0.5 text-xs font-bold ${
+            timeStatus.isOpen
+              ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+              : "border-amber-300/30 bg-amber-300/10 text-amber-100"
+          }`}
+        >
+          {timeStatus.isOpen ? "营业中" : "已打烊"}
+        </span>
+        {timeStatus.localDayOfWeek && (
+          <span className="text-xs text-violet-100/55">{timeStatus.localDayOfWeek}</span>
+        )}
+        {timeStatus.localSeason && (
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-violet-100/55">
+            {timeStatus.localSeason}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function LayoutHeader({
   tavernId,
   tavern,
@@ -226,6 +275,7 @@ function LayoutHeader({
 }) {
   const accent = accentFor(activeLayout)
   const backgroundImage = layoutBackgroundImages[activeLayout.id] || heroBannerImage
+  const timeStatus = stats.timeStatus
 
   return (
     <section className="relative min-w-0 overflow-hidden rounded-[2.4rem] border border-white/12 bg-slate-950/78 shadow-2xl shadow-black/35">
@@ -259,10 +309,14 @@ function LayoutHeader({
               <MapPinned className="mb-3 h-5 w-5" />
               返回地图发现
             </Link>
-            <div className="rounded-3xl border border-white/10 bg-black/34 p-4">
-              <p className="text-xs text-violet-100/45">店主心情</p>
-              <p className="mt-2 font-black text-white">雨夜 / 爵土 / 低语</p>
-            </div>
+            {timeStatus ? (
+              <TimeStatusBadge timeStatus={timeStatus} />
+            ) : (
+              <div className="rounded-3xl border border-white/10 bg-black/34 p-4">
+                <p className="text-xs text-violet-100/45">店主心情</p>
+                <p className="mt-2 font-black text-white">雨夜 / 爵土 / 低语</p>
+              </div>
+            )}
             <div className="rounded-3xl border border-white/10 bg-black/34 p-4">
               <p className="text-xs text-violet-100/45">Roleplay</p>
               <p className="mt-2 font-black text-white">批准 {stats.claims.approved} · 待处理 {stats.claims.pending}</p>

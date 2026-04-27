@@ -222,6 +222,22 @@ python3 ./.trellis/scripts/task.py create "<title>" --slug <task-name>
        next session resumes where you left off
 ```
 
+
+### Completion Integrity Rule
+
+Before marking a task complete or reporting completion, separate scope explicitly:
+
+- **Done**: implemented in this task and backed by fresh verification output.
+- **Deferred / Not Done**: intentionally out of scope or not implemented.
+- **Follow-up**: a Trellis task / PRD link if the user expects the work later.
+
+Rules:
+
+1. Never check an acceptance criterion, mark a parent direction as implemented, or say a feature is complete for work that was not actually changed and verified in this task.
+2. A completed child task only proves that child slice is complete; it does not imply the parent roadmap, deferred scope, backend/schema work, or future subtasks are complete.
+3. If scope is intentionally deferred, record it in the task `prd.md` and `task.json.meta.deferred_not_done` / equivalent notes before final reporting.
+4. Final reports must include a clear “Done vs Not Done / Risk” split when there is any deferred scope.
+
 ### Code Quality Checklist
 
 **Must pass before commit**:

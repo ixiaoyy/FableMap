@@ -12,9 +12,16 @@ class CharacterWriteRequest(FlexibleBody):
     description: str | None = None
     personality: str | None = None
     scenario: str | None = None
+    gender: str | None = None
     system_prompt: str | None = None
     first_mes: str | None = None
     tags: list[str] | None = None
+
+
+class CharacterDraftRequest(FlexibleBody):
+    style_tags: list[str] | str | None = None
+    forbidden: list[str] | str | None = None
+    tone: str | None = None
 
 
 class CharacterImportRequest(FlexibleBody):
@@ -47,6 +54,7 @@ class CharacterCardExportRequest(FlexibleBody):
 __all__ = [
     "CharacterCardExportRequest",
     "CharacterCardParseRequest",
+    "CharacterDraftRequest",
     "CharacterImportRequest",
     "CharacterWriteRequest",
     "ExpressionInferRequest",

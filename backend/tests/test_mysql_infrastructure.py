@@ -204,6 +204,59 @@ class TestTavernCRUD:
         assert updated is not None
         assert updated.layout_style == "hybrid-room"
 
+    def test_place_home_fields_round_trip(self, store: MySQLTavernStore):
+        """测试地点类型、Home 成员和关系图字段持久化"""
+        from fablemap_api.core.tavern import Tavern
+
+        tavern = Tavern(
+            id="home_mysql_round_trip",
+            name="MySQL Home",
+            description="",
+            lat=35.6581,
+            lon=139.7016,
+            owner_id="owner_001",
+            created_at="2026-04-22T10:00:00Z",
+            place_type="home",
+            access="private",
+            home_members=[
+                {
+                    "id": "member_stone",
+                    "name": "小石头",
+                    "member_type": "silent_member",
+                    "speech_mode": "silent",
+                }
+            ],
+            place_relationships=[
+                {
+                    "id": "rel_care",
+                    "relation_type": "care_link",
+                    "source_tavern_id": "home_mysql_round_trip",
+                    "source_member_id": "member_stone",
+                    "target_tavern_id": "care_mysql",
+                    "status": "pending",
+                    "source_role": "home_member",
+                    "target_role": "care_place",
+                }
+            ],
+        )
+        store.create_tavern(tavern)
+
+        retrieved = store.get_tavern("home_mysql_round_trip")
+        assert retrieved is not None
+        assert retrieved.place_type == "home"
+        assert retrieved.access == "private"
+        assert retrieved.home_members[0]["speech_mode"] == "silent"
+        assert retrieved.place_relationships[0]["relation_type"] == "care_link"
+        assert retrieved.place_relationships[0]["target_role"] == "care_place"
+        assert retrieved.place_relationships[0]["status"] == "pending"
+
+        retrieved.place_relationships[0]["status"] = "approved"
+        store.update_tavern(retrieved)
+
+        updated = store.get_tavern("home_mysql_round_trip")
+        assert updated is not None
+        assert updated.place_relationships[0]["status"] == "approved"
+
     def test_delete_tavern(self, store: MySQLTavernStore):
         """测试删除酒馆"""
         from fablemap_api.core.tavern import Tavern
@@ -291,6 +344,39 @@ class TestCharacterCRUD:
         assert len(updated.characters) == 1
         assert updated.characters[0].name == "新角色"
 
+    def test_character_gender_round_trip(self, store: MySQLTavernStore):
+        """测试角色性别字段持久化"""
+        from fablemap_api.core.tavern import Tavern, TavernCharacter
+
+        character = TavernCharacter(
+            id="char_gender",
+            tavern_id="tavern_char_gender",
+            name="性别字段角色",
+            gender="nonbinary",
+        )
+        tavern = Tavern(
+            id="tavern_char_gender",
+            name="角色性别酒馆",
+            description="",
+            lat=35.6581,
+            lon=139.7016,
+            owner_id="owner_001",
+            created_at="2026-04-22T10:00:00Z",
+            characters=[character],
+        )
+        store.create_tavern(tavern)
+
+        retrieved = store.get_tavern("tavern_char_gender")
+        assert retrieved is not None
+        assert retrieved.characters[0].gender == "nonbinary"
+
+        retrieved.characters[0].gender = "female"
+        store.update_tavern(retrieved)
+
+        updated = store.get_tavern("tavern_char_gender")
+        assert updated is not None
+        assert updated.characters[0].gender == "female"
+
 
 class TestVisitorState:
     """访客状态测试"""
@@ -315,6 +401,7 @@ class TestVisitorState:
         visitor_state = VisitorState(
             visitor_id="visitor_001",
             tavern_id="tavern_visitor",
+            gender="male",
             visit_count=1,
             first_visit="2026-04-22T10:00:00Z",
             last_visit="2026-04-22T10:00:00Z",
@@ -328,16 +415,19 @@ class TestVisitorState:
         assert retrieved is not None
         assert retrieved.visitor_id == "visitor_001"
         assert retrieved.visit_count == 1
+        assert retrieved.gender == "male"
 
         # 更新访客状态
         visitor_state.visit_count = 2
         visitor_state.relationship_strength = 0.3
+        visitor_state.gender = "nonbinary"
         store.update_visitor_state("tavern_visitor", visitor_state)
 
         # 验证更新
         updated = store.get_visitor_state("tavern_visitor", "visitor_001")
         assert updated.visit_count == 2
         assert updated.relationship_strength == 0.3
+        assert updated.gender == "nonbinary"
 
     def test_list_visitor_states(self, store: MySQLTavernStore):
         """测试列出访客状态"""

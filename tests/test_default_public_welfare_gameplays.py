@@ -18,6 +18,7 @@ def test_default_public_welfare_taverns_have_theme_gameplays_and_rules_fallback_
         "pw_lost_found_archive": ["失物", "线索", "档案"],
         "pw_third_shelf_observatory": ["人类", "谜题", "便利店"],
         "pw_midnight_commission_board": ["线索", "委托", "异常"],
+        "pw_jingan_catbell_refuge": ["猫铃", "复国", "静安"],
     }
 
     with TemporaryDirectory() as tmpdir:

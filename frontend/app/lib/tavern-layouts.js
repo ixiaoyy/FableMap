@@ -92,6 +92,26 @@ export function countClaimsByStatus(claims = []) {
   return counts
 }
 
+function extractTimeStatus(tavern) {
+  // Extract time_status from tavern (API returns this field)
+  const timeStatus = tavern?.time_status
+  if (!timeStatus) return undefined
+
+  return {
+    timezone: timeStatus.timezone || "",
+    localTimeDisplay: timeStatus.local_time_display || timeStatus.local_time || "--:--",
+    isOpen: Boolean(timeStatus.is_open),
+    localDate: timeStatus.local_date,
+    localSeason: timeStatus.local_season,
+    localDayOfWeek: timeStatus.local_day_of_week,
+    // Extract hour for day/night icon logic
+    localHour: (() => {
+      const match = (timeStatus.local_time_display || "").match(/(\d{1,2}):(\d{2})/)
+      return match ? parseInt(match[1], 10) : undefined
+    })(),
+  }
+}
+
 export function buildTavernLayoutStats(tavern, characters = [], claims = []) {
   const lat = formatCoordinate(tavern?.lat, "N")
   const lon = formatCoordinate(tavern?.lon, "E")
@@ -106,5 +126,6 @@ export function buildTavernLayoutStats(tavern, characters = [], claims = []) {
     gameplayCount: Array.isArray(tavern?.gameplay_definitions) ? tavern.gameplay_definitions.length : 0,
     visitCount: Number.isFinite(Number(tavern?.visit_count)) ? Number(tavern.visit_count) : 0,
     claims: countClaimsByStatus(claims),
+    timeStatus: extractTimeStatus(tavern),
   }
 }

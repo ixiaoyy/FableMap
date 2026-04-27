@@ -127,5 +127,32 @@ class TavernManagementApplicationMixin:
     def delete_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, str]:
         return self.taverns.delete_tavern(tavern_id, user_id)
 
-    def enter_tavern(self, tavern_id: str, password: str = "", user_id: str = "") -> dict[str, Any]:
-        return self.taverns.enter_tavern(tavern_id, password, user_id)
+    def add_home_member(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        return self.taverns.add_home_member(tavern_id, data, user_id)
+
+    def create_school_enrollment(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        return self.taverns.create_school_enrollment(tavern_id, data, user_id)
+
+    def create_place_relationship(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        return self.taverns.create_place_relationship(tavern_id, data, user_id)
+
+    def decide_place_relationship(
+        self,
+        tavern_id: str,
+        relationship_id: str,
+        data: dict[str, Any],
+        user_id: str = "",
+    ) -> dict[str, Any]:
+        return self.taverns.decide_place_relationship(tavern_id, relationship_id, data, user_id)
+
+    def list_school_members(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
+        return self.taverns.list_school_members(tavern_id, user_id)
+
+    def enter_tavern(
+        self,
+        tavern_id: str,
+        password: str = "",
+        user_id: str = "",
+        visitor_gender: str = "",
+    ) -> dict[str, Any]:
+        return self.taverns.enter_tavern(tavern_id, password, user_id, visitor_gender)

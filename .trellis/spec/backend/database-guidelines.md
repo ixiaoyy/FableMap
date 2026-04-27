@@ -189,6 +189,176 @@ Normalization keeps JSON, MySQL, API responses, and frontend route initializatio
 
 ---
 
+## Scenario: Place/Home MVP Persistence Contract
+
+### 1. Scope / Trigger
+
+Use this contract when changing Place/Home data on top of the Tavern compatibility layer: `place_type`, Home members, generic Place relationships, including school enrollment, public discovery filtering, JSON persistence, MySQL persistence, API contracts, and frontend service types.
+
+### 2. Signatures
+
+```python
+Tavern.place_type: str
+Tavern.home_members: list[dict[str, Any]]
+Tavern.place_relationships: list[dict[str, Any]]
+TavernService.add_home_member(tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]
+TavernService.create_place_relationship(tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]
+TavernService.create_school_enrollment(tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]  # compatibility wrapper
+TavernService.decide_place_relationship(tavern_id: str, relationship_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]
+```
+
+```typescript
+type PlaceType =
+  | "tavern"
+  | "cafe"
+  | "milk-tea-shop"
+  | "restaurant"
+  | "convenience-store"
+  | "bookstore"
+  | "school"
+  | "home"
+```
+
+### 3. Contracts
+
+- Persistent key `place_type` is finite and backward-compatible; missing legacy values read as `tavern`.
+- Home is still a Tavern with real `lat/lon`; creating/updating `place_type="home"` must coerce public access to private/password, never public.
+- Public list/discover responses must exclude Home records unless an owner-scoped list is requested.
+- Public Tavern payloads must not expose `home_members` or `place_relationships`; owner/private payloads may include them.
+- `silent_member` and `display_object` Home members must normalize to non-conversational speech modes and must not become `characters` in enter/chat payloads.
+- `PlaceRelationship.relation_type` is a finite controlled set. `school_enrollment` is one type, not the entire relationship graph.
+- Generic relationships are stored on the source Home. Same-owner Home→target Place can auto-approve; cross-owner relationships must remain `pending` until the target Place owner decides.
+- `school_enrollment` is the only relationship type projected into school member summaries; other approved relationships stay target-owner governance data.
+- JSON `TavernStore` and `MySQLTavernStore` must round-trip `place_type`, `home_members`, and `place_relationships`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Legacy Tavern missing `place_type` | API/domain reads `tavern` |
+| Create/update with unsupported `place_type` | 400 with a user-facing place-type error |
+| Create Home with `access="public"` | stored/returned as private |
+| Public tavern list includes public Home row in storage | response filters it out |
+| Visitor GET private Home | 403 |
+| Owner GET Home | includes Home fields |
+| Home silent/display member | saved with silent/display speech and absent from enter characters |
+| Same-owner school enrollment | `approved`, appears in school member summary |
+| Cross-owner school enrollment | `pending`, hidden until school owner approves |
+| Cross-owner non-school relationship | `pending`, visible to target owner for approval, not to public visitors |
+| Unsupported relationship type | 400 with a user-facing relationship-type error |
+
+### 5. Good/Base/Bad Cases
+
+- Good: Add a new place type or relationship type by updating backend enum validation, `WORLD_SCHEMA`, frontend constants/types, frontend tests, and persistence/API tests in one change.
+- Base: Discovery helper may infer legacy types when `place_type` is missing, but persisted `place_type` must win.
+- Bad: Deriving Home solely from keywords, exposing Home members in public payloads, or treating relationship records as a global friend/social graph.
+
+### 6. Tests Required
+
+Run and assert:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests/test_v1_place_home_mvp.py backend/tests/test_mysql_infrastructure.py::TestTavernCRUD::test_place_home_fields_round_trip --tb=short
+npm --prefix .\frontend test
+npm --prefix .\frontend run typecheck
+```
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+tavern.place_type = data.get("place_type", "tavern")
+```
+
+This can persist unsupported UI strings and accidentally publish Home records.
+
+#### Correct
+
+```python
+place_type = _require_valid_place_type(data.get("place_type", "tavern"))
+tavern.place_type = place_type
+tavern.access = _normalize_home_access(data.get("access")) if place_type == "home" else _normalize_access(data.get("access"))
+```
+
+Validation and Home access coercion keep backend, persistence, docs, and frontend behavior aligned.
+
+---
+
+## Scenario: Visitor/NPC Gender Persistence Contract
+
+### 1. Scope / Trigger
+
+Use this contract when maintaining `TavernCharacter.gender`, `VisitorState.gender`, v1 character/chat/enter API payloads, JSON persistence, MySQL persistence, and frontend gender helpers.
+
+### 2. Signatures
+
+```python
+TavernCharacter.gender: str
+VisitorState.gender: str
+TavernService.enter_tavern(..., visitor_gender: str = "") -> dict[str, Any]
+ChatRequest.visitor_gender: str
+GroupChatRequest.visitor_gender: str
+```
+
+```typescript
+type Gender = "unspecified" | "female" | "male" | "nonbinary" | "other"
+type TavernCharacter = { gender?: Gender | string }
+type VisitorStatePayload = { gender?: Gender | string }
+```
+
+### 3. Contracts
+
+- Persistent key is `gender` for both `TavernCharacter` and `VisitorState`; chat/enter request input uses `visitor_gender`.
+- Allowed values are `unspecified`, `female`, `male`, `nonbinary`, and `other`.
+- Missing, blank, legacy, or unsupported values normalize to `unspecified`; common Chinese/English aliases may normalize to the finite values.
+- NPC gender is owner-authored metadata and may appear in character payloads.
+- Visitor gender is self-declared runtime state scoped to `tavern_id + visitor_id`; do not promote it to global profile, public discovery filters, visitor matching, or social features.
+- JSON `TavernStore` and `MySQLTavernStore` must round-trip both fields.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Create character without `gender` | response includes `gender: "unspecified"` |
+| Create/update character with `女` / `non-binary` | normalized to `female` / `nonbinary` |
+| Enter tavern with `visitor_gender` | `visitor_state.gender` updates |
+| Send chat with a different `visitor_gender` | current visitor state updates to the new normalized value |
+| Legacy JSON/MySQL row missing `gender` | domain object reads `unspecified` |
+| Unsupported gender value | normalized to `unspecified`, not stored as free-form UI text |
+
+### 5. Tests Required
+
+Run and assert:
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests/test_v1_gender_fields.py backend/tests/test_mysql_infrastructure.py::TestCharacterCRUD::test_character_gender_round_trip backend/tests/test_mysql_infrastructure.py::TestVisitorState::test_update_and_get_visitor_state --tb=short
+npm --prefix .\frontend test
+npm --prefix .\frontend run typecheck
+```
+
+### 6. Wrong vs Correct
+
+#### Wrong
+
+```python
+character.gender = data.get("gender")
+```
+
+This can persist arbitrary frontend strings or inferred labels.
+
+#### Correct
+
+```python
+character.gender = _normalize_gender(data.get("gender"))
+```
+
+Normalization keeps docs, API payloads, JSON, MySQL, and frontend labels aligned.
+
+---
+
 ## Migrations
 
 There is no formal migration runner. Compatibility is handled by:

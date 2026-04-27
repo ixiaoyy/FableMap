@@ -40,6 +40,7 @@ from fablemap_api.core.tavern import (
     VisitorState,
     VoiceConfig,
     WorldInfoEntry,
+    _normalize_gender,
 )
 
 from ...domain.group_chat_policy import (
@@ -67,6 +68,8 @@ from ...domain.tavern_package_policy import (
     safe_tavern_package_tavern,
 )
 from ...domain.tavern_policy import can_view_memory, clean_text, relationship_stage_for
+
+from ...core.affinity import AffinityCalculator, AffinityStage, AffinityPromptBuilder
 from ...domain.world_info_policy import (
     test_world_info_entries,
     world_info_depth,
@@ -115,6 +118,7 @@ class RuntimeApplicationMixin:
         message: str,
         visitor_id: str,
         visitor_name: str = "",
+        visitor_gender: str = "",
         user_id: str = "",
         extra_context: list[dict[str, Any]] | None = None,
         display_message: str = "",
@@ -187,7 +191,17 @@ class RuntimeApplicationMixin:
         self.store.add_chat_message(user_message)
         self.store.add_chat_message(assistant_message)
         self.store.add_token_usage(tavern_id, max(1, (len(clean_message) + len(response_text)) // 4))
-        visitor_state = self._touch_visitor_state(tavern_id, visitor_id, now)
+
+        # Calculate and update visitor affinity based on chat interaction
+        affinity_result = self._update_affinity_from_chat(
+            tavern_id=tavern_id,
+            visitor_id=visitor_id,
+            visitor_message=clean_message,
+            character_response=response_text,
+            visitor_gender=visitor_gender,
+            now=now,
+        )
+        visitor_state = affinity_result["visitor_state"]
 
         created_memories: list[dict[str, Any]] = []
         try:
@@ -314,6 +328,7 @@ class RuntimeApplicationMixin:
         message: str,
         visitor_id: str,
         visitor_name: str = "",
+        visitor_gender: str = "",
         user_id: str = "",
         display_message: str = "",
     ) -> dict[str, Any]:
@@ -466,7 +481,7 @@ class RuntimeApplicationMixin:
 
         if total_token_count:
             self.store.add_token_usage(tavern_id, total_token_count)
-        visitor_state = self._touch_visitor_state(tavern_id, visitor_id, now)
+        visitor_state = self._touch_visitor_state(tavern_id, visitor_id, now, visitor_gender=visitor_gender)
         if not responses:
             return {
                 "messages": [],
@@ -779,13 +794,73 @@ class RuntimeApplicationMixin:
             "timestamp": _utc_now_iso(),
         }
 
-    def _touch_visitor_state(self, tavern_id: str, visitor_id: str, now: str) -> VisitorState:
+    def _update_affinity_from_chat(
+        self,
+        *,
+        tavern_id: str,
+        visitor_id: str,
+        visitor_message: str,
+        character_response: str,
+        now: str,
+        visitor_gender: str = "",
+    ) -> dict[str, Any]:
+        state = self.store.get_visitor_state(tavern_id, visitor_id) or VisitorState(
+            visitor_id=visitor_id,
+            tavern_id=tavern_id,
+            first_visit=now,
+        )
+        if not state.first_visit:
+            state.first_visit = now
+        state.last_visit = now
+        if visitor_gender:
+            state.gender = _normalize_gender(visitor_gender)
+
+        calculator = AffinityCalculator()
+        result = calculator.calculate_chat_affinity(
+            current_strength=float(state.relationship_strength or 0.0),
+            current_stage=AffinityStage.from_string(state.relationship_stage or "stranger"),
+            visitor_message=visitor_message,
+            character_response=character_response,
+            interaction_count=state.visit_count or 0,
+        )
+
+        state.relationship_strength = result.current_strength
+        state.relationship_stage = result.new_stage.value
+        self.store.update_visitor_state(tavern_id, state)
+        return {"visitor_state": state, "affinity": result.to_dict()}
+
+    def _touch_visitor_state(
+        self,
+        tavern_id: str,
+        visitor_id: str,
+        now: str,
+        *,
+        visitor_gender: str = "",
+    ) -> VisitorState:
         state = self.store.get_visitor_state(tavern_id, visitor_id) or VisitorState(visitor_id=visitor_id, tavern_id=tavern_id, first_visit=now)
         if not state.first_visit:
             state.first_visit = now
         state.last_visit = now
-        state.relationship_strength = min(1.0, float(state.relationship_strength or 0.0) + 0.05)
-        state.relationship_stage = relationship_stage_for(state.relationship_strength, state.visit_count)
+        if visitor_gender:
+            state.gender = _normalize_gender(visitor_gender)
+
+        # Use new AffinityCalculator for relationship updates
+        calculator = AffinityCalculator()
+        current_stage = AffinityStage.from_string(state.relationship_stage or "stranger")
+        current_strength = float(state.relationship_strength or 0.0)
+        interaction_count = state.visit_count or 0
+
+        # Calculate affinity change based on visit
+        result = calculator.calculate_chat_affinity(
+            current_strength=current_strength,
+            current_stage=current_stage,
+            visitor_message="",  # No message content for visit-only touch
+            character_response="",
+            interaction_count=interaction_count,
+        )
+
+        state.relationship_strength = result.current_strength
+        state.relationship_stage = result.new_stage.value
         self.store.update_visitor_state(tavern_id, state)
         return state
 

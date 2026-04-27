@@ -23,6 +23,7 @@ assert.deepEqual(prefill, {
   lon: "121.473700",
   address: "上海 · 外滩",
   sourceTavernId: "source tavern/1",
+  sourceOwnerId: "",
   hasSource: true,
 })
 
@@ -30,6 +31,7 @@ const fallback = readCreatePrefill(new URLSearchParams("lat=bad&lon=&address=  &
 assert.equal(fallback.lat, "31.2304")
 assert.equal(fallback.lon, "121.4737")
 assert.equal(fallback.address, "")
+assert.equal(fallback.sourceOwnerId, "")
 assert.equal(fallback.hasSource, false)
 
 const noCoordinatesLink = buildCreatorConversionLink({ id: "abc", lat: "bad", lon: null, address: "  " })

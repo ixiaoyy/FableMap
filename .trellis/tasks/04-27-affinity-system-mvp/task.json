@@ -1,0 +1,81 @@
+{
+  "id": "affinity-system-mvp",
+  "name": "affinity-system-mvp",
+  "title": "好感度系统 MVP",
+  "description": "实现完整访客-NPC好感度系统：好感度等级制度、计算规则、NPC行为影响、前端UI展示",
+  "status": "paused",
+  "dev_type": "fullstack",
+  "scope": "affinity-stages, affinity-calculator, affinity-prompt-injection, affinity-ui",
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-27",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 3,
+  "next_action": [
+    {
+      "phase": 3,
+      "action": "implement - step 3: add _update_affinity_from_chat method"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    ".trellis/tasks/04-27-affinity-system-mvp/prd.md",
+    ".trellis/tasks/04-27-affinity-system-mvp/research.md",
+    ".trellis/tasks/04-27-affinity-system-mvp/implement.jsonl",
+    ".trellis/tasks/04-27-affinity-system-mvp/check.jsonl",
+    "backend/src/fablemap_api/core/affinity.py",
+    "backend/src/fablemap_api/infrastructure/models.py",
+    "backend/src/fablemap_api/infrastructure/mysql_store.py",
+    "backend/src/fablemap_api/core/prompt_builder.py",
+    "backend/src/fablemap_api/application/services/runtime.py",
+    "frontend/app/lib/taverns.ts",
+    "frontend/app/product/TavernContextPanel.jsx",
+    "frontend/app/product/TavernMemoryPanel.jsx",
+    "frontend/app/product/services/placeProtocol.js",
+    "frontend/app/product/services/orchestrator.js",
+    "docs/WORLD_SCHEMA.md",
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/frontend/index.md"
+  ],
+  "notes": "2026-04-27: Started affinity system MVP. Created prd.md with full requirements and research.md documenting existing implementation. Created affinity.py module with AffinityStage enum, AffinityCalculator, and AffinityPromptBuilder. Partially integrated affinity calculator into runtime.py _touch_visitor_state method. Implementation paused for task list review.",
+  "meta": {
+    "affinity_stages": [
+      "stranger",
+      "acquaintance",
+      "familiar",
+      "friend",
+      "close_friend",
+      "best_friend"
+    ],
+    "completion_boundary": {
+      "done": [
+        "prd.md: Created full requirements document",
+        "research.md: Documented existing implementation",
+        "affinity.py: Created with AffinityStage enum, AffinityCalculator, AffinityPromptBuilder",
+        "runtime.py: Partially integrated affinity calculator into _touch_visitor_state"
+      ],
+      "in_progress": [
+        "runtime.py: _update_affinity_from_chat method needs to be added",
+        "prompt_builder.py: Needs affinity prompt injection integration",
+        "frontend: Needs affinity UI components"
+      ],
+      "not_built": [
+        "API endpoint for affinity stages (/api/v1/affinity/stages)",
+        "Frontend AffinityBadge and AffinityProgress components",
+        "Frontend TavernContextPanel/TavernMemoryPanel integration",
+        "Backend tests for affinity calculation",
+        "WORLD_SCHEMA.md updates",
+        "Decay mechanism implementation"
+      ]
+    }
+  }
+}

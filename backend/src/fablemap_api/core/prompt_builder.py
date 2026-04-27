@@ -22,6 +22,7 @@ from .memory import format_memory_atoms_for_prompt
 from .prompt_blocks import normalize_prompt_blocks, truncate_to_budget
 from .world_info_injector import WorldInfoInjector, InjectionContext, MacroSubstitutor
 from .char_card_parser import ParsedCharacter
+from .time_context import build_time_context, build_time_context_prompt, build_closed_tavern_prompt, TimeContext
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,11 @@ class PromptBuildConfig:
     # Tavern info
     tavern_name: str = ""
     tavern_scene_prompt: str = ""
+    # Time context (optional, will be computed if not provided)
+    timezone: str | None = None
+    operating_hours: dict = field(default_factory=dict)
+    tavern_lat: float | None = None
+    tavern_lon: float | None = None
     # User info
     user_name: str = "旅人"
     user_persona: str = ""
@@ -77,6 +83,8 @@ class PromptBuildConfig:
     include_system_in_history: bool = False
     # Extra
     extra_macros: dict = field(default_factory=dict)
+    # Internal: computed time context (not exposed to caller)
+    _time_context: TimeContext | None = field(default=None, repr=False)
 
 
 # ─── Prompt Builder ──────────────────────────────────────────────────────────────
@@ -117,6 +125,22 @@ class PromptBuilder:
         self.config = config
         self.injector = WorldInfoInjector(config.world_info_entries)
         self.macro = MacroSubstitutor()
+
+        # 计算时间上下文
+        self._compute_time_context()
+
+    def _compute_time_context(self) -> None:
+        """计算时间上下文（如果配置了相关字段）"""
+        config = self.config
+        if config.timezone is not None or config.tavern_lat is not None:
+            if config.tavern_lat is not None and config.tavern_lon is not None:
+                ctx = build_time_context(
+                    lat=config.tavern_lat,
+                    lon=config.tavern_lon,
+                    timezone_str=config.timezone,
+                    operating_hours=config.operating_hours,
+                )
+                config._time_context = ctx
 
     def build(
         self,
@@ -171,6 +195,22 @@ class PromptBuilder:
                 "role": "system",
                 "content": sys_prompt,
             })
+
+        # ── Time Context ────────────────────────────────────────────────────
+        time_ctx = config._time_context
+        if time_ctx:
+            time_prompt = build_time_context_prompt(time_ctx)
+            result_messages.append({
+                "role": "system",
+                "content": f"【时间背景】\n{time_prompt}",
+            })
+            # 如果打烊，追加打烊提示
+            if time_ctx.is_closed:
+                closed_prompt = build_closed_tavern_prompt()
+                result_messages.append({
+                    "role": "system",
+                    "content": closed_prompt,
+                })
 
         # ── Layer 3: Character info ────────────────────────────────────────
         char_info_parts = [f"角色姓名：{config.char_name}"]
@@ -326,6 +366,21 @@ class PromptBuilder:
                 "role": "system",
                 "content": content,
             })
+
+        # ── Time Context ────────────────────────────────────────────────────
+        time_ctx = config._time_context
+        if time_ctx:
+            time_prompt = build_time_context_prompt(time_ctx)
+            result_messages.append({
+                "role": "system",
+                "content": f"【时间背景】\n{time_prompt}",
+            })
+            if time_ctx.is_closed:
+                closed_prompt = build_closed_tavern_prompt()
+                result_messages.append({
+                    "role": "system",
+                    "content": closed_prompt,
+                })
 
         history_msgs = self._format_history(messages)
         result_messages.extend(history_msgs)
@@ -572,6 +627,10 @@ def build_tavern_prompt(
     new_message: str,
     user_name: str = "旅人",
     config: PromptBuildConfig = None,
+    timezone: str | None = None,
+    operating_hours: dict | None = None,
+    tavern_lat: float | None = None,
+    tavern_lon: float | None = None,
 ) -> dict[str, Any]:
     """Convenience function to build a tavern chat prompt."""
     if config is None:
@@ -586,6 +645,15 @@ def build_tavern_prompt(
     config.char_system_prompt = character.get("system_prompt", "")
     config.user_name = user_name
     config.world_info_entries = world_info
+    # Time context
+    if timezone is not None:
+        config.timezone = timezone
+    if operating_hours is not None:
+        config.operating_hours = operating_hours
+    if tavern_lat is not None:
+        config.tavern_lat = tavern_lat
+    if tavern_lon is not None:
+        config.tavern_lon = tavern_lon
 
     builder = PromptBuilder(config)
     return builder.build(messages, new_message)

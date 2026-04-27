@@ -115,6 +115,10 @@ export function isDiscoverablePlaceType(value) {
 }
 
 export function derivePlaceType(tavern = {}) {
+  if (tavern && typeof tavern === "object" && "place_type" in tavern) {
+    return normalizePlaceTypeId(tavern.place_type)
+  }
+
   const text = tavernSearchText(tavern)
   if (!text) return "tavern"
 

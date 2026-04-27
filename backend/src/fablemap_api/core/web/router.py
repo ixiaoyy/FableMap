@@ -263,10 +263,10 @@ def create_api_router(service: WebService) -> APIRouter:
         return service.delete_tavern_payload(tavern_id, user_id)
 
     @router.post("/api/taverns/{tavern_id}/enter")
-    def enter_tavern(request: Request, tavern_id: str, password: str = "") -> dict:
+    def enter_tavern(request: Request, tavern_id: str, password: str = "", visitor_gender: str = "") -> dict:
         """Enter a tavern (verify password)"""
         user_id = _get_user_id(request)
-        return service.enter_tavern_payload(tavern_id, password, user_id)
+        return service.enter_tavern_payload(tavern_id, password, user_id, visitor_gender)
 
     @router.get("/api/taverns/{tavern_id}/visitors")
     def list_tavern_visitors(request: Request, tavern_id: str) -> dict:
@@ -422,6 +422,7 @@ def create_api_router(service: WebService) -> APIRouter:
         message: str = Body(...),
         visitor_id: str = Body(...),
         visitor_name: str = Body(""),
+        visitor_gender: str = Body(""),
         extra_context: list[dict] | None = Body(None),
         display_message: str = Body(""),
     ) -> dict:
@@ -434,6 +435,7 @@ def create_api_router(service: WebService) -> APIRouter:
             visitor_id,
             visitor_name,
             user_id,
+            visitor_gender=visitor_gender,
             extra_context=extra_context,
             display_message=display_message,
         )

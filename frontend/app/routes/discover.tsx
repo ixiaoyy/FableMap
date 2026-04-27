@@ -67,7 +67,7 @@ function tavernMatchesFilter(
   if (filters.search && !tavern.name.toLowerCase().includes(filters.search.toLowerCase())) {
     return false
   }
-  // Place type filter — derived from existing public Tavern fields, not a persisted schema field
+  // Place type filter — prefers persisted `place_type`, with legacy keyword fallback.
   if (filters.activePlaceTypes.size > 0) {
     const matches = Array.from(filters.activePlaceTypes).some((placeTypeId) =>
       placeTypeMatchesTavern(tavern, placeTypeId),

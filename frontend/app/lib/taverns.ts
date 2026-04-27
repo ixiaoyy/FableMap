@@ -3,13 +3,19 @@ import { jsonInit, readApiBlob, readApiJson } from "./api-client"
 export const DEFAULT_OWNER_ID = "owner-demo"
 export const DEFAULT_VISITOR_ID = "visitor-demo"
 
+export type Gender = "unspecified" | "female" | "male" | "nonbinary" | "other"
+
 export type TavernCharacter = {
   id: string
   name: string
   description?: string
   personality?: string
   scenario?: string
+  gender?: Gender | string
+  system_prompt?: string
   first_mes?: string
+  mes_example?: string
+  alternate_greetings?: string[]
   avatar?: string
   image_url?: string
   sprites?: Record<string, string>
@@ -21,6 +27,15 @@ export type TavernCharacter = {
 export type RoleplayMode = "ai_only" | "hybrid"
 
 export type TavernLayoutStyle = "lobby" | "npc-chat" | "quest-play" | "hybrid-room"
+export type PlaceType =
+  | "tavern"
+  | "cafe"
+  | "milk-tea-shop"
+  | "restaurant"
+  | "convenience-store"
+  | "bookstore"
+  | "school"
+  | "home"
 
 export type RoleplayClaimStatus = "pending" | "approved" | "rejected" | "revoked"
 
@@ -33,6 +48,80 @@ export type RoleplayClaim = {
   requested_at?: string
   decided_at?: string
   note?: string
+}
+
+export type HomeMemberType = "conversational_character" | "silent_member" | "display_object"
+export type HomeMemberSpeechMode = "character" | "silent" | "display"
+
+export type HomeMember = {
+  id: string
+  home_id?: string
+  name: string
+  display_name?: string
+  member_type: HomeMemberType | string
+  speech_mode: HomeMemberSpeechMode | string
+  description?: string
+  avatar?: string
+  character_id?: string
+  created_at?: string
+}
+
+export type PlaceRelationshipStatus = "pending" | "approved" | "rejected" | "revoked"
+export type PlaceRelationshipType =
+  | "school_enrollment"
+  | "care_link"
+  | "membership"
+  | "work_affiliation"
+  | "story_link"
+
+export type PlaceRelationship = {
+  id: string
+  relation_type: PlaceRelationshipType | string
+  source_tavern_id: string
+  source_member_id: string
+  target_tavern_id: string
+  status: PlaceRelationshipStatus | string
+  display_name?: string
+  visibility?: string
+  source_role?: string
+  target_role?: string
+  requested_by?: string
+  decided_by?: string
+  created_at?: string
+  decided_at?: string
+  note?: string
+}
+
+export type SchoolMemberSummary = {
+  relationship_id: string
+  home_tavern_id: string
+  member_id: string
+  display_name: string
+  member_type: HomeMemberType | string
+  speech_mode?: HomeMemberSpeechMode | string
+  avatar?: string
+}
+
+// Time context types
+export type OperatingHoursMode = "always_open" | "scheduled"
+
+export type OperatingHours =
+  | { mode: "always_open" }
+  | {
+      mode: "scheduled"
+      open_at: string // "HH:MM" format
+      close_at: string // "HH:MM" format, can be > 24 for next-day (e.g., "26:00" = 2:00 next day)
+      enabled_days: number[] // 0=Monday, 6=Sunday
+    }
+
+export type TavernTimeStatus = {
+  timezone: string // IANA timezone e.g., "Asia/Shanghai"
+  local_time_display: string // e.g., "22:47"
+  is_open: boolean
+  local_date?: string // e.g., "2026-04-27"
+  local_season?: string // e.g., "春季"
+  local_day_of_week?: string // e.g., "周一"
+  local_hour?: number
 }
 
 export type Tavern = {
@@ -48,11 +137,25 @@ export type Tavern = {
   scene_prompt?: string
   roleplay_mode?: RoleplayMode | string
   layout_style?: TavernLayoutStyle | string
+  place_type?: PlaceType | string
   character_claims?: RoleplayClaim[]
   visit_count?: number
   characters?: TavernCharacter[]
   world_info?: unknown[]
   gameplay_definitions?: unknown[]
+  home_members?: HomeMember[]
+  place_relationships?: PlaceRelationship[]
+  school_members?: SchoolMemberSummary[]
+  pending_school_enrollments?: PlaceRelationship[]
+  target_place_relationships?: PlaceRelationship[]
+  pending_place_relationships?: PlaceRelationship[]
+  // Time system fields
+  timezone?: string
+  operating_hours?: OperatingHours
+  // Computed time context (returned by API)
+  time_status?: TavernTimeStatus
+  is_open?: boolean
+  local_time_display?: string
 }
 
 export type TavernListResponse = {
@@ -101,6 +204,7 @@ export type ChatMessage = {
   character_id?: string
   visitor_id?: string
   visitor_name?: string
+  visitor_gender?: Gender | string
   timestamp?: string
 }
 
@@ -113,6 +217,7 @@ export type VisitorRelationshipPayload = {
 export type VisitorStatePayload = {
   visitor_id?: string
   tavern_id?: string
+  gender?: Gender | string
   visit_count?: number
   first_visit?: string | null
   last_visit?: string | null
@@ -276,6 +381,7 @@ export type RuntimePresetsResponse = {
 export type TavernVisitor = {
   visitor_id: string
   tavern_id: string
+  gender?: Gender | string
   visit_count: number
   first_visit?: string | null
   last_visit?: string | null
@@ -318,6 +424,7 @@ export type ParsedCharacterCard = {
   description?: string
   personality?: string
   scenario?: string
+  gender?: Gender | string
   system_prompt?: string
   first_mes?: string
   mes_example?: string
@@ -326,6 +433,25 @@ export type ParsedCharacterCard = {
   sprites?: Record<string, string>
   world_info?: Record<string, unknown>[]
   source_format?: string
+}
+
+export type CharacterDraftRequest = {
+  style_tags?: string[]
+  forbidden?: string[]
+  tone?: string
+}
+
+export type CharacterDraftPreview = Pick<
+  TavernCharacter,
+  "name" | "description" | "personality" | "scenario" | "system_prompt" | "first_mes" | "mes_example" | "tags"
+>
+
+export type CharacterDraftResponse = {
+  ok: boolean
+  tavern_id: string
+  status: "ai_draft" | string
+  draft: CharacterDraftPreview
+  warnings: string[]
 }
 
 export type WorldInfoEntry = Record<string, unknown> & {
@@ -395,10 +521,15 @@ export function getTavernShare(tavernId: string, userId = "") {
   return readApiJson<TavernSharePayload>(`/api/v1/taverns/${encodeURIComponent(tavernId)}/share`, { userId })
 }
 
-export function enterTavern(tavernId: string, password = "", userId = DEFAULT_VISITOR_ID) {
+export function enterTavern(
+  tavernId: string,
+  password = "",
+  userId = DEFAULT_VISITOR_ID,
+  visitorGender: Gender | string = "",
+) {
   return readApiJson<{ ok: boolean; first_mes?: string; visitor_state?: VisitorStatePayload | null }>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/enter`,
-    jsonInit("POST", { password }, userId),
+    jsonInit("POST", { password, visitor_gender: visitorGender }, userId),
   )
 }
 
@@ -472,6 +603,73 @@ export function listTavernVisitors(tavernId: string, userId = DEFAULT_OWNER_ID) 
 export function addCharacter(tavernId: string, data: Partial<TavernCharacter>, userId = DEFAULT_OWNER_ID) {
   return readApiJson<TavernCharacter>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/characters`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function addHomeMember(tavernId: string, data: Partial<HomeMember>, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ ok: boolean; tavern_id: string; member: HomeMember; members: HomeMember[] }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/home-members`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function createSchoolEnrollment(
+  tavernId: string,
+  data: { member_id: string; school_tavern_id: string; display_name?: string; note?: string },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; relationship: PlaceRelationship }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationships/school-enrollments`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function createPlaceRelationship(
+  tavernId: string,
+  data: {
+    member_id: string
+    target_tavern_id: string
+    relation_type: PlaceRelationshipType | string
+    display_name?: string
+    source_role?: string
+    target_role?: string
+    note?: string
+  },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; relationship: PlaceRelationship }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationships`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function decidePlaceRelationship(
+  tavernId: string,
+  relationshipId: string,
+  data: { status: PlaceRelationshipStatus | string; note?: string },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; relationship: PlaceRelationship }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationships/${encodeURIComponent(relationshipId)}`,
+    jsonInit("PUT", data, userId),
+  )
+}
+
+export function listSchoolMembers(tavernId: string, userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<{ tavern_id: string; members: SchoolMemberSummary[]; count: number }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/school-members`,
+    { userId },
+  )
+}
+
+export function generateCharacterDraft(
+  tavernId: string,
+  data: CharacterDraftRequest,
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<CharacterDraftResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/characters/ai-draft`,
     jsonInit("POST", data, userId),
   )
 }
@@ -556,6 +754,7 @@ export function sendTavernChat(
     message: string
     visitor_id: string
     visitor_name?: string
+    visitor_gender?: Gender | string
   },
 ) {
   return readApiJson<ChatResponse>(
@@ -596,7 +795,7 @@ export function saveGroupChatConfig(
 
 export function sendGroupChat(
   tavernId: string,
-  data: { message: string; visitor_id: string; visitor_name?: string; display_message?: string },
+  data: { message: string; visitor_id: string; visitor_name?: string; visitor_gender?: Gender | string; display_message?: string },
 ) {
   return readApiJson<GroupChatResponse>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/group-chat`,

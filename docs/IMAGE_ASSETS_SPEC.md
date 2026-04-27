@@ -1,8 +1,18 @@
-# FableMap 图片资源规范 v1.1
+# FableMap 图片资源规范 v1.2
 
 ## 概述
 
 本文档定义 FableMap 项目所需的 AI 生成图片资源的规格、存放位置和命名规范。
+
+---
+
+## AI 生成图片落盘总规则
+
+- 任何用于代码、默认 seed、文档验收或前端展示的 AI 生成图片，必须复制/转换到本仓库内的规范路径后才算完成。
+- `.codex/generated_images`、系统临时目录、浏览器下载目录和聊天预览只算生成来源，不算项目资源目录。
+- 替换既有图片时，必须覆盖实际被代码/文档引用的项目文件；如果只是生成了新图但引用路径仍指向旧图，视为未替换。
+- 允许保留废稿或参考图，但必须放入 `artifacts/` / 设计参考目录，或在交付说明里明确标记为“未采用/参考-only”。
+- 图片类任务完成前，要核对本轮 `.codex/generated_images` 输出与项目目标路径的对应关系；必要时用 hash、尺寸、修改时间或源→目标映射证明已落盘。
 
 ---
 
@@ -53,6 +63,21 @@ frontend/app/assets/npc-style-cast/portraits/
 ├── spirit-a.png
 └── spirit-b.png
 ```
+
+#### 默认公益 NPC 专属素材
+
+`AI 草稿` 示例角色「眯眯喵桑」属于已批准默认 demo seed，专属头像 / 表情素材作为公开 URL 存放在：
+
+```
+frontend/public/assets/npcs/
+├── mimi-nya-neutral.png
+├── mimi-nya-joy.png
+├── mimi-nya-anger.png
+├── mimi-nya-embarrassment.png
+└── mimi-nya-curiosity.png
+```
+
+这些文件由 `backend/src/fablemap_api/core/default_taverns.py` 的默认角色 `avatar` / `sprites` 引用；它们不是通用 fallback，也不会被写回其他店主角色。
 
 #### 加载逻辑
 

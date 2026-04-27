@@ -4,24 +4,31 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useLoaderData } from "react-router"
 
 import { TavernLayoutShowcase } from "../features/tavern-layout-showcase"
-import { buildCreatorConversionLink } from "../lib/creator-conversion.js"
+import { buildCreatorConversionLink, buildCreatorProfileLink } from "../lib/creator-conversion.js"
 import { buildTavernShareDisplay, buildTavernSharePayload } from "../lib/tavern-share.js"
 import {
+  addHomeMember,
+  createPlaceRelationship,
+  createSchoolEnrollment,
   DEFAULT_OWNER_ID,
   DEFAULT_VISITOR_ID,
   decideRoleplayClaim,
+  decidePlaceRelationship,
   errorMessage,
   getRoleplayState,
   getTavern,
   getTavernShare,
   requestRoleplayClaim,
   saveRoleplayConfig,
+  type HomeMember,
+  type PlaceRelationship,
   type RoleplayClaim,
   type RoleplayState,
   type Tavern,
   type TavernCharacter,
   type TavernSharePayload,
 } from "../lib/taverns"
+import { PLACE_RELATIONSHIP_TYPES, normalizePlaceRelationshipDraft } from "../lib/place-home.js"
 import { ProductShell } from "../shell/product-shell"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
@@ -39,7 +46,12 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs): Promis
     return { tavernId, tavern: null, roleplay: null, error: "缺少酒馆 ID" }
   }
   try {
-    const tavern = await getTavern(tavernId, DEFAULT_VISITOR_ID)
+    let tavern: Tavern
+    try {
+      tavern = await getTavern(tavernId, DEFAULT_VISITOR_ID)
+    } catch {
+      tavern = await getTavern(tavernId, DEFAULT_OWNER_ID)
+    }
     let roleplay: RoleplayState | null = null
     try {
       roleplay = await getRoleplayState(tavernId, DEFAULT_VISITOR_ID)
@@ -282,6 +294,11 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
         <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
           <p className="text-sm font-bold text-white">{sharePayload.title}</p>
           <p className="mt-2 text-sm leading-6 text-violet-50/70">{sharePayload.summary}</p>
+          {sharePayload.characters ? (
+            <p className="mt-2 text-sm font-bold text-cyan-100">
+              <span className="text-violet-100/55">NPC：</span>{sharePayload.characters}
+            </p>
+          ) : null}
           <p className="mt-3 break-all rounded-2xl bg-slate-950/45 px-3 py-2 text-xs text-cyan-100">
             {sharePayload.url}
           </p>
@@ -321,6 +338,215 @@ function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PlaceHomePanel({ tavern }: { tavern: Tavern }) {
+  const [ownerId, setOwnerId] = useState(tavern.owner_id || DEFAULT_OWNER_ID)
+  const [memberName, setMemberName] = useState("")
+  const [memberType, setMemberType] = useState("silent_member")
+  const [memberDescription, setMemberDescription] = useState("")
+  const [members, setMembers] = useState<HomeMember[]>(tavern.home_members || [])
+  const [selectedMemberId, setSelectedMemberId] = useState((tavern.home_members || [])[0]?.id || "")
+  const [targetTavernId, setTargetTavernId] = useState("")
+  const [relationType, setRelationType] = useState("school_enrollment")
+  const [pendingRelationships, setPendingRelationships] = useState<PlaceRelationship[]>(tavern.pending_place_relationships || tavern.pending_school_enrollments || [])
+  const [schoolMembers, setSchoolMembers] = useState(tavern.school_members || [])
+  const [busy, setBusy] = useState("")
+  const [message, setMessage] = useState("")
+  const isHome = tavern.place_type === "home"
+  const isSchool = tavern.place_type === "school"
+  const hasTargetRelationships = Boolean((tavern.target_place_relationships || tavern.pending_place_relationships || []).length)
+
+  async function handleAddMember() {
+    setBusy("member")
+    setMessage("")
+    try {
+      const payload = await addHomeMember(
+        tavern.id,
+        { name: memberName, display_name: memberName, member_type: memberType, description: memberDescription },
+        ownerId,
+      )
+      setMembers(payload.members || [])
+      setSelectedMemberId(payload.member?.id || selectedMemberId)
+      setMemberName("")
+      setMemberDescription("")
+      setMessage("家庭成员已保存；非对话成员会保持沉默。")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  async function handleCreateRelationship() {
+    setBusy("enroll")
+    setMessage("")
+    try {
+      const draft = normalizePlaceRelationshipDraft({
+        member_id: selectedMemberId,
+        target_tavern_id: targetTavernId,
+        relation_type: relationType,
+      })
+      const payload = relationType === "school_enrollment" ? await createSchoolEnrollment(
+        tavern.id,
+        { member_id: selectedMemberId, school_tavern_id: draft.target_tavern_id },
+        ownerId,
+      ) : await createPlaceRelationship(
+        tavern.id,
+        draft,
+        ownerId,
+      )
+      setMessage(payload.relationship.status === "approved" ? "同主人地点关系已同步。" : "已提交目标地点审批，批准前不会公开展示。")
+      setTargetTavernId("")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  async function handleDecision(relationship: PlaceRelationship, status: "approved" | "rejected") {
+    setBusy(relationship.id)
+    setMessage("")
+    try {
+      const payload = await decidePlaceRelationship(tavern.id, relationship.id, { status }, ownerId)
+      setPendingRelationships((current) => current.filter((item) => item.id !== relationship.id))
+      if (payload.relationship.status === "approved" && payload.relationship.relation_type === "school_enrollment") {
+        setSchoolMembers((current) => [
+          ...current,
+          {
+            relationship_id: payload.relationship.id,
+            home_tavern_id: payload.relationship.source_tavern_id,
+            member_id: payload.relationship.source_member_id,
+            display_name: payload.relationship.display_name || payload.relationship.source_member_id,
+            member_type: "silent_member",
+          },
+        ])
+      }
+      setMessage(status === "approved" ? "已批准入学关系。" : "已拒绝入学关系。")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  if (!isHome && !isSchool && !hasTargetRelationships) return null
+
+  return (
+    <Card className="mt-6 min-w-0 overflow-hidden border-cyan-300/18 bg-cyan-300/8">
+      <CardHeader>
+        <CardTitle>{isHome ? "Home 成员与地点关系" : isSchool ? "学校成员审批" : "地点关系审批"}</CardTitle>
+        <CardDescription className="mt-2">
+          {isHome
+            ? "Home 是受控真实坐标空间。家庭成员默认不对话；学生-学校只是关系类型之一，送往其他地点也会先生成审批关系。"
+            : isSchool
+              ? "学校只展示已批准的成员摘要；跨主人入学必须由学校主人批准。"
+              : "目标地点只处理 owner 可见的待审批关系；这不是好友、私信或公开社交图谱。"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <label className="space-y-1.5 text-sm">
+          <span className="text-violet-100/65">Owner ID</span>
+          <input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+        </label>
+
+        {isHome ? (
+          <>
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="space-y-1.5 text-sm">
+                <span className="text-violet-100/65">成员名称</span>
+                <input value={memberName} onChange={(event) => setMemberName(event.target.value)} placeholder="小石头 / 孩子 / 宠物 / 纪念物" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="text-violet-100/65">成员类型</span>
+                <select value={memberType} onChange={(event) => setMemberType(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-300/60">
+                  <option value="silent_member">silent_member</option>
+                  <option value="display_object">display_object</option>
+                  <option value="conversational_character">conversational_character</option>
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm md:col-span-2">
+                <span className="text-violet-100/65">描述</span>
+                <input value={memberDescription} onChange={(event) => setMemberDescription(event.target.value)} placeholder="主人确认的展示描述，不自动生成人格。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+              </label>
+              <Button type="button" disabled={!memberName.trim() || busy === "member"} className="md:col-span-2" onClick={handleAddMember}>
+                添加 Home 成员
+              </Button>
+            </div>
+
+            <div className="grid gap-2">
+              {members.length ? members.map((member) => (
+                <div key={member.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm text-violet-50/72">
+                  <span className="font-bold text-white">{member.display_name || member.name}</span>
+                  <span className="ml-2 text-xs text-violet-100/50">{member.member_type} · {member.speech_mode}</span>
+                </div>
+              )) : (
+                <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm text-violet-100/62">还没有 Home 成员。</p>
+              )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="space-y-1.5 text-sm">
+                <span className="text-violet-100/65">送去学校的成员</span>
+                <select value={selectedMemberId} onChange={(event) => setSelectedMemberId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-300/60">
+                  {members.map((member) => (
+                    <option key={member.id} value={member.id}>{member.display_name || member.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="text-violet-100/65">关系类型</span>
+                <select value={relationType} onChange={(event) => setRelationType(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-300/60">
+                  {PLACE_RELATIONSHIP_TYPES.map((type) => (
+                    <option key={type.id} value={type.id}>{type.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm md:col-span-2">
+                <span className="text-violet-100/65">目标地点 Tavern ID</span>
+                <input value={targetTavernId} onChange={(event) => setTargetTavernId(event.target.value)} placeholder="tavern_xxx" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+              </label>
+              <Button type="button" disabled={!selectedMemberId || !targetTavernId.trim() || busy === "enroll"} className="md:col-span-2" onClick={handleCreateRelationship}>
+                创建地点关系
+              </Button>
+            </div>
+          </>
+        ) : null}
+
+        {isSchool || hasTargetRelationships ? (
+          <>
+            <div className="grid gap-2">
+              <p className="text-sm font-black text-white">已批准成员 ({schoolMembers.length})</p>
+              {schoolMembers.length ? schoolMembers.map((member) => (
+                <div key={member.relationship_id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm text-violet-50/72">
+                  <span className="font-bold text-white">{member.display_name}</span>
+                  <span className="ml-2 text-xs text-violet-100/50">{member.member_type}</span>
+                </div>
+              )) : <p className="text-sm text-violet-100/55">暂无已批准成员。</p>}
+            </div>
+            <div className="grid gap-2">
+              <p className="text-sm font-black text-white">待审批 ({pendingRelationships.length})</p>
+              {pendingRelationships.map((relationship) => (
+                <div key={relationship.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-bold text-white">{relationship.display_name || relationship.source_member_id}</p>
+                    <p className="text-xs text-violet-100/50">{relationship.relation_type} · {relationship.source_tavern_id} → {relationship.target_tavern_id}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" disabled={busy === relationship.id} onClick={() => handleDecision(relationship, "approved")}>批准</Button>
+                    <Button type="button" size="sm" variant="secondary" disabled={busy === relationship.id} onClick={() => handleDecision(relationship, "rejected")}>拒绝</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        {message ? <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{message}</p> : null}
       </CardContent>
     </Card>
   )
@@ -370,6 +596,8 @@ export default function TavernRoute() {
           </div>
         </details>
       ) : null}
+
+      {tavern ? <PlaceHomePanel tavern={tavern} /> : null}
     </ProductShell>
   )
 }
