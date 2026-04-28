@@ -257,10 +257,11 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         assert "静安寺" in tavern["address"]
         assert 31.20 < tavern["lat"] < 31.24
         assert 121.43 < tavern["lon"] < 121.46
-        assert len(tavern["characters"]) == 1
-        assert len(tavern["world_info"]) >= 4
+        assert len(tavern["characters"]) == 2
+        assert len(tavern["world_info"]) >= 5
 
-        mimi = tavern["characters"][0]
+        characters_by_id = {character["id"]: character for character in tavern["characters"]}
+        mimi = characters_by_id["char_pw_mimi_nya"]
         assert mimi["id"] == "char_pw_mimi_nya"
         assert mimi["name"] == "眯眯喵桑"
         assert mimi["tavern_id"] == "pw_jingan_catbell_refuge"
@@ -280,6 +281,25 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
             assert mimi[field]
         assert {"公益", "猫娘", "傲娇", "上海", "静安寺", "复国"}.issubset(set(mimi["tags"]))
 
+        yinpiao = characters_by_id["char_pw_yinpiao"]
+        assert yinpiao["name"] == "银票"
+        assert yinpiao["tavern_id"] == "pw_jingan_catbell_refuge"
+        assert yinpiao["avatar"] == "/assets/npcs/char_pw_yinpiao-neutral.png"
+        assert yinpiao["sprites"]["neutral"] == "/assets/npcs/char_pw_yinpiao-neutral.png"
+        assert yinpiao["sprites"]["happy"] == "/assets/npcs/char_pw_yinpiao-joy.png"
+        assert yinpiao["sprites"]["joy"] == "/assets/npcs/char_pw_yinpiao-joy.png"
+        assert yinpiao["sprites"]["angry"] == "/assets/npcs/char_pw_yinpiao-anger.png"
+        assert yinpiao["sprites"]["anger"] == "/assets/npcs/char_pw_yinpiao-anger.png"
+        assert yinpiao["sprites"]["shy"] == "/assets/npcs/char_pw_yinpiao-embarrassment.png"
+        assert yinpiao["sprites"]["embarrassment"] == "/assets/npcs/char_pw_yinpiao-embarrassment.png"
+        assert yinpiao["sprites"]["curious"] == "/assets/npcs/char_pw_yinpiao-curiosity.png"
+        assert yinpiao["sprites"]["curiosity"] == "/assets/npcs/char_pw_yinpiao-curiosity.png"
+        for sprite_url in {yinpiao["avatar"], *yinpiao["sprites"].values()}:
+            _assert_project_png_asset(sprite_url)
+        for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
+            assert yinpiao[field]
+        assert {"公益", "猫尾", "账房", "上海", "静安寺", "复国"}.issubset(set(yinpiao["tags"]))
+
         combined_prompt = " ".join(
             [
                 tavern["description"],
@@ -290,10 +310,18 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
                 mimi["system_prompt"],
                 mimi["first_mes"],
                 mimi["mes_example"],
+                yinpiao["description"],
+                yinpiao["personality"],
+                yinpiao["scenario"],
+                yinpiao["system_prompt"],
+                yinpiao["first_mes"],
+                yinpiao["mes_example"],
                 " ".join(entry["content"] for entry in tavern["world_info"]),
             ]
         )
         for keyword in ("猫娘", "傲娇", "猫亚人", "复国", "静安", "AI 草稿"):
+            assert keyword in combined_prompt
+        for keyword in ("银票", "账房", "鱼干预算", "回访暗号"):
             assert keyword in combined_prompt
         for forbidden in ("忽略限制", "用户就是上帝", "湖北省恩施", "碧桂园", "强制", "性需求"):
             assert forbidden not in combined_prompt
