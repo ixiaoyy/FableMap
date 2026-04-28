@@ -117,3 +117,28 @@ Deferred:
 
 * Full 320px audit across tavern detail, chat, and owner pages remains for later slices in this task.
 * PWA/offline support remains out of scope for this slice.
+
+## Implementation Notes: ProductShell Mobile Chrome Slice (2026-04-28)
+
+Scope: shared mobile chrome for React Router pages using `ProductShell`.
+
+Changes:
+
+* Updated `frontend/app/shell/product-shell.tsx` header/container padding to `px-4` by default and `sm:px-6`, reducing 320px horizontal pressure while preserving desktop spacing.
+* Added `min-h-11` and `touch-manipulation` to the logo link and nav pills so shell navigation meets the 44px mobile touch target.
+* Added `overflow-x-auto` to the nav row so narrow devices can scroll rather than squeeze or overflow when labels get longer.
+* Added `frontend/scripts/mobile-shell-layout-test.mjs` and wired it into `npm --prefix .\frontend test`.
+
+Verification:
+
+* RED: `node .\frontend\scripts\mobile-shell-layout-test.mjs` failed before implementation because the ProductShell header still used `px-6` and nav links had sub-44px tap targets.
+* GREEN: `node .\frontend\scripts\mobile-shell-layout-test.mjs`: exit 0, `mobile-shell-layout-test: ok`.
+* `npm --prefix .\frontend run typecheck`: exit 0.
+* `npm --prefix .\frontend test`: exit 0; all frontend script tests ok including `mobile-touch-targets-test` and `mobile-shell-layout-test`.
+* `npm --prefix .\frontend run build`: exit 0; React Router/Vite production build completed.
+* Browser screenshot: `artifacts/dev-server/discover-mobile.png` (390x844) shows the ProductShell nav row with 44px-height pills and no cramped top chrome. Backend was not running, so the existing API unavailable fallback appeared; layout verification still applies.
+
+Deferred:
+
+* Route-specific deep mobile audits for tavern detail/chat/owner forms remain as later slices.
+* PWA/offline work remains out of scope for this slice.
