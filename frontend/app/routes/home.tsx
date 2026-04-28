@@ -1,9 +1,6 @@
 import {
   ArrowRight,
-  Bot,
   Brain,
-  Compass,
-  Crown,
   KeyRound,
   LockKeyhole,
   MapPinned,
@@ -12,18 +9,17 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
-  Store,
   UsersRound,
   type LucideIcon,
 } from "lucide-react"
 import { Link } from "react-router"
 
-import heroBannerImage from "../assets/homepage-reference/modules/hero-banner.png"
+import discoverCozyShopImage from "../assets/discover-reference/discover-cover-cozy-shop.png"
+import discoverNeonAlleyImage from "../assets/discover-reference/discover-cover-neon-alley.png"
+import discoverQuietSanctuaryImage from "../assets/discover-reference/discover-cover-quiet-sanctuary.png"
+import discoverRadarSurfaceImage from "../assets/discover-reference/discover-radar-surface.png"
 import memoryModuleImage from "../assets/homepage-reference/modules/memory-module.png"
 import npcDialogueImage from "../assets/homepage-reference/modules/npc-dialogue.png"
-import tavernNeonImage from "../assets/homepage-reference/modules/tavern-neon.png"
-import tavernNightImage from "../assets/homepage-reference/modules/tavern-night.png"
-import tavernStreetImage from "../assets/homepage-reference/modules/tavern-street.png"
 import guardianPortrait from "../assets/npc-style-cast/portraits/guardian-a.png"
 import merchantPortrait from "../assets/npc-style-cast/portraits/merchant-a.png"
 import scholarPortrait from "../assets/npc-style-cast/portraits/scholar-a.png"
@@ -36,7 +32,7 @@ type Metric = {
   value: string
 }
 
-type TavernPreview = {
+type CitySlicePreview = {
   image: string
   name: string
   location: string
@@ -52,30 +48,30 @@ type Feature = {
 }
 
 const navItems = [
-  { to: "/discover", label: "发现" },
-  { to: "/discover", label: "酒馆" },
-  { to: "/discover", label: "NPC" },
+  { to: "/discover", label: "探索" },
+  { to: "/discover", label: "区域" },
+  { to: "/discover", label: "角色" },
   { to: "/discover", label: "记忆" },
-  { to: "/create", label: "开店" },
+  { to: "/create", label: "创建空间" },
 ]
 
 const metrics: Metric[] = [
-  { icon: Store, value: "1,248+", label: "酒馆收录" },
-  { icon: UsersRound, value: "356+", label: "AI NPC" },
-  { icon: MessageCircle, value: "28,690+", label: "访客对话" },
-  { icon: Star, value: "4.9", label: "社区评分" },
+  { icon: MapPinned, value: "1,248+", label: "发光坐标" },
+  { icon: UsersRound, value: "356+", label: "AI 角色" },
+  { icon: MessageCircle, value: "28,690+", label: "相遇记录" },
+  { icon: Star, value: "4.9", label: "回访期待" },
 ]
 
-const taverns: TavernPreview[] = [
-  { image: tavernNightImage, name: "夜莺酒馆", location: "成都 · 宽窄巷子", distance: "320m", tags: ["免费开放", "剧情丰富"], id: "pw_lantern_helpdesk" },
-  { image: tavernNeonImage, name: "雾红驿站", location: "重庆 · 九街", distance: "1.2km", tags: ["赛博风格", "夜生活"], id: "pw_third_shelf_observatory" },
-  { image: tavernStreetImage, name: "黑猫公社", location: "广州 · 永庆坊", distance: "2.1km", tags: ["社区温度", "NPC 多"], id: "pw_community_repair" },
+const citySlices: CitySlicePreview[] = [
+  { image: discoverCozyShopImage, name: "夜莺门牌", location: "成都 · 宽窄巷子", distance: "320m", tags: ["可进入", "记忆回响"], id: "pw_lantern_helpdesk" },
+  { image: discoverNeonAlleyImage, name: "雾红坐标", location: "重庆 · 九街", distance: "1.2km", tags: ["霓虹深夜", "角色在线"], id: "pw_third_shelf_observatory" },
+  { image: discoverQuietSanctuaryImage, name: "黑猫区域", location: "广州 · 永庆坊", distance: "2.1km", tags: ["社区温度", "等待探索"], id: "pw_community_repair" },
 ]
 
 const features: Feature[] = [
-  { icon: MapPinned, title: "真实地点锚定", text: "每间酒馆绑定真实坐标，而不是漂浮空间。" },
-  { icon: Crown, title: "店主主权", text: "内容、角色、访问规则由店主决定。" },
-  { icon: ShieldCheck, title: "隐私边界", text: "API Key、访问权限与记忆数据分层隔离。" },
+  { icon: MapPinned, title: "真实坐标", text: "每个入口都落在现实地图上，而不是漂浮空间。" },
+  { icon: Brain, title: "记忆回响", text: "角色和区域会保留回访上下文，让相遇不只是一次性对话。" },
+  { icon: ShieldCheck, title: "主人边界", text: "内容、访问和记忆权限由空间主人控制，平台不越权发布。" },
 ]
 
 const portraits = [merchantPortrait, scholarPortrait, spiritPortrait, guardianPortrait]
@@ -90,7 +86,7 @@ function HomeNav() {
           </span>
           <div>
             <p className="font-black tracking-wide text-white">FableMap</p>
-            <p className="text-xs text-violet-100/45">Cyber taverns on real places</p>
+            <p className="text-xs text-violet-100/45">Cyber life on real coordinates</p>
           </div>
         </Link>
 
@@ -107,11 +103,11 @@ function HomeNav() {
             className="flex min-w-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-4 py-2.5 text-sm text-violet-100/55 transition hover:border-cyan-300/35 hover:text-cyan-100 md:w-72"
           >
             <Search className="h-4 w-4 shrink-0" />
-            <span className="truncate">搜索附近门牌、NPC、记忆线索</span>
+            <span className="truncate">搜索附近坐标、角色、记忆线索</span>
           </Link>
           <div className="flex gap-2">
             <Button asChild variant="ghost" size="sm">
-              <Link to="/owner">店主入口</Link>
+              <Link to="/owner">主人入口</Link>
             </Button>
             <Button asChild size="sm">
               <Link to="/discover">开始探索</Link>
@@ -125,15 +121,15 @@ function HomeNav() {
 
 function MetricCard({ icon: Icon, value, label }: Metric) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-5">
-      <Icon className="mb-4 h-6 w-6 text-cyan-200" />
+    <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+      <Icon className="mb-3 h-5 w-5 text-cyan-200" />
       <p className="text-2xl font-black text-white">{value}</p>
       <p className="mt-1 text-sm text-violet-100/58">{label}</p>
     </div>
   )
 }
 
-function TavernPreviewCard({ image, name, location, distance, tags, id }: TavernPreview) {
+function CitySlicePreviewCard({ image, name, location, distance, tags, id }: CitySlicePreview) {
   return (
     <Link
       to={`/tavern/${id}`}
@@ -142,7 +138,7 @@ function TavernPreviewCard({ image, name, location, distance, tags, id }: Tavern
       <div className="relative h-64 overflow-hidden lg:h-72">
         <img
           src={image}
-          alt={`${name} 模块封面`}
+          alt={`${name} 区域封面`}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
           loading="lazy"
           decoding="async"
@@ -182,32 +178,33 @@ function FeatureItem({ icon: Icon, title, text }: Feature) {
   )
 }
 
-function ProductPreview() {
+function HeroPosterPreview() {
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.6fr_0.7fr]">
-      <div className="relative min-h-[520px] overflow-hidden rounded-2xl border border-cyan-300/18 bg-slate-950/78 lg:min-h-[600px]">
-        <img src={heroBannerImage} alt="霓虹赛博酒馆预览" className="absolute inset-0 h-full w-full object-cover" decoding="async" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_38%,rgba(0,214,201,0.24),transparent_11rem),linear-gradient(90deg,rgba(5,6,21,0.66),rgba(5,6,21,0.05))]" />
-        <div className="absolute left-5 top-5 rounded-2xl border border-fuchsia-300/22 bg-fuchsia-300/10 px-4 py-2 text-sm font-black text-fuchsia-100 backdrop-blur-md">
-          夜莺酒馆 · OPEN
-        </div>
-        <div className="absolute bottom-6 left-6 max-w-sm rounded-2xl border border-cyan-300/22 bg-slate-950/64 p-5 backdrop-blur-md">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/80">店主 · 雾</p>
-          <p className="mt-3 text-sm leading-6 text-violet-100/78">又见面了，旅人。上次你说的故事，我还记得。</p>
-        </div>
+    <div className="relative min-h-[420px] overflow-hidden rounded-[1.75rem] border border-cyan-300/24 bg-slate-950 shadow-[0_26px_80px_rgba(0,0,0,0.48),0_0_100px_rgba(6,182,212,0.12)] lg:min-h-[500px]">
+      <img
+        src={discoverRadarSurfaceImage}
+        alt="FableMap 真实坐标雷达视觉"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+        decoding="async"
+      />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_53%_51%,rgba(0,229,255,0.16),transparent_16rem),linear-gradient(90deg,rgba(3,5,18,0.82),rgba(3,5,18,0.24)_48%,rgba(3,5,18,0.62))]" />
+      <div className="absolute inset-4 rounded-[1.35rem] border border-cyan-200/18 bg-[linear-gradient(90deg,rgba(125,249,255,0.07)_1px,transparent_1px),linear-gradient(0deg,rgba(125,249,255,0.05)_1px,transparent_1px)] bg-[size:42px_42px]" />
+      <div className="absolute left-4 top-4 rounded-full border border-cyan-300/36 bg-cyan-300/12 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-cyan-100 backdrop-blur-md">
+        Signal detected
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-        {taverns.map((tavern) => (
-          <Link key={tavern.name} to={`/tavern/${tavern.id}`} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] transition hover:border-cyan-300/45">
-            <img src={tavern.image} alt="" className="h-32 w-full object-cover sm:h-36 lg:h-40" loading="lazy" decoding="async" />
-            <div className="p-4">
-              <p className="truncate font-black text-white">{tavern.name}</p>
-              <p className="mt-1 text-xs text-violet-100/55">{tavern.location}</p>
-              <p className="mt-2 text-xs font-bold text-cyan-100/70">距离 {tavern.distance}</p>
-            </div>
-          </Link>
-        ))}
+      <div className="absolute right-4 top-4 hidden rounded-2xl border border-white/14 bg-slate-950/56 p-3 text-right backdrop-blur-xl sm:block">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-100/74">Live radius</p>
+        <p className="mt-1 text-lg font-black text-white">2.4 km</p>
+      </div>
+      <div className="absolute left-[22%] top-[34%] h-4 w-4 rounded-full border border-cyan-100 bg-cyan-300 shadow-[0_0_32px_rgba(34,211,238,0.95)]" />
+      <div className="absolute right-[25%] top-[42%] h-3 w-3 rounded-full border border-fuchsia-100 bg-fuchsia-300 shadow-[0_0_30px_rgba(217,70,239,0.85)]" />
+      <div className="absolute bottom-[28%] right-[14%] h-3.5 w-3.5 rounded-full border border-cyan-100 bg-cyan-300 shadow-[0_0_30px_rgba(34,211,238,0.85)]" />
+      <div className="absolute bottom-5 left-5 max-w-md rounded-3xl border border-white/14 bg-slate-950/62 p-4 backdrop-blur-xl sm:p-5">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/80">35.6987, 139.7713 · 23:47</p>
+        <p className="mt-3 text-sm leading-6 text-violet-100/82">不是普通地图标记。坐标、角色和记忆同时亮起，等待你进入。</p>
+      </div>
+      <div className="absolute bottom-5 right-5 hidden rounded-full border border-fuchsia-300/28 bg-fuchsia-300/12 px-4 py-2 text-xs font-black text-fuchsia-100 backdrop-blur-md md:block">
+        EXPLORE / REAL COORDINATE
       </div>
     </div>
   )
@@ -219,18 +216,20 @@ export default function HomeRoute() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(217,70,239,0.14),transparent_30rem),radial-gradient(circle_at_82%_16%,rgba(0,214,201,0.13),transparent_28rem)]" />
       <HomeNav />
 
-      <section className="relative mx-auto grid max-w-[1320px] gap-12 px-6 py-14 lg:grid-cols-[0.68fr_1.32fr] lg:items-center lg:py-20">
-        <div className="space-y-7">
+      <section className="relative mx-auto grid max-w-[1360px] gap-8 px-6 py-6 lg:grid-cols-[0.64fr_1.36fr] lg:items-center lg:py-8 xl:gap-10">
+        <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/28 bg-cyan-300/8 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
             <Sparkles className="h-3.5 w-3.5" />
-            Real places. Hidden wonder.
+            Real coordinates. Hidden worlds.
           </div>
-          <div className="space-y-5">
-            <h1 className="max-w-xl text-5xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-[4.6rem]">
-              在真实地图上发现新的世界
+          <div className="space-y-4">
+            <h1 className="max-w-2xl text-[2.7rem] font-black leading-[1.1] tracking-tight text-white sm:text-6xl sm:leading-[1.05] lg:text-[4rem] lg:leading-[1.03]">
+              <span className="block">每个坐标，</span>
+              <span className="block">都可能藏着</span>
+              <span className="block">一个世界</span>
             </h1>
-            <p className="max-w-xl text-base leading-8 text-violet-100/68 sm:text-lg">
-              FableMap 把真实地点变成可以探索的新世界入口。你可以从地图发现附近门牌，遇见由主人配置的 AI NPC，留下记忆，并在一次次回访里重新看见城市里的小美好。
+            <p className="max-w-xl text-base leading-7 text-violet-100/70 sm:text-lg">
+              在真实地图上，进入一个个会回应你的区域。
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -242,35 +241,30 @@ export default function HomeRoute() {
             </Button>
             <Button asChild variant="secondary" size="lg">
               <Link to="/create">
-                创建门牌
+                创建我的空间
                 <KeyRound className="h-4 w-4" />
               </Link>
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs font-bold text-violet-100/54">
-            <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">真实地点入口</span>
-            <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">AI NPC 相遇</span>
-            <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">回访记忆延续</span>
-          </div>
         </div>
 
-        <ProductPreview />
+        <HeroPosterPreview />
       </section>
 
       <section className="relative border-y border-white/8 bg-white/[0.018]">
-        <div className="mx-auto grid max-w-[1320px] gap-4 px-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-[1320px] gap-4 px-6 py-5 sm:grid-cols-2 lg:grid-cols-4">
           {metrics.map((metric) => (
             <MetricCard key={metric.value} {...metric} />
           ))}
         </div>
       </section>
 
-      <section className="relative mx-auto max-w-[1320px] px-6 py-16" aria-labelledby="featured-taverns">
+      <section className="relative mx-auto max-w-[1320px] px-6 py-16" aria-labelledby="featured-city-slices">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100/75">热门酒馆</p>
-            <h2 id="featured-taverns" className="mt-2 text-3xl font-black text-white sm:text-4xl">
-              从地图进入真实的故事
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100/75">正在发光的区域</p>
+            <h2 id="featured-city-slices" className="mt-2 text-3xl font-black text-white sm:text-4xl">
+              从地图进入未被看见的世界
             </h2>
           </div>
           <Button asChild variant="ghost" className="w-fit">
@@ -281,8 +275,8 @@ export default function HomeRoute() {
           </Button>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
-          {taverns.map((tavern) => (
-            <TavernPreviewCard key={tavern.name} {...tavern} />
+          {citySlices.map((citySlice) => (
+            <CitySlicePreviewCard key={citySlice.name} {...citySlice} />
           ))}
         </div>
       </section>
@@ -291,7 +285,7 @@ export default function HomeRoute() {
         <div className="mx-auto grid max-w-[1320px] gap-6 px-6 py-16 lg:grid-cols-[1.15fr_0.85fr]">
           <article className="overflow-hidden rounded-2xl border border-fuchsia-300/18 bg-[#090a1d]/88">
             <div className="relative h-80 overflow-hidden lg:h-[420px]">
-              <img src={npcDialogueImage} alt="AI NPC 对话模块" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+              <img src={npcDialogueImage} alt="AI 角色相遇模块" className="h-full w-full object-cover" loading="lazy" decoding="async" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#090a1d] via-[#090a1d]/15 to-transparent" />
               <div className="absolute bottom-5 left-6 flex -space-x-3">
                 {portraits.map((portrait, index) => (
@@ -307,8 +301,8 @@ export default function HomeRoute() {
               </div>
             </div>
             <div className="space-y-4 p-6">
-              <h2 className="text-2xl font-black text-white">AI NPC 对话</h2>
-              <p className="text-sm leading-6 text-violet-100/64">与他们聊天，建立关系，解锁专属故事线。平台负责体验引擎，不替店主自动生成酒馆内容。</p>
+              <h2 className="text-2xl font-black text-white">AI 角色相遇</h2>
+              <p className="text-sm leading-6 text-violet-100/64">进入区域后，和其中的角色对话、建立关系，让一次访问变成可回访的生活片段。</p>
               <Button asChild>
                 <Link to="/discover">开始对话</Link>
               </Button>
@@ -324,13 +318,13 @@ export default function HomeRoute() {
               decoding="async"
             />
             <div className="relative flex min-h-[420px] flex-col justify-end space-y-5">
-              <h2 className="text-2xl font-black text-white">你的记忆</h2>
-              <p className="max-w-md text-sm leading-6 text-violet-100/72">你的选择会被记录，影响未来的相遇；访客状态、关系阶段与对话历史会成为回访上下文。</p>
+              <h2 className="text-2xl font-black text-white">回访记忆</h2>
+              <p className="max-w-md text-sm leading-6 text-violet-100/72">你做过的选择、说过的话和建立过的关系，会成为下一次进入同一坐标时的上下文。</p>
               <div className="rounded-2xl border border-white/10 bg-slate-950/62 p-4 backdrop-blur-md">
-                <p className="text-sm leading-6 text-violet-100/72">你在夜莺酒馆帮助过我，她记住了这件事。</p>
+                <p className="text-sm leading-6 text-violet-100/72">上次你来过这里。有人还记得你留下的问题。</p>
               </div>
               <Button asChild variant="secondary">
-                <Link to="/discover">查看记忆</Link>
+                <Link to="/discover">继续探索</Link>
               </Button>
             </div>
           </article>

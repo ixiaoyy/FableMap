@@ -6,8 +6,8 @@ import { cn } from "../lib/utils"
 const navItems = [
   { to: "/", label: "首页" },
   { to: "/discover", label: "发现" },
-  { to: "/create", label: "开店" },
-  { to: "/owner", label: "店主" },
+  { to: "/create", label: "创建空间" },
+  { to: "/owner", label: "主人" },
 ]
 
 export function ProductShell({
@@ -28,7 +28,7 @@ export function ProductShell({
             </span>
             <div>
               <p className="font-black tracking-wide text-white">FableMap</p>
-              <p className="text-xs text-violet-100/45">Cyber taverns on real places</p>
+              <p className="text-xs text-violet-100/45">Cyber life on real coordinates</p>
             </div>
           </NavLink>
           <nav className="flex flex-wrap items-center gap-2">
@@ -61,7 +61,7 @@ export function ProductShell({
         {children}
         <footer className="mt-16 flex flex-col gap-2 border-t border-white/10 pt-6 text-sm text-violet-100/45 sm:flex-row sm:items-center">
           <MapPinned className="h-4 w-4 text-cyan-100/60" />
-          <span>Real coordinate anchored. Owner-authored. AI-powered tavern experience.</span>
+          <span>Real coordinate anchored. Owner-authored. AI-powered living spaces.</span>
         </footer>
       </div>
     </main>

@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Review homepage component structure and responsive UX."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify build/typecheck requirements."}
+{"file": ".trellis/spec/frontend/image-asset-guidelines.md", "reason": "Confirm project-local hero asset reference."}
