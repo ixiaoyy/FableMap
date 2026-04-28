@@ -485,9 +485,34 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   )
 }
 
+function DesktopRadarTelemetry({ taverns }: { taverns: Tavern[] }) {
+  const openSignals = taverns.filter((tavern) => tavern.status === "open" || (tavern as TavernWithTimeStatus).is_open).length
+  const characterCount = taverns.reduce((total, tavern) => total + (tavern.characters?.length ?? 0), 0)
+  const averageSignal = taverns.length
+    ? Math.round(taverns.reduce((total, tavern, index) => total + signalStrength(tavern, index), 0) / taverns.length)
+    : 0
+
+  return (
+    <div className="hidden gap-3 xl:grid xl:grid-cols-4" aria-label="Live telemetry">
+      {[
+        { label: "Live telemetry", value: `${taverns.length}`, helper: "坐标信号" },
+        { label: "Open sectors", value: `${openSignals}`, helper: "正在亮起" },
+        { label: "NPC signal", value: `${characterCount}`, helper: "角色回声" },
+        { label: "Avg strength", value: `${averageSignal}%`, helper: "平均强度" },
+      ].map((item) => (
+        <div key={item.label} className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl">
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-100/55">{item.label}</p>
+          <p className="mt-2 text-2xl font-black text-white">{item.value}</p>
+          <p className="mt-1 text-xs text-violet-100/48">{item.helper}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RadarBoard({ taverns, hasFilters, onPreview }: { taverns: Tavern[]; hasFilters: boolean; onPreview: (tavern: Tavern) => void }) {
   return (
-    <section className="relative min-h-[620px] overflow-hidden rounded-[2.2rem] border border-white/12 bg-slate-950/72 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
+    <section className="relative min-h-[620px] overflow-hidden rounded-[2.2rem] border border-white/12 bg-slate-950/72 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl lg:min-h-[680px]">
       <img
         src={discoverRadarSurfaceImage}
         alt=""
@@ -513,7 +538,9 @@ function RadarBoard({ taverns, hasFilters, onPreview }: { taverns: Tavern[]; has
           </span>
         </div>
 
-        <div className="grid gap-3">
+        <DesktopRadarTelemetry taverns={taverns} />
+
+        <div className="grid gap-3 xl:grid-cols-2">
           {taverns.length ? (
             taverns.map((tavern, index) => (
               <RadarSignalCard key={tavern.id} tavern={tavern} index={index} onPreview={onPreview} />
@@ -624,14 +651,17 @@ export default function DiscoverRoute() {
 
   return (
     <ProductShell eyebrow="Discover">
-      <section className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
-        <aside className="space-y-5">
+      <section className="grid gap-6 lg:grid-cols-[0.62fr_1.38fr] lg:items-start">
+        <aside className="space-y-5 lg:sticky lg:top-28">
           <div className="rounded-[2rem] border border-cyan-300/18 bg-slate-950/72 p-6 shadow-2xl shadow-black/25 backdrop-blur-xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">
               <Compass className="h-3.5 w-3.5" />
               Real coordinates. Live signals.
             </div>
-            <h1 className="text-4xl font-black leading-tight text-white sm:text-5xl">附近坐标正在发光</h1>
+            <h1 className="text-4xl font-black leading-tight text-white sm:text-5xl">
+              <span className="block">附近坐标</span>
+              <span className="block">正在发光</span>
+            </h1>
             <p className="mt-4 text-sm leading-7 text-violet-100/66">
               默认用雷达扫过城市，感受哪里有区域正在亮起；开始搜索或筛选时，自动切到更方便浏览的卡片结果。
             </p>

@@ -15,7 +15,7 @@ assert.match(
 assert.ok(discoverSource.includes("manualViewMode"), "discover route should preserve manual view-mode choice")
 assert.ok(discoverSource.includes("雷达视图"), "discover route should expose a radar view toggle")
 assert.ok(discoverSource.includes("卡片视图"), "discover route should expose a card view toggle")
-assert.ok(discoverSource.includes("附近坐标正在发光"), "discover hero should use the approved glowing-coordinate headline")
+assert.ok(discoverSource.includes("附近坐标") && discoverSource.includes("正在发光"), "discover hero should use the approved glowing-coordinate headline")
 assert.ok(discoverSource.includes("activeViewMode"), "discover route should derive the active view mode")
 assert.ok(discoverSource.includes("discoverRadarSurfaceImage"), "discover radar view should use a project-local high-quality radar surface asset")
 assert.ok(discoverSource.includes("discover-cover-neon-alley.png"), "discover cards should use project-local high-quality cover assets")
