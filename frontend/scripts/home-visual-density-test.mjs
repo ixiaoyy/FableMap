@@ -14,7 +14,7 @@ assert.ok(!homeSource.includes("heroReferenceImage"), "homepage hero should not 
 assert.ok(!homeSource.includes("neon-cyber-tavern-reference.png"), "homepage hero should not reference the old blurry homepage image")
 assert.ok(!homeSource.includes("min-h-[calc(100vh-88px)]"), "homepage hero section should not force a viewport-height layout that creates large blank space")
 assert.ok(/py-6[^"]*lg:py-8/.test(homeSource), "homepage hero should use compact vertical padding above the fold")
-assert.ok(homeSource.includes("lg:min-h-[500px]"), "homepage visual should stay strong without the old oversized 640px hero height")
+assert.ok(homeSource.includes("lg:min-h-[560px]"), "homepage visual should use the approved PC poster height without reverting to the old 640px oversized height")
 assert.ok(!homeSource.includes("lg:min-h-[640px]"), "homepage visual should not retain the oversized hero poster height")
 
 console.log("home-visual-density-test: ok")

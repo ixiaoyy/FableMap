@@ -129,6 +129,23 @@ function MetricCard({ icon: Icon, value, label }: Metric) {
   )
 }
 
+function DesktopMetricRail() {
+  return (
+    <div className="hidden lg:grid lg:grid-cols-2 lg:gap-3">
+      {metrics.map(({ icon: Icon, value, label }) => (
+        <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-3">
+            <Icon className="h-5 w-5 text-cyan-200" />
+            <span className="h-px flex-1 bg-gradient-to-r from-cyan-300/24 to-transparent" />
+          </div>
+          <p className="mt-3 text-2xl font-black text-white">{value}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-violet-100/48">{label}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CitySlicePreviewCard({ image, name, location, distance, tags, id }: CitySlicePreview) {
   return (
     <Link
@@ -180,7 +197,7 @@ function FeatureItem({ icon: Icon, title, text }: Feature) {
 
 function HeroPosterPreview() {
   return (
-    <div className="relative min-h-[420px] overflow-hidden rounded-[1.75rem] border border-cyan-300/24 bg-slate-950 shadow-[0_26px_80px_rgba(0,0,0,0.48),0_0_100px_rgba(6,182,212,0.12)] lg:min-h-[500px]">
+    <div className="relative min-h-[420px] overflow-hidden rounded-[1.75rem] border border-cyan-300/24 bg-slate-950 shadow-[0_26px_80px_rgba(0,0,0,0.48),0_0_100px_rgba(6,182,212,0.12)] lg:min-h-[560px]">
       <img
         src={discoverRadarSurfaceImage}
         alt="FableMap 真实坐标雷达视觉"
@@ -196,12 +213,27 @@ function HeroPosterPreview() {
         <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-100/74">Live radius</p>
         <p className="mt-1 text-lg font-black text-white">2.4 km</p>
       </div>
+      <div className="absolute left-8 right-8 top-[5.8rem] hidden items-center gap-3 lg:flex">
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-300/35 to-transparent" />
+        <span className="rounded-full border border-white/12 bg-slate-950/46 px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.22em] text-violet-100/64 backdrop-blur-md">
+          Coordinate grid / Memory field / NPC signal
+        </span>
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-fuchsia-300/28 to-transparent" />
+      </div>
       <div className="absolute left-[22%] top-[34%] h-4 w-4 rounded-full border border-cyan-100 bg-cyan-300 shadow-[0_0_32px_rgba(34,211,238,0.95)]" />
       <div className="absolute right-[25%] top-[42%] h-3 w-3 rounded-full border border-fuchsia-100 bg-fuchsia-300 shadow-[0_0_30px_rgba(217,70,239,0.85)]" />
       <div className="absolute bottom-[28%] right-[14%] h-3.5 w-3.5 rounded-full border border-cyan-100 bg-cyan-300 shadow-[0_0_30px_rgba(34,211,238,0.85)]" />
       <div className="absolute bottom-5 left-5 max-w-md rounded-3xl border border-white/14 bg-slate-950/62 p-4 backdrop-blur-xl sm:p-5">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/80">35.6987, 139.7713 · 23:47</p>
         <p className="mt-3 text-sm leading-6 text-violet-100/82">不是普通地图标记。坐标、角色和记忆同时亮起，等待你进入。</p>
+      </div>
+      <div className="absolute right-5 top-28 hidden w-44 rounded-3xl border border-cyan-300/18 bg-slate-950/50 p-4 backdrop-blur-xl lg:block">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-100/64">Active layers</p>
+        <div className="mt-3 space-y-2 text-xs font-bold text-violet-100/68">
+          <p className="flex items-center justify-between"><span>坐标入口</span><span className="text-cyan-100">ON</span></p>
+          <p className="flex items-center justify-between"><span>角色信号</span><span className="text-fuchsia-100">356</span></p>
+          <p className="flex items-center justify-between"><span>记忆回响</span><span className="text-cyan-100">LIVE</span></p>
+        </div>
       </div>
       <div className="absolute bottom-5 right-5 hidden rounded-full border border-fuchsia-300/28 bg-fuchsia-300/12 px-4 py-2 text-xs font-black text-fuchsia-100 backdrop-blur-md md:block">
         EXPLORE / REAL COORDINATE
@@ -216,7 +248,7 @@ export default function HomeRoute() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(217,70,239,0.14),transparent_30rem),radial-gradient(circle_at_82%_16%,rgba(0,214,201,0.13),transparent_28rem)]" />
       <HomeNav />
 
-      <section className="relative mx-auto grid max-w-[1360px] gap-8 px-6 py-6 lg:grid-cols-[0.64fr_1.36fr] lg:items-center lg:py-8 xl:gap-10">
+      <section className="relative mx-auto grid max-w-[1440px] gap-8 px-6 py-6 lg:grid-cols-[0.56fr_1.44fr] lg:items-center lg:py-8 xl:gap-10">
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/28 bg-cyan-300/8 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
             <Sparkles className="h-3.5 w-3.5" />
@@ -246,12 +278,13 @@ export default function HomeRoute() {
               </Link>
             </Button>
           </div>
+          <DesktopMetricRail />
         </div>
 
         <HeroPosterPreview />
       </section>
 
-      <section className="relative border-y border-white/8 bg-white/[0.018]">
+      <section className="relative border-y border-white/8 bg-white/[0.018] lg:hidden">
         <div className="mx-auto grid max-w-[1320px] gap-4 px-6 py-5 sm:grid-cols-2 lg:grid-cols-4">
           {metrics.map((metric) => (
             <MetricCard key={metric.value} {...metric} />
