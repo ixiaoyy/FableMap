@@ -29,6 +29,17 @@ def _project_png_hash(sprite_url: str) -> str:
 
 
 def test_default_public_welfare_taverns_are_seeded_and_discoverable():
+    expected_names = {
+        "pw_lantern_helpdesk": "公益·灯塔问讯台",
+        "pw_midnight_treehole": "公益·夜航树洞电台",
+        "pw_community_repair": "公益·街角修补工坊",
+        "pw_lost_found_archive": "公益·城市拾光档案亭",
+        "pw_third_shelf_observatory": "公益·第三货架观测站",
+        "pw_midnight_commission_board": "公益·午夜委托局",
+        "pw_after_school_hero_supply": "公益·放学后英雄补给社",
+        "pw_jingan_catbell_refuge": "公益·静安猫铃小屋",
+    }
+
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
 
@@ -41,13 +52,14 @@ def test_default_public_welfare_taverns_are_seeded_and_discoverable():
 
         assert set(DEFAULT_PUBLIC_WELFARE_TAVERN_IDS).issubset(seeded)
         assert len(DEFAULT_PUBLIC_WELFARE_TAVERN_IDS) >= 6
-        for tavern in seeded.values():
+        for tavern_id, tavern in seeded.items():
+            assert tavern["name"] == expected_names[tavern_id]
             assert tavern["access"] == "public"
             assert tavern["status"] == "open"
             assert tavern["owner_id"] == DEFAULT_PUBLIC_WELFARE_OWNER_ID
             assert tavern["llm_config"]["backend"] == "rules"
             assert tavern["llm_config"].get("api_key", "") == ""
-            assert tavern["characters"]
+            assert len(tavern["characters"]) >= 3
             assert tavern["world_info"]
 
 
@@ -117,7 +129,7 @@ def test_third_shelf_observatory_contains_complete_alien_convenience_tavern():
         tavern = service.get_tavern_payload("pw_third_shelf_observatory", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_third_shelf_observatory" for item in payload["taverns"])
-        assert tavern["name"] == "第三货架后面"
+        assert tavern["name"] == "公益·第三货架观测站"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["llm_config"]["backend"] == "rules"
@@ -155,12 +167,12 @@ def test_midnight_commission_board_contains_text_adventure_tavern():
         tavern = service.get_tavern_payload("pw_midnight_commission_board", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_midnight_commission_board" for item in payload["taverns"])
-        assert tavern["name"] == "午夜委托板"
+        assert tavern["name"] == "公益·午夜委托局"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["llm_config"]["backend"] == "rules"
         assert tavern["llm_config"].get("api_key", "") == ""
-        assert len(tavern["characters"]) == 2
+        assert len(tavern["characters"]) >= 3
         assert len(tavern["world_info"]) >= 6
 
         character_ids = {character["id"] for character in tavern["characters"]}
@@ -184,7 +196,7 @@ def test_after_school_hero_supply_contains_emotional_hero_tavern():
         tavern = service.get_tavern_payload("pw_after_school_hero_supply", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_after_school_hero_supply" for item in payload["taverns"])
-        assert tavern["name"] == "放学后英雄补给站"
+        assert tavern["name"] == "公益·放学后英雄补给社"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["layout_style"] == "quest-play"
@@ -193,7 +205,7 @@ def test_after_school_hero_supply_contains_emotional_hero_tavern():
         assert "秋叶原" in tavern["address"]
         assert 35.68 < tavern["lat"] < 35.71
         assert 139.75 < tavern["lon"] < 139.79
-        assert len(tavern["characters"]) == 2
+        assert len(tavern["characters"]) >= 3
         assert len(tavern["world_info"]) >= 5
 
         characters = {character["id"]: character for character in tavern["characters"]}
@@ -249,7 +261,7 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         tavern = service.get_tavern_payload("pw_jingan_catbell_refuge", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_jingan_catbell_refuge" for item in payload["taverns"])
-        assert tavern["name"] == "静安猫铃避难所"
+        assert tavern["name"] == "公益·静安猫铃小屋"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["llm_config"]["backend"] == "rules"
@@ -257,7 +269,7 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         assert "静安寺" in tavern["address"]
         assert 31.20 < tavern["lat"] < 31.24
         assert 121.43 < tavern["lon"] < 121.46
-        assert len(tavern["characters"]) == 2
+        assert len(tavern["characters"]) >= 3
         assert len(tavern["world_info"]) >= 5
 
         characters_by_id = {character["id"]: character for character in tavern["characters"]}
