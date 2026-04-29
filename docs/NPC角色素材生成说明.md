@@ -88,26 +88,26 @@ char_[slug]-[state].png
 | `slug` | 角色英文缩写（短横线分隔） | `mist-bartender-lanbo` |
 | `state` | 情绪状态 | `neutral`, `joy`, `anger`, `embarrassment`, `curiosity` |
 
-**示例文件名：**
+**示例文件名（按角色目录）：**
 ```
-char_mist-bartender-lanbo-neutral.png
-char_mist-bartender-lanbo-joy.png
-char_mist-bartender-lanbo-anger.png
-char_mist-bartender-lanbo-embarrassment.png
-char_mist-bartender-lanbo-curiosity.png
-char_mist-bartender-lanbo-avatar.png      ← 头像（可不单独命名，用 neutral 代替）
+char_mist-bartender-lanbo/neutral.png
+char_mist-bartender-lanbo/joy.png
+char_mist-bartender-lanbo/anger.png
+char_mist-bartender-lanbo/embarrassment.png
+char_mist-bartender-lanbo/curiosity.png
 ```
 
 ### 2.4 存放位置
 
 ```
 frontend/public/assets/npcs/
-├── char_mist-bartender-lanbo-neutral.png
-├── char_mist-bartender-lanbo-joy.png
-├── char_mist-bartender-lanbo-anger.png
-├── char_mist-bartender-lanbo-embarrassment.png
-├── char_mist-bartender-lanbo-curiosity.png
-└── ...其他角色
+└── <category>/
+    └── char_mist-bartender-lanbo/
+        ├── neutral.png
+        ├── joy.png
+        ├── anger.png
+        ├── embarrassment.png
+        └── curiosity.png
 ```
 
 ---
@@ -218,13 +218,13 @@ A finished original anime / game-style tavern NPC portrait of a silver-haired yo
   "tags": ["调酒师", "雾雨", "温柔", "旧地图", "成年人"],
   "talkativeness": 0.5,
   "alternate_greetings": [],
-  "avatar": "/assets/npcs/char_mist-bartender-lanbo-neutral.png",
+  "avatar": "/assets/npcs/custom/char_mist-bartender-lanbo/neutral.png",
   "sprites": {
-    "neutral": "/assets/npcs/char_mist-bartender-lanbo-neutral.png",
-    "joy": "/assets/npcs/char_mist-bartender-lanbo-joy.png",
-    "anger": "/assets/npcs/char_mist-bartender-lanbo-anger.png",
-    "embarrassment": "/assets/npcs/char_mist-bartender-lanbo-embarrassment.png",
-    "curiosity": "/assets/npcs/char_mist-bartender-lanbo-curiosity.png"
+    "neutral": "/assets/npcs/custom/char_mist-bartender-lanbo/neutral.png",
+    "joy": "/assets/npcs/custom/char_mist-bartender-lanbo/joy.png",
+    "anger": "/assets/npcs/custom/char_mist-bartender-lanbo/anger.png",
+    "embarrassment": "/assets/npcs/custom/char_mist-bartender-lanbo/embarrassment.png",
+    "curiosity": "/assets/npcs/custom/char_mist-bartender-lanbo/curiosity.png"
   },
   "appearance": {
     "active_preset_id": "",

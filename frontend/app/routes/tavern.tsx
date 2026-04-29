@@ -10,15 +10,18 @@ import { buildTavernShareDisplay, buildTavernSharePayload } from "../lib/tavern-
 import {
   addHomeMember,
   createPlaceRelationship,
+  createVisitorNote,
   createSchoolEnrollment,
   DEFAULT_OWNER_ID,
   DEFAULT_VISITOR_ID,
+  deleteVisitorNote,
   decideRoleplayClaim,
   decidePlaceRelationship,
   errorMessage,
   getRoleplayState,
   getTavern,
   getTavernShare,
+  listVisitorNotes,
   requestRoleplayClaim,
   saveRoleplayConfig,
   type HomeMember,
@@ -28,6 +31,7 @@ import {
   type Tavern,
   type TavernCharacter,
   type TavernSharePayload,
+  type TavernVisitorNote,
 } from "../lib/taverns"
 import { PLACE_RELATIONSHIP_TYPES, normalizePlaceRelationshipDraft } from "../lib/place-home.js"
 import { ProductShell } from "../shell/product-shell"
@@ -344,6 +348,115 @@ function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
   )
 }
 
+function VisitorNotesPanel({ tavern }: { tavern: Tavern }) {
+  const [visitorId, setVisitorId] = useState(DEFAULT_VISITOR_ID)
+  const [nickname, setNickname] = useState("旅人")
+  const [content, setContent] = useState("")
+  const [ownerId, setOwnerId] = useState(tavern.owner_id || DEFAULT_OWNER_ID)
+  const [notes, setNotes] = useState<TavernVisitorNote[]>([])
+  const [count, setCount] = useState(0)
+  const [busy, setBusy] = useState("")
+  const [message, setMessage] = useState("")
+
+  async function handleSubmitNote() {
+    setBusy("create")
+    setMessage("")
+    try {
+      await createVisitorNote(tavern.id, { visitor_nickname: nickname, content }, visitorId)
+      setContent("")
+      setMessage("已发送给店主。你的反馈不会成为公开留言墙。")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  async function handleLoadOwnerNotes() {
+    setBusy("list")
+    setMessage("")
+    try {
+      const payload = await listVisitorNotes(tavern.id, { limit: 20 }, ownerId)
+      setNotes(payload.notes || [])
+      setCount(payload.count || 0)
+      setMessage("已加载店主可见反馈。")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    setBusy(noteId)
+    setMessage("")
+    try {
+      await deleteVisitorNote(tavern.id, noteId, ownerId)
+      setNotes((current) => current.filter((note) => note.id !== noteId))
+      setCount((current) => Math.max(0, current - 1))
+      setMessage("反馈已删除。")
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  return (
+    <Card className="mt-6 min-w-0 overflow-hidden border-violet-300/18 bg-violet-300/8">
+      <CardHeader>
+        <CardTitle>给店主的回访反馈</CardTitle>
+        <CardDescription className="mt-2">
+          这不是公开留言墙：反馈只发送给本酒馆店主，不支持访客互相回复、点赞或私信。
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="space-y-1.5 text-sm">
+            <span className="text-violet-100/65">Visitor ID</span>
+            <input value={visitorId} onChange={(event) => setVisitorId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+          </label>
+          <label className="space-y-1.5 text-sm">
+            <span className="text-violet-100/65">昵称</span>
+            <input value={nickname} onChange={(event) => setNickname(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+          </label>
+          <label className="space-y-1.5 text-sm md:col-span-2">
+            <span className="text-violet-100/65">反馈内容</span>
+            <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={3} maxLength={500} placeholder="告诉店主这次回访的感受，或希望下次看到什么。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+          </label>
+          <Button type="button" disabled={!content.trim() || busy === "create"} className="md:col-span-2" onClick={handleSubmitNote}>
+            发送给店主
+          </Button>
+        </div>
+
+        <details className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-violet-100/70">店主查看反馈</summary>
+          <div className="mt-4 space-y-3">
+            <label className="space-y-1.5 text-sm">
+              <span className="text-violet-100/65">Owner ID</span>
+              <input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+            </label>
+            <Button type="button" variant="secondary" disabled={busy === "list"} onClick={handleLoadOwnerNotes}>
+              加载店主反馈 ({count})
+            </Button>
+            {notes.map((note) => (
+              <div key={note.id} className="rounded-2xl border border-white/10 bg-slate-950/45 p-3">
+                <p className="text-sm leading-6 text-violet-50/78">{note.content}</p>
+                <p className="mt-2 text-xs text-violet-100/45">{note.visitor_nickname} · {note.created_at}</p>
+                <Button type="button" size="sm" variant="secondary" className="mt-3" disabled={busy === note.id} onClick={() => handleDeleteNote(note.id)}>
+                  删除反馈
+                </Button>
+              </div>
+            ))}
+          </div>
+        </details>
+
+        {message ? <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{message}</p> : null}
+      </CardContent>
+    </Card>
+  )
+}
+
 function PlaceHomePanel({ tavern }: { tavern: Tavern }) {
   const [ownerId, setOwnerId] = useState(tavern.owner_id || DEFAULT_OWNER_ID)
   const [memberName, setMemberName] = useState("")
@@ -599,6 +712,8 @@ export default function TavernRoute() {
       ) : null}
 
       {tavern ? <PlaceHomePanel tavern={tavern} /> : null}
+
+      {tavern ? <VisitorNotesPanel tavern={tavern} /> : null}
 
       {/* Neighborhood Rumors */}
       {tavern ? (

@@ -59,23 +59,22 @@ class HomeVisit:
 
 ```python
 @dataclass
-class HomeCharacter:
+class HomeMember:
     id: str
     home_id: str
     name: str
     description: str
     avatar: Optional[str]
-    is_speaking: bool  # 是否能说话，非生物默认 False
-    is_living: bool  # 是否是生物
+    member_type: str  # 'conversational_character' | 'silent_member' | 'display_object'
 
     # 非生物时
     nonliving_note: Optional[str]  # 备注，如"一块有故事的石头"
 ```
 
-**非生物交互规则**：
-- 非生物默认 `is_speaking = False`
-- 访客尝试对话时返回：`...`（沉默反馈）
-- 不强制将非生物人格化
+**成员类型**：
+- `conversational_character`：可对话角色，访客可以与其对话
+- `silent_member`：沉默成员，展示但不参与对话
+- `display_object`：陈列物品/非生物，仅展示
 
 ## 功能模块
 
@@ -96,12 +95,12 @@ class HomeCharacter:
 
 ## 实现步骤
 
-1. [ ] 定义 Home 数据模型
-2. [ ] 创建 Home API 端点
-3. [ ] Home 管理页面
-4. [ ] Home 发现页面
-5. [ ] Home 拜访流程
-6. [ ] 访客留言功能
+1. [x] 定义 Home 数据模型
+2. [x] 创建 Home API 端点
+3. [x] Home 管理页面
+4. [x] Home 发现页面
+5. [x] Home 拜访流程
+6. [x] 访客留言功能
 
 ## MVP 范围
 

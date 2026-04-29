@@ -13,10 +13,10 @@ import {
 import { Link, useLoaderData } from "react-router"
 import { useMemo, useState } from "react"
 
-import discoverCozyShopImage from "../assets/discover-reference/discover-cover-cozy-shop.png"
-import discoverNeonAlleyImage from "../assets/discover-reference/discover-cover-neon-alley.png"
-import discoverQuietSanctuaryImage from "../assets/discover-reference/discover-cover-quiet-sanctuary.png"
-import discoverRadarSurfaceImage from "../assets/discover-reference/discover-radar-surface.png"
+import discoverCozyShopImage from "../assets/discover/reference/discover-cover-cozy-shop.png"
+import discoverNeonAlleyImage from "../assets/discover/reference/discover-cover-neon-alley.png"
+import discoverQuietSanctuaryImage from "../assets/discover/reference/discover-cover-quiet-sanctuary.png"
+import discoverRadarSurfaceImage from "../assets/discover/reference/discover-radar-surface.png"
 import { TavernPreviewModal } from "../components/tavern-preview-modal"
 import { DISCOVERABLE_PLACE_TYPES, derivePlaceTypeDisplay, placeTypeMatchesTavern } from "../lib/place-types.js"
 import { errorMessage, listTaverns, type Tavern, type TavernCharacter, type TavernListResponse } from "../lib/taverns"
@@ -262,7 +262,7 @@ function FilterPanel({
       </label>
 
       <div className="space-y-2">
-        <p className="text-xs font-bold text-violet-100/48">入口语义</p>
+        <p className="text-xs font-bold text-violet-100/48">场所类型</p>
         <div className="flex flex-wrap gap-2">
           {DISCOVERABLE_PLACE_TYPES.map((type) => {
             const active = activePlaceTypes.has(type.id)
@@ -287,7 +287,7 @@ function FilterPanel({
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-bold text-violet-100/48">内容信号</p>
+        <p className="text-xs font-bold text-violet-100/48">内容标签</p>
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((category) => {
             const active = activeCategories.has(category.label)
@@ -531,7 +531,7 @@ function RadarBoard({ taverns, hasFilters, onPreview }: { taverns: Tavern[]; has
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-100/70">Live coordinate radar</p>
             <h2 className="mt-2 text-3xl font-black text-white">发光坐标流</h2>
-            <p className="mt-1 text-sm text-violet-100/56">默认用雷达感建立探索氛围；查找时可切成卡片结果。</p>
+            <p className="mt-1 text-sm text-violet-100/56">用雷达视角感受附近的区域氛围；查找时可切成卡片结果。</p>
           </div>
           <span className="grid h-14 w-14 place-items-center rounded-full border border-cyan-300/28 bg-cyan-300/10 text-cyan-100">
             <Waves className="h-7 w-7" />
@@ -729,3 +729,4 @@ export default function DiscoverRoute() {
     </ProductShell>
   )
 }
+

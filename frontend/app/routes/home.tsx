@@ -14,12 +14,12 @@ import {
 } from "lucide-react"
 import { Link } from "react-router"
 
-import discoverCozyShopImage from "../assets/discover-reference/discover-cover-cozy-shop.png"
-import discoverNeonAlleyImage from "../assets/discover-reference/discover-cover-neon-alley.png"
-import discoverQuietSanctuaryImage from "../assets/discover-reference/discover-cover-quiet-sanctuary.png"
-import discoverRadarSurfaceImage from "../assets/discover-reference/discover-radar-surface.png"
-import memoryModuleImage from "../assets/homepage-reference/modules/memory-module.png"
-import npcDialogueImage from "../assets/homepage-reference/modules/npc-dialogue.png"
+import discoverCozyShopImage from "../assets/discover/reference/discover-cover-cozy-shop.png"
+import discoverNeonAlleyImage from "../assets/discover/reference/discover-cover-neon-alley.png"
+import discoverQuietSanctuaryImage from "../assets/discover/reference/discover-cover-quiet-sanctuary.png"
+import discoverRadarSurfaceImage from "../assets/discover/reference/discover-radar-surface.png"
+import memoryModuleImage from "../assets/homepage/reference/modules/memory-module.png"
+import npcDialogueImage from "../assets/homepage/reference/modules/npc-dialogue.png"
 import guardianPortrait from "../assets/npc-style-cast/portraits/guardian-a.png"
 import merchantPortrait from "../assets/npc-style-cast/portraits/merchant-a.png"
 import scholarPortrait from "../assets/npc-style-cast/portraits/scholar-a.png"
@@ -107,7 +107,7 @@ function HomeNav() {
           </Link>
           <div className="flex gap-2">
             <Button asChild variant="ghost" size="sm">
-              <Link to="/owner">主人入口</Link>
+              <Link to="/owner">管理入口</Link>
             </Button>
             <Button asChild size="sm">
               <Link to="/discover">开始探索</Link>
@@ -372,3 +372,4 @@ export default function HomeRoute() {
     </main>
   )
 }
+

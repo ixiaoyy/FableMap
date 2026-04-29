@@ -12,10 +12,9 @@ from ...contracts.taverns import (
     SchoolEnrollmentRequest,
     TavernCreateRequest,
     TavernListResponse,
-    TavernMessageCreateRequest,
-    TavernMessageListResponse,
-    TavernMessageReplyRequest,
     TavernUpdateRequest,
+    VisitorNoteCreateRequest,
+    VisitorNoteListResponse,
 )
 from .common import get_user_id, taverns_service
 
@@ -148,32 +147,33 @@ def get_tavern_metrics(request: Request, tavern_id: str) -> dict[str, Any]:
 
 
 # ─────────────────────────────────────────
-# Guest Message Board
+# Owner-visible Visitor Notes
 # ─────────────────────────────────────────
 
-@router.get("/{tavern_id}/messages", response_model=TavernMessageListResponse)
-def list_tavern_messages(
+@router.get("/{tavern_id}/visitor-notes", response_model=VisitorNoteListResponse)
+def list_visitor_notes(
     request: Request,
     tavern_id: str,
-    limit: int = 50,
+    limit: int = 20,
     offset: int = 0,
 ) -> dict[str, Any]:
-    return taverns_service(request).list_tavern_messages(
+    return taverns_service(request).list_visitor_notes(
         tavern_id,
+        get_user_id(request),
         limit=limit,
         offset=offset,
     )
 
 
-@router.post("/{tavern_id}/messages")
-def create_tavern_message(
+@router.post("/{tavern_id}/visitor-notes")
+def create_visitor_note(
     request: Request,
     background_tasks: BackgroundTasks,
     tavern_id: str,
-    data: TavernMessageCreateRequest,
+    data: VisitorNoteCreateRequest,
 ) -> dict[str, Any]:
     user_id = get_user_id(request)
-    result = taverns_service(request).create_tavern_message(
+    result = taverns_service(request).create_visitor_note(
         tavern_id,
         data.to_payload(),
         user_id,
@@ -194,58 +194,14 @@ def create_tavern_message(
     return result
 
 
-@router.delete("/{tavern_id}/messages/{message_id}")
-def delete_tavern_message(
+@router.delete("/{tavern_id}/visitor-notes/{note_id}")
+def delete_visitor_note(
     request: Request,
     tavern_id: str,
-    message_id: str,
+    note_id: str,
 ) -> dict[str, Any]:
-    return taverns_service(request).delete_tavern_message(
+    return taverns_service(request).delete_visitor_note(
         tavern_id,
-        message_id,
+        note_id,
         get_user_id(request),
     )
-
-
-@router.put("/{tavern_id}/messages/{message_id}/pin")
-def toggle_tavern_message_pin(
-    request: Request,
-    tavern_id: str,
-    message_id: str,
-) -> dict[str, Any]:
-    return taverns_service(request).toggle_tavern_message_pin(
-        tavern_id,
-        message_id,
-        get_user_id(request),
-    )
-
-
-@router.post("/{tavern_id}/messages/{message_id}/reply")
-def reply_tavern_message(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    tavern_id: str,
-    message_id: str,
-    data: TavernMessageReplyRequest,
-) -> dict[str, Any]:
-    user_id = get_user_id(request)
-    result = taverns_service(request).reply_tavern_message(
-        tavern_id,
-        message_id,
-        data.to_payload(),
-        user_id,
-    )
-
-    # Trigger notification for tavern owner
-    tavern = taverns_service(request).store.get_tavern(tavern_id)
-    if tavern and tavern.owner_id and tavern.owner_id != user_id:
-        from ...core.notifications import notify_guest_reply
-        background_tasks.add_task(
-            notify_guest_reply,
-            tavern_id,
-            tavern.name,
-            tavern.owner_id,
-            data.visitor_nickname or "访客",
-        )
-
-    return result

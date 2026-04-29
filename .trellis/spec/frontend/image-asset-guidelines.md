@@ -41,7 +41,7 @@ docs/...                                # documented reference images only when 
 For public URL assets, backend/frontend references must use the project-served URL, not a local absolute path:
 
 ```text
-frontend/public/assets/npcs/mimi-nya-neutral.png -> /assets/npcs/mimi-nya-neutral.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png -> /assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png
 ```
 
 ### 3. Contracts
@@ -68,7 +68,7 @@ frontend/public/assets/npcs/mimi-nya-neutral.png -> /assets/npcs/mimi-nya-neutra
 
 Good:
 
-- Generate an NPC sprite, resize to `512×512`, save as `frontend/public/assets/npcs/name-neutral.png`, update `sprites.neutral` to `/assets/npcs/name-neutral.png`, then run focused asset tests and frontend build.
+- Generate an NPC sprite, resize to `512×512`, save as `frontend/public/assets/npcs/public-welfare/name/neutral.png`, update `sprites.neutral` to `/assets/npcs/public-welfare/name/neutral.png`, then run focused asset tests and frontend build.
 
 Base:
 
@@ -130,8 +130,8 @@ Generated source:
 C:\Users\phpxi\.codex\generated_images\...\new-npc.png
 
 Project deliverable:
-frontend/public/assets/npcs/mimi-nya-neutral.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png
 
 Runtime reference:
-/assets/npcs/mimi-nya-neutral.png
+/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png
 ```

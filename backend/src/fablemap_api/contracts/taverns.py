@@ -137,24 +137,16 @@ class EnterTavernRequest(BaseModel):
     visitor_gender: str = ""
 
 
-class TavernMessageCreateRequest(FlexibleBody):
-    """创建留言请求"""
+class VisitorNoteCreateRequest(FlexibleBody):
+    """创建给店主的访客反馈请求"""
     content: str
-    visitor_nickname: str = "匿名"
-    parent_id: str | None = None  # 用于回复
+    visitor_nickname: str = "旅人"
 
 
-class TavernMessageReplyRequest(FlexibleBody):
-    """回复留言请求"""
-    content: str
-    visitor_nickname: str = "酒馆主人"
-
-
-class TavernMessageListResponse(BaseModel):
-    """留言列表响应"""
-    messages: list[dict[str, Any]]
+class VisitorNoteListResponse(BaseModel):
+    """店主可见访客反馈列表响应"""
+    notes: list[dict[str, Any]]
     count: int
-    pinned_count: int
 
 
 __all__ = [
@@ -190,10 +182,9 @@ __all__ = [
     "RoleplayConfigRequest",
     "SpriteMapWriteRequest",
     "SchoolEnrollmentRequest",
-    "TavernMessageCreateRequest",
-    "TavernMessageListResponse",
-    "TavernMessageReplyRequest",
     "TavernStatusInfo",
+    "VisitorNoteCreateRequest",
+    "VisitorNoteListResponse",
     "TTSRequest",
     "TavernCreateRequest",
     "TavernListResponse",

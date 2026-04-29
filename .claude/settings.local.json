@@ -37,12 +37,18 @@
       "Bash(py -3 -m pytest -q tests/test_page.py -k tavern --tb=short)",
       "Bash(py -3 -m pytest -q --tb=short)",
       "Bash(python -m py_compile src/fablemap_api/core/notifications.py src/fablemap_api/api/v1/notifications.py src/fablemap_api/application/services/notifications.py)",
-      "Bash(python -m py_compile src/fablemap_api/core/notifications.py src/fablemap_api/api/v1/notifications.py src/fablemap_api/application/services/__init__.py)"
+      "Bash(python -m py_compile src/fablemap_api/core/notifications.py src/fablemap_api/api/v1/notifications.py src/fablemap_api/application/services/__init__.py)",
+      "Bash(dir /b \".trellis\\\\\" 2>nul)",
+      "Bash(claude mcp *)",
+      "Bash(py -3 -m compileall -q backend/src)",
+      "Bash(npx tsc *)",
+      "Bash(xxd)"
     ],
     "additionalDirectories": [
       "d:\\work\\ai-\\.trellis\\tasks\\04-28-owner-dashboard",
       "d:\\work\\ai-\\.trellis\\tasks\\04-28-guest-message-board",
-      "d:\\work\\ai-"
+      "d:\\work\\ai-",
+      "d:\\work\\ai-\\.trellis\\tasks"
     ]
   }
 }

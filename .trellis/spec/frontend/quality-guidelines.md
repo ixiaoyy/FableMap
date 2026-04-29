@@ -18,6 +18,7 @@ Frontend quality means preserving the tavern-first product direction, keeping AP
 - UI errors are readable and do not reveal secrets.
 - Tavern and gameplay UI must respect owner-authored content boundaries.
 - Mobile/narrow screens must remain usable for visual/interaction changes.
+- User-facing pages must meet the global visual quality bar in `component-guidelines.md`: no bare admin-form MVP UI for primary flows; use designed hierarchy, polished panels/cards, visible interaction states, and mobile-safe touch targets.
 
 ---
 
@@ -78,6 +79,8 @@ If a change affects a specific script-tested service/rule, run `npm --prefix .\f
 - Are schema fields aligned with backend and `docs/WORLD_SCHEMA.md`?
 - Are loading, busy, empty, and error states visible?
 - Does it work on narrow screens?
+- Does the page look like a polished FableMap product surface rather than an internal/admin prototype?
+- Are primary flows represented with designed cards/panels/previews instead of only raw form controls?
 - Was the appropriate build/test command run and reported?
 
 ---

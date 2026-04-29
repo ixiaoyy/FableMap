@@ -125,3 +125,83 @@ Review backend changes for:
 - Changing response shape in backend but forgetting `frontend/app/lib/`, `frontend/app/product/services/`, and frontend scripts.
 - Treating tests as documentation substitutes; still update `docs/WORLD_SCHEMA.md` for schema changes.
 - Using broad `except Exception` without logging, rollback/fallback, or a clear reason.
+
+---
+
+## Scenario: Notification WebSocket MVP
+
+### 1. Scope / Trigger
+
+Use this contract when changing `backend/src/fablemap_api/core/notifications.py` or `backend/src/fablemap_api/api/v1/notifications.py`. The notification MVP is in-memory and process-local; it is not a Redis/pub-sub production system yet.
+
+### 2. Signatures
+
+```python
+NotificationStore.add_notification(user_id, notification_type, title, content, data=None, tavern_id=None, tavern_name=None) -> Notification
+NotificationStore.register_connection(user_id: str) -> asyncio.Queue
+NotificationStore.unregister_connection(user_id: str, queue: asyncio.Queue) -> None
+NotificationStore.get_notifications(user_id: str, limit=20, offset=0, unread_only=False) -> tuple[list[dict], int, int]
+NotificationStore.mark_as_read(user_id: str, notification_id: str) -> bool
+```
+
+```http
+GET /api/v1/notifications
+POST /api/v1/notifications/{notification_id}/read
+POST /api/v1/notifications/read-all
+DELETE /api/v1/notifications/{notification_id}
+GET /api/v1/notifications/unread-count
+WS  /api/v1/notifications/ws/{user_id}
+```
+
+### 3. Contracts
+
+- REST endpoints identify the user from `X-User-Id` / `X-User-ID` or `user_id`; missing identity returns `401`.
+- WebSocket sends an initial `{ type: "connected", unread_count, notifications }` payload.
+- After a WebSocket connects, new `NotificationStore.add_notification(...)` calls for that user must push `{ type: "notification", data }` to the connection.
+- WebSocket client messages support `ping`, `mark_read`, `mark_all_read`, and `get_unread_count`.
+- Store keeps only the most recent 100 notifications per user.
+- MVP persistence is memory-only; data loss on restart is expected until a future store abstraction replaces it.
+- Logs must use logger formatting and must not include private message bodies beyond notification title/type/user/tavern identifiers.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Missing user ID on REST list/read/delete | `401` |
+| Mark unknown notification | `404` |
+| WebSocket connect with no pending notifications | initial `connected` with `unread_count: 0` |
+| Add notification while WebSocket is connected | WebSocket receives `type: notification` |
+| Client sends `mark_read` | WebSocket replies `notification_read` and REST unread count decreases |
+| Invalid WebSocket JSON | warning log only; connection stays alive |
+
+### 5. Good/Base/Bad Cases
+
+- Good: WebSocket registers a queue in `NotificationStore`, and `add_notification` broadcasts through that queue.
+- Base: REST list/mark-read works without an active WebSocket.
+- Bad: tracking sockets in a separate manager while `NotificationStore` broadcasts to unused queues; that makes real-time delivery silently fail.
+
+### 6. Tests Required
+
+```powershell
+py -3 -m pytest -q tests/test_notifications.py --tb=short
+py -3 -m compileall -q backend/src
+```
+
+Focused tests must assert REST list/mark-read and live WebSocket push after connection.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+await manager.connect(websocket, user_id)
+# NotificationStore.add_notification broadcasts to a different connection registry.
+```
+
+#### Correct
+
+```python
+store = get_notification_store()
+queue = await store.register_connection(user_id)
+# queue.get() is raced with websocket.receive_text(); add_notification pushes to this queue.
+```

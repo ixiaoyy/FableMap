@@ -7,30 +7,31 @@ DEFAULT_PUBLIC_WELFARE_OWNER_ID = "system_public_welfare"
 DEFAULT_PUBLIC_WELFARE_CREATED_AT = "2026-04-20T00:00:00Z"
 DEFAULT_PUBLIC_WELFARE_MODEL = "public-welfare-rules-v1"
 DEFAULT_PUBLIC_WELFARE_NPC_NEUTRAL_ASSETS = {
-    "char_pw_xiaozhou": "/assets/npcs/char_pw_xiaozhou-neutral.png",
-    "char_pw_anlan": "/assets/npcs/char_pw_anlan-neutral.png",
-    "char_pw_ahuai": "/assets/npcs/char_pw_ahuai-neutral.png",
-    "char_pw_heguang": "/assets/npcs/char_pw_heguang-neutral.png",
-    "char_pw_wenjian": "/assets/npcs/char_pw_wenjian-neutral.png",
-    "char_pw_9_delta": "/assets/npcs/char_pw_9_delta-neutral.png",
-    "char_pw_mu_mu": "/assets/npcs/char_pw_mu_mu-neutral.png",
-    "char_pw_v17": "/assets/npcs/char_pw_v17-neutral.png",
-    "char_pw_pi_pi": "/assets/npcs/char_pw_pi_pi-neutral.png",
-    "char_pw_mozhan": "/assets/npcs/char_pw_mozhan-neutral.png",
-    "char_pw_zhideng": "/assets/npcs/char_pw_zhideng-neutral.png",
-    "char_pw_aheng": "/assets/npcs/char_pw_aheng-neutral.png",
-    "char_pw_zhijian": "/assets/npcs/char_pw_zhijian-neutral.png",
-    "char_pw_yinpiao": "/assets/npcs/char_pw_yinpiao-neutral.png",
-    "char_pw_luming": "/assets/npcs/char_pw_luming-neutral.png",
-    "char_pw_qiaoqiao": "/assets/npcs/char_pw_qiaoqiao-neutral.png",
-    "char_pw_yeyu": "/assets/npcs/char_pw_yeyu-neutral.png",
-    "char_pw_dengxin": "/assets/npcs/char_pw_dengxin-neutral.png",
-    "char_pw_qiaoshou": "/assets/npcs/char_pw_qiaoshou-neutral.png",
-    "char_pw_shiyi": "/assets/npcs/char_pw_shiyi-neutral.png",
-    "char_pw_suoyin": "/assets/npcs/char_pw_suoyin-neutral.png",
-    "char_pw_huoyan": "/assets/npcs/char_pw_huoyan-neutral.png",
-    "char_pw_xingdai": "/assets/npcs/char_pw_xingdai-neutral.png",
-    "char_pw_tongling": "/assets/npcs/char_pw_tongling-neutral.png",
+    "char_pw_xiaozhou": "/assets/npcs/public-welfare/char_pw_xiaozhou/neutral.png",
+    "char_pw_anlan": "/assets/npcs/public-welfare/char_pw_anlan/neutral.png",
+    "char_pw_ahuai": "/assets/npcs/public-welfare/char_pw_ahuai/neutral.png",
+    "char_pw_heguang": "/assets/npcs/public-welfare/char_pw_heguang/neutral.png",
+    "char_pw_wenjian": "/assets/npcs/public-welfare/char_pw_wenjian/neutral.png",
+    "char_pw_9_delta": "/assets/npcs/public-welfare/char_pw_9_delta/neutral.png",
+    "char_pw_mu_mu": "/assets/npcs/public-welfare/char_pw_mu_mu/neutral.png",
+    "char_pw_v17": "/assets/npcs/public-welfare/char_pw_v17/neutral.png",
+    "char_pw_pi_pi": "/assets/npcs/public-welfare/char_pw_pi_pi/neutral.png",
+    "char_pw_mozhan": "/assets/npcs/public-welfare/char_pw_mozhan/neutral.png",
+    "char_pw_zhideng": "/assets/npcs/public-welfare/char_pw_zhideng/neutral.png",
+    "char_pw_aheng": "/assets/npcs/public-welfare/char_pw_aheng/neutral.png",
+    "char_pw_zhijian": "/assets/npcs/public-welfare/char_pw_zhijian/neutral.png",
+    "char_pw_yinpiao": "/assets/npcs/public-welfare/char_pw_yinpiao/neutral.png",
+    "char_pw_luming": "/assets/npcs/public-welfare/char_pw_luming/neutral.png",
+    "char_pw_qiaoqiao": "/assets/npcs/public-welfare/char_pw_qiaoqiao/neutral.png",
+    "char_pw_yeyu": "/assets/npcs/public-welfare/char_pw_yeyu/neutral.png",
+    "char_pw_dengxin": "/assets/npcs/public-welfare/char_pw_dengxin/neutral.png",
+    "char_pw_qiaoshou": "/assets/npcs/public-welfare/char_pw_qiaoshou/neutral.png",
+    "char_pw_shiyi": "/assets/npcs/public-welfare/char_pw_shiyi/neutral.png",
+    "char_pw_suoyin": "/assets/npcs/public-welfare/char_pw_suoyin/neutral.png",
+    "char_pw_huoyan": "/assets/npcs/public-welfare/char_pw_huoyan/neutral.png",
+    "char_pw_xingdai": "/assets/npcs/public-welfare/char_pw_xingdai/neutral.png",
+    "char_pw_tongling": "/assets/npcs/public-welfare/char_pw_tongling/neutral.png",
+    "char_pw_mimi_nya": "/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png",
 }
 
 DEFAULT_PUBLIC_WELFARE_NPC_EXPRESSION_ASSET_SUFFIXES = (
@@ -42,10 +43,10 @@ DEFAULT_PUBLIC_WELFARE_NPC_EXPRESSION_ASSET_SUFFIXES = (
 
 
 def _expression_asset_url(neutral_asset: str, expression_suffix: str) -> str:
-    neutral_suffix = "-neutral.png"
+    neutral_suffix = "/neutral.png"
     if not neutral_asset.endswith(neutral_suffix):
         return ""
-    return f"{neutral_asset[: -len(neutral_suffix)]}-{expression_suffix}.png"
+    return f"{neutral_asset[: -len(neutral_suffix)]}/{expression_suffix}.png"
 
 
 def _default_character_assets(
@@ -1255,17 +1256,17 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                     tags=["公益", "猫娘", "傲娇", "上海", "静安寺", "复国", "轻喜剧"],
                     appearance_id="night-platform",
                     talkativeness=0.74,
-                    avatar="/assets/npcs/mimi-nya-neutral.png",
+                    avatar="/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png",
                     sprites={
-                        "neutral": "/assets/npcs/mimi-nya-neutral.png",
-                        "happy": "/assets/npcs/mimi-nya-joy.png",
-                        "joy": "/assets/npcs/mimi-nya-joy.png",
-                        "angry": "/assets/npcs/mimi-nya-anger.png",
-                        "anger": "/assets/npcs/mimi-nya-anger.png",
-                        "shy": "/assets/npcs/mimi-nya-embarrassment.png",
-                        "embarrassment": "/assets/npcs/mimi-nya-embarrassment.png",
-                        "curious": "/assets/npcs/mimi-nya-curiosity.png",
-                        "curiosity": "/assets/npcs/mimi-nya-curiosity.png",
+                        "neutral": "/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png",
+                        "happy": "/assets/npcs/public-welfare/char_pw_mimi_nya/joy.png",
+                        "joy": "/assets/npcs/public-welfare/char_pw_mimi_nya/joy.png",
+                        "angry": "/assets/npcs/public-welfare/char_pw_mimi_nya/anger.png",
+                        "anger": "/assets/npcs/public-welfare/char_pw_mimi_nya/anger.png",
+                        "shy": "/assets/npcs/public-welfare/char_pw_mimi_nya/embarrassment.png",
+                        "embarrassment": "/assets/npcs/public-welfare/char_pw_mimi_nya/embarrassment.png",
+                        "curious": "/assets/npcs/public-welfare/char_pw_mimi_nya/curiosity.png",
+                        "curiosity": "/assets/npcs/public-welfare/char_pw_mimi_nya/curiosity.png",
                     },
                 ),
                 _character(
@@ -1304,17 +1305,17 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                     tags=["公益", "猫尾", "账房", "上海", "静安寺", "复国", "轻喜剧"],
                     appearance_id="night-platform",
                     talkativeness=0.58,
-                    avatar="/assets/npcs/char_pw_yinpiao-neutral.png",
+                    avatar="/assets/npcs/public-welfare/char_pw_yinpiao/neutral.png",
                     sprites={
-                        "neutral": "/assets/npcs/char_pw_yinpiao-neutral.png",
-                        "happy": "/assets/npcs/char_pw_yinpiao-joy.png",
-                        "joy": "/assets/npcs/char_pw_yinpiao-joy.png",
-                        "angry": "/assets/npcs/char_pw_yinpiao-anger.png",
-                        "anger": "/assets/npcs/char_pw_yinpiao-anger.png",
-                        "shy": "/assets/npcs/char_pw_yinpiao-embarrassment.png",
-                        "embarrassment": "/assets/npcs/char_pw_yinpiao-embarrassment.png",
-                        "curious": "/assets/npcs/char_pw_yinpiao-curiosity.png",
-                        "curiosity": "/assets/npcs/char_pw_yinpiao-curiosity.png",
+                        "neutral": "/assets/npcs/public-welfare/char_pw_yinpiao/neutral.png",
+                        "happy": "/assets/npcs/public-welfare/char_pw_yinpiao/joy.png",
+                        "joy": "/assets/npcs/public-welfare/char_pw_yinpiao/joy.png",
+                        "angry": "/assets/npcs/public-welfare/char_pw_yinpiao/anger.png",
+                        "anger": "/assets/npcs/public-welfare/char_pw_yinpiao/anger.png",
+                        "shy": "/assets/npcs/public-welfare/char_pw_yinpiao/embarrassment.png",
+                        "embarrassment": "/assets/npcs/public-welfare/char_pw_yinpiao/embarrassment.png",
+                        "curious": "/assets/npcs/public-welfare/char_pw_yinpiao/curiosity.png",
+                        "curiosity": "/assets/npcs/public-welfare/char_pw_yinpiao/curiosity.png",
                     },
                 ),
             ],

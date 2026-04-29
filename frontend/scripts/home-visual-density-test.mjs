@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const homeSource = readFileSync(resolve(__dirname, "../app/routes/home.tsx"), "utf8")
-const radarAssetPath = resolve(__dirname, "../app/assets/discover-reference/discover-radar-surface.png")
+const radarAssetPath = resolve(__dirname, "../app/assets/discover/reference/discover-radar-surface.png")
 
 assert.ok(existsSync(radarAssetPath), "homepage hero should rely on a project-local high-quality radar/city asset")
 assert.ok(homeSource.includes("discoverRadarSurfaceImage"), "homepage hero should import the high-quality radar surface asset")

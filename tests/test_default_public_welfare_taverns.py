@@ -1,5 +1,6 @@
 import hashlib
 import json
+import struct
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -17,15 +18,30 @@ def _service(tmpdir: str) -> WebService:
 
 
 def _assert_project_png_asset(sprite_url: str) -> None:
-    assert sprite_url.startswith("/assets/npcs/")
+    assert sprite_url.startswith("/assets/npcs/public-welfare/")
     sprite_path = Path("frontend/public") / sprite_url.removeprefix("/")
     assert sprite_path.exists(), f"missing project NPC asset: {sprite_path}"
     assert sprite_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
+def _public_welfare_npc_asset(char_id: str, expression: str) -> str:
+    return f"/assets/npcs/public-welfare/{char_id}/{expression}.png"
+
+
 def _project_png_hash(sprite_url: str) -> str:
     sprite_path = Path("frontend/public") / sprite_url.removeprefix("/")
     return hashlib.sha256(sprite_path.read_bytes()).hexdigest()
+
+
+def _project_png_dimensions(sprite_url: str) -> tuple[int, int]:
+    sprite_path = Path("frontend/public") / sprite_url.removeprefix("/")
+    header = sprite_path.read_bytes()[:24]
+    assert header.startswith(b"\x89PNG\r\n\x1a\n")
+    return struct.unpack(">II", header[16:24])
+
+
+def _project_png_file_hash(path: str) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def test_default_public_welfare_taverns_are_seeded_and_discoverable():
@@ -120,6 +136,34 @@ def test_default_public_welfare_characters_have_direct_expression_assets():
             assert len(expression_hashes) == len(set(expression_hashes.values())), (
                 f"{character['id']} must use distinct direct assets for neutral and expression sprites"
             )
+
+
+def test_default_public_welfare_npc_assets_are_grouped_by_character_directory():
+    flat_pngs = list(Path("frontend/public/assets/npcs").glob("*.png"))
+    assert flat_pngs == []
+
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+
+        characters = []
+        for tavern_id in DEFAULT_PUBLIC_WELFARE_TAVERN_IDS:
+            tavern = service.get_tavern_payload(tavern_id, user_id="visitor_public_welfare")
+            characters.extend(tavern["characters"])
+
+        character_ids = {character["id"] for character in characters}
+        character_dirs = {
+            path.name
+            for path in Path("frontend/public/assets/npcs/public-welfare").iterdir()
+            if path.is_dir()
+        }
+
+        assert character_ids == character_dirs
+        for char_id in character_ids:
+            files = {
+                path.name
+                for path in (Path("frontend/public/assets/npcs/public-welfare") / char_id).glob("*.png")
+            }
+            assert files == {"neutral.png", "joy.png", "anger.png", "embarrassment.png", "curiosity.png"}
 
 
 def test_default_public_welfare_taverns_explain_npc_role_division():
@@ -306,16 +350,16 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         assert mimi["id"] == "char_pw_mimi_nya"
         assert mimi["name"] == "眯眯喵桑"
         assert mimi["tavern_id"] == "pw_jingan_catbell_refuge"
-        assert mimi["avatar"] == "/assets/npcs/mimi-nya-neutral.png"
-        assert mimi["sprites"]["neutral"] == "/assets/npcs/mimi-nya-neutral.png"
-        assert mimi["sprites"]["happy"] == "/assets/npcs/mimi-nya-joy.png"
-        assert mimi["sprites"]["joy"] == "/assets/npcs/mimi-nya-joy.png"
-        assert mimi["sprites"]["angry"] == "/assets/npcs/mimi-nya-anger.png"
-        assert mimi["sprites"]["anger"] == "/assets/npcs/mimi-nya-anger.png"
-        assert mimi["sprites"]["shy"] == "/assets/npcs/mimi-nya-embarrassment.png"
-        assert mimi["sprites"]["embarrassment"] == "/assets/npcs/mimi-nya-embarrassment.png"
-        assert mimi["sprites"]["curious"] == "/assets/npcs/mimi-nya-curiosity.png"
-        assert mimi["sprites"]["curiosity"] == "/assets/npcs/mimi-nya-curiosity.png"
+        assert mimi["avatar"] == _public_welfare_npc_asset("char_pw_mimi_nya", "neutral")
+        assert mimi["sprites"]["neutral"] == _public_welfare_npc_asset("char_pw_mimi_nya", "neutral")
+        assert mimi["sprites"]["happy"] == _public_welfare_npc_asset("char_pw_mimi_nya", "joy")
+        assert mimi["sprites"]["joy"] == _public_welfare_npc_asset("char_pw_mimi_nya", "joy")
+        assert mimi["sprites"]["angry"] == _public_welfare_npc_asset("char_pw_mimi_nya", "anger")
+        assert mimi["sprites"]["anger"] == _public_welfare_npc_asset("char_pw_mimi_nya", "anger")
+        assert mimi["sprites"]["shy"] == _public_welfare_npc_asset("char_pw_mimi_nya", "embarrassment")
+        assert mimi["sprites"]["embarrassment"] == _public_welfare_npc_asset("char_pw_mimi_nya", "embarrassment")
+        assert mimi["sprites"]["curious"] == _public_welfare_npc_asset("char_pw_mimi_nya", "curiosity")
+        assert mimi["sprites"]["curiosity"] == _public_welfare_npc_asset("char_pw_mimi_nya", "curiosity")
         for sprite_url in {mimi["avatar"], *mimi["sprites"].values()}:
             _assert_project_png_asset(sprite_url)
         for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
@@ -325,16 +369,16 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         yinpiao = characters_by_id["char_pw_yinpiao"]
         assert yinpiao["name"] == "银票"
         assert yinpiao["tavern_id"] == "pw_jingan_catbell_refuge"
-        assert yinpiao["avatar"] == "/assets/npcs/char_pw_yinpiao-neutral.png"
-        assert yinpiao["sprites"]["neutral"] == "/assets/npcs/char_pw_yinpiao-neutral.png"
-        assert yinpiao["sprites"]["happy"] == "/assets/npcs/char_pw_yinpiao-joy.png"
-        assert yinpiao["sprites"]["joy"] == "/assets/npcs/char_pw_yinpiao-joy.png"
-        assert yinpiao["sprites"]["angry"] == "/assets/npcs/char_pw_yinpiao-anger.png"
-        assert yinpiao["sprites"]["anger"] == "/assets/npcs/char_pw_yinpiao-anger.png"
-        assert yinpiao["sprites"]["shy"] == "/assets/npcs/char_pw_yinpiao-embarrassment.png"
-        assert yinpiao["sprites"]["embarrassment"] == "/assets/npcs/char_pw_yinpiao-embarrassment.png"
-        assert yinpiao["sprites"]["curious"] == "/assets/npcs/char_pw_yinpiao-curiosity.png"
-        assert yinpiao["sprites"]["curiosity"] == "/assets/npcs/char_pw_yinpiao-curiosity.png"
+        assert yinpiao["avatar"] == _public_welfare_npc_asset("char_pw_yinpiao", "neutral")
+        assert yinpiao["sprites"]["neutral"] == _public_welfare_npc_asset("char_pw_yinpiao", "neutral")
+        assert yinpiao["sprites"]["happy"] == _public_welfare_npc_asset("char_pw_yinpiao", "joy")
+        assert yinpiao["sprites"]["joy"] == _public_welfare_npc_asset("char_pw_yinpiao", "joy")
+        assert yinpiao["sprites"]["angry"] == _public_welfare_npc_asset("char_pw_yinpiao", "anger")
+        assert yinpiao["sprites"]["anger"] == _public_welfare_npc_asset("char_pw_yinpiao", "anger")
+        assert yinpiao["sprites"]["shy"] == _public_welfare_npc_asset("char_pw_yinpiao", "embarrassment")
+        assert yinpiao["sprites"]["embarrassment"] == _public_welfare_npc_asset("char_pw_yinpiao", "embarrassment")
+        assert yinpiao["sprites"]["curious"] == _public_welfare_npc_asset("char_pw_yinpiao", "curiosity")
+        assert yinpiao["sprites"]["curiosity"] == _public_welfare_npc_asset("char_pw_yinpiao", "curiosity")
         for sprite_url in {yinpiao["avatar"], *yinpiao["sprites"].values()}:
             _assert_project_png_asset(sprite_url)
         for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
@@ -440,8 +484,8 @@ def test_default_public_welfare_seed_backfills_missing_character_assets_without_
         service = _service(tmpdir)
         repaired_helpdesk = service.get_tavern_payload("pw_lantern_helpdesk", user_id="visitor_public_welfare")
         repaired_xiaozhou = repaired_helpdesk["characters"][0]
-        assert repaired_xiaozhou["avatar"] == "/assets/npcs/char_pw_xiaozhou-neutral.png"
-        assert repaired_xiaozhou["sprites"]["neutral"] == "/assets/npcs/char_pw_xiaozhou-neutral.png"
+        assert repaired_xiaozhou["avatar"] == _public_welfare_npc_asset("char_pw_xiaozhou", "neutral")
+        assert repaired_xiaozhou["sprites"]["neutral"] == _public_welfare_npc_asset("char_pw_xiaozhou", "neutral")
         _assert_project_png_asset(repaired_xiaozhou["avatar"])
 
         repaired_community = service.get_tavern_payload("pw_community_repair", user_id="visitor_public_welfare")

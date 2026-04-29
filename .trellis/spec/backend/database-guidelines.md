@@ -566,3 +566,183 @@ def create_store(settings):
         ...
     return TavernStore(settings.output_root / "taverns")
 ```
+
+---
+
+## Scenario: Owner Default LLM Config Store
+
+### 1. Scope / Trigger
+
+Use this contract when implementing or extending owner-level default LLM configuration used by creator workflows such as AI-assisted tavern drafts. This is sensitive owner runtime configuration, not public tavern content.
+
+### 2. Signatures
+
+```python
+OwnerConfigStore(path: Path)
+OwnerConfigStore.get_default_llm_config(owner_id: str) -> dict[str, Any] | None
+OwnerConfigStore.save_default_llm_config(owner_id: str, config: dict[str, Any]) -> dict[str, Any]
+
+TavernApplicationService.get_owner_default_llm(user_id: str) -> dict[str, Any]
+TavernApplicationService.save_owner_default_llm(data: dict[str, Any], user_id: str) -> dict[str, Any]
+TavernApplicationService.generate_tavern_draft(data: dict[str, Any], user_id: str) -> dict[str, Any]
+```
+
+```http
+GET /api/v1/owners/me/default-llm
+PUT /api/v1/owners/me/default-llm
+POST /api/v1/owners/me/tavern-drafts/generate
+X-User-Id: <owner id>
+```
+
+### 3. Contracts
+
+- Route handlers must stay thin and delegate to `TavernApplicationService`; they must not read or write `owner_configs.json` directly.
+- JSON persistence is MVP-only and must sit behind `OwnerConfigStore` so a DB-backed store can replace it later.
+- The storage key is the authenticated owner ID from `X-User-Id`; do not fall back to `owner-demo` for these endpoints.
+- Read responses must never echo raw `api_key`; use `configured` / `api_key_configured` and safe model/backend/base URL fields only.
+- Draft generation may use the private API key internally through `core.llm_clients.create_client`, but the returned payload is a candidate draft only and must not persist Tavern or Character records.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Missing `X-User-Id` | `401` user identity error |
+| Owner saves valid config | Config persists under that owner ID |
+| Owner reads config | Raw `api_key` omitted; `api_key_configured` reflects presence |
+| Different owner reads | Cannot see the first owner's config |
+| Draft generation without config | `400` clear "configure default LLM first" style error; no writes |
+| LLM returns non-JSON | `502` provider/format error; no writes |
+| LLM returns valid draft JSON | Sanitized draft payload only; no Tavern/Character persistence |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `owners.py` extracts `X-User-Id`, calls the application service, and returns a masked config/draft response.
+- Base: JSON store writes normalized config for MVP, with a follow-up to move dynamic multi-user data to DB.
+- Bad: route or React code importing `owner_configs.json`, returning `api_key`, or silently using `owner-demo` when the user header is missing.
+
+### 6. Tests Required
+
+Run focused tests that assert:
+
+```powershell
+py -3 -m pytest -q tests/test_ai_assisted_tavern_drafts.py --tb=short
+```
+
+Required assertions:
+
+- config save/read masks `api_key`;
+- configs are isolated by owner ID;
+- missing user ID fails;
+- missing default LLM blocks draft generation;
+- successful draft generation does not add Tavern/Character records;
+- invalid LLM JSON returns an error.
+
+Also run:
+
+```powershell
+py -3 -m compileall -q backend/src
+```
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+owner_id = request.headers.get("X-User-Id") or "owner-demo"
+return json.loads(Path("owner_configs.json").read_text())[owner_id]
+```
+
+This bypasses identity enforcement, hard-codes persistence, and risks leaking secrets.
+
+#### Correct
+
+```python
+owner_id = get_user_id(request)
+return taverns_service(request).get_owner_default_llm(owner_id)
+```
+
+The service enforces identity, uses `OwnerConfigStore`, and returns only a masked safe payload.
+
+---
+
+## Scenario: Owner-Visible Tavern Visitor Notes
+
+### 1. Scope / Trigger
+
+Use this contract when implementing visitor feedback tied to a tavern. This is a bounded revisit-feedback loop, not a public guestbook or visitor social feature.
+
+### 2. Signatures
+
+```python
+VisitorNoteStore(path: Path)
+VisitorNoteStore.create_note(tavern_id: str, visitor_id: str, data: dict[str, Any]) -> dict[str, Any]
+VisitorNoteStore.list_notes(tavern_id: str, *, limit: int = 20, offset: int = 0) -> tuple[list[dict[str, Any]], int]
+VisitorNoteStore.delete_note(tavern_id: str, note_id: str) -> bool
+
+TavernApplicationService.create_visitor_note(tavern_id: str, data: dict[str, Any], user_id: str) -> dict[str, Any]
+TavernApplicationService.list_visitor_notes(tavern_id: str, user_id: str, limit: int = 20, offset: int = 0) -> dict[str, Any]
+TavernApplicationService.delete_visitor_note(tavern_id: str, note_id: str, user_id: str) -> dict[str, Any]
+```
+
+```http
+POST /api/v1/taverns/{tavern_id}/visitor-notes
+GET /api/v1/taverns/{tavern_id}/visitor-notes
+DELETE /api/v1/taverns/{tavern_id}/visitor-notes/{note_id}
+```
+
+### 3. Contracts
+
+- Notes are stored outside public Tavern payloads.
+- `visibility` is fixed to `owner_only` for MVP.
+- Visitors may create notes only for visible taverns and must provide `X-User-Id`.
+- Only the tavern owner can list all notes.
+- Owner can delete any note; the original visitor may delete their own note if that path is exposed.
+- Do not expose public `/messages`, replies, pinning, likes, follows, feeds, or cross-tavern visitor messaging for this feature.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Missing visitor identity on create | `401` |
+| Empty content | `400` |
+| Content over 500 chars | `400` |
+| Non-owner lists notes | `403` |
+| Owner lists notes | `200`, `{ notes, count }` |
+| Public tavern GET | no `visitor_notes` / `messages` fields |
+| Old `/messages` routes | not exposed by v1 router |
+
+### 5. Good/Base/Bad Cases
+
+- Good: visitor sends one private note to owner, owner reviews/deletes it.
+- Base: JSON-backed `VisitorNoteStore` is MVP storage behind a store abstraction.
+- Bad: public message board with replies/pins, because it drifts into visitor-to-visitor social behavior.
+
+### 6. Tests Required
+
+```powershell
+py -3 -m pytest -q tests/test_tavern_visitor_notes.py --tb=short
+py -3 -m compileall -q backend/src
+```
+
+Assertions must cover create, owner-only list, public-payload exclusion, delete, and old social route non-exposure.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+@router.get("/{tavern_id}/messages")
+def list_public_messages(...): ...
+```
+
+This creates a public social surface.
+
+#### Correct
+
+```python
+@router.get("/{tavern_id}/visitor-notes")
+def list_visitor_notes(request, tavern_id):
+    return service.list_visitor_notes(tavern_id, get_user_id(request))
+```
+
+The service enforces owner-only access and keeps notes private.

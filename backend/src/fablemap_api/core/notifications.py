@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 import asyncio
 import logging
 
@@ -34,7 +34,7 @@ class Notification:
     title: str
     content: str
     data: dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     read: bool = False
     tavern_id: str | None = None
     tavern_name: str | None = None
@@ -89,7 +89,7 @@ class NotificationStore:
             title=title,
             content=content,
             data=data or {},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             read=False,
             tavern_id=tavern_id,
             tavern_name=tavern_name,
@@ -107,7 +107,7 @@ class NotificationStore:
             # Broadcast to connected clients
             await self._broadcast(user_id, notification)
 
-        logger.info(f"Notification sent to {user_id}: {notification_type} - {title}")
+        logger.info("Notification sent to %s: %s - %s", user_id, notification_type, title)
         return notification
 
     async def _broadcast(self, user_id: str, notification: Notification) -> None:
@@ -117,7 +117,7 @@ class NotificationStore:
                 try:
                     await queue.put(notification.to_dict())
                 except Exception as e:
-                    logger.warning(f"Failed to queue notification: {e}")
+                    logger.warning("Failed to queue notification: %s", e)
 
     async def register_connection(self, user_id: str) -> asyncio.Queue:
         """Register a new WebSocket connection for a user."""
@@ -235,12 +235,12 @@ async def notify_new_message(tavern_id: str, tavern_name: str, owner_id: str, ch
 
 
 async def notify_new_guest_message(tavern_id: str, tavern_name: str, owner_id: str, visitor_name: str) -> Notification:
-    """Notify tavern owner when there's a new guest message."""
+    """Notify tavern owner when there's a new owner-visible visitor note."""
     return await get_notification_store().add_notification(
         user_id=owner_id,
         notification_type=NotificationType.NEW_GUEST_MESSAGE.value,
-        title="新留言",
-        content=f"{visitor_name} 给你的酒馆留言了",
+        title="新回访反馈",
+        content=f"{visitor_name} 给你的酒馆留下了回访反馈",
         data={"tavern_id": tavern_id, "visitor_name": visitor_name},
         tavern_id=tavern_id,
         tavern_name=tavern_name,

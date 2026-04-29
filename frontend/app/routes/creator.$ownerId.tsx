@@ -3,8 +3,8 @@ import { ArrowRight, Globe, MapPinned, Store, Users, Sparkles } from "lucide-rea
 import { Link, useLoaderData } from "react-router"
 import { useMemo, useState } from "react"
 
-import tavernNeonImage from "../assets/homepage-reference/modules/tavern-neon.png"
-import tavernNightImage from "../assets/homepage-reference/modules/tavern-night.png"
+import tavernNeonImage from "../assets/homepage/reference/modules/tavern-neon.png"
+import tavernNightImage from "../assets/homepage/reference/modules/tavern-night.png"
 import { TavernPreviewModal } from "../components/tavern-preview-modal"
 import { DEFAULT_OWNER_ID, errorMessage, listTaverns, type Tavern, type TavernCharacter, type TavernListResponse } from "../lib/taverns"
 import { ProductShell } from "../shell/product-shell"
@@ -264,3 +264,4 @@ export default function CreatorRoute() {
     </ProductShell>
   )
 }
+

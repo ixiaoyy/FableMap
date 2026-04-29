@@ -16,6 +16,8 @@ export const PLACE_TYPES = [
     shortLabel: "酒馆",
     icon: "🍻",
     discoverable: true,
+    tone: "夜色、霓虹、吧台与旧友重逢",
+    cardClass: "border-cyan-300/26 bg-cyan-300/10 text-cyan-50",
     description: "默认兼容类型，延续当前赛博酒馆主线。",
   },
   {
@@ -24,6 +26,8 @@ export const PLACE_TYPES = [
     shortLabel: "咖啡",
     icon: "☕",
     discoverable: true,
+    tone: "白日、咖啡香、读书角与安静陪伴",
+    cardClass: "border-amber-300/28 bg-amber-300/10 text-amber-50",
     description: "适合白日休闲、阅读、陪伴和轻社交氛围。",
   },
   {
@@ -32,6 +36,8 @@ export const PLACE_TYPES = [
     shortLabel: "奶茶",
     icon: "🧋",
     discoverable: true,
+    tone: "轻快、校园、甜味气泡与打卡感",
+    cardClass: "border-pink-300/28 bg-pink-300/10 text-pink-50",
     description: "适合年轻、轻快、校园和打卡型地点。",
   },
   {
@@ -40,6 +46,8 @@ export const PLACE_TYPES = [
     shortLabel: "餐馆",
     icon: "🍽️",
     discoverable: true,
+    tone: "正餐、仪式感、主厨故事与纪念日",
+    cardClass: "border-orange-300/28 bg-orange-300/10 text-orange-50",
     description: "适合正餐、约会、庆祝和主厨叙事。",
   },
   {
@@ -48,6 +56,8 @@ export const PLACE_TYPES = [
     shortLabel: "便利店",
     icon: "🏪",
     discoverable: true,
+    tone: "24h、夜班、街角灯箱与临时避雨",
+    cardClass: "border-emerald-300/28 bg-emerald-300/10 text-emerald-50",
     description: "适合 24h、夜班、街角和社区照明场景。",
   },
   {
@@ -56,6 +66,8 @@ export const PLACE_TYPES = [
     shortLabel: "书店",
     icon: "📚",
     discoverable: true,
+    tone: "旧书、书架、纸页气味与低声交谈",
+    cardClass: "border-violet-300/28 bg-violet-300/10 text-violet-50",
     description: "适合安静阅读、旧书、书架和文艺场景。",
   },
   {
@@ -64,6 +76,8 @@ export const PLACE_TYPES = [
     shortLabel: "学校",
     icon: "🏫",
     discoverable: true,
+    tone: "校园、传达室、铃声与受控公共空间",
+    cardClass: "border-sky-300/28 bg-sky-300/10 text-sky-50",
     description: "高隐私风险类型，仅作为受控地点语义展示。",
   },
   {
@@ -73,6 +87,8 @@ export const PLACE_TYPES = [
     icon: "🏠",
     discoverable: false,
     reserved: true,
+    tone: "私密、家庭成员、物件展示与邀请访问",
+    cardClass: "border-lime-300/28 bg-lime-300/10 text-lime-50",
     description: "保留类型；默认私密，不进入公开发现筛选。",
   },
 ]

@@ -10,7 +10,9 @@ from fastapi.responses import JSONResponse
 from .application.taverns import TavernApplicationService
 from .api.v1.router import api_router
 from .core.tavern import TavernStore
+from .infrastructure.owner_config_store import OwnerConfigStore
 from .infrastructure.settings import ApiSettings
+from .infrastructure.visitor_note_store import VisitorNoteStore
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,11 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
 
     # 根据配置选择存储后端
     store = create_store(resolved)
-    app.state.taverns = TavernApplicationService(store)
+    app.state.taverns = TavernApplicationService(
+        store,
+        OwnerConfigStore(resolved.output_root / "owner_configs.json"),
+        VisitorNoteStore(resolved.output_root / "visitor_notes.json"),
+    )
 
     app.add_middleware(
         CORSMiddleware,

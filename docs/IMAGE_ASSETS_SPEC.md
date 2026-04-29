@@ -66,15 +66,15 @@ frontend/app/assets/npc-style-cast/portraits/
 
 #### 默认公益 NPC 专属素材
 
-`AI 草稿` 示例角色「眯眯喵桑」属于已批准默认 demo seed，专属头像 / 表情素材作为公开 URL 存放在：
+`AI 草稿` 示例角色「眯眯喵桑」属于已批准默认 demo seed，专属头像 / 表情素材作为公开 URL 按角色目录存放在：
 
 ```
-frontend/public/assets/npcs/
-├── mimi-nya-neutral.png
-├── mimi-nya-joy.png
-├── mimi-nya-anger.png
-├── mimi-nya-embarrassment.png
-└── mimi-nya-curiosity.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/
+├── neutral.png
+├── joy.png
+├── anger.png
+├── embarrassment.png
+└── curiosity.png
 ```
 
 这些文件由 `backend/src/fablemap_api/core/default_taverns.py` 的默认角色 `avatar` / `sprites` 引用；它们不是通用 fallback，也不会被写回其他店主角色。

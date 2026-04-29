@@ -1,13 +1,13 @@
-import { MapPinned, Sparkles } from "lucide-react"
+import { Compass, Home, MapPinned, PlusCircle, Sparkles, UserRound } from "lucide-react"
 import { NavLink } from "react-router"
 
 import { cn } from "../lib/utils"
 
 const navItems = [
-  { to: "/", label: "首页" },
-  { to: "/discover", label: "发现" },
-  { to: "/create", label: "创建空间" },
-  { to: "/owner", label: "主人" },
+  { to: "/", label: "首页", icon: Home },
+  { to: "/discover", label: "发现", icon: Compass },
+  { to: "/create", label: "创建空间", icon: PlusCircle },
+  { to: "/owner", label: "主人", icon: UserRound },
 ]
 
 export function ProductShell({
@@ -46,6 +46,7 @@ export function ProductShell({
                   )
                 }
               >
+                <item.icon className="mr-2 hidden h-4 w-4 sm:block" />
                 {item.label}
               </NavLink>
             ))}
@@ -53,7 +54,31 @@ export function ProductShell({
         </div>
       </header>
 
-      <div className="relative mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 sm:py-12">
+      <nav
+        className="mobile-bottom-dock fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 gap-1 rounded-[1.5rem] border border-white/12 bg-slate-950/88 p-1.5 shadow-2xl shadow-black/45 backdrop-blur-xl lg:hidden"
+        aria-label="Mobile navigation"
+      >
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            className={({ isActive }) =>
+              cn(
+                "flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-[1.1rem] px-2 text-[0.68rem] font-bold transition",
+                isActive
+                  ? "bg-cyan-300/18 text-white shadow-[0_0_26px_rgba(0,214,201,0.18)]"
+                  : "text-violet-100/58 hover:bg-white/8 hover:text-violet-50",
+              )
+            }
+          >
+            <item.icon className="h-5 w-5" />
+            <span className="max-w-full truncate">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="relative mx-auto w-full max-w-[1320px] px-4 py-8 pb-28 sm:px-6 sm:py-12 lg:pb-12">
         <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/8 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-cyan-100">
           <Sparkles className="h-3.5 w-3.5" />
           {eyebrow}

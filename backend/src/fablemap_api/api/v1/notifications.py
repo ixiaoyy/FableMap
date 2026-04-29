@@ -12,13 +12,9 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
 
 from ...core.notifications import (
-    NotificationType,
     get_notification_store,
-    notify_new_guest_message,
-    notify_new_visitor,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +33,7 @@ class ConnectionManager:
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
-        logger.info(f"WebSocket connected: {user_id}")
+        logger.info("WebSocket connected: %s", user_id)
 
     def disconnect(self, websocket: WebSocket, user_id: str):
         if user_id in self.active_connections:
@@ -45,7 +41,7 @@ class ConnectionManager:
                 self.active_connections[user_id].remove(websocket)
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
-        logger.info(f"WebSocket disconnected: {user_id}")
+        logger.info("WebSocket disconnected: %s", user_id)
 
     async def send_to_user(self, user_id: str, message: dict[str, Any]):
         if user_id in self.active_connections:
@@ -54,7 +50,7 @@ class ConnectionManager:
                 try:
                     await websocket.send_json(message)
                 except Exception as e:
-                    logger.warning(f"Failed to send to websocket: {e}")
+                    logger.warning("Failed to send to websocket: %s", e)
                     disconnected.append(websocket)
             for ws in disconnected:
                 self.disconnect(ws, user_id)
@@ -73,10 +69,11 @@ async def websocket_notifications(websocket: WebSocket, user_id: str):
     - Listens for ping messages
     - Broadcasts new notifications in real-time
     """
+    store = get_notification_store()
     await manager.connect(websocket, user_id)
+    queue = await store.register_connection(user_id)
 
     # Send pending notifications
-    store = get_notification_store()
     notifications, _, unread_count = await store.get_notifications(user_id, limit=20)
 
     try:
@@ -87,18 +84,34 @@ async def websocket_notifications(websocket: WebSocket, user_id: str):
             "notifications": notifications,
         })
 
-        # Send any unread notifications as separate messages
-        for notification in notifications:
-            if not notification.get("read"):
+        # Keep connection alive, listen for client messages, and push new notifications.
+        while True:
+            receive_task = asyncio.create_task(websocket.receive_text())
+            notification_task = asyncio.create_task(queue.get())
+            done, pending = await asyncio.wait(
+                {receive_task, notification_task},
+                timeout=30.0,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            if not done:
+                for task in pending:
+                    task.cancel()
+                await websocket.send_json({"type": "ping"})
+                continue
+
+            for task in pending:
+                task.cancel()
+
+            if notification_task in done:
                 await websocket.send_json({
                     "type": "notification",
-                    "data": notification,
+                    "data": notification_task.result(),
                 })
+                continue
 
-        # Keep connection alive and listen for messages
-        while True:
             try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                data = receive_task.result()
                 message = json.loads(data)
 
                 if message.get("type") == "ping":
@@ -123,15 +136,13 @@ async def websocket_notifications(websocket: WebSocket, user_id: str):
                         "count": count,
                     })
 
-            except asyncio.TimeoutError:
-                # Send keepalive ping
-                await websocket.send_json({"type": "ping"})
             except json.JSONDecodeError:
-                logger.warning(f"Invalid JSON received: {data}")
+                logger.warning("Invalid notification websocket JSON received")
 
     except WebSocketDisconnect:
         pass
     finally:
+        await store.unregister_connection(user_id, queue)
         manager.disconnect(websocket, user_id)
 
 
@@ -228,7 +239,7 @@ async def get_unread_count(request: Request) -> dict[str, Any]:
 def _get_user_id(request: Request) -> str | None:
     """Extract user ID from request headers or query params."""
     # Try header first
-    user_id = request.headers.get("X-User-ID")
+    user_id = request.headers.get("X-User-Id") or request.headers.get("X-User-ID")
     if user_id:
         return user_id
 

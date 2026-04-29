@@ -7,7 +7,9 @@ from fastapi import HTTPException
 from fablemap_api.core.tavern import LLMConfig, Tavern, TavernService, TavernStore
 
 from ..domain.tavern_policy import can_view_tavern, is_tavern_owner
+from ..infrastructure.owner_config_store import OwnerConfigStore
 from ..infrastructure.settings import ApiSettings
+from ..infrastructure.visitor_note_store import VisitorNoteStore
 from .services.management import TavernManagementApplicationMixin
 from .services.packages import PackageApplicationMixin
 from .services.worldinfo import WorldInfoApplicationMixin
@@ -44,9 +46,16 @@ class TavernApplicationService(
     behavior in the core modules while the enterprise package is expanded.
     """
 
-    def __init__(self, store: TavernStore):
+    def __init__(
+        self,
+        store: TavernStore,
+        owner_config_store: OwnerConfigStore | None = None,
+        visitor_note_store: VisitorNoteStore | None = None,
+    ):
         self.store = store
         self.taverns = TavernService(store)
+        self.owner_config_store = owner_config_store
+        self.visitor_note_store = visitor_note_store
 
     def _get_runtime_llm_config(self, tavern_id: str) -> LLMConfig | None:
         private_getter = getattr(self.store, "get_llm_config_private", None)
@@ -56,7 +65,11 @@ class TavernApplicationService(
 
     @classmethod
     def from_settings(cls, settings: ApiSettings) -> "TavernApplicationService":
-        return cls(TavernStore(settings.output_root / "taverns"))
+        return cls(
+            TavernStore(settings.output_root / "taverns"),
+            OwnerConfigStore(settings.output_root / "owner_configs.json"),
+            VisitorNoteStore(settings.output_root / "visitor_notes.json"),
+        )
 
     def _get_tavern_or_404(self, tavern_id: str) -> Tavern:
         tavern = self.store.get_tavern(tavern_id)
@@ -87,6 +100,56 @@ class TavernApplicationService(
         except (TypeError, ValueError):
             return fallback
 
+    def _require_user_id(self, user_id: str) -> str:
+        safe_user_id = str(user_id or "").strip()
+        if not safe_user_id:
+            raise HTTPException(status_code=401, detail="用户身份不能为空")
+        return safe_user_id
+
+    def create_visitor_note(self, tavern_id: str, data: dict[str, Any], user_id: str) -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        visitor_id = self._require_user_id(user_id)
+        self._ensure_visible(tavern, visitor_id)
+        if not self.visitor_note_store:
+            raise HTTPException(status_code=500, detail="访客反馈存储不可用")
+        content = str(data.get("content") or "").strip()
+        if not content:
+            raise HTTPException(status_code=400, detail="反馈内容不能为空")
+        if len(content) > 500:
+            raise HTTPException(status_code=400, detail="反馈内容不能超过 500 字符")
+        note = self.visitor_note_store.create_note(
+            tavern_id,
+            visitor_id,
+            {
+                "visitor_nickname": str(data.get("visitor_nickname") or "旅人").strip()[:64] or "旅人",
+                "content": content,
+            },
+        )
+        return {"ok": True, "note": note}
+
+    def list_visitor_notes(self, tavern_id: str, user_id: str, limit: int = 20, offset: int = 0) -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_owner(tavern, self._require_user_id(user_id))
+        if not self.visitor_note_store:
+            raise HTTPException(status_code=500, detail="访客反馈存储不可用")
+        notes, total = self.visitor_note_store.list_notes(tavern_id, limit=limit, offset=offset)
+        return {"notes": notes, "count": total}
+
+    def delete_visitor_note(self, tavern_id: str, note_id: str, user_id: str) -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        safe_user_id = self._require_user_id(user_id)
+        if not self.visitor_note_store:
+            raise HTTPException(status_code=500, detail="访客反馈存储不可用")
+        note = self.visitor_note_store.get_note(tavern_id, note_id)
+        if not note:
+            raise HTTPException(status_code=404, detail="反馈不存在")
+        is_owner = self._is_owner(tavern, safe_user_id)
+        is_author = note.get("visitor_id") == safe_user_id
+        if not is_owner and not is_author:
+            raise HTTPException(status_code=403, detail="无权删除此反馈")
+        self.visitor_note_store.delete_note(tavern_id, note_id)
+        return {"ok": True, "note_id": note_id}
+
     def _get_public_bond_store(self) -> "PublicBondStore":
         """返回 PublicBondStore 实例（仅在 MySQL 后端时可用）。"""
         from .services.public_bond import MySQLPublicBondStore
@@ -94,137 +157,3 @@ class TavernApplicationService(
             db = self.store._session()
             return MySQLPublicBondStore(db)
         raise HTTPException(500, "Public bond store requires MySQL backend")
-
-    # ── Tavern Messages ──────────────────────────
-
-    def list_tavern_messages(self, tavern_id: str, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """列出酒馆留言"""
-        tavern = self._get_tavern_or_404(tavern_id)
-
-        # 检查是否可访问
-        self._ensure_visible(tavern, "")
-
-        # 检查 store 是否支持 messages
-        if not hasattr(self.store, "list_tavern_messages"):
-            raise HTTPException(500, "Message board not available. Please enable MySQL backend.")
-
-        messages, total, pinned_count = self.store.list_tavern_messages(tavern_id, limit, offset)
-        return {
-            "messages": messages,
-            "count": total,
-            "pinned_count": pinned_count,
-        }
-
-    def create_tavern_message(self, tavern_id: str, message_data: dict, user_id: str) -> dict[str, Any]:
-        """创建留言"""
-        tavern = self._get_tavern_or_404(tavern_id)
-
-        # 检查是否可访问
-        self._ensure_visible(tavern, user_id)
-
-        # 检查 store 是否支持 messages
-        if not hasattr(self.store, "create_tavern_message"):
-            raise HTTPException(500, "Message board not available. Please enable MySQL backend.")
-
-        # 验证内容
-        content = message_data.get("content", "").strip()
-        if not content:
-            raise HTTPException(400, "留言内容不能为空")
-        if len(content) > 500:
-            raise HTTPException(400, "留言内容不能超过 500 字符")
-
-        # 使用用户 ID 作为访客 ID
-        visitor_id = user_id or message_data.get("visitor_id", "anonymous")
-        visitor_nickname = message_data.get("visitor_nickname", "匿名")
-
-        # 如果有 parent_id，检查父留言是否存在
-        parent_id = message_data.get("parent_id")
-        if parent_id:
-            parent = self.store.get_tavern_message(tavern_id, parent_id)
-            if not parent:
-                raise HTTPException(404, "父留言不存在")
-
-        result = self.store.create_tavern_message(tavern_id, {
-            "visitor_id": visitor_id,
-            "visitor_nickname": visitor_nickname,
-            "content": content,
-            "parent_id": parent_id,
-        })
-
-        return result
-
-    def delete_tavern_message(self, tavern_id: str, message_id: str, user_id: str) -> dict[str, Any]:
-        """删除留言"""
-        tavern = self._get_tavern_or_404(tavern_id)
-
-        # 检查 store 是否支持 messages
-        if not hasattr(self.store, "delete_tavern_message"):
-            raise HTTPException(500, "Message board not available. Please enable MySQL backend.")
-
-        # 获取留言
-        message = self.store.get_tavern_message(tavern_id, message_id)
-        if not message:
-            raise HTTPException(404, "留言不存在")
-
-        # 检查权限：只有留言者或酒馆主人可以删除
-        is_owner = self._is_owner(tavern, user_id)
-        is_author = message.get("visitor_id") == user_id
-
-        if not is_owner and not is_author:
-            raise HTTPException(403, "无权删除此留言")
-
-        self.store.delete_tavern_message(tavern_id, message_id)
-        return {"ok": True, "message_id": message_id}
-
-    def toggle_tavern_message_pin(self, tavern_id: str, message_id: str, user_id: str) -> dict[str, Any]:
-        """切换留言置顶状态"""
-        tavern = self._get_tavern_or_404(tavern_id)
-
-        # 检查权限：只有酒馆主人可以置顶
-        self._ensure_owner(tavern, user_id)
-
-        # 检查 store 是否支持 messages
-        if not hasattr(self.store, "toggle_tavern_message_pin"):
-            raise HTTPException(500, "Message board not available. Please enable MySQL backend.")
-
-        result = self.store.toggle_tavern_message_pin(tavern_id, message_id)
-        if not result:
-            raise HTTPException(404, "留言不存在")
-
-        return result
-
-    def reply_tavern_message(self, tavern_id: str, message_id: str, reply_data: dict, user_id: str) -> dict[str, Any]:
-        """回复留言"""
-        tavern = self._get_tavern_or_404(tavern_id)
-
-        # 检查是否可访问
-        self._ensure_visible(tavern, user_id)
-
-        # 检查 store 是否支持 messages
-        if not hasattr(self.store, "create_tavern_message"):
-            raise HTTPException(500, "Message board not available. Please enable MySQL backend.")
-
-        # 获取父留言
-        parent = self.store.get_tavern_message(tavern_id, message_id)
-        if not parent:
-            raise HTTPException(404, "父留言不存在")
-
-        # 验证内容
-        content = reply_data.get("content", "").strip()
-        if not content:
-            raise HTTPException(400, "回复内容不能为空")
-        if len(content) > 500:
-            raise HTTPException(400, "回复内容不能超过 500 字符")
-
-        # 回复者的昵称
-        is_owner = self._is_owner(tavern, user_id)
-        visitor_nickname = reply_data.get("visitor_nickname", "酒馆主人") if is_owner else "访客"
-
-        result = self.store.create_tavern_message(tavern_id, {
-            "visitor_id": user_id or "owner",
-            "visitor_nickname": visitor_nickname,
-            "content": content,
-            "parent_id": message_id,
-        })
-
-        return result

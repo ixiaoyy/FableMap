@@ -106,11 +106,11 @@ In the current product expression taxonomy, map semantic names to engine keys li
 - Asset filenames should include the NPC slug and expression, for example:
 
 ```text
-frontend/public/assets/npcs/mimi-nya-neutral.png
-frontend/public/assets/npcs/mimi-nya-joy.png
-frontend/public/assets/npcs/mimi-nya-anger.png
-frontend/public/assets/npcs/mimi-nya-embarrassment.png
-frontend/public/assets/npcs/mimi-nya-curiosity.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/joy.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/anger.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/embarrassment.png
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/curiosity.png
 ```
 
 ### 4. Validation & Error Matrix
@@ -183,17 +183,17 @@ _character(
 ```python
 _character(
     name="新 NPC",
-    avatar="/assets/npcs/new-npc-neutral.png",
+    avatar="/assets/npcs/public-welfare/new-npc/neutral.png",
     sprites={
-        "neutral": "/assets/npcs/new-npc-neutral.png",
-        "happy": "/assets/npcs/new-npc-joy.png",
-        "joy": "/assets/npcs/new-npc-joy.png",
-        "angry": "/assets/npcs/new-npc-anger.png",
-        "anger": "/assets/npcs/new-npc-anger.png",
-        "shy": "/assets/npcs/new-npc-embarrassment.png",
-        "embarrassment": "/assets/npcs/new-npc-embarrassment.png",
-        "curious": "/assets/npcs/new-npc-curiosity.png",
-        "curiosity": "/assets/npcs/new-npc-curiosity.png",
+        "neutral": "/assets/npcs/public-welfare/new-npc/neutral.png",
+        "happy": "/assets/npcs/public-welfare/new-npc/joy.png",
+        "joy": "/assets/npcs/public-welfare/new-npc/joy.png",
+        "angry": "/assets/npcs/public-welfare/new-npc/anger.png",
+        "anger": "/assets/npcs/public-welfare/new-npc/anger.png",
+        "shy": "/assets/npcs/public-welfare/new-npc/embarrassment.png",
+        "embarrassment": "/assets/npcs/public-welfare/new-npc/embarrassment.png",
+        "curious": "/assets/npcs/public-welfare/new-npc/curiosity.png",
+        "curiosity": "/assets/npcs/public-welfare/new-npc/curiosity.png",
     },
 )
 ```

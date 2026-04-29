@@ -1434,6 +1434,54 @@ export function replyTavernMessage(
   )
 }
 
+export type TavernVisitorNote = {
+  id: string
+  tavern_id: string
+  visitor_id: string
+  visitor_nickname: string
+  content: string
+  created_at: string
+  visibility: "owner_only" | string
+}
+
+export type TavernVisitorNoteListResponse = {
+  notes: TavernVisitorNote[]
+  count: number
+}
+
+export function createVisitorNote(
+  tavernId: string,
+  data: { content: string; visitor_nickname?: string },
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<{ ok: boolean; note: TavernVisitorNote }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/visitor-notes`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function listVisitorNotes(
+  tavernId: string,
+  options: { limit?: number; offset?: number } = {},
+  userId = DEFAULT_OWNER_ID,
+) {
+  const params = new URLSearchParams()
+  if (options.limit) params.set("limit", String(options.limit))
+  if (options.offset) params.set("offset", String(options.offset))
+  const query = params.toString() ? `?${params.toString()}` : ""
+  return readApiJson<TavernVisitorNoteListResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/visitor-notes${query}`,
+    { userId },
+  )
+}
+
+export function deleteVisitorNote(tavernId: string, noteId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ ok: boolean; note_id: string }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/visitor-notes/${encodeURIComponent(noteId)}`,
+    { method: "DELETE", userId },
+  )
+}
+
 // ─────────────────────────────────────────
 // Neighborhood Rumors
 // ─────────────────────────────────────────
@@ -1500,5 +1548,250 @@ export function recordRumorClick(rumorId: string) {
   return readApiJson<{ ok: boolean; click_count: number }>(
     `/api/v1/rumors/${encodeURIComponent(rumorId)}/click`,
     { method: "POST" },
+  )
+}
+
+// ─────────────────────────────────────────
+// Owner Default LLM Config
+// ─────────────────────────────────────────
+
+export type OwnerDefaultLLMSafe = {
+  configured: boolean
+  llm_config: {
+    backend: string
+    model: string
+    api_key_configured: boolean
+    base_url: string
+    temperature: number
+    max_tokens: number
+    top_p: number
+  } | null
+}
+
+export type OwnerDefaultLLMSave = {
+  backend?: string
+  model?: string
+  api_key?: string
+  base_url?: string
+  temperature?: number
+  max_tokens?: number
+  top_p?: number
+}
+
+export function getOwnerDefaultLLM(userId = DEFAULT_OWNER_ID) {
+  return readApiJson<OwnerDefaultLLMSafe>("/api/v1/owners/me/default-llm", { userId })
+}
+
+export function saveOwnerDefaultLLM(data: OwnerDefaultLLMSave, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ ok: boolean; owner_id: string; configured: boolean }>(
+    "/api/v1/owners/me/default-llm",
+    jsonInit("PUT", data, userId),
+  )
+}
+
+// ─────────────────────────────────────────
+// Tavern Draft Generation
+// ─────────────────────────────────────────
+
+export type TavernDraftRequest = {
+  lat: number
+  lon: number
+  address?: string
+  place_type?: string
+  style_tags?: string[]
+  forbidden?: string[]
+  tone?: string
+}
+
+export type TavernDraftCharacter = {
+  name: string
+  description?: string
+  personality?: string
+  scenario?: string
+  system_prompt?: string
+  first_mes?: string
+  mes_example?: string
+  tags?: string[]
+}
+
+export type TavernDraft = {
+  name: string
+  description: string
+  scene_prompt: string
+  character: TavernDraftCharacter
+}
+
+export type TavernDraftResponse = {
+  ok: boolean
+  draft: TavernDraft
+}
+
+export function generateTavernDraft(data: TavernDraftRequest, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<TavernDraftResponse>(
+    "/api/v1/owners/me/tavern-drafts/generate",
+    jsonInit("POST", data, userId),
+  )
+}
+
+// ─────────────────────────────────────────
+// Home System
+// ─────────────────────────────────────────
+
+export type HomeVisitSettings = {
+  public: boolean
+  approval_required: boolean
+  friends_only: boolean
+  max_daily_visitors: number
+}
+
+export type HomeStatus = "open" | "closed" | "hidden"
+
+export type Home = {
+  id: string
+  owner_id: string
+  name: string
+  description: string
+  avatar: string
+  cover_image: string
+  theme: string
+  visit_settings: HomeVisitSettings
+  members: HomeMember[]
+  status: HomeStatus | string
+  created_at: string
+  updated_at: string
+}
+
+export type HomeListResponse = {
+  homes: Home[]
+  count: number
+}
+
+export type HomeVisitResponse = {
+  home_id: string
+  owner_id: string
+  name: string
+  status: string
+  can_enter: boolean
+  message: string | null
+}
+
+export type HomeChatResponse = {
+  member_id: string
+  message: string
+  is_silent: boolean
+}
+
+export type HomeMemberWriteData = {
+  id?: string
+  name?: string
+  display_name?: string
+  member_type?: HomeMemberType | string
+  speech_mode?: HomeMemberSpeechMode | string
+  description?: string
+  avatar?: string
+  is_speaking?: boolean
+  is_living?: boolean
+  nonliving_note?: string
+  character_id?: string
+  metadata?: Record<string, unknown>
+}
+
+export type HomeCreateData = {
+  name?: string
+  description?: string
+  avatar?: string
+  cover_image?: string
+  theme?: string
+  visit_settings?: Partial<HomeVisitSettings>
+  members?: HomeMemberWriteData[]
+}
+
+export type HomeUpdateData = {
+  name?: string
+  description?: string
+  avatar?: string
+  cover_image?: string
+  theme?: string
+  status?: HomeStatus | string
+  visit_settings?: Partial<HomeVisitSettings>
+}
+
+export function getMyHome(userId = "") {
+  return readApiJson<Home | null>("/api/v1/homes/me", { userId })
+}
+
+export function createHome(data: HomeCreateData, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<Home>("/api/v1/homes", jsonInit("POST", data, userId))
+}
+
+export function getHome(homeId: string, userId = "") {
+  return readApiJson<Home | null>(`/api/v1/homes/${encodeURIComponent(homeId)}`, { userId })
+}
+
+export function updateHome(homeId: string, data: HomeUpdateData, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<Home | null>(`/api/v1/homes/${encodeURIComponent(homeId)}`, jsonInit("PATCH", data, userId))
+}
+
+export function deleteHome(homeId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ success: boolean; message?: string }>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}`,
+    jsonInit("DELETE", {}, userId),
+  )
+}
+
+export function listPublicHomes() {
+  return readApiJson<HomeListResponse>("/api/v1/homes")
+}
+
+export function addMemberToHome(homeId: string, data: HomeMemberWriteData, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<HomeMember | null>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}/members`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function updateMemberInHome(
+  homeId: string,
+  memberId: string,
+  data: Partial<HomeMemberWriteData>,
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<HomeMember | null>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}/members/${encodeURIComponent(memberId)}`,
+    jsonInit("PATCH", data, userId),
+  )
+}
+
+export function removeMemberFromHome(homeId: string, memberId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ success: boolean; message?: string }>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}/members/${encodeURIComponent(memberId)}`,
+    jsonInit("DELETE", {}, userId),
+  )
+}
+
+export function visitHome(homeId: string, visitorId?: string, userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<HomeVisitResponse>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}/visit`,
+    jsonInit("POST", { visitor_id: visitorId }, userId),
+  )
+}
+
+export function leaveHomeMessage(homeId: string, content: string, visitorNickname = "旅人", userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<{ success: boolean }>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}/visit/message`,
+    jsonInit("POST", { content, visitor_nickname: visitorNickname }, userId),
+  )
+}
+
+export function chatWithHomeMember(
+  homeId: string,
+  memberId: string,
+  message: string,
+  visitorId?: string,
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<HomeChatResponse>(
+    `/api/v1/homes/${encodeURIComponent(homeId)}/chat`,
+    jsonInit("POST", { member_id: memberId, message, visitor_id: visitorId }, userId),
   )
 }

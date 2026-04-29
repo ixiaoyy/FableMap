@@ -137,7 +137,7 @@ export default function WorldMap({
 
     async function loadSnapshotManifest() {
       try {
-        const response = await fetch(`/map-snapshots/${snapshotId}/manifest.json`, { cache: 'no-store' })
+        const response = await fetch(`/assets/map-snapshots/${snapshotId}/manifest.json`, { cache: 'no-store' })
         if (!response.ok) {
           throw new Error('manifest not found')
         }

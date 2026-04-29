@@ -5,12 +5,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener, ProxyHandler
 
 from fablemap_api.core.page import create_server
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "overpass_sample.json"
+LOCAL_OPENER = build_opener(ProxyHandler({}))
 
 
 @contextmanager
@@ -31,9 +32,9 @@ class PageTests(unittest.TestCase):
         with TemporaryDirectory() as tmpdir:
             output_root = Path(tmpdir) / ".fablemap-page"
             with running_page_server(output_root) as base_url:
-                with urlopen(f"{base_url}/") as response:
+                with LOCAL_OPENER.open(f"{base_url}/") as response:
                     html = response.read().decode("utf-8")
-                with urlopen(f"{base_url}/api/health") as response:
+                with LOCAL_OPENER.open(f"{base_url}/api/health") as response:
                     health = json.loads(response.read().decode("utf-8"))
 
             self.assertIn("附近地图变异世界", html)
@@ -61,9 +62,9 @@ class PageTests(unittest.TestCase):
                     ).encode("utf-8"),
                     method="POST",
                 )
-                with urlopen(request) as response:
+                with LOCAL_OPENER.open(request) as response:
                     result = json.loads(response.read().decode("utf-8"))
-                with urlopen(result["preview_url"]) as response:
+                with LOCAL_OPENER.open(result["preview_url"]) as response:
                     preview_html = response.read().decode("utf-8")
 
                 self.assertEqual(result["provider"], "fixture")

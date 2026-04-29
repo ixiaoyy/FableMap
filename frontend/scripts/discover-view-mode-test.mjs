@@ -26,3 +26,4 @@ assert.ok(shellSource.includes("Cyber life on real coordinates"), "product shell
 
 console.log("discover-view-mode-test: ok")
 
+

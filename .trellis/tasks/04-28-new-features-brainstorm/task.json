@@ -45,7 +45,9 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "04-29-04-29-owner-dashboard-presentational-mvp"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",

@@ -286,3 +286,97 @@ class OwnerConfigApplicationMixin:
             "preset": preset,
             "tavern": tavern_payload,
         }
+
+    def _require_user_id(self, user_id: str) -> str:
+        safe_user_id = str(user_id or "").strip()
+        if not safe_user_id:
+            raise HTTPException(status_code=401, detail="用户身份不能为空")
+        return safe_user_id
+
+    def get_owner_default_llm(self, user_id: str = "") -> dict[str, Any]:
+        owner_id = self._require_user_id(user_id)
+        if not self.owner_config_store:
+            return {"configured": False, "llm_config": {}}
+        from fablemap_api.domain.owner_llm_policy import mask_owner_llm_config
+
+        return mask_owner_llm_config(self.owner_config_store.get_default_llm_config(owner_id))
+
+    def save_owner_default_llm(self, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        owner_id = self._require_user_id(user_id)
+        if not self.owner_config_store:
+            raise HTTPException(status_code=500, detail="店主默认 LLM 配置存储不可用")
+        from fablemap_api.domain.owner_llm_policy import mask_owner_llm_config, normalize_owner_llm_config
+
+        config = self.owner_config_store.save_default_llm_config(owner_id, normalize_owner_llm_config(data))
+        return mask_owner_llm_config(config)
+
+    def generate_tavern_draft(self, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        owner_id = self._require_user_id(user_id)
+        if not self.owner_config_store:
+            raise HTTPException(status_code=500, detail="店主默认 LLM 配置存储不可用")
+
+        from fablemap_api.domain.owner_llm_policy import (
+            normalize_tavern_draft_request,
+            owner_llm_is_configured,
+            sanitize_tavern_draft,
+        )
+
+        config = self.owner_config_store.get_default_llm_config(owner_id)
+        if not owner_llm_is_configured(config):
+            raise HTTPException(status_code=400, detail="请先配置店主默认 LLM")
+
+        request_data = normalize_tavern_draft_request(data)
+        messages = self._build_tavern_draft_messages(request_data)
+        try:
+            response = create_client(
+                ClientLLMConfig(
+                    backend=config.get("backend", "openai"),
+                    model=config.get("model", "gpt-4o-mini"),
+                    api_key=config.get("api_key", ""),
+                    base_url=config.get("base_url", ""),
+                    temperature=float(config.get("temperature", 0.8)),
+                    max_tokens=int(config.get("max_tokens", 1024)),
+                    top_p=float(config.get("top_p", 1.0)),
+                )
+            ).complete(messages)
+        except LLMError as exc:
+            raise HTTPException(status_code=502, detail=f"AI 草稿生成失败：{exc}") from exc
+
+        try:
+            parsed = json.loads(str(response.content or ""))
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=502, detail="AI 草稿返回不是有效 JSON") from exc
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=502, detail="AI 草稿 JSON 必须是对象")
+        try:
+            draft = sanitize_tavern_draft(parsed)
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {"draft": draft}
+
+    def _build_tavern_draft_messages(self, data: dict[str, Any]) -> list[dict[str, str]]:
+        style_tags = "、".join(data.get("style_tags") or []) or "温暖、可进入、适合聊天"
+        forbidden = "、".join(data.get("forbidden") or []) or "现实名人、既有 IP、露骨色情、危险行动、API Key、私人敏感信息"
+        tone = data.get("tone") or "赛博酒馆、现实映射、店主可编辑"
+        system = (
+            "你是 FableMap 的开店草稿助手。只返回 JSON，不要 Markdown，不要解释。"
+            "生成内容必须是未发布、可编辑、可丢弃的候选草稿。"
+            "不要声称已经创建或发布酒馆。不要生成现实名人、影视/游戏/IP 角色。"
+            "不要生成露骨色情、未成年性化、非自愿、仇恨骚扰、现实危险行动。"
+            "不要写真实私人地址、身份证、手机号、API Key 等敏感信息。"
+            "不要生成战斗、等级、装备、排行榜。"
+        )
+        user = (
+            "请基于真实坐标和店主偏好生成一份开店草稿 JSON。\n"
+            f"坐标：lat={data['lat']}, lon={data['lon']}\n"
+            f"地址标签：{data.get('address') or '未填写'}\n"
+            f"地点类型：{data.get('place_type') or 'tavern'}\n"
+            f"风格标签：{style_tags}\n"
+            f"禁止方向：{forbidden}\n"
+            f"语气：{tone}\n"
+            'JSON 结构必须为：{"name": string, "description": string, "scene_prompt": string, '
+            '"character": {"name": string, "description": string, "personality": string, '
+            '"scenario": string, "system_prompt": string, "first_mes": string, '
+            '"mes_example": string, "tags": string[]}}'
+        )
+        return [{"role": "system", "content": system}, {"role": "user", "content": user}]

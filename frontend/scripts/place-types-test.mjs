@@ -37,6 +37,10 @@ const cafeDisplay = derivePlaceTypeDisplay({ name: "转角咖啡", description: 
 assert.equal(cafeDisplay.id, "cafe")
 assert.equal(cafeDisplay.label, "咖啡店")
 assert.equal(typeof cafeDisplay.icon, "string")
+assert.equal(typeof cafeDisplay.tone, "string", "地点类型应提供可展示的氛围短句")
+assert.equal(typeof cafeDisplay.cardClass, "string", "地点类型应提供创建页视觉卡片样式")
+assert.ok(cafeDisplay.cardClass.includes("border-"), "地点类型卡片样式应包含边框色")
+assert.ok(DISCOVERABLE_PLACE_TYPES.every((type) => typeof type.tone === "string" && type.tone.length > 0), "公开地点类型都应提供氛围短句")
 
 assert.equal(derivePlaceType(homeLikeTavern), "home", "Home 可以被识别为保留类型")
 assert.equal(isDiscoverablePlaceType("home"), false, "Home 不应进入公开发现筛选")

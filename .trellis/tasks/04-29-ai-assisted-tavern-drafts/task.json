@@ -2,52 +2,35 @@
   "id": "ai-assisted-tavern-drafts",
   "name": "ai-assisted-tavern-drafts",
   "title": "AI Assisted Tavern Drafts",
-  "description": "",
-  "status": "planning",
-  "dev_type": null,
-  "scope": null,
+  "description": "Design and implement an owner-confirmed AI-assisted tavern draft workflow that helps owners create tavern/NPC drafts from a real coordinate without bypassing owner sovereignty.",
+  "status": "completed",
+  "dev_type": "fullstack",
+  "scope": "feature",
   "package": null,
   "priority": "P2",
   "creator": "lijin",
-  "assignee": "lijin",
+  "assignee": "claude",
   "createdAt": "2026-04-29",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-04-29",
+  "branch": "main",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
-  "next_action": [
-    {
-      "phase": 1,
-      "action": "brainstorm"
-    },
-    {
-      "phase": 2,
-      "action": "research"
-    },
-    {
-      "phase": 3,
-      "action": "implement"
-    },
-    {
-      "phase": 4,
-      "action": "check"
-    },
-    {
-      "phase": 5,
-      "action": "update-spec"
-    },
-    {
-      "phase": 6,
-      "action": "record-session"
-    }
-  ],
-  "commit": null,
+  "current_phase": 6,
+  "next_action": [],
+  "commit": "feat: add AI-assisted tavern draft generation on /create",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "04-29-new-feature-ideation",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "backend/src/fablemap_api/domain/owner_llm_policy.py",
+    "backend/src/fablemap_api/infrastructure/owner_config_store.py",
+    "backend/src/fablemap_api/application/services/owner_config.py",
+    "backend/src/fablemap_api/api/v1/owners.py",
+    "frontend/app/routes/create.tsx",
+    "frontend/app/lib/taverns.ts",
+    "frontend/app/lib/tavern-drafts.js"
+  ],
+  "notes": "Implementation, check, typecheck, build/test validation, and update-spec completed. See implementation.md. Ready for human review/manual browser test or record-session after commit.",
   "meta": {}
 }

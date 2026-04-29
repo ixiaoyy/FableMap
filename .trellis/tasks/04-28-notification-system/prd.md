@@ -23,7 +23,7 @@
 Client (Web)  <--WebSocket-->  FastAPI Server
                                     |
                                     v
-                               Redis Pub/Sub
+                               In-memory queue (MVP)`r`n                              # Redis Pub/Sub is future work
                                     |
                                     v
                                Notification Service
@@ -55,17 +55,24 @@ async def mark_notification_read(notification_id: str):
 
 ## 实现步骤
 
-1. [ ] 添加 WebSocket 支持到 FastAPI
-2. [ ] 实现通知频道管理
-3. [ ] 实现新访客通知
-4. [ ] 实现通知列表 API
-5. [ ] 实现已读标记功能
-6. [ ] 前端 WebSocket 连接
-7. [ ] 通知中心组件
+1. [x] 添加 WebSocket 支持到 FastAPI
+2. [x] 实现通知频道管理（MVP: NotificationStore queue）
+3. [x] 实现新访客通知
+4. [x] 实现通知列表 API
+5. [x] 实现已读标记功能
+6. [x] 前端 WebSocket 连接（hook/component 已存在）
+7. [x] 通知中心组件（NotificationBell 已存在）
 
 ## 验收标准
 
-- [ ] WebSocket 连接稳定
-- [ ] 新访客时主人收到通知
-- [ ] 通知列表正确显示
-- [ ] 已读标记功能正常
+- [x] WebSocket 连接后可收到实时通知（focused test 覆盖）
+- [x] 新访客/访客反馈时主人可收到通知（backend hook 已接入）
+- [x] 通知列表 API 正确返回 total/unread_count
+- [x] 已读标记功能正常
+
+
+## MVP Notes
+
+- 当前实现是进程内内存通知存储，不引入 Redis 依赖。
+- WebSocket 通过 NotificationStore 注册 queue；新增通知会推送到已连接客户端。
+- 生产级 Redis/pub-sub、多进程广播和持久化通知存储是后续任务。

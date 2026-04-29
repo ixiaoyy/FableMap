@@ -504,7 +504,7 @@ class WebService:
         if not isinstance(tiles, list) or not tiles:
             raise HTTPException(status_code=400, detail="tiles payload is required")
 
-        snapshot_dir = (frontend_public / "map-snapshots" / normalized_snapshot_id).resolve()
+        snapshot_dir = (frontend_public / "assets" / "map-snapshots" / normalized_snapshot_id).resolve()
         if not _is_within_root(snapshot_dir, frontend_public.resolve()):
             raise HTTPException(status_code=400, detail="invalid snapshot path")
         snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -529,7 +529,7 @@ class WebService:
                     "top": int(tile.get("top") or 0),
                     "width": int(tile.get("width") or 0),
                     "height": int(tile.get("height") or 0),
-                    "file": f"/map-snapshots/{normalized_snapshot_id}/{filename}",
+                    "file": f"/assets/map-snapshots/{normalized_snapshot_id}/{filename}",
                     "source": src,
                 }
             )
