@@ -1408,6 +1408,8 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
     for tavern in taverns:
         tavern["name"] = _PUBLIC_WELFARE_TAVERN_DISPLAY_NAMES.get(tavern["id"], tavern["name"])
         tavern["characters"].extend(_extra_public_welfare_characters(tavern["id"]))
+        tavern["world_info"].extend(_public_welfare_role_world_info(tavern["id"]))
+        tavern["gameplay_definitions"].extend(_public_welfare_role_gameplays(tavern["id"]))
     return deepcopy(taverns)
 
 
@@ -1576,6 +1578,145 @@ def _extra_public_welfare_characters(tavern_id: str) -> list[dict[str, Any]]:
     return [
         _character(tavern_id=tavern_id, **spec)
         for spec in _extra_public_welfare_character_specs().get(tavern_id, [])
+    ]
+
+
+_PUBLIC_WELFARE_ROLE_DIVISIONS = {
+    "pw_lantern_helpdesk": {
+        "title": "灯塔问讯台角色分工",
+        "content": "NPC 分工：小舟负责总览开店/进店流程，路明负责把问题拆成地图、权限和下一步路线，桥桥负责陪访客练习与 NPC 开口的第一句话。",
+        "gameplay_id": "gp_pw_helpdesk_role_triage",
+        "gameplay_title": "角色分工问诊",
+        "gameplay_summary": "按角色分工在小舟、路明、桥桥之间选择最适合的新手帮助入口。",
+        "entry_label": "选择问讯台分工",
+        "start": "问讯台亮起三盏小灯：小舟管总览，路明管路线，桥桥管第一句话。你想先找谁？",
+        "progress": "被选中的 NPC 会把问题压成一个低风险下一步，并把不属于自己的部分转给同伴。",
+        "reward": "你得到一张写着“地图、权限、第一句话”的分工路线卡。",
+        "fallback": "三盏灯随机闪了一下：如果你说不清卡点，就先从“小舟总览”开始。",
+    },
+    "pw_midnight_treehole": {
+        "title": "夜航树洞电台角色分工",
+        "content": "NPC 分工：安澜负责夜间主持和危机边界提醒，夜雨负责整理匿名来信与模糊心事，灯芯负责给出一盏小灯和现实可做的安全动作。",
+        "gameplay_id": "gp_pw_treehole_role_triage",
+        "gameplay_title": "今晚找哪盏灯",
+        "gameplay_summary": "按角色分工在安澜、夜雨、灯芯之间选择倾听、整理或安全动作入口。",
+        "entry_label": "选择电台分工",
+        "start": "电台桌面有三张卡：安澜的麦克风、夜雨的来信、灯芯的小灯。你想先拿哪一张？",
+        "progress": "对应 NPC 会先接住一句话，再把它整理成倾听、来信或安全动作中的一个小步骤。",
+        "reward": "你得到一张“今晚先安全待过这一小段”的电台便签。",
+        "fallback": "备用灯轻轻亮起。灯芯建议先喝水、坐稳，再决定要不要把话交给安澜或夜雨。",
+    },
+    "pw_community_repair": {
+        "title": "街角修补工坊角色分工",
+        "content": "NPC 分工：阿槐负责生活物件和大问题拆小，和光负责关键对话与关系修补，巧手负责零件分类，把事情分成可换、可补、可暂放。",
+        "gameplay_id": "gp_pw_repair_role_triage",
+        "gameplay_title": "修补工单分流",
+        "gameplay_summary": "按角色分工把问题交给阿槐、和光或巧手，整理成今日一件小修补。",
+        "entry_label": "选择修补分工",
+        "start": "工坊柜台摆出三张工单：物件修补、关系对话、零件分类。你要把今天的问题投进哪一格？",
+        "progress": "对应 NPC 会把工单拆成一个动作，并在需要时请另两位补充工具或沟通边界。",
+        "reward": "你得到一枚“今天先修一颗螺丝”的分工纸徽章。",
+        "fallback": "巧手把三张工单洗乱，请你先选最不吓人的那一张。",
+    },
+    "pw_lost_found_archive": {
+        "title": "城市拾光档案亭角色分工",
+        "content": "NPC 分工：闻笺负责失物登记册和线索表，拾忆负责把模糊回忆贴上时间/天气/动作标签，索引负责连接公开地标和物件特征。",
+        "gameplay_id": "gp_pw_archive_role_triage",
+        "gameplay_title": "档案三格登记",
+        "gameplay_summary": "按角色分工在闻笺、拾忆、索引之间选择登记、贴标签或连线索入口。",
+        "entry_label": "选择档案分工",
+        "start": "档案亭打开三只抽屉：登记册、记忆标签、交叉索引。你想先打开哪一只？",
+        "progress": "对应 NPC 会只保留公开低风险线索，并把模糊内容转成时间、地点或最后动作。",
+        "reward": "你得到一张“公开线索优先”的拾光档案标签。",
+        "fallback": "台灯照到一张空白标签，拾忆建议先写一个不涉及隐私的小细节。",
+    },
+    "pw_third_shelf_observatory": {
+        "title": "第三货架观测站角色分工",
+        "content": "NPC 分工：9-Delta 负责提出人类行为研究假设，Mu-Mu 负责便利店服务拟态，V-17 负责样本与回访记忆归档，Pi-Pi 负责地球礼仪和寒暄纠错。",
+        "gameplay_id": "gp_pw_observatory_role_triage",
+        "gameplay_title": "人类观察分工实验",
+        "gameplay_summary": "按角色分工在 9-Delta、Mu-Mu、V-17、Pi-Pi 之间选择荒诞人类观察入口。",
+        "entry_label": "选择观测站分工",
+        "start": "第三货架后面弹出四份研究表：假设、拟态、归档、礼仪。你愿意协助哪一项？",
+        "progress": "对应外星 NPC 会认真误读一个便利店日常，再请你用地球常识修正。",
+        "reward": "你得到一张“珍贵人类解释者”便利店研究贴纸。",
+        "fallback": "Mu-Mu 误把关东煮当作社交液体，Pi-Pi 请求你先纠正最明显的一项。",
+    },
+    "pw_midnight_commission_board": {
+        "title": "午夜委托局角色分工",
+        "content": "NPC 分工：墨栈负责选择式线索调查，栀灯负责异常登记和值班氛围，火眼负责把传闻验收成安全、低风险、可验证的小委托。",
+        "gameplay_id": "gp_pw_commission_role_triage",
+        "gameplay_title": "委托分工受理",
+        "gameplay_summary": "按角色分工在墨栈、栀灯、火眼之间选择线索、异常或安全验收入口。",
+        "entry_label": "选择委托分工",
+        "start": "委托板分成三栏：线索调查、异常登记、安全验收。你要把纸条钉在哪一栏？",
+        "progress": "对应 NPC 会把委托改写成不跟踪、不闯入、不冒险的文字互动步骤。",
+        "reward": "你得到一张“低风险委托已受理”的午夜回执。",
+        "fallback": "火眼先用红笔划掉危险行动，再请你在剩下的线索里选一条。",
+    },
+    "pw_after_school_hero_supply": {
+        "title": "放学后英雄补给社角色分工",
+        "content": "NPC 分工：阿衡负责旧玩具店/模型店柜台和现实小委托，纸剑负责童年英雄回声与旧英雄卡，星袋负责徽章、贴纸和临时英雄名。",
+        "gameplay_id": "gp_pw_hero_role_triage",
+        "gameplay_title": "小英雄分工补给",
+        "gameplay_summary": "按角色分工在阿衡、纸剑、星袋之间选择旧道具、英雄回声或徽章命名入口。",
+        "entry_label": "选择英雄补给分工",
+        "start": "补给社柜台摆着旧道具、纸剑、星星徽章。今天的小英雄行动从哪一样开始？",
+        "progress": "对应 NPC 会把英雄梦降落成一件普通人今天能完成的小勇气。",
+        "reward": "你得到一枚临时英雄名贴纸，不提供数值加成，只提醒你做完一件小事。",
+        "fallback": "星袋从纸袋里抽出一颗星星，请你把今天的小事命名成一个不夸张的英雄名。",
+    },
+    "pw_jingan_catbell_refuge": {
+        "title": "静安猫铃小屋角色分工",
+        "content": "NPC 分工：眯眯喵桑负责傲娇复国会议和猫娘日常，银票负责鱼干预算、同盟名单与回访暗号，铜铃负责门铃守卫和安全边界提醒。",
+        "gameplay_id": "gp_pw_catbell_role_triage",
+        "gameplay_title": "猫铃会议分工",
+        "gameplay_summary": "按角色分工在眯眯喵桑、银票、铜铃之间选择复国会议、预算或边界入口。",
+        "entry_label": "选择猫铃分工",
+        "start": "猫铃小屋响了三声：眯眯喵桑要开会，银票要记账，铜铃要登记来客。你先找谁？",
+        "progress": "对应 NPC 会把复国话题压回安全日常：据点、鱼干预算、同盟名单或回访暗号。",
+        "reward": "你得到一枚“猫铃临时同盟”贴纸，以及一条安全回访暗号。",
+        "fallback": "铜铃叮一声提醒：不写私人地址，只选一个安全日常议题喵。",
+    },
+}
+
+
+def _public_welfare_role_world_info(tavern_id: str) -> list[dict[str, Any]]:
+    division = _PUBLIC_WELFARE_ROLE_DIVISIONS.get(tavern_id)
+    if not division:
+        return []
+    return [
+        _world_info(
+            entry_id=f"wi_{tavern_id}_role_division",
+            tavern_id=tavern_id,
+            keys=["NPC 分工", "角色分工", "分工", "入口"],
+            content=division["content"],
+            constant=True,
+            order=15,
+            depth=5,
+        )
+    ]
+
+
+def _public_welfare_role_gameplays(tavern_id: str) -> list[dict[str, Any]]:
+    division = _PUBLIC_WELFARE_ROLE_DIVISIONS.get(tavern_id)
+    if not division:
+        return []
+    return [
+        _gameplay(
+            gameplay_id=division["gameplay_id"],
+            title=division["gameplay_title"],
+            summary=division["gameplay_summary"],
+            entry_label=division["entry_label"],
+            goal=f"让访客理解{division['title']}，并选择合适的安全互动入口。",
+            tone="清楚、低风险、有酒馆角色分工感",
+            materials=["角色分工牌", "酒馆柜台", "便签"],
+            forbidden=["敏感隐私收集", "现实危险行动", "战斗/等级/装备系统", "平台替用户发布内容"],
+            start=division["start"],
+            progress=division["progress"],
+            reward=division["reward"],
+            fallback=division["fallback"],
+        )
     ]
 
 

@@ -30,3 +30,17 @@
 ## 验证
 
 - `C:\Users\phpxi\miniconda3\python.exe -m pytest -q --tb=short tests/test_default_public_welfare_taverns.py tests/test_default_public_welfare_gameplays.py`：19 passed
+
+## 2026-04-29 追加：公益酒馆美术与内容打磨
+
+- 替换新增 10 名公益 NPC 的项目内 PNG 资源，保留原有 `/assets/npcs/<char_id>-<expression>.png` 引用路径。
+- 每名新增 NPC 仍保留 `neutral / joy / anger / embarrassment / curiosity` 五套表情资源。
+- 为 8 间公益酒馆追加 `NPC 分工` 世界书，明确每间酒馆 3+ NPC 的职责边界。
+- 为 8 间公益酒馆追加“角色分工”玩法入口，作为低风险、安全边界清晰的文字互动入口。
+- 不新增 schema/API 字段，不改变 owner/API key/token 边界。
+
+## 追加验证
+
+- `C:\Users\phpxi\miniconda3\python.exe -m pytest -q --tb=short tests/test_default_public_welfare_taverns.py tests/test_default_public_welfare_gameplays.py`：20 passed
+- `C:\Users\phpxi\miniconda3\python.exe -m compileall -q backend/src`：passed
+- `npm --prefix .\frontend run build`：passed（沙箱内因 Tailwind native dependency / spawn EPERM 失败后，按授权在沙箱外重跑通过）

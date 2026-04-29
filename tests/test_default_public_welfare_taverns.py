@@ -122,6 +122,35 @@ def test_default_public_welfare_characters_have_direct_expression_assets():
             )
 
 
+def test_default_public_welfare_taverns_explain_npc_role_division():
+    expected_role_keywords = {
+        "pw_lantern_helpdesk": ("小舟", "路明", "桥桥", "NPC 分工"),
+        "pw_midnight_treehole": ("安澜", "夜雨", "灯芯", "NPC 分工"),
+        "pw_community_repair": ("阿槐", "和光", "巧手", "NPC 分工"),
+        "pw_lost_found_archive": ("闻笺", "拾忆", "索引", "NPC 分工"),
+        "pw_third_shelf_observatory": ("9-Delta", "Mu-Mu", "V-17", "Pi-Pi", "NPC 分工"),
+        "pw_midnight_commission_board": ("墨栈", "栀灯", "火眼", "NPC 分工"),
+        "pw_after_school_hero_supply": ("阿衡", "纸剑", "星袋", "NPC 分工"),
+        "pw_jingan_catbell_refuge": ("眯眯喵桑", "银票", "铜铃", "NPC 分工"),
+    }
+
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+
+        for tavern_id, keywords in expected_role_keywords.items():
+            tavern = service.get_tavern_payload(tavern_id, user_id="visitor_public_welfare")
+            combined_world_info = " ".join(entry["content"] for entry in tavern["world_info"])
+            for keyword in keywords:
+                assert keyword in combined_world_info, f"{tavern_id} missing role keyword {keyword}"
+
+            gameplays = tavern["gameplay_definitions"]
+            combined_gameplays = " ".join(
+                f"{gameplay.get('title', '')} {gameplay.get('summary', '')} {gameplay.get('entry_label', '')}"
+                for gameplay in gameplays
+            )
+            assert "角色分工" in combined_gameplays or "分工" in combined_gameplays
+
+
 def test_third_shelf_observatory_contains_complete_alien_convenience_tavern():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
