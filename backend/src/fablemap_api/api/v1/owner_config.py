@@ -9,6 +9,7 @@ from ...contracts.owner_config import (
     OutputRulesWriteRequest,
     PromptBlocksPreviewRequest,
     PromptBlocksWriteRequest,
+    PresetImportPreviewRequest,
     RuntimePresetApplyRequest,
     RuntimePresetsWriteRequest,
     WorldInfoTestRequest,
@@ -66,3 +67,8 @@ def save_runtime_presets(request: Request, tavern_id: str, data: RuntimePresetsW
 @router.post("/{tavern_id}/runtime-presets/apply")
 def apply_runtime_preset(request: Request, tavern_id: str, data: RuntimePresetApplyRequest) -> dict[str, Any]:
     return taverns_service(request).apply_runtime_preset(tavern_id, data.to_payload(), get_user_id(request))
+
+
+@router.post("/{tavern_id}/preset-import/preview")
+def preview_preset_import(request: Request, tavern_id: str, data: PresetImportPreviewRequest) -> dict[str, Any]:
+    return taverns_service(request).preview_preset_import(tavern_id, data.to_payload(), get_user_id(request))

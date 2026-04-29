@@ -635,3 +635,43 @@ Skill Packs let the tavern act.
 Created child task: `.trellis/tasks/04-29-state-cards-for-tavern-continuity/`
 
 Purpose: turn the top recommendation — **State Cards / Canon Ledger first** — into a focused follow-up task with its own PRD and implementation context.
+
+## Implementation closure (2026-04-30)
+
+本轮已把该 brainstorm 中适合立即落地的安全 MVP 拆成 Trellis 子任务，并按任务目录完成实现、规范同步和验证记录。
+
+### Completed / review-ready child slices
+
+- `.trellis/tasks/04-29-state-cards-for-tavern-continuity/`：State Cards / Canon Ledger 连续性基础，已实现并留下 implementation note。
+- `.trellis/tasks/04-29-tavern-skill-packs-mvp/`：Tavern Skill Packs MVP，已实现 owner-visible opt-in skill pack 与 local-rumor 基础能力。
+- `.trellis/tasks/04-30-preset-import-preview-safe-converter/`：社区 preset 导入预览与风险报告，draft-only，不写入 live tavern state。
+- `.trellis/tasks/04-30-tavern-gm-layer-structured-conflict-candidates/`：GM Layer 结构化冲突/机会候选预览，复用 State Cards，preview-only。
+- `.trellis/tasks/04-30-serial-novel-export-episode-builder/`：会话日志 + confirmed state cards 的 Markdown/JSON episode draft 导出，不调用 LLM、不持久化。
+- `.trellis/tasks/04-30-voice-greeting-tts-pack-preview/`：NPC 首句/alternate greeting 的 no-audio TTS request preview，不合成音频、不自动播放。
+- `.trellis/tasks/04-30-visual-souvenir-shared-moment-preview/`：共同瞬间纪念图 prompt preview，不生成图片、不保存资产，并做 visitor/contact/API-key 风险脱敏。
+
+### Protocol/spec/docs sync
+
+- `docs/AI参与开发协议.md` 已切换到 Task First：新任务优先参考 `.trellis/tasks/`、`.trellis/workflow.md`、`.trellis/spec/`，并要求使用 Trellis `start` / `before-dev` / `check` / `finish-work` 或等价流程。
+- `.trellis/spec/backend/` 与 `.trellis/spec/frontend/` 已补充本轮新增跨层 API/服务边界合同。
+- `README.md`、`docs/ARCHITECTURE.md`、`docs/changes/2026-04-30-*.md` 已同步新增能力和明确的 no-persistence / no-generation 边界。
+
+### Final verification evidence
+
+- `py -3 -m compileall -q backend/src` -> passed
+- `py -3 -m pytest -q --tb=short` -> `527 passed, 103 warnings`
+- `npm --prefix .\frontend test` -> passed
+- `npm --prefix .\frontend run typecheck` -> passed
+- `npm --prefix .\frontend run build` -> passed
+- `.trellis/scripts/task.py validate` 已对新增/更新任务上下文执行并通过；visual-souvenir 子任务最终 validate 通过。
+
+### Explicitly deferred / not done
+
+- `visual-souvenir` 只完成 prompt preview；实际图像生成、资产落盘、公开分享和保留/删除策略仍是后续高风险设计。
+- `voice-greeting` 只完成 no-audio preview；实际 TTS 调用、音频存储、自动播放、声音克隆/上传仍未实现。
+- `revisit-care` 主动触达/通知调度仍未实现；需要 opt-in、quiet hours、频控和取消订阅设计后再做。
+- `multi-npc-group-tavern-future` 仍是未来完整产品切片；当前仓库已有 group-chat 基础能力和测试，但本轮没有实现完整多人 NPC 房间 UX。
+
+### Closure status
+
+该父任务从“头脑风暴”推进为“review-ready implementation bundle”：安全、可测试、可留痕的 MVP 子切片均已拆分并完成；生成式图片/音频、主动通知、完整多人 NPC 房间等高风险扩展明确延期，避免越过 `WHAT_NOT_TO_BUILD` 与主人主权边界。

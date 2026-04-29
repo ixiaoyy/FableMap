@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { getTavernStatusColor, getTavernStatusLabel, getTavernAccessIcon } from './services/tavernService'
+import { resolveTavernAtmosphereImage } from './services/atmosphereAssets'
 import { enterTavern, getTavernChatHistory, sendTavernChat } from '../lib/taverns'
 
 /**
@@ -94,6 +95,7 @@ export default function TavernInterior({
 
   const characters = tavern?.characters || []
   const layoutStyle = getLayoutStyle(tavern)
+  const atmosphereImage = resolveTavernAtmosphereImage(tavern)
 
   // Auto-select first character
   useEffect(() => {
@@ -225,8 +227,13 @@ export default function TavernInterior({
   return (
     <div
       className="tavern-interior"
-      style={{ background: layoutStyle.gradient }}
+      style={{
+        backgroundColor: '#0f172a',
+        '--tavern-atmosphere-image': `url("${atmosphereImage}")`,
+        '--tavern-atmosphere-fallback': layoutStyle.gradient,
+      }}
       data-layout-style={tavern?.layout_style || 'lobby'}
+      data-atmosphere-image={atmosphereImage}
     >
       {/* Scene atmosphere banner */}
       {tavern?.scene_prompt && (

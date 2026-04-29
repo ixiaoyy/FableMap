@@ -22,6 +22,8 @@ from .services.utilities import UtilityApplicationMixin
 from .services.roleplay import RoleplayApplicationMixin
 from .services.public_bond import NpcPublicBondApplicationMixin
 from .services.rumor import RumorApplicationMixin
+from .services.skill_packs import SkillPackApplicationMixin
+from .services.state_cards import StateCardApplicationMixin
 
 
 class TavernApplicationService(
@@ -37,6 +39,8 @@ class TavernApplicationService(
     RoleplayApplicationMixin,
     NpcPublicBondApplicationMixin,
     RumorApplicationMixin,
+    SkillPackApplicationMixin,
+    StateCardApplicationMixin,
 ):
     """Application facade for native `/api/v1/taverns` use cases.
 

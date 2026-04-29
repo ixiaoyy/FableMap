@@ -9,6 +9,7 @@ from ...contracts.chat import (
     ChatExportRequest,
     ChatRequest,
     ChatSearchRequest,
+    EpisodeExportRequest,
     GroupChatConfigRequest,
     GroupChatRequest,
 )
@@ -131,6 +132,21 @@ def export_chat(request: Request, tavern_id: str, data: ChatExportRequest) -> di
         character_id=data.character_id,
         visitor_id=data.visitor_id,
         format=data.format,
+    )
+
+
+@router.post("/{tavern_id}/episodes/export")
+def export_episode(request: Request, tavern_id: str, data: EpisodeExportRequest) -> dict[str, Any]:
+    user_id = get_user_id(request)
+    return taverns_service(request).export_episode(
+        tavern_id,
+        user_id,
+        visitor_id=data.visitor_id,
+        character_id=data.character_id,
+        title=data.title,
+        include_pending=data.include_pending,
+        format=data.format,
+        limit=data.limit,
     )
 
 

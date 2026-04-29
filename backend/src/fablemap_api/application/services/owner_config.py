@@ -32,6 +32,7 @@ from fablemap_api.core.presets import (
     safe_llm_preset_config,
     safe_memory_policy,
 )
+from fablemap_api.core.preset_import import PresetImportError, preview_preset_import as build_preset_import_preview
 from fablemap_api.core.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks
 from fablemap_api.core.prompt_builder import PromptBuildConfig, PromptBuilder
 from fablemap_api.core.tavern import (
@@ -285,6 +286,19 @@ class OwnerConfigApplicationMixin:
             "active_preset_id": preset.get("id") or "",
             "preset": preset,
             "tavern": tavern_payload,
+        }
+
+    def preview_preset_import(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_owner(tavern, user_id)
+        try:
+            report = build_preset_import_preview(data or {})
+        except PresetImportError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "tavern_id": tavern_id,
+            "tavern_name": tavern.name,
+            **report,
         }
 
     def _require_user_id(self, user_id: str) -> str:

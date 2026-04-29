@@ -30,4 +30,29 @@ class TTSRequest(FlexibleBody):
     character_id: str | None = None
 
 
-__all__ = ["LLMConfigTestRequest", "TTSRequest", "VoiceConfigRequest"]
+class VoiceGreetingPreviewRequest(FlexibleBody):
+    character_id: str | None = None
+    characterId: str | None = None
+    greeting_index: int | str | None = 0
+    greetingIndex: int | str | None = None
+
+
+class VisualSouvenirPreviewRequest(FlexibleBody):
+    visitor_id: str | None = None
+    visitorId: str | None = None
+    character_id: str | None = None
+    characterId: str | None = None
+    user_message: str | None = None
+    userMessage: str | None = None
+    assistant_message: str | None = None
+    assistantMessage: str | None = None
+    style: str | None = None
+
+
+__all__ = [
+    "LLMConfigTestRequest",
+    "TTSRequest",
+    "VoiceConfigRequest",
+    "VoiceGreetingPreviewRequest",
+    "VisualSouvenirPreviewRequest",
+]

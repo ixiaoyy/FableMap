@@ -82,6 +82,24 @@ py -3 -m fablemap_api api
 http://127.0.0.1:8950/
 ```
 
+## Docker 部署 / 本地容器运行
+
+仓库提供两服务 Docker Compose 配置：`backend` 运行 FastAPI v1 API，`frontend` 用 nginx 托管 React Router 静态构建并代理 `/api` 到后端。
+
+```powershell
+# 可选：复制环境变量模板并按需调整端口 / MySQL URL
+Copy-Item .env.example .env
+
+# 构建并启动
+docker compose up --build
+
+# 访问
+http://127.0.0.1:3000/
+http://127.0.0.1:8000/api/v1/health
+```
+
+默认情况下后端使用 Docker volume `fablemap_data` 保存 JSON 文件数据；设置 `FABLEMAP_MYSQL_URL` 后会按后端现有逻辑切换到 MySQL。店主 LLM API Key 仍应通过 FableMap 的店主配置写入，不要放入共享 `.env`。
+
 ## 核心模块
 
 ### 后端 (`backend/src/fablemap_api/core/`)
@@ -90,6 +108,7 @@ http://127.0.0.1:8950/
 |------|------|
 | `tavern.py` | 酒馆核心: Tavern CRUD, 状态管理 |
 | `gameplay.py` | 酒馆玩法模型、AI Director 与 fallback 推进 |
+| `skill_packs.py` | 店主显式启用的 NPC 能力包（MVP: 环境传闻） |
 | `llm_clients.py` | LLM 客户端工厂: OpenAI / Claude / Ollama |
 | `char_card_parser.py` | SillyTavern 角色卡解析 (JSON / PNG tEXt) |
 | `world_info_injector.py` | 世界知识注入器 (关键词匹配) |
@@ -113,6 +132,7 @@ http://127.0.0.1:8950/
 | `TavernInterior.jsx` | 酒馆内部（角色列表 + ChatPanel） |
 | `ChatPanel.jsx` | 对话面板 |
 | `TavernOwnerPanel.jsx` | 店主管理面板 |
+| `SkillPackManager.jsx` | 店主技能包管理面板 |
 | `hooks/useTavernSession.js` | 酒馆会话管理 |
 | `hooks/useTavernChat.js` | 酒馆对话 |
 
@@ -143,6 +163,16 @@ http://127.0.0.1:8950/
 | POST | `/api/taverns/{id}/gameplay-sessions` | 开始或恢复玩法 |
 | POST | `/api/taverns/{id}/gameplay-sessions/{sid}/advance` | 推进玩法 |
 | POST | `/api/taverns/{id}/gameplay-sessions/{sid}/abandon` | 放弃玩法 |
+| GET | `/api/v1/taverns/{id}/skill-packs` | 获取酒馆技能包元数据与启用状态 |
+| PUT | `/api/v1/taverns/{id}/skill-packs` | 店主保存技能包启用状态 |
+| POST | `/api/v1/taverns/{id}/preset-import/preview` | 店主预览社区预设导入风险；不应用、不保存 |
+| POST | `/api/v1/taverns/{id}/gm-layer/preview` | 预览 GM Layer 结构化任务/资源/冲突/事件候选；不应用、不保存 |
+| POST | `/api/v1/taverns/{id}/episodes/export` | 导出指定访客会话的 Markdown/JSON 剧集草稿；不调用 LLM、不保存 |
+| POST | `/api/v1/taverns/{id}/voice-greeting/preview` | 预览 NPC 开场白和 TTS 请求参数；不合成音频、不保存 |
+| POST | `/api/v1/taverns/{id}/visual-souvenir/preview` | 预览共享瞬间纪念图提示词；不生成图片、不保存 |
+| GET | `/api/v1/taverns/{id}/state-cards` | 列出当前用户可见的连续性状态卡 |
+| POST | `/api/v1/taverns/{id}/state-cards` | 创建手动状态卡或候选卡 |
+| PUT | `/api/v1/taverns/{id}/state-cards/{card_id}/decision` | 确认、忽略或替换状态卡 |
 
 ## 文档导航
 

@@ -36,6 +36,13 @@ Frontend work must preserve:
 | [Type Safety](./type-safety.md) | JS/JSDoc/runtime normalization conventions | Current |
 | [Image Asset Guidelines](./image-asset-guidelines.md) | AI-generated bitmap placement, project paths, and verification | Current |
 | [NPC Art Guidelines](./npc-art-guidelines.md) | Tavern-themed NPC portrait assets and fallback contracts | Current |
+| [State Card UI Boundary](./state-card-ui-boundary.md) | Canon Ledger pending-card service/UI contract | Current |
+| [Tavern GM Layer Preview Boundary](./gm-layer-preview-boundary.md) | Preview-only structured GM suggestion service/UI contract | Current |
+| [Serial Episode Export Boundary](./episode-export-boundary.md) | Deterministic chat/state-card episode export service/UI contract | Current |
+| [Voice Greeting Preview Boundary](./voice-greeting-preview-boundary.md) | No-audio NPC first-greeting preview and safe TTS request boundary | Current |
+| [Visual Souvenir Preview Boundary](./visual-souvenir-preview-boundary.md) | No-image shared-moment prompt preview and future asset guardrail | Current |
+| [Tavern Skill Pack UI Boundary](./skill-pack-ui-boundary.md) | Owner-visible skill-pack service/UI contract | Current |
+| [Preset Import Preview UI Boundary](./preset-import-preview-ui-boundary.md) | Owner-only preview modal/service contract for community preset risk reports | Current |
 
 ---
 
@@ -47,7 +54,14 @@ Frontend work must preserve:
 4. For UI work, check narrow-screen behavior and avoid desktop-only layouts.
 5. For any AI-generated bitmap or image replacement, read `image-asset-guidelines.md`; a deliverable image is not complete while it only exists in `.codex/generated_images`, a temp folder, or a chat preview.
 6. For any new formal NPC role, NPC portrait, expression sprites, or tavern interior visual work, read `npc-art-guidelines.md`; a shipped NPC is not implementation-complete without a project/owner `avatar` or `sprites.neutral`, required expression semantics, and payload/file-existence tests.
-7. Run the right verification:
+7. For Canon Ledger / state-card UI changes, read `state-card-ui-boundary.md`.
+8. For GM Layer preview UI/service changes, read `gm-layer-preview-boundary.md`.
+9. For Serial Episode Export UI/service changes, read `episode-export-boundary.md`.
+10. For Voice Greeting Preview UI/service changes, read `voice-greeting-preview-boundary.md`.
+11. For Visual Souvenir Preview UI/service changes, read `visual-souvenir-preview-boundary.md` and `image-asset-guidelines.md`.
+12. For Tavern Skill Pack UI/service changes, read `skill-pack-ui-boundary.md`.
+13. For preset import preview UI/service changes, read `preset-import-preview-ui-boundary.md`.
+14. Run the right verification:
    - UI/build change: `npm --prefix .\frontend run build`
    - Service/rule script change: `npm --prefix .\frontend test`
 

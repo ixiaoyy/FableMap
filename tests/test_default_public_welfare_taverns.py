@@ -44,6 +44,14 @@ def _project_png_file_hash(path: str) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def _rejected_npc_asset_manifest() -> dict:
+    manifest_path = Path(
+        ".trellis/tasks/04-29-04-29-npc-expression-art-quality-rebuild/rejected-public-welfare-npc-assets.json"
+    )
+    assert manifest_path.exists(), "missing rejected public-welfare NPC asset manifest"
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+
 def test_default_public_welfare_taverns_are_seeded_and_discoverable():
     expected_names = {
         "pw_lantern_helpdesk": "公益·灯塔问讯台",
@@ -136,6 +144,52 @@ def test_default_public_welfare_characters_have_direct_expression_assets():
             assert len(expression_hashes) == len(set(expression_hashes.values())), (
                 f"{character['id']} must use distinct direct assets for neutral and expression sprites"
             )
+
+
+def test_rejected_public_welfare_npc_assets_do_not_pass_after_regeneration():
+    manifest = _rejected_npc_asset_manifest()
+    entries = manifest["entries"]
+    forced_characters = {
+        "char_pw_aheng",
+        "char_pw_dengxin",
+        "char_pw_huoyan",
+        "char_pw_luming",
+        "char_pw_qiaoqiao",
+        "char_pw_qiaoshou",
+        "char_pw_shiyi",
+        "char_pw_suoyin",
+        "char_pw_tongling",
+        "char_pw_xingdai",
+        "char_pw_yeyu",
+    }
+    required_expressions = {"neutral", "joy", "anger", "embarrassment", "curiosity"}
+
+    regenerated_by_character: dict[str, set[str]] = {char_id: set() for char_id in forced_characters}
+    for char_id in forced_characters:
+        for expression in required_expressions:
+            sprite_url = _public_welfare_npc_asset(char_id, expression)
+            _assert_project_png_asset(sprite_url)
+            assert _project_png_dimensions(sprite_url) == (256, 256)
+
+    for entry in entries:
+        path = entry["path"]
+        if entry["status"] != "regenerated":
+            continue
+
+        current_hash = _project_png_file_hash(path)
+        assert current_hash != entry["sha256"], f"regenerated asset still uses rejected hash: {path}"
+        sprite_url = "/" + str(Path(path).relative_to("frontend/public")).replace("\\", "/")
+        assert _project_png_dimensions(sprite_url) == (256, 256)
+
+        char_id = entry["char_id"]
+        if char_id in regenerated_by_character:
+            regenerated_by_character[char_id].add(entry["expression"])
+
+    for char_id, expressions in regenerated_by_character.items():
+        expected_rejected_expressions = required_expressions
+        if char_id == "char_pw_aheng":
+            expected_rejected_expressions = required_expressions - {"neutral"}
+        assert expressions == expected_rejected_expressions, f"{char_id} must regenerate rejected expressions"
 
 
 def test_default_public_welfare_npc_assets_are_grouped_by_character_directory():

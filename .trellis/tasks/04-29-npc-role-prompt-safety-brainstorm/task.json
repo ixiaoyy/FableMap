@@ -3,7 +3,7 @@
   "name": "npc-role-prompt-safety-brainstorm",
   "title": "brainstorm: NPC role prompt safety and tavern persona templates",
   "description": "Brainstorm safer TavernCharacter persona guidance from a user-provided catgirl prompt sample while preserving owner sovereignty, SillyTavern-compatible fields, and FableMap product boundaries.",
-  "status": "planning",
+  "status": "review",
   "dev_type": "docs",
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 5,
   "next_action": [
     {
       "phase": 1,
@@ -48,7 +48,11 @@
   "children": [
     "04-29-state-cards-for-tavern-continuity",
     "04-29-tavern-skill-packs-mvp",
-    "04-30-preset-import-preview-safe-converter"
+    "04-30-preset-import-preview-safe-converter",
+    "04-30-tavern-gm-layer-structured-conflict-candidates",
+    "04-30-serial-novel-export-episode-builder",
+    "04-30-voice-greeting-tts-pack-preview",
+    "04-30-visual-souvenir-shared-moment-preview"
   ],
   "parent": null,
   "relatedFiles": [
@@ -56,9 +60,21 @@
     "context-memory.md",
     "implement.jsonl",
     "check.jsonl",
-    "debug.jsonl"
+    "debug.jsonl",
+    ".trellis/tasks/04-29-state-cards-for-tavern-continuity/",
+    ".trellis/tasks/04-29-tavern-skill-packs-mvp/",
+    ".trellis/tasks/04-30-preset-import-preview-safe-converter/",
+    ".trellis/tasks/04-30-tavern-gm-layer-structured-conflict-candidates/",
+    ".trellis/tasks/04-30-serial-novel-export-episode-builder/",
+    ".trellis/tasks/04-30-voice-greeting-tts-pack-preview/",
+    ".trellis/tasks/04-30-visual-souvenir-shared-moment-preview/",
+    "docs/AI参与开发协议.md",
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/frontend/index.md",
+    "README.md",
+    "docs/ARCHITECTURE.md"
   ],
-  "notes": "Brainstorm expanded with NanoMate market reference: character card=soul, preset=voice, skills=actions; adds Tavern Skill Packs as second-track after State Cards.",
+  "notes": "Safe implementation-ready child slices from the NPC/preset/tavern-continuity brainstorm have been split into Trellis tasks, implemented, documented, and verified. Parent is ready for human review; full image generation, direct audio synthesis/autoplay, proactive notification delivery, and full multi-NPC room UX remain explicit future work.",
   "meta": {
     "options": [
       "state-cards-for-tavern-continuity",
@@ -77,6 +93,29 @@
       "https://cdn3.ldstatic.com/original/4X/c/d/c/cdc3174b822f1380140fd1fdd3aa225648423f6a.txt",
       "user-provided AI tavern gameplay reflection and screenshots"
     ],
-    "principle": "State Cards make the tavern remember; Skill Packs let the tavern act."
+    "principle": "State Cards make the tavern remember; Skill Packs let the tavern act.",
+    "implemented_child_slices": [
+      "04-29-state-cards-for-tavern-continuity",
+      "04-29-tavern-skill-packs-mvp",
+      "04-30-preset-import-preview-safe-converter",
+      "04-30-tavern-gm-layer-structured-conflict-candidates",
+      "04-30-serial-novel-export-episode-builder",
+      "04-30-voice-greeting-tts-pack-preview",
+      "04-30-visual-souvenir-shared-moment-preview"
+    ],
+    "final_verification": {
+      "backend_compile": "py -3 -m compileall -q backend/src -> passed",
+      "backend_full": "py -3 -m pytest -q --tb=short -> 527 passed, 103 warnings",
+      "frontend_test": "npm --prefix .\\frontend test -> passed",
+      "frontend_typecheck": "npm --prefix .\\frontend run typecheck -> passed",
+      "frontend_build": "npm --prefix .\\frontend run build -> passed",
+      "trellis_visual_task_validate": "py -3 .\\.trellis\\scripts\\task.py validate .\\.trellis\\tasks\\04-30-visual-souvenir-shared-moment-preview -> passed"
+    },
+    "deferred_not_done": [
+      "visual-souvenir full image generation, generated assets, and asset persistence are deferred; current slice is no-image prompt preview only.",
+      "voice-greeting direct TTS synthesis, autoplay UI, voice cloning/upload/storage are deferred; current slice is no-audio preview only.",
+      "revisit-care proactive delivery/notification scheduling is deferred pending opt-in, quiet hours, and rate-limit design.",
+      "full multi-NPC tavern room UX remains future work; existing group-chat primitives/tests are treated as foundation only."
+    ]
   }
 }

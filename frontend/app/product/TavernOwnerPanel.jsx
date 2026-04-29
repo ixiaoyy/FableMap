@@ -27,8 +27,11 @@ import WorldBookEditor from './WorldBookEditor'
 import OutputRulesEditor from './OutputRulesEditor'
 import PromptBlockEditor from './PromptBlockEditor'
 import PresetManager from './PresetManager'
+import PresetImportPreviewModal from './PresetImportPreviewModal'
+import SkillPackManager from './SkillPackManager'
 import TavernGroupSettingsModal from './TavernGroupSettingsModal'
 import GameplayManager from './GameplayManager'
+import OwnerStateCardPanel from './OwnerStateCardPanel'
 import { OwnerAdvancedToolPanel, OwnerNextActionPanel, OwnerSectionNav } from './OwnerConsoleSections'
 
 const STATUS_FILTERS = [
@@ -174,7 +177,10 @@ export default function TavernOwnerPanel({
   const [outputRulesTavern, setOutputRulesTavern] = useState(null)
   const [promptBlocksTavern, setPromptBlocksTavern] = useState(null)
   const [presetManagerTavern, setPresetManagerTavern] = useState(null)
+  const [presetImportTavern, setPresetImportTavern] = useState(null)
+  const [skillPackManagerTavern, setSkillPackManagerTavern] = useState(null)
   const [groupSettingsTavern, setGroupSettingsTavern] = useState(null)
+  const [stateCardTavern, setStateCardTavern] = useState(null)
   const [gameplayManagerTavern, setGameplayManagerTavern] = useState(null)
   const [llmFormData, setLlmFormData] = useState(null)
   const [savingLlm, setSavingLlm] = useState(false)
@@ -785,6 +791,12 @@ export default function TavernOwnerPanel({
     if (onTavernCreated) onTavernCreated(updatedTavern)
   }
 
+  function handleSkillPacksUpdated(updatedTavern) {
+    setMyTaverns(prev => prev.map(t => t.id === updatedTavern.id ? { ...t, ...updatedTavern } : t))
+    setSkillPackManagerTavern(updatedTavern)
+    if (onTavernCreated) onTavernCreated(updatedTavern)
+  }
+
   function handleGroupSettingsUpdated(updatedTavern) {
     setMyTaverns(prev => prev.map(t => t.id === updatedTavern.id ? { ...t, ...updatedTavern } : t))
     setGroupSettingsTavern(updatedTavern)
@@ -1062,8 +1074,11 @@ export default function TavernOwnerPanel({
           onManageOutputRules={setOutputRulesTavern}
           onManagePromptBlocks={setPromptBlocksTavern}
           onManagePresets={setPresetManagerTavern}
+          onPreviewPresetImport={setPresetImportTavern}
+          onManageSkillPacks={setSkillPackManagerTavern}
           onManageGroupSettings={setGroupSettingsTavern}
           onManageGameplay={setGameplayManagerTavern}
+          onManageStateCards={setStateCardTavern}
           onExportPackage={handleExportPackage}
           onDelete={(tavern) => setDeleteTarget(tavern.id)}
         />
@@ -1081,6 +1096,8 @@ export default function TavernOwnerPanel({
           onManageOutputRules={setOutputRulesTavern}
           onManagePromptBlocks={setPromptBlocksTavern}
           onManagePresets={setPresetManagerTavern}
+          onPreviewPresetImport={setPresetImportTavern}
+          onManageSkillPacks={setSkillPackManagerTavern}
           onManageGroupSettings={setGroupSettingsTavern}
           onManageGameplay={setGameplayManagerTavern}
           onExportPackage={handleExportPackage}
@@ -1132,6 +1149,23 @@ export default function TavernOwnerPanel({
         />
       )}
 
+      {presetImportTavern && (
+        <PresetImportPreviewModal
+          tavern={presetImportTavern}
+          ownerId={ownerId}
+          onClose={() => setPresetImportTavern(null)}
+        />
+      )}
+
+      {skillPackManagerTavern && (
+        <SkillPackManager
+          tavern={skillPackManagerTavern}
+          ownerId={ownerId}
+          onClose={() => setSkillPackManagerTavern(null)}
+          onUpdated={handleSkillPacksUpdated}
+        />
+      )}
+
       {groupSettingsTavern && (
         <TavernGroupSettingsModal
           tavern={groupSettingsTavern}
@@ -1147,6 +1181,14 @@ export default function TavernOwnerPanel({
           ownerId={ownerId}
           onClose={() => setGameplayManagerTavern(null)}
           onUpdated={handleGameplayUpdated}
+        />
+      )}
+
+      {stateCardTavern && (
+        <OwnerStateCardPanel
+          tavern={stateCardTavern}
+          ownerId={ownerId}
+          onClose={() => setStateCardTavern(null)}
         />
       )}
 
@@ -1282,6 +1324,8 @@ function OwnerTavernManagementSection({
   onManageOutputRules,
   onManagePromptBlocks,
   onManagePresets,
+  onPreviewPresetImport,
+  onManageSkillPacks,
   onManageGroupSettings,
   onManageGameplay,
   onExportPackage,
@@ -1364,6 +1408,8 @@ function OwnerTavernManagementSection({
               onManageOutputRules={() => onManageOutputRules(tavern)}
               onManagePromptBlocks={() => onManagePromptBlocks(tavern)}
               onManagePresets={() => onManagePresets(tavern)}
+              onPreviewPresetImport={() => onPreviewPresetImport(tavern)}
+              onManageSkillPacks={() => onManageSkillPacks(tavern)}
               onManageGroupSettings={() => onManageGroupSettings(tavern)}
               onManageGameplay={() => onManageGameplay(tavern)}
               onExportPackage={() => onExportPackage(tavern)}
@@ -1800,6 +1846,8 @@ function TavernCard({
   onManageOutputRules,
   onManagePromptBlocks,
   onManagePresets,
+  onPreviewPresetImport,
+  onManageSkillPacks,
   onManageGroupSettings,
   onManageGameplay,
   onExportPackage,
@@ -1816,6 +1864,7 @@ function TavernCard({
   const worldInfoCount = tavern?.world_info?.length || 0
   const promptBlockCount = tavern?.prompt_blocks?.length || 0
   const presetCount = tavern?.runtime_presets?.length || 0
+  const skillPackCount = (tavern?.skill_packs || []).filter((item) => item?.enabled).length
   const gameplayCount = tavern?.gameplay_definitions?.length || 0
   const groupEnabled = Boolean(tavern?.group_chat_enabled)
 
@@ -1837,6 +1886,7 @@ function TavernCard({
           <span className="char-count-badge">{worldInfoCount} 世界书</span>
           <span className="char-count-badge">{promptBlockCount || '默认'} 段落</span>
           <span className="char-count-badge">{presetCount || '内置'} 预设</span>
+          <span className={`char-count-badge ${skillPackCount ? 'is-on' : ''}`}>{skillPackCount ? `${skillPackCount} 技能包` : '技能包关'}</span>
           <span className="char-count-badge">{gameplayCount || '未设'} 玩法</span>
           <span className={`char-count-badge ${groupEnabled ? 'is-on' : ''}`}>{groupEnabled ? '群聊开' : '群聊关'}</span>
         </div>
@@ -1890,6 +1940,8 @@ function TavernCard({
         <button className="secondary" onClick={onManageWorldBook}>世界书</button>
         <button className="secondary" onClick={onManagePromptBlocks}>段落</button>
         <button className="secondary" onClick={onManagePresets}>预设</button>
+        <button className="secondary" onClick={onPreviewPresetImport}>预览导入</button>
+        <button className="secondary" onClick={onManageSkillPacks}>技能包</button>
         <button className="secondary" onClick={onManageGameplay}>玩法</button>
         <button className="secondary" onClick={onManageGroupSettings}>群聊</button>
         <button className="secondary" onClick={onManageOutputRules}>护栏</button>

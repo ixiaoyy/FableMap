@@ -75,8 +75,26 @@ function testSummaryMetricsAndHighlights() {
       updated_at: '2026-04-26T10:00:00Z',
     },
   ]
+  const visitorNotes = [
+    {
+      id: 'note_1',
+      tavern_id: 'tavern_a',
+      tavern_name: '夜雨柜台',
+      visitor_id: 'visitor_alpha',
+      visitor_nickname: 'Alpha',
+      content: '希望阿柜下次还记得我喜欢靠窗的位置。',
+      created_at: '2026-04-27T10:00:00Z',
+      visibility: 'owner_only',
+    },
+  ]
 
-  const summary = buildOwnerOperatingSummary({ taverns, visitors, sessions })
+  const summary = buildOwnerOperatingSummary({
+    taverns,
+    visitors,
+    sessions,
+    visitorNotes,
+    ownerLLM: { configured: false, llm_config: null },
+  })
 
   assertEqual(summary.metrics.taverns, 2, 'counts taverns')
   assertEqual(summary.metrics.openTaverns, 1, 'counts open taverns')
@@ -85,11 +103,16 @@ function testSummaryMetricsAndHighlights() {
   assertEqual(summary.metrics.engagedVisitors, 2, 'counts engaged visitors')
   assertEqual(summary.metrics.sessions, 2, 'counts chat sessions')
   assertEqual(summary.metrics.messages, 11, 'sums session messages')
+  assertEqual(summary.metrics.visitorNotes, 1, 'counts owner-visible visitor notes')
+  assertEqual(summary.metrics.llmConfigured, false, 'reports missing owner default LLM')
 
   assertEqual(summary.returningHighlights[0].visitorLabel, 'Alpha', 'sorts strongest returning visitor first')
   assertEqual(summary.tavernHighlights[0].tavernName, '夜雨柜台', 'sorts tavern with most owner feedback first')
   assert(summary.recentSessions[0].lastMessage.includes('蓝莓派'), 'keeps recent visible session message')
+  assert(summary.latestFeedback[0].content.includes('靠窗'), 'keeps latest owner-visible visitor feedback')
   assert(summary.nextActions.some((item) => item.kind === 'follow_up_returning'), 'suggests following up with returning visitors')
+  assert(summary.nextActions.some((item) => item.kind === 'configure_owner_llm'), 'suggests configuring owner default LLM')
+  assert(summary.nextActions.some((item) => item.kind === 'review_owner_visible_feedback'), 'suggests reviewing owner-visible feedback')
   assert(summary.nextActions.some((item) => item.kind === 'reopen_closed'), 'suggests reopening closed taverns')
 }
 
@@ -100,7 +123,23 @@ function testEmptySummaryHasOnboardingAction() {
   assert(summary.nextActions.some((item) => item.kind === 'create_first_tavern'), 'suggests first tavern creation')
 }
 
+function testConfiguredLlmDoesNotSuggestSetup() {
+  const summary = buildOwnerOperatingSummary({
+    taverns: [{ id: 'tavern_ai', name: 'AI 柜台', status: 'open' }],
+    visitors: [],
+    sessions: [],
+    visitorNotes: [],
+    ownerLLM: { configured: true, llm_config: { backend: 'openai', model: 'gpt-test', api_key_configured: true } },
+  })
+
+  assertEqual(summary.metrics.llmConfigured, true, 'reports configured owner default LLM')
+  assertEqual(summary.metrics.llmBackend, 'openai', 'keeps safe LLM backend label')
+  assertEqual(summary.metrics.llmModel, 'gpt-test', 'keeps safe LLM model label')
+  assert(!summary.nextActions.some((item) => item.kind === 'configure_owner_llm'), 'does not suggest LLM setup when configured')
+}
+
 testSummaryMetricsAndHighlights()
 testEmptySummaryHasOnboardingAction()
+testConfiguredLlmDoesNotSuggestSetup()
 
 console.log('owner-summary-test: ok')

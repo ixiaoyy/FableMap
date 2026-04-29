@@ -42,6 +42,15 @@ class ChatExportRequest(FlexibleBody):
     format: str = "json"
 
 
+class EpisodeExportRequest(FlexibleBody):
+    visitor_id: str = ""
+    character_id: str = ""
+    title: str = ""
+    include_pending: bool | str | int = False
+    format: str = "markdown"
+    limit: int | str = 200
+
+
 class ChatSearchRequest(FlexibleBody):
     character_id: str = ""
     visitor_id: str = ""
@@ -54,6 +63,7 @@ __all__ = [
     "ChatExportRequest",
     "ChatRequest",
     "ChatSearchRequest",
+    "EpisodeExportRequest",
     "GroupChatConfigRequest",
     "GroupChatRequest",
 ]

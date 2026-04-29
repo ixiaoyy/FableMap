@@ -47,6 +47,9 @@
 - `README.md`
 - `CONTRIBUTING.md`
 - `docs/WORLD_SCHEMA.md`
+- `.trellis/workflow.md`
+- `.trellis/spec/`
+- 当前 `.trellis/tasks/<task>/prd.md`、`task.json`、`implement.jsonl`、`check.jsonl`
 - 相关系统文档（如阵营、扰动、审美系统）
 
 如果 AI 输出与这些文档冲突，必须以文档为准，而不是以 AI 输出为准。
@@ -90,17 +93,28 @@ AI 不允许：
 
 正确顺序是：
 
-1. 先从共享任务列表中选任务或补任务
-2. 对中高风险任务先提交模块认领说明
-3. 再给 AI 明确边界
-4. 再让 AI 辅助产出
-5. 最后人工验证与提交
+1. 先从 `.trellis/tasks/` 中选任务、补任务或创建新任务
+2. 使用 Trellis `start` / `before-dev` / `check` / `finish-work` 等技能或等价脚本建立上下文
+3. 对中高风险任务先在任务目录留下 PRD、认领说明、研究记录或 implementation plan
+4. 再给 AI 明确边界
+5. 再让 AI 辅助产出
+6. 最后人工验证与提交
 
-当前仓库内统一共享任务入口为：
+当前仓库内统一任务入口为：
 
-- `docs/AI_SHARED_TASKLIST.md`
+- `.trellis/tasks/`
+- `.trellis/workspace/<developer>/`
+- `.trellis/spec/`
 
-如果任务已经进入共享任务列表，任务卡应优先引用该文档中的任务名或任务 ID，而不是只引用聊天记录。
+`docs/AI_SHARED_TASKLIST.md` 仅作为历史 / 辅助参考；如果任务已经进入 Trellis，任务卡、PR、提交说明应优先引用 `.trellis/tasks/<task>/` 中的任务名、PRD、上下文文件或验收记录，而不是只引用聊天记录。
+
+### Trellis 技能使用要求
+
+- 开始新会话或切换任务时，先使用 Trellis `start` skill 或等价脚本读取当前任务、开发者身份、git 状态和 active tasks。
+- 开始写代码前，必须使用 `before-dev` skill 或等价流程读取 `.trellis/spec/` 中与本次改动相关的 backend / frontend / guides 规范。
+- 新功能、bug 修复、重构级改动优先在 `.trellis/tasks/<task>/` 下维护 `prd.md`、`implementation-plan.md`、`implement.jsonl`、`check.jsonl` 或验收记录。
+- 跨层 API / Schema / 数据流变更必须把对应规范沉淀回 `.trellis/spec/` 或权威 `docs/`，不能只停留在聊天记录。
+- 完成前必须按 Trellis `check` / `finish-work` 思路运行真实验证，并在汇报中列出命令与结果。
 
 ### 每个任务卡至少包含
 

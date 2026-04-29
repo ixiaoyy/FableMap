@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: fablemap-backend:local
+    environment:
+      FABLEMAP_MYSQL_URL: ${FABLEMAP_MYSQL_URL:-}
+      FABLEMAP_OUTPUT_ROOT: /data
+      FABLEMAP_SEED_DEFAULT_TAVERNS: ${FABLEMAP_SEED_DEFAULT_TAVERNS:-1}
+      FABLEMAP_CORS_ORIGINS: ${FABLEMAP_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      PYTHONPATH: /app/backend/src
+    ports:
+      - "${FABLEMAP_API_PORT:-8000}:8000"
+    volumes:
+      - fablemap_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-}
+    image: fablemap-frontend:local
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FABLEMAP_FRONTEND_PORT:-3000}:80"
+
+volumes:
+  fablemap_data:

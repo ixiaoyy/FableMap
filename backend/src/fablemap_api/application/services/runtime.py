@@ -34,6 +34,15 @@ from fablemap_api.core.presets import (
 )
 from fablemap_api.core.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks
 from fablemap_api.core.prompt_builder import PromptBuildConfig, PromptBuilder
+from fablemap_api.core.skill_packs import (
+    LOCAL_RUMOR_SKILL_PACK_ID,
+    build_local_rumor_prompt_block,
+    is_skill_pack_enabled,
+    normalize_skill_pack_settings,
+)
+from fablemap_api.core.episode_builder import build_episode_export
+from fablemap_api.core.voice_greeting import build_voice_greeting_preview
+from fablemap_api.core.visual_souvenir import build_visual_souvenir_preview
 from fablemap_api.core.tavern import (
     ChatMessage,
     Tavern,
@@ -98,6 +107,14 @@ def _days_since(iso_timestamp: str | None) -> int:
         return max(0, (now - past).days)
     except (ValueError, TypeError):
         return 0
+
+
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 class RuntimeApplicationMixin:
@@ -236,6 +253,21 @@ class RuntimeApplicationMixin:
         except Exception:
             created_memories = []
 
+        state_card_candidates: list[dict[str, Any]] = []
+        try:
+            state_card_candidates = self.create_state_card_candidates_from_chat(
+                tavern_id=tavern_id,
+                visitor_id=visitor_id,
+                character_id=character_id,
+                user_message=user_message.content,
+                assistant_message=response_text,
+                source_message_ids=[user_message.id, assistant_message.id],
+                proposed_by=visitor_id,
+                source="chat",
+            )
+        except Exception:
+            state_card_candidates = []
+
         return {
             "character_id": character_id,
             "character_name": character.name,
@@ -247,6 +279,7 @@ class RuntimeApplicationMixin:
             "visitor_state": visitor_state.to_dict(),
             "affinity": affinity_result.get("affinity"),
             "created_memories": created_memories,
+            "state_card_candidates": state_card_candidates,
             "timestamp": now,
         }
 
@@ -527,6 +560,7 @@ class RuntimeApplicationMixin:
                 "visitor_state": visitor_state.to_dict(),
                 "affinity": affinity_result.get("affinity"),
                 "created_memories": [],
+                "state_card_candidates": [],
             }
 
         created_memories: list[dict[str, Any]] = []
@@ -547,6 +581,21 @@ class RuntimeApplicationMixin:
         except Exception:
             created_memories = []
 
+        state_card_candidates: list[dict[str, Any]] = []
+        try:
+            state_card_candidates = self.create_state_card_candidates_from_chat(
+                tavern_id=tavern_id,
+                visitor_id=visitor_id,
+                character_id="",
+                user_message=saved_user_content,
+                assistant_message=assistant_text,
+                source_message_ids=[current_user_message_id, str(responses[0].get("id") or "")],
+                proposed_by=visitor_id,
+                source="group_chat",
+            )
+        except Exception:
+            state_card_candidates = []
+
         return {
             "messages": responses,
             "speaker_count": len(responses),
@@ -555,6 +604,7 @@ class RuntimeApplicationMixin:
             "visitor_state": visitor_state.to_dict(),
             "affinity": affinity_result.get("affinity"),
             "created_memories": created_memories,
+            "state_card_candidates": state_card_candidates,
         }
 
     def get_group_chat_history(self, tavern_id: str, visitor_id: str = "", user_id: str = "", limit: int = 50) -> dict[str, Any]:
@@ -594,6 +644,56 @@ class RuntimeApplicationMixin:
         self._get_tavern_or_404(tavern_id)
         voice_config = self.store.get_voice_config(tavern_id) or VoiceConfig()
         return {"voice_config": voice_config.to_dict()}
+
+    def preview_voice_greeting(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        payload = data or {}
+        character_id = str(payload.get("character_id") or payload.get("characterId") or "").strip()
+        if not character_id:
+            raise HTTPException(status_code=400, detail="语音问候预览需要 character_id")
+        character = next((item for item in tavern.characters if item.id == character_id), None)
+        if not character:
+            raise HTTPException(status_code=404, detail="角色不存在")
+        voice_config = self.store.get_voice_config(tavern_id) or VoiceConfig()
+        return build_voice_greeting_preview(
+            tavern_id=tavern.id,
+            tavern_name=tavern.name,
+            character=character,
+            voice_config=voice_config,
+            greeting_index=payload.get("greeting_index", payload.get("greetingIndex", 0)),
+        )
+
+    def preview_visual_souvenir(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
+        if not str(user_id or "").strip():
+            raise HTTPException(status_code=401, detail="纪念图预览需要明确用户身份")
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        payload = data or {}
+        visitor_id = str(payload.get("visitor_id") or payload.get("visitorId") or "").strip()
+        if not visitor_id:
+            raise HTTPException(status_code=400, detail="纪念图预览需要 visitor_id")
+        if visitor_id != user_id and not self._is_owner(tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能为其他访客预览纪念图")
+        character_id = str(payload.get("character_id") or payload.get("characterId") or "").strip()
+        if not character_id:
+            raise HTTPException(status_code=400, detail="纪念图预览需要 character_id")
+        character = next((item for item in tavern.characters if item.id == character_id), None)
+        if not character:
+            raise HTTPException(status_code=404, detail="角色不存在")
+        user_message = payload.get("user_message") or payload.get("userMessage") or ""
+        assistant_message = payload.get("assistant_message") or payload.get("assistantMessage") or ""
+        if not clean_text(f"{user_message} {assistant_message}", max_length=1200):
+            raise HTTPException(status_code=400, detail="纪念图预览需要可观察回合文本")
+        return build_visual_souvenir_preview(
+            tavern_id=tavern.id,
+            tavern_name=tavern.name,
+            character_name=character.name,
+            visitor_id=visitor_id,
+            user_message=user_message,
+            assistant_message=assistant_message,
+            style=str(payload.get("style") or ""),
+        )
 
     def save_voice_config(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         tavern = self._get_tavern_or_404(tavern_id)
@@ -797,6 +897,9 @@ class RuntimeApplicationMixin:
             )
         )
         system_content = f"你是 FableMap 赛博酒馆「{tavern.name}」里的 NPC {character_name}。{character_prompt}"
+        skill_pack_prompt = self._skill_pack_prompt_block(tavern)
+        if skill_pack_prompt:
+            system_content = f"{system_content}\n\n{skill_pack_prompt}"
         affinity_prompt = self._affinity_prompt_block_for_state(visitor_state)
         if affinity_prompt:
             system_content = f"{system_content}\n\n{affinity_prompt}"
@@ -820,7 +923,23 @@ class RuntimeApplicationMixin:
             interaction_count=state.visit_count or 0,
         )
 
+    def _skill_pack_prompt_block(self, tavern: Tavern) -> str:
+        settings = normalize_skill_pack_settings(tavern.skill_packs)
+        if not is_skill_pack_enabled(settings, LOCAL_RUMOR_SKILL_PACK_ID):
+            return ""
+        config = next((item.get("config", {}) for item in settings if item.get("id") == LOCAL_RUMOR_SKILL_PACK_ID), {})
+        limit = self._safe_int(config.get("limit"), 3) if isinstance(config, dict) else 3
+        try:
+            rumors = self.get_rumors_for_tavern(tavern.id, limit=limit)
+        except Exception:
+            rumors = []
+        return build_local_rumor_prompt_block(rumors, limit=limit)
+
     def _rules_response(self, character_name: str, message: str, tavern: Tavern) -> str:
+        rumor_response = self._local_rumor_rules_response(message, tavern)
+        if rumor_response:
+            return f"{character_name}把杯垫推近一些：“{rumor_response}”"
+
         if tavern.id == "pw_after_school_hero_supply":
             text = message or ""
             if any(keyword in text for keyword in ("英雄名", "名字", "英雄卡")):
@@ -849,6 +968,26 @@ class RuntimeApplicationMixin:
         suffix = f"这里的气味和灯光让我想到：{scene}" if scene else "我会把这句话记在今晚的吧台边。"
         return f"{character_name}望向你，轻声回应：“我听见了——{topic}。”{suffix}"
 
+    def _local_rumor_rules_response(self, message: str, tavern: Tavern) -> str:
+        settings = normalize_skill_pack_settings(tavern.skill_packs)
+        if not is_skill_pack_enabled(settings, LOCAL_RUMOR_SKILL_PACK_ID):
+            return ""
+        text = str(message or "")
+        if not any(keyword in text for keyword in ("传闻", "附近", "推荐", "别的酒馆", "其他酒馆", "哪里")):
+            return ""
+        config = next((item.get("config", {}) for item in settings if item.get("id") == LOCAL_RUMOR_SKILL_PACK_ID), {})
+        limit = self._safe_int(config.get("limit"), 3) if isinstance(config, dict) else 3
+        try:
+            rumors = self.get_rumors_for_tavern(tavern.id, limit=limit)
+        except Exception:
+            rumors = []
+        if not rumors:
+            return "环境传闻技能包已经开启，但今晚还没有可分享的邻里传闻；我不会临时编造一个。"
+        rumor = rumors[0]
+        target_name = str(rumor.get("target_tavern_name") or rumor.get("target_tavern_id") or "附近酒馆").strip()
+        rumor_text = clean_text(rumor.get("rumor_text"), max_length=180) or "有旅人提起过那里。"
+        return f"这只是传闻、不是正史：{target_name}——{rumor_text}"
+
     def _degraded_chat(self, character_id: str, character_name: str, status: str, title: str, message: str) -> dict[str, Any]:
         return {
             "character_id": character_id,
@@ -860,6 +999,7 @@ class RuntimeApplicationMixin:
             "tavern_status": status,
             "visitor_state": None,
             "created_memories": [],
+            "state_card_candidates": [],
             "timestamp": _utc_now_iso(),
         }
 
@@ -1055,6 +1195,64 @@ class RuntimeApplicationMixin:
                 lines.append(f"{prefix}{speaker}: {content}")
             return {"text": "\n".join(lines)}
         return {"messages": [m.to_dict() if hasattr(m, "to_dict") else m for m in history]}
+
+    def export_episode(
+        self,
+        tavern_id: str,
+        user_id: str = "",
+        *,
+        visitor_id: str = "",
+        character_id: str = "",
+        title: str = "",
+        include_pending: bool | str | int = False,
+        format: str = "markdown",
+        limit: int | str = 200,
+    ) -> dict[str, Any]:
+        """Export a deterministic episode draft from one explicit visitor scope."""
+        if not str(user_id or "").strip():
+            raise HTTPException(status_code=401, detail="导出剧集需要明确用户身份")
+        tavern = self._get_tavern_or_404(tavern_id)
+        self._ensure_visible(tavern, user_id)
+        resolved_visitor_id = str(visitor_id or "").strip()
+        if not resolved_visitor_id:
+            raise HTTPException(status_code=400, detail="导出剧集需要 visitor_id")
+        if resolved_visitor_id != user_id and not self._is_owner(tavern, user_id):
+            raise HTTPException(status_code=403, detail="不能导出其他访客的剧集")
+
+        format_type = str(format or "markdown").strip().lower() or "markdown"
+        if format_type not in {"markdown", "json"}:
+            raise HTTPException(status_code=400, detail="剧集导出格式必须是 markdown 或 json")
+
+        safe_limit = max(1, min(self._safe_int(limit, 200), 500))
+        history = self.store.get_chat_history(tavern.id, resolved_visitor_id, character_id, limit=safe_limit)
+        character = next((char for char in tavern.characters if char.id == character_id), None)
+        include_pending_cards = _truthy(include_pending)
+        allowed_statuses = {"confirmed", "pending"} if include_pending_cards else {"confirmed"}
+        cards: list[dict[str, Any]] = []
+        for card in self.store.list_state_cards(tavern.id):
+            if card.visitor_id != resolved_visitor_id:
+                continue
+            if character_id and card.character_id and card.character_id != character_id:
+                continue
+            if card.status not in allowed_statuses:
+                continue
+            if not self._can_view_state_card(card, tavern, user_id):
+                continue
+            cards.append(card.to_dict())
+
+        export = build_episode_export(
+            tavern_id=tavern.id,
+            tavern_name=tavern.name,
+            visitor_id=resolved_visitor_id,
+            character_id=character_id,
+            character_name=character.name if character else "",
+            title=title,
+            messages=history,
+            state_cards=cards,
+        )
+        export["requested_format"] = format_type
+        export["include_pending"] = include_pending_cards
+        return export
 
     def search_chat_history(
         self,

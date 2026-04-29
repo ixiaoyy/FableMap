@@ -78,6 +78,12 @@ class RuntimePresetApplyRequest(FlexibleBody):
     preset: dict[str, Any] | None = None
 
 
+class PresetImportPreviewRequest(FlexibleBody):
+    preset: dict[str, Any] | str | None = None
+    preset_json: str | None = None
+    content: str | None = None
+
+
 class TavernDraftGenerateRequest(FlexibleBody):
     """生成酒馆草稿请求"""
     lat: float
@@ -110,6 +116,7 @@ __all__ = [
     "OwnerDefaultLLMRequest",
     "OwnerDefaultLLMSafeResponse",
     "OwnerDefaultLLMSaveResponse",
+    "PresetImportPreviewRequest",
     "TavernDraftCharacter",
     "TavernDraftGenerateRequest",
     "TavernDraftResponse",

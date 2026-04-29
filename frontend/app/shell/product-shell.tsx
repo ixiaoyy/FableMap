@@ -1,4 +1,4 @@
-import { Compass, Home, MapPinned, PlusCircle, Sparkles, UserRound } from "lucide-react"
+import { ClipboardList, Compass, Home, MapPinned, PlusCircle, Sparkles, UserRound } from "lucide-react"
 import { NavLink } from "react-router"
 
 import { cn } from "../lib/utils"
@@ -6,6 +6,7 @@ import { cn } from "../lib/utils"
 const navItems = [
   { to: "/", label: "首页", icon: Home },
   { to: "/discover", label: "发现", icon: Compass },
+  { to: "/quests", label: "任务", icon: ClipboardList },
   { to: "/create", label: "创建空间", icon: PlusCircle },
   { to: "/owner", label: "主人", icon: UserRound },
 ]
@@ -55,7 +56,7 @@ export function ProductShell({
       </header>
 
       <nav
-        className="mobile-bottom-dock fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 gap-1 rounded-[1.5rem] border border-white/12 bg-slate-950/88 p-1.5 shadow-2xl shadow-black/45 backdrop-blur-xl lg:hidden"
+        className="mobile-bottom-dock fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 gap-1 rounded-[1.5rem] border border-white/12 bg-slate-950/88 p-1.5 shadow-2xl shadow-black/45 backdrop-blur-xl lg:hidden"
         aria-label="Mobile navigation"
       >
         {navItems.map((item) => (

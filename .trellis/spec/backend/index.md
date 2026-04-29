@@ -33,6 +33,13 @@ Backend work must preserve these principles:
 | [Quality Guidelines](./quality-guidelines.md) | Tests, validation, forbidden patterns | Current |
 | [Logging Guidelines](./logging-guidelines.md) | Logging style and sensitive-data rules | Current |
 | [Tavern Share API Contract](./tavern-share-api-contract.md) | Public-safe share endpoint contract, errors, and tests | Current |
+| [State Card API Contract](./state-card-api-contract.md) | Canon Ledger state-card API, storage, permissions, and tests | Current |
+| [Tavern GM Layer Preview API Contract](./gm-layer-preview-contract.md) | Preview-only structured GM suggestions that reuse State Cards without persistence | Current |
+| [Serial Episode Export API Contract](./episode-export-contract.md) | Deterministic chat/state-card markdown export with no LLM and explicit visitor scope | Current |
+| [Voice Greeting Preview API Contract](./voice-greeting-preview-contract.md) | No-audio NPC first-greeting preview and safe TTS request boundary | Current |
+| [Visual Souvenir Preview API Contract](./visual-souvenir-preview-contract.md) | No-image shared-moment prompt preview with privacy redaction | Current |
+| [Tavern Skill Pack API Contract](./skill-pack-api-contract.md) | Owner-enabled NPC skill-pack API, runtime boundaries, permissions, and tests | Current |
+| [Preset Import Preview API Contract](./preset-import-preview-contract.md) | Draft-only community preset preview parser, risk report, permissions, and no-persistence boundary | Current |
 
 ---
 
@@ -43,6 +50,13 @@ Backend work must preserve these principles:
 3. If the change touches tavern CRUD/chat/gameplay, inspect the relevant methods in:
    - `backend/src/fablemap_api/core/tavern.py`
    - `backend/src/fablemap_api/core/gameplay.py`
+   - `backend/src/fablemap_api/core/state_cards.py` for Canon Ledger / state-card changes
+   - `backend/src/fablemap_api/core/gm_layer.py` for GM Layer preview changes
+   - `backend/src/fablemap_api/core/episode_builder.py` for episode export changes
+   - `backend/src/fablemap_api/core/voice_greeting.py` for voice-greeting preview changes
+   - `backend/src/fablemap_api/core/visual_souvenir.py` for visual-souvenir preview changes
+   - `backend/src/fablemap_api/core/skill_packs.py` for Tavern Skill Pack changes
+   - `backend/src/fablemap_api/core/preset_import.py` for preset import preview changes
    - `backend/src/fablemap_api/core/web/service.py`
    - `backend/src/fablemap_api/core/web/router.py`
    - `backend/src/fablemap_api/domain/tavern_share_policy.py` for public share payload changes

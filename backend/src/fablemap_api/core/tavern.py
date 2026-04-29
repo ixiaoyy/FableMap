@@ -23,6 +23,7 @@ from fablemap_api.core.default_taverns import (
     default_public_welfare_taverns,
 )
 from fablemap_api.core.memory import MemoryAtom
+from fablemap_api.core.skill_packs import normalize_skill_pack_settings
 from fablemap_api.core.time_context import build_time_context
 
 # ─────────────────────────────────────────
@@ -482,6 +483,7 @@ class Tavern:
     output_rules: list[dict[str, Any]] = field(default_factory=list)
     prompt_blocks: list[dict[str, Any]] = field(default_factory=list)
     runtime_presets: list[dict[str, Any]] = field(default_factory=list)
+    skill_packs: list[dict[str, Any]] = field(default_factory=list)
     active_preset_id: str = ""
     memory_policy: dict[str, Any] = field(default_factory=dict)
     scene_prompt: str = ""
@@ -504,6 +506,7 @@ class Tavern:
             self.access = _normalize_home_access(self.access)
         self.home_members = _normalize_home_members(self.home_members, self.id)
         self.place_relationships = _normalize_place_relationships(self.place_relationships)
+        self.skill_packs = normalize_skill_pack_settings(self.skill_packs)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -531,6 +534,7 @@ class Tavern:
             "output_rules": deepcopy(self.output_rules),
             "prompt_blocks": deepcopy(self.prompt_blocks),
             "runtime_presets": deepcopy(self.runtime_presets),
+            "skill_packs": deepcopy(self.skill_packs),
             "active_preset_id": self.active_preset_id,
             "memory_policy": deepcopy(self.memory_policy),
             "scene_prompt": self.scene_prompt,
@@ -600,6 +604,7 @@ class Tavern:
             output_rules=_normalize_metadata_list(d.get("output_rules", [])),
             prompt_blocks=_normalize_metadata_list(d.get("prompt_blocks", [])),
             runtime_presets=_normalize_metadata_list(d.get("runtime_presets", [])),
+            skill_packs=normalize_skill_pack_settings(d.get("skill_packs", [])),
             active_preset_id=str(d.get("active_preset_id") or ""),
             memory_policy=deepcopy(d.get("memory_policy", {})) if isinstance(d.get("memory_policy"), dict) else {},
             scene_prompt=d.get("scene_prompt", ""),
@@ -1042,6 +1047,73 @@ class TavernStore:
         self._save_taverns(data)
         return True
 
+    # ── 连续性状态卡 / Canon Ledger ────────────────────────
+
+    def list_state_cards(self, tavern_id: str) -> list[Any]:
+        from fablemap_api.core.state_cards import StateCard
+
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        cards = tavern_data.get("_state_cards", {})
+        if not isinstance(cards, dict):
+            return []
+
+        result = []
+        for value in cards.values():
+            if not isinstance(value, dict):
+                continue
+            try:
+                result.append(StateCard.from_dict(value))
+            except (TypeError, ValueError):
+                continue
+        result.sort(
+            key=lambda card: (
+                card.status == "pending",
+                card.updated_at or card.created_at,
+                card.id,
+            ),
+            reverse=True,
+        )
+        return result
+
+    def get_state_card(self, tavern_id: str, card_id: str) -> Any | None:
+        from fablemap_api.core.state_cards import StateCard
+
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        cards = tavern_data.get("_state_cards", {})
+        if not isinstance(cards, dict):
+            return None
+        value = cards.get(card_id)
+        if not isinstance(value, dict):
+            return None
+        try:
+            return StateCard.from_dict(value)
+        except (TypeError, ValueError):
+            return None
+
+    def save_state_card(self, tavern_id: str, card: Any) -> Any:
+        data = self._load_taverns()
+        tavern_data = data.setdefault(tavern_id, {})
+        cards = tavern_data.setdefault("_state_cards", {})
+        if not isinstance(cards, dict):
+            cards = {}
+            tavern_data["_state_cards"] = cards
+        card.tavern_id = tavern_id
+        cards[card.id] = card.to_dict()
+        self._save_taverns(data)
+        return card
+
+    def delete_state_card(self, tavern_id: str, card_id: str) -> bool:
+        data = self._load_taverns()
+        tavern_data = data.get(tavern_id, {})
+        cards = tavern_data.get("_state_cards", {})
+        if not isinstance(cards, dict) or card_id not in cards:
+            return False
+        del cards[card_id]
+        self._save_taverns(data)
+        return True
+
     # ── 玩法会话 ────────────────────────
 
     def list_gameplay_sessions(self, tavern_id: str) -> list[Any]:
@@ -1399,6 +1471,7 @@ class TavernService:
             output_rules=_normalize_metadata_list(data.get("output_rules", [])),
             prompt_blocks=_normalize_metadata_list(data.get("prompt_blocks", [])),
             runtime_presets=_normalize_metadata_list(data.get("runtime_presets", [])),
+            skill_packs=normalize_skill_pack_settings(data.get("skill_packs", [])),
             active_preset_id=str(data.get("active_preset_id") or ""),
             memory_policy=deepcopy(data.get("memory_policy", {})) if isinstance(data.get("memory_policy"), dict) else {},
             scene_prompt=data.get("scene_prompt", ""),
@@ -1487,6 +1560,8 @@ class TavernService:
         for metadata_key in ("groups", "bookmarks", "chat_templates", "gameplay_definitions", "output_rules", "prompt_blocks", "runtime_presets"):
             if metadata_key in data:
                 setattr(tavern, metadata_key, _normalize_metadata_list(data[metadata_key]))
+        if "skill_packs" in data:
+            tavern.skill_packs = normalize_skill_pack_settings(data.get("skill_packs"))
         if "active_preset_id" in data:
             tavern.active_preset_id = str(data.get("active_preset_id") or "").strip()
         if "memory_policy" in data:

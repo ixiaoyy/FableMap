@@ -143,6 +143,7 @@ export type Tavern = {
   characters?: TavernCharacter[]
   world_info?: unknown[]
   gameplay_definitions?: unknown[]
+  skill_packs?: SkillPackSetting[]
   home_members?: HomeMember[]
   place_relationships?: PlaceRelationship[]
   school_members?: SchoolMemberSummary[]
@@ -268,6 +269,7 @@ export type ChatResponse = {
   visitor_state?: VisitorStatePayload | null
   affinity?: AffinityResult | null
   created_memories?: unknown[]
+  state_card_candidates?: StateCard[]
 }
 
 export type LLMConfigTestResponse = {
@@ -317,6 +319,7 @@ export type GroupChatResponse = {
   visitor_state?: VisitorStatePayload | null
   affinity?: AffinityResult | null
   created_memories?: unknown[]
+  state_card_candidates?: StateCard[]
 }
 
 export type VoiceConfig = {
@@ -329,6 +332,56 @@ export type VoiceConfig = {
   stt_provider: string
   stt_model?: string
   auto_play?: boolean
+}
+
+export type VoiceGreetingPreviewResponse = {
+  ok: boolean
+  tavern_id: string
+  tavern_name?: string
+  character_id: string
+  character_name: string
+  preview_only: boolean
+  applied: boolean
+  audio_generated: boolean
+  tts_ready: boolean
+  greeting: {
+    text: string
+    source: string
+    greeting_index: number
+  }
+  voice: {
+    enabled: boolean
+    tts_provider: string
+    tts_voice?: string
+    tts_model?: string
+    tts_speed?: number
+    tts_language?: string
+    auto_play?: boolean
+  }
+  tts_request: {
+    text: string
+    character_id: string
+  }
+  notes: string[]
+}
+
+export type VisualSouvenirPreviewResponse = {
+  ok: boolean
+  tavern_id: string
+  tavern_name?: string
+  visitor_id: string
+  preview_only: boolean
+  applied: boolean
+  image_generated: boolean
+  requires_confirmation: boolean
+  souvenir: {
+    prompt: string
+    negative_prompt: string
+    source_summary: string
+    style: string
+  }
+  privacy_notes: string[]
+  next_action: string
 }
 
 export type MemoryAtom = {
@@ -358,6 +411,97 @@ export type MemoryAtomListResponse = {
   memory_atoms: MemoryAtom[]
   count: number
   filters: Record<string, string>
+}
+
+export type StateCardStatus = "pending" | "confirmed" | "rejected" | "superseded"
+export type StateCardCategory = "character" | "task" | "resource" | "conflict" | "event_log"
+export type StateCardScope = "visitor" | "tavern"
+
+export type StateCard = {
+  id: string
+  tavern_id: string
+  category: StateCardCategory | string
+  status: StateCardStatus | string
+  canon_scope: StateCardScope | string
+  title: string
+  summary: string
+  visitor_id: string
+  character_id: string
+  source: string
+  source_message_ids: string[]
+  proposed_by: string
+  confirmed_by: string
+  created_at: string
+  updated_at: string
+  fixed_canon: boolean
+  metadata: Record<string, unknown>
+}
+
+export type StateCardListResponse = {
+  tavern_id: string
+  state_cards: StateCard[]
+  count: number
+  filters: Record<string, string>
+}
+
+export type GmLayerPreviewRequest = {
+  visitor_id?: string
+  visitorId?: string
+  character_id?: string
+  characterId?: string
+  user_message?: string
+  message?: string
+  assistant_message?: string
+  response?: string
+  source_message_ids?: string[]
+  sourceMessageIds?: string[]
+  source?: string
+}
+
+export type GmLayerPreviewResponse = {
+  ok: boolean
+  tavern_id: string
+  tavern_name?: string
+  visitor_id: string
+  gm_mode: string
+  preview_only: boolean
+  applied: boolean
+  candidates: StateCard[]
+  summary: {
+    total: number
+    task: number
+    resource: number
+    conflict: number
+    event_log: number
+    [key: string]: number
+  }
+  notes: string[]
+}
+
+export type SkillPackDefinition = {
+  id: string
+  label: string
+  description: string
+  category?: string
+  default_enabled?: boolean
+  capabilities: string[]
+  prompt_notes: string[]
+  config_schema?: Record<string, unknown>
+}
+
+export type SkillPackSetting = {
+  id: string
+  enabled: boolean
+  config?: Record<string, unknown>
+}
+
+export type SkillPacksResponse = {
+  ok?: boolean
+  tavern_id: string
+  available_packs: SkillPackDefinition[]
+  skill_packs: SkillPackSetting[]
+  enabled_pack_ids: string[]
+  owner_view?: boolean
 }
 
 export type WorldInfoTestResponse = {
@@ -407,6 +551,38 @@ export type RuntimePresetsResponse = {
   custom_presets: RuntimePreset[]
   default_presets: RuntimePreset[]
   memory_policy: Record<string, unknown>
+}
+
+export type PresetImportPreviewItem = {
+  id: string
+  name: string
+  category: string
+  severity: "supported" | "warning" | "blocked" | string
+  reason: string
+  source?: string
+  sample?: string
+  enabled?: boolean
+}
+
+export type PresetImportPreviewResponse = {
+  ok: boolean
+  tavern_id?: string
+  tavern_name?: string
+  preview_only: boolean
+  applied: boolean
+  preset_name: string
+  summary: {
+    total_modules: number
+    supported: number
+    warning: number
+    blocked: number
+    runtime_parameters: number
+  }
+  supported: PresetImportPreviewItem[]
+  warnings: PresetImportPreviewItem[]
+  blocked: PresetImportPreviewItem[]
+  runtime_parameters: Record<string, unknown>
+  notes: string[]
 }
 
 export type TavernVisitor = {
@@ -883,6 +1059,37 @@ export type ChatExportResponse = {
   text?: string
 }
 
+export type EpisodeExportOptions = {
+  tavernId?: string
+  visitorId?: string
+  characterId?: string
+  title?: string
+  includePending?: boolean
+  format?: "markdown" | "json" | string
+  limit?: number
+}
+
+export type EpisodeExportResponse = {
+  ok: boolean
+  tavern_id: string
+  tavern_name?: string
+  visitor_id: string
+  character_id: string
+  format: string
+  requested_format?: string
+  persisted: boolean
+  include_pending?: boolean
+  episode: {
+    title: string
+    summary: string
+    markdown: string
+    messages: Array<{ id?: string; role: string; speaker: string; content: string; timestamp?: string }>
+    state_cards: Array<{ id?: string; category: string; status: string; title: string; summary?: string }>
+    message_count: number
+    state_card_count: number
+  }
+}
+
 export function listChatSessions(
   options: { tavernId?: string; characterId?: string; visitorId?: string } = {},
   userId = DEFAULT_OWNER_ID,
@@ -923,6 +1130,20 @@ export function exportChatHistory(
   )
 }
 
+export function exportEpisode(options: EpisodeExportOptions = {}, userId = DEFAULT_VISITOR_ID) {
+  return readApiJson<EpisodeExportResponse>(
+    `/api/v1/taverns/${encodeURIComponent(options.tavernId || "")}/episodes/export`,
+    jsonInit("POST", {
+      visitor_id: options.visitorId || "",
+      character_id: options.characterId || "",
+      title: options.title || "",
+      include_pending: Boolean(options.includePending),
+      format: options.format || "markdown",
+      limit: options.limit || 200,
+    }, userId),
+  )
+}
+
 export function searchChatHistory(
   options: { tavernId: string; characterId?: string; visitorId?: string; query?: string; limit?: number },
   userId = DEFAULT_OWNER_ID,
@@ -946,6 +1167,47 @@ export function saveVoiceConfig(tavernId: string, data: Partial<VoiceConfig>, us
   return readApiJson<{ ok: boolean; voice_config: VoiceConfig }>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/voice`,
     jsonInit("PUT", data, userId),
+  )
+}
+
+export function previewVoiceGreeting(
+  tavernId: string,
+  data: { character_id?: string; characterId?: string; greeting_index?: number; greetingIndex?: number },
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<VoiceGreetingPreviewResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/voice-greeting/preview`,
+    jsonInit("POST", {
+      character_id: data.character_id || data.characterId || "",
+      greeting_index: data.greeting_index ?? data.greetingIndex ?? 0,
+    }, userId),
+  )
+}
+
+export function previewVisualSouvenir(
+  tavernId: string,
+  data: {
+    visitor_id?: string
+    visitorId?: string
+    character_id?: string
+    characterId?: string
+    user_message?: string
+    userMessage?: string
+    assistant_message?: string
+    assistantMessage?: string
+    style?: string
+  },
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<VisualSouvenirPreviewResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/visual-souvenir/preview`,
+    jsonInit("POST", {
+      visitor_id: data.visitor_id || data.visitorId || "",
+      character_id: data.character_id || data.characterId || "",
+      user_message: data.user_message || data.userMessage || "",
+      assistant_message: data.assistant_message || data.assistantMessage || "",
+      style: data.style || "",
+    }, userId),
   )
 }
 
@@ -990,6 +1252,69 @@ export function deleteMemoryAtom(tavernId: string, memoryId: string, userId = DE
   return readApiJson<{ ok: boolean; tavern_id: string; memory_id: string }>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}`,
     jsonInit("DELETE", undefined, userId),
+  )
+}
+
+export function listStateCards(
+  tavernId: string,
+  filters: Record<string, string | number | undefined | null> = {},
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<StateCardListResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/state-cards${queryString(filters)}`,
+    { userId },
+  )
+}
+
+export function createStateCard(
+  tavernId: string,
+  data: Partial<StateCard>,
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<{ ok: boolean; tavern_id: string; state_card: StateCard }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/state-cards`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function decideStateCard(
+  tavernId: string,
+  cardId: string,
+  data: { status: StateCardStatus | string; note?: string },
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<{ ok: boolean; tavern_id: string; state_card: StateCard }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/state-cards/${encodeURIComponent(cardId)}/decision`,
+    jsonInit("PUT", data, userId),
+  )
+}
+
+export function previewGmLayer(
+  tavernId: string,
+  data: GmLayerPreviewRequest,
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<GmLayerPreviewResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/gm-layer/preview`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function listSkillPacks(tavernId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<SkillPacksResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/skill-packs`,
+    { userId },
+  )
+}
+
+export function saveSkillPacks(
+  tavernId: string,
+  skillPacks: SkillPackSetting[],
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<SkillPacksResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/skill-packs`,
+    jsonInit("PUT", { skill_packs: skillPacks }, userId),
   )
 }
 
@@ -1198,6 +1523,17 @@ export function applyRuntimePreset(
 ) {
   return readApiJson<{ ok: boolean; tavern_id: string; active_preset_id: string; preset: RuntimePreset; tavern: Tavern }>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/runtime-presets/apply`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function previewPresetImport(
+  tavernId: string,
+  data: { preset?: Record<string, unknown> | string; preset_json?: string; json?: string; content?: string } & Record<string, unknown>,
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<PresetImportPreviewResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/preset-import/preview`,
     jsonInit("POST", data, userId),
   )
 }

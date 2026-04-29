@@ -8,6 +8,8 @@ from ...contracts.runtime import (
     LLMConfigTestRequest,
     TTSRequest,
     VoiceConfigRequest,
+    VoiceGreetingPreviewRequest,
+    VisualSouvenirPreviewRequest,
 )
 from .common import get_user_id, taverns_service
 
@@ -39,6 +41,16 @@ def save_voice_config(request: Request, tavern_id: str, data: VoiceConfigRequest
 def synthesize_voice(request: Request, tavern_id: str, data: TTSRequest) -> Response:
     audio = taverns_service(request).synthesize_voice(tavern_id, data.to_payload(), get_user_id(request))
     return Response(content=audio, media_type="audio/mpeg")
+
+
+@router.post("/{tavern_id}/voice-greeting/preview")
+def preview_voice_greeting(request: Request, tavern_id: str, data: VoiceGreetingPreviewRequest) -> dict[str, Any]:
+    return taverns_service(request).preview_voice_greeting(tavern_id, data.to_payload(), get_user_id(request))
+
+
+@router.post("/{tavern_id}/visual-souvenir/preview")
+def preview_visual_souvenir(request: Request, tavern_id: str, data: VisualSouvenirPreviewRequest) -> dict[str, Any]:
+    return taverns_service(request).preview_visual_souvenir(tavern_id, data.to_payload(), get_user_id(request))
 
 
 @router.post("/{tavern_id}/stt")

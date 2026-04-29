@@ -113,6 +113,7 @@ class PackageApplicationMixin:
             "output_rules": tavern_payload.get("output_rules") or default_output_rules(),
             "prompt_blocks": tavern_payload.get("prompt_blocks") or default_prompt_blocks(),
             "runtime_presets": custom_runtime_presets(tavern_payload.get("runtime_presets")),
+            "skill_packs": tavern_payload.get("skill_packs", []),
             "default_runtime_presets": default_runtime_presets(),
             "active_preset_id": tavern_payload.get("active_preset_id", ""),
             "prompt_preset": {
@@ -176,6 +177,7 @@ class PackageApplicationMixin:
             "output_rules": package_list(package, tavern_payload, "output_rules"),
             "prompt_blocks": package_list(package, tavern_payload, "prompt_blocks"),
             "runtime_presets": package_list(package, tavern_payload, "runtime_presets"),
+            "skill_packs": package_list(package, tavern_payload, "skill_packs"),
             "active_preset_id": str(package.get("active_preset_id") or tavern_payload.get("active_preset_id") or ""),
             "memory_policy": package_dict(package, tavern_payload, "memory_policy"),
         }

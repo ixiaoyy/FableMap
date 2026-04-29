@@ -2,8 +2,11 @@ import type { ClientLoaderFunctionArgs } from "react-router"
 import {
   ArrowRight,
   BarChart3,
+  Bell,
+  ClipboardList,
   Clock3,
   DoorOpen,
+  KeyRound,
   MessageSquareText,
   RefreshCw,
   Sparkles,
@@ -14,6 +17,7 @@ import {
 } from "lucide-react"
 import { Link, useLoaderData } from "react-router"
 
+import { NotificationBell } from "../components/NotificationBell"
 import { PeakHoursChart } from "../components/PeakHoursChart"
 import { TokenUsageChart } from "../components/TokenUsageChart"
 import {
@@ -23,13 +27,17 @@ import {
 import {
   DEFAULT_OWNER_ID,
   errorMessage,
+  getOwnerDefaultLLM,
   getTavernMetrics,
+  listVisitorNotes,
   listGlobalChatSessions,
   listTavernVisitors,
   listTaverns,
   type ChatSession,
+  type OwnerDefaultLLMSafe,
   type Tavern,
   type TavernMetricsResponse,
+  type TavernVisitorNote,
   type TavernVisitor,
 } from "../lib/taverns"
 import { ProductShell } from "../shell/product-shell"
@@ -41,11 +49,17 @@ type TavernMetrics = TavernMetricsResponse & {
   tavern_name?: string
 }
 
+type OwnerVisitorNote = TavernVisitorNote & {
+  tavern_name?: string
+}
+
 type OwnerLoaderData = {
   ownerId: string
   taverns: Tavern[]
   visitors: TavernVisitor[]
   sessions: ChatSession[]
+  visitorNotes: OwnerVisitorNote[]
+  ownerLLM: OwnerDefaultLLMSafe | null
   tavernMetrics: Record<string, TavernMetrics>
   errors: string[]
 }
@@ -67,6 +81,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs): Promi
   const errors: string[] = []
   let taverns: Tavern[] = []
   let sessions: ChatSession[] = []
+  let ownerLLM: OwnerDefaultLLMSafe | null = null
 
   try {
     const result = await listTaverns({ owner_id: ownerId })
@@ -82,6 +97,12 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs): Promi
     errors.push(`读取会话失败：${errorMessage(error)}`)
   }
 
+  try {
+    ownerLLM = await getOwnerDefaultLLM(ownerId)
+  } catch (error) {
+    errors.push(`读取默认 AI 配置失败：${errorMessage(error)}`)
+  }
+
   const visitorRows = await Promise.all(
     taverns.map(async (tavern) => {
       try {
@@ -93,6 +114,21 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs): Promi
         }))
       } catch (error) {
         errors.push(`读取 ${tavern.name || tavern.id} 访客失败：${errorMessage(error)}`)
+        return []
+      }
+    }),
+  )
+
+  const visitorNoteRows = await Promise.all(
+    taverns.map(async (tavern) => {
+      try {
+        const result = await listVisitorNotes(tavern.id, { limit: 5 }, ownerId)
+        return (result.notes || []).map((note) => ({
+          ...note,
+          tavern_name: tavern.name,
+        }))
+      } catch (error) {
+        errors.push(`读取 ${tavern.name || tavern.id} 访客反馈失败：${errorMessage(error)}`)
         return []
       }
     }),
@@ -120,6 +156,8 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs): Promi
     taverns,
     visitors: visitorRows.flat(),
     sessions,
+    visitorNotes: visitorNoteRows.flat(),
+    ownerLLM,
     tavernMetrics: tavernMetricsMap,
     errors,
   }
@@ -143,11 +181,15 @@ function MetricCard({ label, value, helper, icon: Icon }: MetricCardProps) {
 }
 
 export default function OwnerRoute() {
-  const { ownerId, taverns, visitors, sessions, tavernMetrics, errors } = useLoaderData<typeof clientLoader>()
-  const summary = buildOwnerOperatingSummary({ taverns, visitors, sessions })
+  const { ownerId, taverns, visitors, sessions, visitorNotes, ownerLLM, tavernMetrics, errors } = useLoaderData<typeof clientLoader>()
+  const summary = buildOwnerOperatingSummary({ taverns, visitors, sessions, visitorNotes, ownerLLM })
   const metrics = summary.metrics
   const openRatio = metrics.taverns ? Math.round((metrics.openTaverns / metrics.taverns) * 100) : 0
   const returnRatio = metrics.visitors ? Math.round((metrics.returningVisitors / metrics.visitors) * 100) : 0
+  const llmStatusText = metrics.llmConfigured ? "已配置" : "待配置"
+  const llmHelperText = metrics.llmConfigured
+    ? `${metrics.llmBackend || "AI"}${metrics.llmModel ? ` · ${metrics.llmModel}` : ""}`
+    : "进入创建页配置默认 AI；草稿保存前仍需店主确认"
 
   // Calculate aggregate metrics from all taverns
   const totalTokens = Object.values(tavernMetrics).reduce((sum, m) => {
@@ -200,6 +242,34 @@ export default function OwnerRoute() {
                 </Button>
               </form>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button asChild size="lg">
+                  <Link to={`/create?owner_id=${encodeURIComponent(ownerId)}`}>
+                    <Sparkles className="h-4 w-4" />
+                    开店 / AI 草稿辅助
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="secondary">
+                  <Link to="/discover">
+                    <DoorOpen className="h-4 w-4" />
+                    查看发现页入口
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.045] p-4">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-sm font-bold text-white">
+                    <Bell className="h-4 w-4 text-cyan-100" />
+                    通知入口
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-violet-100/55">
+                    用于查看店主侧待处理事件；这里不生成公开社交动态。
+                  </p>
+                </div>
+                <NotificationBell userId={ownerId} />
+              </div>
+
               {errors.length ? (
                 <div className="space-y-2 rounded-2xl border border-amber-300/28 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50">
                   {errors.map((item) => (
@@ -216,6 +286,18 @@ export default function OwnerRoute() {
                     : metrics.returningVisitors > 0
                       ? `已有 ${metrics.returningVisitors} 位回访者，说明酒馆关系链开始成立。`
                       : "已有酒馆基础，但还需要让访客完成第一次对话和回访。"}
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-fuchsia-300/16 bg-fuchsia-300/[0.07] p-4">
+                <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-100/70">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  AI / LLM
+                </p>
+                <p className="mt-2 text-sm leading-7 text-violet-100/72">
+                  {metrics.llmConfigured
+                    ? `店主默认 AI 已配置：${llmHelperText}。AI 草稿仍只会填充待确认表单。`
+                    : "默认 AI 尚未配置或暂不可确认；可进入创建页配置后再使用 AI 草稿辅助。"}
                 </p>
               </div>
             </CardContent>
@@ -277,6 +359,18 @@ export default function OwnerRoute() {
               value={formatNumber(metrics.engagedVisitors)}
               helper="已产生对话的访客"
               icon={UserRoundCheck}
+            />
+            <MetricCard
+              label="访客反馈"
+              value={formatNumber(metrics.visitorNotes)}
+              helper="owner-visible notes，不是公开留言墙"
+              icon={ClipboardList}
+            />
+            <MetricCard
+              label="默认 AI"
+              value={llmStatusText}
+              helper={llmHelperText}
+              icon={KeyRound}
             />
             <MetricCard
               label="Token"
@@ -376,6 +470,41 @@ export default function OwnerRoute() {
               </CardContent>
             </Card>
           </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>访客给店主的反馈</CardTitle>
+              <CardDescription>只汇总 owner-visible notes，帮助店主复盘体验；不构成公开留言墙或访客社交。</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {summary.latestFeedback.length ? summary.latestFeedback.map((note) => (
+                <article key={`${note.tavernId}-${note.noteId}-${note.createdAt}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-black text-white">{note.visitorLabel}</p>
+                      <p className="mt-1 text-sm text-violet-100/58">{note.tavernName} · {formatOwnerSummaryTime(note.createdAt)}</p>
+                    </div>
+                    <span className="w-fit rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-xs font-black text-fuchsia-100">
+                      {note.visibility}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-violet-100/72">{note.content || "访客未留下文字内容"}</p>
+                  {note.tavernId ? (
+                    <Button asChild size="sm" variant="ghost" className="mt-3">
+                      <Link to={`/tavern/${encodeURIComponent(note.tavernId)}`}>
+                        进入酒馆处理反馈
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  ) : null}
+                </article>
+              )) : (
+                <div className="grid min-h-36 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
+                  暂无访客反馈。访客在酒馆内提交给店主的私密反馈会出现在这里，不会展示给其他访客。
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

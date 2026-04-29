@@ -56,6 +56,7 @@ interface Tavern {
   character_claims: CharacterClaim[]; // 玩家扮演 NPC 的认领记录
   world_info: WorldInfoEntry[];   // 世界知识（关键词注入）
   gameplay_definitions: GameplayDefinition[]; // 店主配置的结构化玩法定义
+  skill_packs: SkillPackSetting[]; // 店主显式启用的 NPC 能力包配置
   scene_prompt?: string;          // 场景氛围提示词（附加上下文）
 
   // ── 时间系统 (v0.6) ──────────────
@@ -534,7 +535,101 @@ interface GameplayEvent {
 
 ---
 
-## 十二、SillyTavern 角色卡字段映射
+## 十二、Tavern Skill Packs（酒馆技能包）
+
+Tavern Skill Packs 是店主显式启用的 NPC 能力包：它让 NPC “可以做某类被允许的事”，但不改变 TavernCharacter 身份、世界书、访问规则、LLM 配置或 StateCard 正史。MVP 只内置 `local-rumor`（环境传闻）技能包。
+
+```typescript
+type SkillPackId = 'local-rumor';
+
+interface SkillPackDefinition {
+  id: SkillPackId | string;
+  label: string;
+  description: string;
+  category: string;
+  default_enabled: boolean;
+  capabilities: string[];  // owner 可读的能力说明
+  prompt_notes: string[];  // 注入给运行时的边界说明
+  config_schema?: Record<string, unknown>;
+}
+
+interface SkillPackSetting {
+  id: SkillPackId | string;
+  enabled: boolean;
+  config: {
+    limit?: number;        // local-rumor 每轮最多参考传闻数，1-5，默认 3
+    [key: string]: unknown;
+  };
+}
+```
+
+约束：
+
+- `skill_packs` 是 Tavern 持久字段，默认空数组；API 展示时会合并为安全的 disabled 默认设置。
+- 店主通过 `GET/PUT /api/v1/taverns/{tavern_id}/skill-packs` 查看和保存；非店主不能修改。
+- `local-rumor` 只能引用已有 NeighborhoodRumor；没有传闻时不得编造目标酒馆、现实地点或事实。
+- 技能包提示必须说明“传闻不是正史”，不得自动写入记忆、状态卡、角色卡、世界书或酒馆事实。
+- `revisit-care`、`visual-souvenir` 等需要主动通知、图片/音频隐私、成本与资源留存规则的能力不属于本 Schema 版本。
+
+---
+
+## 十三、StateCard / Canon Ledger（连续性状态卡）
+
+StateCard 是长期酒馆会话的连续性台账：AI / NPC 可以提出“候选变化”，但这些变化默认是 `pending`，不会直接覆盖店主配置的 Tavern、TavernCharacter、WorldInfoEntry、访问规则或 LLM 配置。访客或店主确认后，状态卡才进入 `confirmed` 正史记录。
+
+StateCard 存储在 `TavernStore` 私有桶 `_state_cards` 中，不进入公开 Tavern payload，不随酒馆包导出。
+
+```typescript
+type StateCardCategory = 'character' | 'task' | 'resource' | 'conflict' | 'event_log';
+type StateCardStatus = 'pending' | 'confirmed' | 'rejected' | 'superseded';
+type StateCardScope = 'visitor' | 'tavern';
+
+interface StateCard {
+  id: string;
+  tavern_id: string;
+  category: StateCardCategory;
+  status: StateCardStatus;
+  canon_scope: StateCardScope;     // visitor: 某访客连续性；tavern: 酒馆级正史
+  title: string;                   // 最长 80 字
+  summary: string;                 // 最长 600 字；只写可观察摘要，不写 chain-of-thought
+  visitor_id?: string;
+  character_id?: string;
+  source: 'chat' | 'group_chat' | 'gameplay' | 'manual' | 'system' | string;
+  source_message_ids: string[];
+  proposed_by: string;
+  confirmed_by?: string;
+  created_at: string;
+  updated_at: string;
+  fixed_canon: boolean;            // true 时只能由店主维护
+  metadata: {
+    contradiction_candidate?: boolean;
+    decision_note?: string;
+    decided_by?: string;
+    decided_at?: string;
+    [key: string]: unknown;
+  };
+}
+```
+
+约束：
+
+- Chat / group chat 只能生成 `pending` 候选卡；候选卡可以覆盖 `task`、`resource`、`conflict`、`event_log` 等连续性变化。
+- `confirmed / rejected / superseded` 必须通过专用状态卡 API 决定；确认动作只更新状态卡，不修改 Tavern 固定字段。
+- 非店主访客只能确认 / 忽略自己的 `visitor` scope 卡；`tavern` scope 或 `fixed_canon=true` 只能由店主维护。
+- 若候选变化疑似引用未确认资源、任务或关系，后端可标记 `metadata.contradiction_candidate=true`，前端应提醒用户核对。
+- 状态卡不得成为传统 RPG 属性、战斗装备、排行榜或公开社交资料。
+
+API 端点：
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/api/v1/taverns/{id}/state-cards` | 列出当前用户可见状态卡，可按 `status/category/canon_scope/visitor_id/character_id` 过滤 |
+| POST | `/api/v1/taverns/{id}/state-cards` | 创建手动状态卡或候选卡；访客只能创建自己的 `pending visitor` 卡 |
+| PUT | `/api/v1/taverns/{id}/state-cards/{card_id}/decision` | 将卡决定为 `confirmed / rejected / superseded` |
+
+---
+
+## 十四、SillyTavern 角色卡字段映射
 
 SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
@@ -555,7 +650,7 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ---
 
-## 十三、旧世界 Schema（历史参考）
+## 十五、旧世界 Schema（历史参考）
 
 以下为旧的 world Schema，保留为历史参考。新的赛博酒馆平台不再使用这套概念体系。
 
@@ -587,11 +682,11 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ---
 
-## 十四、NpcPublicBond（NPC 公开关系 / 结缘系统）
+## 十六、NpcPublicBond（NPC 公开关系 / 结缘系统）
 
 访客与 NPC 建立公开的长期/永久关系（结缘），经店主审批后生效，关系对其他用户可见。
 
-### 14.1 关系类型枚举（PublicBondType）
+### 16.1 关系类型枚举（PublicBondType）
 
 系统内置枚举，MVP 不开放店主自定义，分两类：
 
@@ -623,11 +718,11 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 > `best_friend`（公开关系类型）与 `AffinityStage.best_friend`（好感度阶段）是不同概念，内部明确区分。
 
-### 14.2 触发条件
+### 16.2 触发条件
 
 访客与 NPC 的 `VisitorState.relationship.strength >= 0.70`（AffinityStage.close_friend 或以上）时，展示申请入口。
 
-### 14.3 NpcPublicBond 数据模型
+### 16.3 NpcPublicBond 数据模型
 
 ```typescript
 /**
@@ -658,7 +753,7 @@ interface NpcPublicBond {
 type PublicBondStatus = "pending" | "active" | "revoked" | "expired";
 ```
 
-### 14.4 NpcPublicBondQueue 数据模型
+### 16.4 NpcPublicBondQueue 数据模型
 
 当 1:1 NPC 已有活跃关系时，新申请进入等待队列：
 
@@ -684,7 +779,7 @@ interface NpcPublicBondQueue {
 type QueueStatus = "waiting" | "promoted" | "expired";
 ```
 
-### 14.5 权限与审批规则
+### 16.5 权限与审批规则
 
 | 场景 | 审批方 |
 |------|--------|
@@ -693,21 +788,21 @@ type QueueStatus = "waiting" | "promoted" | "expired";
 
 **所有变更 NPC 公开身份的申请，都必须经审批生效，不得自动绑定。**
 
-### 14.6 公开展示规则
+### 16.6 公开展示规则
 
 - NPC 卡片显示"已结缘"徽标，悬停显示关系类型
 - **不暴露访客身份**：公开端点 `GET /taverns/{tavern_id}/characters/{character_id}/public-bonds` 只返回 `bond_type` 与 `status`，不含 `visitor_id`
 
-### 14.7 冲突处理
+### 16.7 冲突处理
 
 - **1:1 排他关系**：NPC 已有活跃 1:1 关系时，新申请自动进入等待队列（position 按申请顺序排列）；当前关系撤销/过期后，队列首位自动晋升为 `active`
 - **非排他关系（capacity: N）**：可允许多个访客同时与同一 NPC 保持活跃关系
 
-### 14.8 撤销规则
+### 16.8 撤销规则
 
 店主可随时撤销，撤销后该访客申请记录清除，NPC 可接受新申请。
 
-### 14.9 API 端点摘要
+### 16.9 API 端点摘要
 
 | 方法 | 路径 | 说明 | 可见性 |
 |------|------|------|--------|
@@ -721,7 +816,7 @@ type QueueStatus = "waiting" | "promoted" | "expired";
 | DELETE | `/api/v1/taverns/{tavern_id}/public-bond-queue/{queue_id}` | 取消等待 | 访客认证 |
 | GET | `/api/v1/public-bond/types` | 所有关系类型定义 | 公开 |
 
-### 14.10 数据库表
+### 16.10 数据库表
 
 对应 MySQL 表：`npc_public_bonds`、`npc_public_bond_queues`，详见 `backend/src/fablemap_api/infrastructure/models.py`。
 
@@ -729,6 +824,8 @@ type QueueStatus = "waiting" | "promoted" | "expired";
 
 ## 版本历史
 
+- v1.2 (2026-04-29): 增加 Tavern Skill Packs MVP：`Tavern.skill_packs` 持久字段、`local-rumor` 环境传闻技能包、店主 `GET/PUT /skill-packs` 配置端点；技能包只能启用显式能力，不自动改写角色、世界书、记忆或正史状态卡。
+- v1.1 (2026-04-29): 增加 StateCard / Canon Ledger 连续性状态卡：Chat 可生成 pending 任务、资源、冲突、事件台账候选；确认后进入结构化正史记录；状态卡存储在 `_state_cards` 私有桶，不进入公开 Tavern payload 或酒馆包。
 - v1.0 (2026-04-28): 增加 NpcPublicBond（NPC 公开关系 / 结缘系统）：16 种系统内置关系类型（9 种 1:1 排他 + 7 种多人），close_friend（strength ≥ 0.70）触发申请，经店主审批生效，1:1 冲突进入等待队列，店主可随时撤销。数据库表 `npc_public_bonds`、`npc_public_bond_queues`；完整 API 路由 + 服务层；前端 BondBadge / BondApplyModal 组件；`docs/WORLD_SCHEMA.md` 更新。
 - v0.9 (2026-04-27): 增加好感度系统（Affinity System）：6 阶段好感度（stranger → acquaintance → familiar → friend → close_friend → best_friend），情感分析自动计算，衰减机制（7 天未访问 -0.02，30 天 -0.05）；更新 VisitorState.relationship.stage 枚举；新增 `GET /api/v1/affinity/stages` 接口；前端 AffinityBadge / AffinityProgress 组件。
 - v0.8 (2026-04-27): 增加 `Gender` 枚举、`TavernCharacter.gender` 与 `VisitorState.gender`；游客性别为 tavern-scoped 自声明字段，NPC 性别为店主填写字段，旧数据默认 `unspecified`，不得自动推断或用于公开社交筛选。

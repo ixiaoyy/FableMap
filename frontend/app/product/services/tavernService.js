@@ -400,6 +400,94 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
+     * 列出当前用户可见的连续性状态卡。
+     * @param {string} tavernId
+     * @param {object} options — { status, category, canonScope|canon_scope, visitorId|visitor_id, characterId|character_id }
+     * @param {string} userId
+     * @returns {Promise<object>} { tavern_id, state_cards, count }
+     */
+    async listStateCards(tavernId, options = {}, userId = '') {
+      const params = new URLSearchParams()
+      if (options.status) params.set('status', options.status)
+      if (options.category) params.set('category', options.category)
+      if (options.canon_scope || options.canonScope) params.set('canon_scope', options.canon_scope || options.canonScope)
+      if (options.visitor_id || options.visitorId) params.set('visitor_id', options.visitor_id || options.visitorId)
+      if (options.character_id || options.characterId) params.set('character_id', options.character_id || options.characterId)
+      const query = params.toString()
+      const response = await fetch(
+        `${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/state-cards${query ? `?${query}` : ''}`,
+        { cache: 'no-store', headers: buildHeaders(userId) },
+      )
+      return readJson(response)
+    },
+
+    /**
+     * 决定一张待确认状态卡。
+     * @param {string} tavernId
+     * @param {string} cardId
+     * @param {object} data — { status: confirmed|rejected|superseded, note }
+     * @param {string} userId
+     * @returns {Promise<object>} { ok, state_card }
+     */
+    async decideStateCard(tavernId, cardId, data = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/state-cards/${encodeURIComponent(cardId)}/decision`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          status: data.status || '',
+          note: data.note || '',
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 预览 GM Layer 结构化候选（只预览，不写入状态卡）。
+     * @param {string} tavernId
+     * @param {object} data — { visitor_id, character_id, user_message, assistant_message, source_message_ids }
+     * @param {string} userId
+     * @returns {Promise<object>} { ok, preview_only, applied, candidates, summary }
+     */
+    async previewGmLayer(tavernId, data = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/gm-layer/preview`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data || {}),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 获取店主可配置的酒馆技能包。
+     * @param {string} tavernId
+     * @param {string} userId
+     * @returns {Promise<object>} { available_packs, skill_packs, enabled_pack_ids }
+     */
+    async listSkillPacks(tavernId, userId = '') {
+      const response = await fetch(
+        `${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/skill-packs`,
+        { cache: 'no-store', headers: buildHeaders(userId) },
+      )
+      return readJson(response)
+    },
+
+    /**
+     * 保存酒馆技能包启用状态。
+     * @param {string} tavernId
+     * @param {Array<object>} skillPacks
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async saveSkillPacks(tavernId, skillPacks = [], userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/skill-packs`, {
+        method: 'PUT',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({ skill_packs: Array.isArray(skillPacks) ? skillPacks : [] }),
+      })
+      return readJson(response)
+    },
+
+    /**
      * 获取酒馆运行预设（内置 + 店主自定义）
      * @param {string} tavernId
      * @param {string} userId
@@ -441,6 +529,22 @@ export function createTavernService(getBaseUrl) {
         method: 'POST',
         headers: buildJsonHeaders(userId),
         body: JSON.stringify(data),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 预览社区/SillyTavern 风格预设导入风险（只预览，不保存）。
+     * @param {string} tavernId
+     * @param {object} data — { preset?, preset_json? }
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async previewPresetImport(tavernId, data, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/preset-import/preview`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify(data || {}),
       })
       return readJson(response)
     },
@@ -1060,6 +1164,49 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
+     * 预览 NPC 开场白的语音播放参数（不直接合成音频）。
+     * @param {string} tavernId
+     * @param {object} data
+     * @param {string} data.characterId
+     * @param {number} data.greetingIndex
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async previewVoiceGreeting(tavernId, data = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/voice-greeting/preview`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          character_id: data.character_id || data.characterId || '',
+          greeting_index: data.greeting_index ?? data.greetingIndex ?? 0,
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 预览共享瞬间纪念图提示词（不生成图片、不保存资产）。
+     * @param {string} tavernId
+     * @param {object} data
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async previewVisualSouvenir(tavernId, data = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/visual-souvenir/preview`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          visitor_id: data.visitor_id || data.visitorId || '',
+          character_id: data.character_id || data.characterId || '',
+          user_message: data.user_message || data.userMessage || '',
+          assistant_message: data.assistant_message || data.assistantMessage || '',
+          style: data.style || '',
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
      * 合成语音，返回可播放的 blob URL
      * @param {string} tavernId
      * @param {string} text
@@ -1192,6 +1339,33 @@ export function createTavernService(getBaseUrl) {
           character_id: options.characterId || '',
           visitor_id: options.visitorId || '',
           format: options.format || 'json',
+        }),
+      })
+      return readJson(response)
+    },
+
+    /**
+     * 导出指定访客会话的剧集草稿（不调用 LLM，不保存导出结果）。
+     * @param {object} options
+     * @param {string} options.tavernId
+     * @param {string} options.characterId
+     * @param {string} options.visitorId
+     * @param {string} options.title
+     * @param {boolean} options.includePending
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async exportEpisode(options = {}, userId = '') {
+      const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(options.tavernId || '')}/episodes/export`, {
+        method: 'POST',
+        headers: buildJsonHeaders(userId),
+        body: JSON.stringify({
+          visitor_id: options.visitorId || '',
+          character_id: options.characterId || '',
+          title: options.title || '',
+          include_pending: Boolean(options.includePending),
+          format: options.format || 'markdown',
+          limit: options.limit || 200,
         }),
       })
       return readJson(response)

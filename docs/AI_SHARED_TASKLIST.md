@@ -1296,7 +1296,79 @@ PromptBlock {
 
 ---
 
-## 认领记录（续）
+## 13. StateCard / Canon Ledger（剧情状态卡）
+
+剧情状态卡（Canon Ledger）让 AI 和访客在聊天中提炼剧情进展，生成待确认的状态快照，店主可审核、管理和维护酒馆剧情正史。
+
+### SC-01：访客侧状态卡生成 `[done 2026-04-29]`
+
+**目标**：聊天后从消息历史提炼候选状态卡，推送给访客确认。
+
+**改动文件**
+
+- `fablemap/canon_ledger.py`（新增）：StateCard 数据模型、卡片生成器、矛盾检测
+- `fablemap/web/service.py`：聊天后调用 `generate_candidate_cards()`
+- `frontend/src/product/StateCardReviewPanel.jsx`（新增）：访客侧确认/拒绝/替换 UI
+
+**验收标准**
+
+- 聊天成功后（≥5 条消息）生成 0–3 张候选卡
+- 访客可在聊天中看到"X 条待确认状态卡"横幅
+- 访客可确认/拒绝/替换，决策后卡进入 confirmed/rejected/superseded
+- 矛盾检测：与现有 confirmed 卡片内容相似的卡标记 contradiction_candidate
+
+**实现记录**
+
+- `fablemap/canon_ledger.py` 新增 `StateCard` 数据模型（id/status/category/title/summary/canon_scope/fixed_canon/source/proposed_by/source_message_ids/metadata）和 `CanonLedger` 卡片生成器（规则启发式 + 可扩展 LLM 提炼器）
+- 规则生成：按 category（character/task/resource/conflict/event_log）拆分候选、打分、去重合并
+- `fablemap/web/service.py` 聊天成功后调用 `generate_candidate_cards()`，结果写入 `TavernStore._state_cards`，返回 `created_state_cards`
+- `frontend/src/product/StateCardReviewPanel.jsx` 新增访客侧状态卡确认面板（卡片列表、确认/拒绝/替换按钮、矛盾警告）
+- 验证：`py -3 -m pytest tests/test_tavern_state_cards.py`、`npm --prefix ./frontend run build`、`258 passed`
+
+---
+
+### SC-02：店主侧状态卡管理面板 `[done 2026-04-29]`
+
+**目标**：店主可在酒馆后台查看/管理所有状态卡，并手动创建酒馆级正史卡。
+
+**改动文件**
+
+- `frontend/src/product/OwnerStateCardPanel.jsx`（新增）
+- `frontend/src/product/TavernOwnerPanel.jsx`：集成面板入口
+- `frontend/src/product/OwnerConsoleSections.jsx`：高级工具台"状态卡"按钮
+- `frontend/src/product/styles.css`：面板样式
+
+**验收标准**
+
+- 店主可按状态/类型/范围筛选所有状态卡
+- pending 卡可确认/拒绝/替换
+- 店主可手动创建酒馆级正史卡（类型/标题/摘要）
+- 矛盾候选卡有视觉警告
+
+**实现记录**
+
+- `OwnerStateCardPanel.jsx` 提供全功能店主侧状态卡管理（卡片列表、筛选器、决策按钮、创建表单）
+- `TavernOwnerPanel.jsx` 集成状态卡管理弹窗入口
+- `OwnerConsoleSections.jsx` 高级工具台新增"状态卡"按钮（紧接"群聊"后）
+- CSS 样式覆盖弹窗布局、筛选栏、创建表单、卡片列表、决策按钮、矛盾警告、移动端响应式
+- 验证：`npm --prefix ./frontend run build` 通过；`py -3 -m pytest tests/ --ignore=tests/test_api.py --ignore=tests/test_voice_greeting.py -q` 258 passed
+
+---
+
+### SC-03：状态卡 Prompt 注入（预留）
+
+**目标**：已确认的 fixed_canon 状态卡可注入到 AI Prompt，作为场景上下文。
+
+**改动文件**（计划中）
+
+- `fablemap/prompt_builder.py`：新增 StateCard 段落
+- `fablemap/canon_ledger.py`：筛选 confirmed + fixed_canon 卡
+
+**验收标准**
+
+- fixed_canon=true 的 confirmed 卡注入到 Prompt
+- 普通 confirmed 卡仅在 WorldInfo 层级可见
+- 卡片更新时自动刷新 Prompt 注入内容
 
 | 任务 ID | 认领人 / Agent | 状态 | 备注 |
 |---------|----------------|------|------|
@@ -1306,4 +1378,5 @@ PromptBlock {
 | FM-VT-GC-08 | Codex | done | TavernChatRoom 群聊模式已接入酒馆级 sendGroupChat/history，多角色消息流展示头像和角色名 |
 | FM-VT-GC-09 | Codex | done | 店主群聊配置界面：开关、策略选择、角色 talkativeness 滑块 |
 | FM-VT-GC-10 | Codex | done | 已修复消息顺序断言脆弱性；完整回归 216 passed |
-| FM-VT-GC-11 | Codex | done | 群聊发送返回 visitor_state / created_memories，并刷新访客记忆 |
+| SC-01 | Trellis | done | 2026-04-29 | 访客侧状态卡生成：canon_ledger.py、StateCardReviewPanel.jsx |
+| SC-02 | Trellis | done | 2026-04-29 | 店主侧状态卡管理面板：OwnerStateCardPanel.jsx 及集成 |

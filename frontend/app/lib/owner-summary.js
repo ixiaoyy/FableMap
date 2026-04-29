@@ -91,6 +91,24 @@ function summarizeRecentSessions(sessions) {
     .sort((a, b) => timestampValue(b.updatedAt) - timestampValue(a.updatedAt))
 }
 
+function summarizeVisitorNotes(notes) {
+  return notes
+    .map((note) => ({
+      noteId: String(note.id || ""),
+      tavernId: String(note.tavern_id || ""),
+      tavernName: note.tavern_name || note.tavern_id || "未知酒馆",
+      visitorId: String(note.visitor_id || ""),
+      visitorLabel: note.visitor_nickname || (note.visitor_id ? String(note.visitor_id).slice(0, 16) : "匿名访客"),
+      content: String(note.content || ""),
+      createdAt: note.created_at || "",
+      visibility: note.visibility || "owner_only",
+    }))
+    .sort((a, b) => (
+      timestampValue(b.createdAt) - timestampValue(a.createdAt)
+      || a.visitorLabel.localeCompare(b.visitorLabel)
+    ))
+}
+
 function summarizeTaverns(taverns, visitors, sessions) {
   return taverns
     .map((tavern) => {
@@ -120,7 +138,7 @@ function summarizeTaverns(taverns, visitors, sessions) {
     ))
 }
 
-function buildNextActions(metrics, taverns, returningHighlights) {
+function buildNextActions(metrics, taverns, returningHighlights, latestFeedback) {
   const actions = []
   const closedCount = taverns.filter((tavern) => tavern.status === "closed").length
 
@@ -141,6 +159,25 @@ function buildNextActions(metrics, taverns, returningHighlights) {
       title: "回应正在形成关系的回访者",
       detail: `${first.visitorLabel} 已回访 ${first.visitCount} 次，可以先查看最近会话，确认 NPC 是否延续了关系。`,
       tavernId: first.tavernId,
+    })
+  }
+
+  if (!metrics.llmConfigured) {
+    actions.push({
+      kind: "configure_owner_llm",
+      title: "检查店主默认 AI 配置",
+      detail: "默认 AI 未配置或不可确认。AI 草稿只是辅助，保存发布仍需要店主确认。",
+      to: "/create",
+    })
+  }
+
+  if (latestFeedback.length > 0) {
+    const firstNote = latestFeedback[0]
+    actions.push({
+      kind: "review_owner_visible_feedback",
+      title: "处理访客给店主的反馈",
+      detail: `${firstNote.visitorLabel} 留下了 owner-visible 反馈：${firstNote.content.slice(0, 28)}${firstNote.content.length > 28 ? "…" : ""}`,
+      tavernId: firstNote.tavernId,
     })
   }
 
@@ -172,14 +209,25 @@ function buildNextActions(metrics, taverns, returningHighlights) {
   return actions.slice(0, 4)
 }
 
-export function buildOwnerOperatingSummary({ taverns = [], visitors = [], sessions = [] } = {}) {
+export function buildOwnerOperatingSummary({
+  taverns = [],
+  visitors = [],
+  sessions = [],
+  visitorNotes = [],
+  ownerLLM = null,
+} = {}) {
   const safeTaverns = asArray(taverns)
   const safeVisitors = asArray(visitors)
   const safeSessions = asArray(sessions)
+  const safeVisitorNotes = asArray(visitorNotes)
+  const latestFeedback = summarizeVisitorNotes(safeVisitorNotes)
   const uniqueVisitorKeys = new Set(safeVisitors.map(visitorKey))
   const returningHighlights = summarizeReturningVisitors(safeVisitors)
   const recentSessions = summarizeRecentSessions(safeSessions)
   const tavernHighlights = summarizeTaverns(safeTaverns, safeVisitors, safeSessions)
+  const llmConfig = ownerLLM && typeof ownerLLM === "object" ? ownerLLM : {}
+  const llmSafeConfig = llmConfig.llm_config && typeof llmConfig.llm_config === "object" ? llmConfig.llm_config : {}
+  const llmConfigured = Boolean(llmConfig.configured || llmSafeConfig.api_key_configured)
   const metrics = {
     taverns: safeTaverns.length,
     openTaverns: safeTaverns.filter((tavern) => tavern.status === "open").length,
@@ -189,13 +237,18 @@ export function buildOwnerOperatingSummary({ taverns = [], visitors = [], sessio
     engagedVisitors: safeVisitors.filter((visitor) => toNumber(visitor.message_count) > 0).length,
     sessions: safeSessions.length,
     messages: safeSessions.reduce((sum, session) => sum + toNumber(session.message_count), 0),
+    visitorNotes: safeVisitorNotes.length,
+    llmConfigured,
+    llmBackend: llmSafeConfig.backend || "",
+    llmModel: llmSafeConfig.model || "",
   }
 
   return {
     metrics,
     returningHighlights: returningHighlights.slice(0, 5),
     recentSessions: recentSessions.slice(0, 5),
+    latestFeedback: latestFeedback.slice(0, 5),
     tavernHighlights: tavernHighlights.slice(0, 5),
-    nextActions: buildNextActions(metrics, safeTaverns, returningHighlights),
+    nextActions: buildNextActions(metrics, safeTaverns, returningHighlights, latestFeedback),
   }
 }

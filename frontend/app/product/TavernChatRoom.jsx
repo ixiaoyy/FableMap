@@ -6,6 +6,7 @@ import CharacterLookSummary from './CharacterLookSummary'
 import TavernMiniGamePanel from './TavernMiniGamePanel'
 import TavernGameplayLauncher from './TavernGameplayLauncher'
 import GameplaySessionPanel from './GameplaySessionPanel'
+import StateCardReviewPanel from './StateCardReviewPanel'
 import {
   buildGuildActionPrompt,
   GUILD_REPUTATION_TIERS,
@@ -20,6 +21,7 @@ import { buildMiniGameStartPrompt, getMiniGameTemplates } from './tavernMiniGame
 import {
   abandonGameplaySession,
   advanceGameplaySession,
+  decideStateCard,
   getCharacterSprites,
   getExpressions,
   getGameplays,
@@ -27,6 +29,7 @@ import {
   getTavernChatHistory,
   getVoiceConfig,
   inferExpression,
+  listStateCards,
   listGameplaySessions,
   sendGroupChat,
   sendTavernChat,
@@ -139,6 +142,19 @@ function getGroupResponseCapLabel(maxResponses) {
   const parsed = Number.parseInt(maxResponses, 10)
   const count = Number.isFinite(parsed) ? Math.max(1, Math.min(3, parsed)) : 2
   return `每轮最多 ${count} 人`
+}
+
+function mergeStateCards(currentCards, incomingCards) {
+  const nextById = new Map()
+  const addCard = (card) => {
+    if (!card || typeof card !== 'object' || !card.id) return
+    nextById.set(card.id, { ...(nextById.get(card.id) || {}), ...card })
+  }
+  ;(Array.isArray(currentCards) ? currentCards : []).forEach(addCard)
+  ;(Array.isArray(incomingCards) ? incomingCards : []).forEach(addCard)
+  return Array.from(nextById.values())
+    .filter((card) => card.status === 'pending')
+    .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))
 }
 
 function normalizeSprites(rawSprites) {
@@ -712,6 +728,9 @@ export default function TavernChatRoom({
   const [gameplayScene, setGameplayScene] = useState(null)
   const [gameplayBusy, setGameplayBusy] = useState(false)
   const [gameplayError, setGameplayError] = useState('')
+  const [stateCards, setStateCards] = useState([])
+  const [stateCardBusy, setStateCardBusy] = useState(false)
+  const [stateCardError, setStateCardError] = useState('')
   const messagesEndRef = useRef(null)
   const groupChatEnabled = Boolean(tavern?.group_chat_enabled && characters.length > 1)
   const groupChatConfig = tavern?.group_chat_config || {}
@@ -768,6 +787,10 @@ export default function TavernChatRoom({
 
   useEffect(() => {
     loadGameplayState()
+  }, [roomId, visitorId])
+
+  useEffect(() => {
+    loadStateCards()
   }, [roomId, visitorId])
 
   useEffect(() => {
@@ -1026,6 +1049,44 @@ export default function TavernChatRoom({
     }
   }
 
+  async function loadStateCards() {
+    if (!roomId || !visitorId) {
+      setStateCards([])
+      setStateCardError('')
+      return
+    }
+    try {
+      const result = await listStateCards(
+        roomId,
+        { status: 'pending', visitor_id: visitorId },
+        visitorId,
+      )
+      setStateCards(Array.isArray(result?.state_cards) ? result.state_cards : [])
+      setStateCardError('')
+    } catch (err) {
+      setStateCardError(`状态卡读取失败：${err.message}`)
+    }
+  }
+
+  async function handleStateCardDecision(card, status) {
+    if (!roomId || !card?.id || stateCardBusy) return
+    setStateCardBusy(true)
+    setStateCardError('')
+    try {
+      const note = status === 'confirmed' ? '访客确认加入连续性正史。' : '访客忽略本次候选变化。'
+      const result = await decideStateCard(roomId, card.id, { status, note }, visitorId)
+      setStateCards((prev) => (
+        status === 'confirmed' || status === 'rejected' || status === 'superseded'
+          ? prev.filter((item) => item.id !== card.id)
+          : mergeStateCards(prev, [result?.state_card])
+      ))
+    } catch (err) {
+      setStateCardError(`状态卡更新失败：${err.message}`)
+    } finally {
+      setStateCardBusy(false)
+    }
+  }
+
   function applyGameplayResult(result) {
     if (result?.session) {
       setActiveGameplaySession(result.session)
@@ -1149,6 +1210,10 @@ export default function TavernChatRoom({
       if (result.created_memories && result.created_memories.length > 0) {
         setCreatedMemories(result.created_memories)
       }
+      if (Array.isArray(result.state_card_candidates) && result.state_card_candidates.length > 0) {
+        setStateCards((prev) => mergeStateCards(prev, result.state_card_candidates))
+        setStateCardError('')
+      }
       const charMsg = {
         ...buildAssistantMessage({
           id: replyId,
@@ -1240,6 +1305,10 @@ export default function TavernChatRoom({
       }
       if (result.created_memories && result.created_memories.length > 0) {
         setCreatedMemories(result.created_memories)
+      }
+      if (Array.isArray(result.state_card_candidates) && result.state_card_candidates.length > 0) {
+        setStateCards((prev) => mergeStateCards(prev, result.state_card_candidates))
+        setStateCardError('')
       }
 
       if (result.degraded) {
@@ -1479,6 +1548,13 @@ export default function TavernChatRoom({
                   <span>{gameplayError}</span>
                 </div>
               ) : null}
+
+              <StateCardReviewPanel
+                cards={stateCards}
+                busy={stateCardBusy}
+                error={stateCardError}
+                onDecision={handleStateCardDecision}
+              />
 
               <TavernGameplayLauncher
                 gameplays={gameplays}

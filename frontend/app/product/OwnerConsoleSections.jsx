@@ -89,7 +89,11 @@ export function OwnerAdvancedToolPanel({
   onManageOutputRules,
   onManagePromptBlocks,
   onManagePresets,
+  onPreviewPresetImport,
+  onManageSkillPacks,
   onManageGroupSettings,
+  onManageStateCards,
+  onManageGameplay,
   onExportPackage,
 }) {
   return (
@@ -122,6 +126,7 @@ export function OwnerAdvancedToolPanel({
             const ruleCount = tavern?.output_rules?.length || 0
             const blockCount = tavern?.prompt_blocks?.length || 0
             const presetCount = tavern?.runtime_presets?.length || 0
+            const skillPackCount = (tavern?.skill_packs || []).filter((item) => item?.enabled).length
             const groupEnabled = Boolean(tavern?.group_chat_enabled)
             return (
               <article key={tavern.id} className="owner-advanced-card">
@@ -136,6 +141,7 @@ export function OwnerAdvancedToolPanel({
                   <small>{charCount} 角色</small>
                   <small>{worldInfoCount} 世界书</small>
                   <small>{presetCount || '内置'} 预设</small>
+                  <small>{skillPackCount ? `${skillPackCount} 技能包` : '技能包未开'}</small>
                   <small>{blockCount || '默认'} 段落</small>
                   <small>{ruleCount || '默认'} 护栏</small>
                   <small>{groupEnabled ? '群聊已开' : '群聊未开'}</small>
@@ -144,8 +150,11 @@ export function OwnerAdvancedToolPanel({
                   <button type="button" className="secondary" onClick={() => onManageCharacters(tavern)}>角色</button>
                   <button type="button" className="secondary" onClick={() => onManageWorldBook(tavern)}>世界书</button>
                   <button type="button" className="secondary" onClick={() => onManagePresets(tavern)}>预设</button>
+                  <button type="button" className="secondary" onClick={() => onPreviewPresetImport(tavern)}>预览导入</button>
+                  <button type="button" className="secondary" onClick={() => onManageSkillPacks(tavern)}>技能包</button>
                   <button type="button" className="secondary" onClick={() => onManagePromptBlocks(tavern)}>段落</button>
                   <button type="button" className="secondary" onClick={() => onManageGroupSettings(tavern)}>群聊</button>
+                  <button type="button" className="secondary" onClick={() => onManageStateCards(tavern)}>状态卡</button>
                   <button type="button" className="secondary" onClick={() => onManageOutputRules(tavern)}>护栏</button>
                   <button type="button" className="secondary" onClick={() => onManageLlm(tavern)}>AI</button>
                   <button type="button" className="secondary" onClick={() => onExportPackage(tavern)} disabled={packageBusy === `export:${tavern.id}`}>

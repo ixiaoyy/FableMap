@@ -107,6 +107,7 @@ class MySQLTavernStore:
             output_rules=deepcopy(model.output_rules) if model.output_rules else [],
             prompt_blocks=deepcopy(model.prompt_blocks) if model.prompt_blocks else [],
             runtime_presets=deepcopy(model.runtime_presets) if model.runtime_presets else [],
+            skill_packs=deepcopy(model.skill_packs) if model.skill_packs else [],
             active_preset_id=model.active_preset_id or "",
             memory_policy=deepcopy(model.memory_policy) if model.memory_policy else {},
             scene_prompt=model.scene_prompt or "",
@@ -328,6 +329,7 @@ class MySQLTavernStore:
                 output_rules=tavern.output_rules,
                 prompt_blocks=tavern.prompt_blocks,
                 runtime_presets=tavern.runtime_presets,
+                skill_packs=tavern.skill_packs,
                 active_preset_id=tavern.active_preset_id,
                 memory_policy=tavern.memory_policy,
                 voice_config=tavern.voice_config.to_dict() if hasattr(tavern.voice_config, "to_dict") else {},
@@ -413,6 +415,7 @@ class MySQLTavernStore:
             model.output_rules = tavern.output_rules
             model.prompt_blocks = tavern.prompt_blocks
             model.runtime_presets = tavern.runtime_presets
+            model.skill_packs = tavern.skill_packs
             model.active_preset_id = tavern.active_preset_id
             model.memory_policy = tavern.memory_policy
             model.voice_config = tavern.voice_config.to_dict() if hasattr(tavern.voice_config, "to_dict") else {}

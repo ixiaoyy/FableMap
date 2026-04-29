@@ -36,6 +36,8 @@ class RumorApplicationMixin:
 
     def _get_rumor_store(self) -> RumorStore:
         """获取 rumor store"""
+        if not hasattr(self, "_rumor_store"):
+            self._rumor_store = RumorStore()
         return self._rumor_store
 
     def list_rumors(

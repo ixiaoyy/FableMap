@@ -60,6 +60,7 @@ class TavernModel(Base):
     output_rules = Column(JSON, default=list)
     prompt_blocks = Column(JSON, default=list)
     runtime_presets = Column(JSON, default=list)
+    skill_packs = Column(JSON, default=list)
     active_preset_id = Column(String(64), default="")
     memory_policy = Column(JSON, default=dict)
     voice_config = Column(JSON, default=dict)
