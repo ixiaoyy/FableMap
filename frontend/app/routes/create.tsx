@@ -30,10 +30,11 @@ import {
 } from "../ui/dialog"
 import LLMConfigForm from "../product/LLMConfigForm.jsx"
 
-const steps = [
-  { icon: MapPinned, title: "选择真实坐标", text: "酒馆必须挂接真实地图位置，地点是空间锚点。" },
-  { icon: UserRoundPlus, title: "配置 AI NPC", text: "导入或手写 SillyTavern 兼容角色卡。" },
-  { icon: KeyRound, title: "店主 LLM 配置", text: "API Key 与 token 由店主承担，前端不暴露给访客。" },
+const CREATE_WIZARD_STEPS = [
+  { id: "anchor", number: "01", icon: MapPinned, title: "真实坐标", text: "先钉住地图锚点、地点类型和入口规则。" },
+  { id: "story", number: "02", icon: Sparkles, title: "酒馆内容", text: "填写店主确认的名称、简介与场景氛围。" },
+  { id: "npc", number: "03", icon: UserRoundPlus, title: "NPC 接待", text: "添加首个 NPC，之后可导入完整角色卡。" },
+  { id: "open", number: "04", icon: ShieldCheck, title: "店主确认后开门", text: "最终由店主提交创建，AI 草稿不会自动发布。" },
 ]
 
 const checklist = ["真实坐标", "店主确认的酒馆内容", "角色卡可导出", "API Key 不向访客暴露"]
@@ -47,6 +48,7 @@ export default function CreateRoute() {
   const [createdId, setCreatedId] = useState("")
   const [placeType, setPlaceType] = useState("tavern")
   const activePlaceType = derivePlaceTypeDisplay(placeType)
+  const [activeGuideStep, setActiveGuideStep] = useState(CREATE_WIZARD_STEPS[0].id)
 
   // AI Draft states
   const [llmConfigured, setLlmConfigured] = useState<boolean | null>(null)
@@ -225,8 +227,55 @@ export default function CreateRoute() {
             </span>
           </div>
 
+          <nav
+            aria-label="创建酒馆分步向导"
+            className="mb-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            {CREATE_WIZARD_STEPS.map((step) => {
+              const active = activeGuideStep === step.id
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => setActiveGuideStep(step.id)}
+                  aria-current={active ? "step" : undefined}
+                  className={`min-h-11 touch-manipulation rounded-2xl border p-3 text-left transition ${
+                    active
+                      ? "border-cyan-300/40 bg-cyan-300/12 text-cyan-50 shadow-[0_0_24px_rgba(0,214,201,0.14)]"
+                      : "border-white/10 bg-white/[0.035] text-violet-100/62 hover:border-white/20 hover:bg-white/[0.055]"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em]">
+                    <step.icon className="h-4 w-4" />
+                    Step {step.number}
+                  </span>
+                  <span className="mt-2 block font-black text-white">{step.title}</span>
+                  <span className="mt-1 block text-xs leading-5">{step.text}</span>
+                </button>
+              )
+            })}
+          </nav>
+
           <form className="space-y-5" onSubmit={handleSubmit}>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <section
+              data-create-wizard-step="anchor"
+              onFocusCapture={() => setActiveGuideStep("anchor")}
+              className="space-y-4 rounded-[1.85rem] border border-cyan-300/16 bg-cyan-300/[0.045] p-4"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/70">Step 01</p>
+                  <h2 className="mt-1 text-xl font-black text-white">定位真实坐标与入口规则</h2>
+                  <p className="mt-1 text-xs leading-5 text-violet-100/58">
+                    FableMap 不创建无锚点空间；每间酒馆都先绑定真实地图位置。
+                  </p>
+                </div>
+                <span className="w-fit rounded-full border border-cyan-300/24 bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-50">
+                  真实坐标优先
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
               <label className="space-y-1.5 text-sm">
                 <span className="text-violet-100/65">店主 ID</span>
                 <input
@@ -254,9 +303,9 @@ export default function CreateRoute() {
                   <option value="hybrid">hybrid</option>
                 </select>
               </label>
-            </div>
+              </div>
 
-            <section className="space-y-3 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4">
+              <section className="space-y-3 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4">
               <input type="hidden" name="place_type" value={placeType} />
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -300,54 +349,102 @@ export default function CreateRoute() {
               <p className="rounded-2xl border border-white/10 bg-slate-950/45 p-3 text-xs leading-5 text-violet-100/56">
                 当前选择：<span className="font-bold text-white">{activePlaceType.label}</span> · {activePlaceType.description}
               </p>
+              </section>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="space-y-1.5 text-sm">
+                  <span className="text-violet-100/65">纬度</span>
+                  <input name="lat" required type="number" step="0.000001" defaultValue={createPrefill.lat} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="text-violet-100/65">经度</span>
+                  <input name="lon" required type="number" step="0.000001" defaultValue={createPrefill.lon} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="text-violet-100/65">地址标签</span>
+                  <input name="address" defaultValue={createPrefill.address} placeholder="上海 · 外滩" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                </label>
+              </div>
             </section>
 
-            <label className="space-y-1.5 text-sm">
-              <span className="text-violet-100/65">酒馆名称</span>
-              <input name="name" required placeholder="星港夜谈" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
-            </label>
-            <label className="space-y-1.5 text-sm">
-              <span className="text-violet-100/65">简介</span>
-              <textarea name="description" rows={3} placeholder="写下店主确认的酒馆氛围。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <section
+              data-create-wizard-step="story"
+              onFocusCapture={() => setActiveGuideStep("story")}
+              className="space-y-4 rounded-[1.85rem] border border-fuchsia-300/14 bg-fuchsia-300/[0.035] p-4"
+            >
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-fuchsia-100/65">Step 02</p>
+                <h2 className="mt-1 text-xl font-black text-white">填写店主确认的酒馆内容</h2>
+                <p className="mt-1 text-xs leading-5 text-violet-100/58">
+                  名称、简介和场景提示都是 owner-authored 内容；AI 只能作为可丢弃草稿。
+                </p>
+              </div>
               <label className="space-y-1.5 text-sm">
-                <span className="text-violet-100/65">纬度</span>
-                <input name="lat" required type="number" step="0.000001" defaultValue={createPrefill.lat} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                <span className="text-violet-100/65">酒馆名称</span>
+                <input name="name" required placeholder="星港夜谈" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
               </label>
               <label className="space-y-1.5 text-sm">
-                <span className="text-violet-100/65">经度</span>
-                <input name="lon" required type="number" step="0.000001" defaultValue={createPrefill.lon} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                <span className="text-violet-100/65">简介</span>
+                <textarea name="description" rows={3} placeholder="写下店主确认的酒馆氛围。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
               </label>
               <label className="space-y-1.5 text-sm">
-                <span className="text-violet-100/65">地址标签</span>
-                <input name="address" defaultValue={createPrefill.address} placeholder="上海 · 外滩" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                <span className="text-violet-100/65">场景提示</span>
+                <textarea name="scene_prompt" rows={3} placeholder="这个空间闻起来像雨后的霓虹和热红酒。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
               </label>
-            </div>
-            <label className="space-y-1.5 text-sm">
-              <span className="text-violet-100/65">场景提示</span>
-              <textarea name="scene_prompt" rows={3} placeholder="这个空间闻起来像雨后的霓虹和热红酒。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
+            </section>
+
+            <section
+              data-create-wizard-step="npc"
+              onFocusCapture={() => setActiveGuideStep("npc")}
+              className="space-y-4 rounded-[1.85rem] border border-violet-300/14 bg-violet-300/[0.035] p-4"
+            >
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-100/65">Step 03</p>
+                <h2 className="mt-1 text-xl font-black text-white">配置首个接待 NPC</h2>
+                <p className="mt-1 text-xs leading-5 text-violet-100/58">
+                  先让酒馆有一个能开口迎客的角色；完整 SillyTavern 角色卡可在创建后继续导入/维护。
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5 text-sm">
+                  <span className="text-violet-100/65">首个 NPC</span>
+                  <input name="character_name" placeholder="阿珀" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="text-violet-100/65">NPC 简介</span>
+                  <input name="character_description" placeholder="记得每位回访者点过的酒" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                </label>
+              </div>
               <label className="space-y-1.5 text-sm">
-                <span className="text-violet-100/65">首个 NPC</span>
-                <input name="character_name" placeholder="阿珀" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                <span className="text-violet-100/65">首次问候</span>
+                <input name="first_mes" placeholder="欢迎回到这里。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
               </label>
-              <label className="space-y-1.5 text-sm">
-                <span className="text-violet-100/65">NPC 简介</span>
-                <input name="character_description" placeholder="记得每位回访者点过的酒" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
-              </label>
-            </div>
-            <label className="space-y-1.5 text-sm">
-              <span className="text-violet-100/65">首次问候</span>
-              <input name="first_mes" placeholder="欢迎回到这里。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
-            </label>
-            {error ? <p className="rounded-2xl border border-red-300/30 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
-            {createdId ? <p className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-sm text-cyan-100">已创建：{createdId}</p> : null}
-            <Button type="submit" disabled={busy} size="lg">
-              {busy ? "正在开店..." : "创建酒馆"}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            </section>
+
+            <section
+              data-create-wizard-step="open"
+              onFocusCapture={() => setActiveGuideStep("open")}
+              className="space-y-4 rounded-[1.85rem] border border-emerald-300/14 bg-emerald-300/[0.035] p-4"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100/65">Step 04</p>
+                  <h2 className="mt-1 text-xl font-black text-white">店主确认后开门</h2>
+                  <p className="mt-1 text-xs leading-5 text-violet-100/58">
+                    AI 草稿只进入可编辑表单；点击创建前仍可修改或清空，不会自动保存为公开内容。
+                  </p>
+                </div>
+                <span className="w-fit rounded-full border border-emerald-300/24 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-50">
+                  不改 Schema / API
+                </span>
+              </div>
+              {error ? <p className="rounded-2xl border border-red-300/30 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
+              {createdId ? <p className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-sm text-cyan-100">已创建：{createdId}</p> : null}
+              <Button type="submit" disabled={busy} size="lg" className="min-h-11">
+                {busy ? "正在开店..." : "创建酒馆"}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </section>
           </form>
         </div>
 
@@ -518,7 +615,7 @@ export default function CreateRoute() {
               ))}
             </ul>
             <div className="mt-5 grid gap-3">
-              {steps.map((step) => (
+              {CREATE_WIZARD_STEPS.map((step) => (
                 <div key={step.title} className="flex gap-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4">
                   <step.icon className="mt-1 h-5 w-5 shrink-0 text-cyan-200" />
                   <div>

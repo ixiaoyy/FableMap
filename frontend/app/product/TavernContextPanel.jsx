@@ -7,6 +7,7 @@ import {
   listMemoryAtoms,
   togglePinMemory,
   updateMemoryAtom,
+  listStateCards,
 } from '../lib/taverns'
 
 function TabButton({ id, label, active, onClick }) {
@@ -428,6 +429,91 @@ function MemoryTab({ entryState, messages, visitorNickname, roomName, selectedCh
   )
 }
 
+function StateCardsTab({ tavernId, visitorId }) {
+  const [canonCards, setCanonCards] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const CATEGORY_META = {
+    character: { label: '角色事实', icon: '👤' },
+    task: { label: '任务/委托', icon: '📋' },
+    resource: { label: '资源/线索', icon: '🔑' },
+    conflict: { label: '冲突/机会', icon: '⚡' },
+    event_log: { label: '事件', icon: '📖' },
+  }
+
+  async function loadCanonCards() {
+    if (!tavernId) return
+    setLoading(true)
+    setError('')
+    try {
+      const result = await listStateCards(tavernId, { status: 'confirmed' }, visitorId)
+      const all = Array.isArray(result?.state_cards) ? result.state_cards : []
+      const canon = all.filter(c => c.fixed_canon || c.canon_scope === 'tavern')
+      setCanonCards(canon)
+    } catch (err) {
+      setError(err.message || '正史卡读取失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadCanonCards()
+  }, [tavernId])
+
+  return (
+    <div className="ctx-section">
+      <div className="ctx-field-heading">
+        <span className="mini-label">剧情正史（已确认）</span>
+        <button type="button" className="ctx-mini-action" onClick={loadCanonCards} disabled={loading}>
+          刷新
+        </button>
+      </div>
+
+      {error && <p className="error-note">{error}</p>}
+
+      {loading ? (
+        <p className="muted">正在读取正史...</p>
+      ) : canonCards.length === 0 ? (
+        <div className="ctx-empty">
+          <p>还没有正史卡。</p>
+          <p className="muted">访客确认的事实和店主创建的正史卡会出现在这里。</p>
+        </div>
+      ) : (
+        <div className="ctx-sc-list">
+          {[...canonCards]
+            .sort((a, b) => {
+              const order = ['character', 'task', 'resource', 'conflict', 'event_log']
+              return (order.indexOf(a.category) - order.indexOf(b.category))
+            })
+            .map((card) => {
+              const meta = CATEGORY_META[card.category] || { label: card.category, icon: '📄' }
+              return (
+                <article key={card.id} className="ctx-sc-item">
+                  <div className="ctx-sc-header">
+                    <span className="ctx-sc-icon">{meta.icon}</span>
+                    <span className="ctx-sc-category">{meta.label}</span>
+                    {card.fixed_canon && (
+                      <span className="ctx-sc-badge fixed">正史</span>
+                    )}
+                    {card.canon_scope === 'tavern' && !card.fixed_canon && (
+                      <span className="ctx-sc-badge tavern">酒馆</span>
+                    )}
+                  </div>
+                  <h5 className="ctx-sc-title">{card.title}</h5>
+                  {card.summary && (
+                    <p className="ctx-sc-summary">{card.summary}</p>
+                  )}
+                </article>
+              )
+            })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AIConfigTab({ tavern, voiceConfig }) {
   const llm = tavern?.llm_config || {}
 
@@ -521,6 +607,7 @@ export default function TavernContextPanel({
     { id: 'tavern', label: '场所' },
     { id: 'worldbook', label: '世界书' },
     { id: 'memory', label: '记忆' },
+    { id: 'state_cards', label: '正史' },
     { id: 'ai', label: 'AI' },
   ]
 
@@ -563,6 +650,9 @@ export default function TavernContextPanel({
             roomName={roomName}
             selectedChar={selectedChar}
           />
+        )}
+        {activeTab === 'state_cards' && (
+          <StateCardsTab tavernId={tavern?.id || ''} visitorId={visitorId} />
         )}
         {activeTab === 'ai' && (
           <AIConfigTab tavern={tavern} voiceConfig={voiceConfig} />

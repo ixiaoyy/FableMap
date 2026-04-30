@@ -750,6 +750,10 @@ export default function TavernChatRoom({
     () => getGuildQuestBoard(tavern || {}, guildProgress),
     [tavern, guildProgress],
   )
+  const activeGameplayDefinition = useMemo(() => {
+    if (!activeGameplaySession?.gameplay_id) return null
+    return gameplays.find((gameplay) => gameplay?.id === activeGameplaySession.gameplay_id) || null
+  }, [gameplays, activeGameplaySession?.gameplay_id])
 
   // Auto-select first character
   useEffect(() => {
@@ -1567,6 +1571,7 @@ export default function TavernChatRoom({
               <GameplaySessionPanel
                 session={activeGameplaySession}
                 scene={gameplayScene}
+                gameplay={activeGameplayDefinition}
                 busy={gameplayBusy}
                 onChoice={(choice) => handleGameplayAdvance({ choiceId: choice.id })}
                 onSubmit={(message) => handleGameplayAdvance({ message })}

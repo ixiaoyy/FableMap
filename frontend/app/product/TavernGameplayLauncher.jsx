@@ -1,3 +1,4 @@
+import { isShortDramaCandidate } from './shortDramaGameplayTemplates'
 import './tavernGameplay.css'
 
 const ACTIVE_STATES = new Set(['started', 'in_progress'])
@@ -35,17 +36,23 @@ export default function TavernGameplayLauncher({ gameplays = [], activeSessions 
 
       {publishedGameplays.length > 0 ? (
         <div className="tavern-gameplay-launcher__grid">
-          {publishedGameplays.map((gameplay) => (
-            <article key={gameplay.id} className="gameplay-launch-card">
-              <div>
-                <strong>{gameplay.title}</strong>
-                <p>{gameplay.summary || '进入一局由酒馆主持的轻量玩法。'}</p>
-              </div>
-              <button type="button" className="secondary" onClick={() => onStart?.(gameplay)} disabled={busy}>
-                {gameplay.entry_label || '开始玩法'}
-              </button>
-            </article>
-          ))}
+          {publishedGameplays.map((gameplay) => {
+            const shortDrama = isShortDramaCandidate(gameplay)
+            const goal = gameplay?.owner_brief?.goal || ''
+            return (
+              <article key={gameplay.id} className={`gameplay-launch-card ${shortDrama ? 'is-drama' : ''}`}>
+                <div>
+                  <span className="gameplay-launch-card__tag">{shortDrama ? '竖屏短剧感' : '酒馆玩法'}</span>
+                  <strong>{gameplay.title}</strong>
+                  <p>{gameplay.summary || '进入一局由酒馆主持的轻量玩法。'}</p>
+                  {shortDrama && goal ? <small className="gameplay-launch-card__goal">目标：{goal}</small> : null}
+                </div>
+                <button type="button" className={shortDrama ? 'primary' : 'secondary'} onClick={() => onStart?.(gameplay)} disabled={busy}>
+                  {gameplay.entry_label || (shortDrama ? '进入小剧场' : '开始玩法')}
+                </button>
+              </article>
+            )
+          })}
         </div>
       ) : null}
     </section>

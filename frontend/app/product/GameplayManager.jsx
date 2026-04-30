@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getGameplays, saveGameplays } from '../lib/taverns'
 import GameplayDefinitionEditor, { createBlankGameplay } from './GameplayDefinitionEditor'
+import {
+  createShortDramaGameplayFromTemplate,
+  SHORT_DRAMA_GAMEPLAY_TEMPLATES,
+} from './shortDramaGameplayTemplates'
 import './tavernGameplay.css'
 
 const STATUS_LABEL = {
@@ -52,6 +56,14 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     setGameplays((prev) => [next, ...prev])
     setSelectedId(next.id)
     setStatus('新玩法已加入草稿，填写目标后保存。')
+  }
+
+  function addShortDramaGameplay(template) {
+    const next = createShortDramaGameplayFromTemplate(template, gameplays.length + 1)
+    if (!next) return
+    setGameplays((prev) => [next, ...prev])
+    setSelectedId(next.id)
+    setStatus('短剧模板已生成本地草稿；请检查内容、按本酒馆调整，并保存/发布后访客才可见。')
   }
 
   function updateGameplay(nextGameplay) {
@@ -106,6 +118,27 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
         <div className="gameplay-manager__layout">
           <aside className="gameplay-manager__list">
             <button type="button" className="btn-primary" onClick={addGameplay}>+ 添加玩法</button>
+            <section className="short-drama-template-panel" aria-label="短剧玩法模板">
+              <div className="short-drama-template-panel__header">
+                <span className="mini-label">短剧模板</span>
+                <small>只生成草稿，不会自动发布。</small>
+              </div>
+              <div className="short-drama-template-grid">
+                {SHORT_DRAMA_GAMEPLAY_TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className="short-drama-template-card"
+                    onClick={() => addShortDramaGameplay(template)}
+                    title={template.bestFor}
+                  >
+                    <span>{template.badge}</span>
+                    <strong>{template.title}</strong>
+                    <small>{template.duration} · {template.bestFor}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
             {gameplays.length === 0 ? (
               <p className="note muted">还没有玩法。添加一个草稿后，填写目标并保存即可。</p>
             ) : gameplays.map((gameplay) => (

@@ -31,6 +31,7 @@
 .gameplay-launch-card {
   display: flex;
   justify-content: space-between;
+  align-items: stretch;
   gap: 12px;
   padding: 12px;
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -38,9 +39,34 @@
   background: rgba(15, 23, 42, 0.42);
 }
 
+.gameplay-launch-card.is-drama {
+  border-color: rgba(244, 114, 182, 0.34);
+  background:
+    radial-gradient(circle at top left, rgba(244, 114, 182, 0.18), transparent 32%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(49, 46, 129, 0.46));
+}
+
 .gameplay-launch-card p {
   margin: 4px 0 0;
   color: var(--text-muted, #94a3b8);
+}
+
+.gameplay-launch-card__tag {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  border-radius: 999px;
+  color: #bae6fd;
+  font-size: 0.72rem;
+}
+
+.gameplay-launch-card__goal {
+  display: block;
+  margin-top: 8px;
+  color: #fbcfe8;
+  line-height: 1.5;
 }
 
 .gameplay-chip {
@@ -63,12 +89,30 @@
   line-height: 1.65;
 }
 
+.gameplay-session-panel__objective {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 114, 182, 0.26);
+  border-radius: 14px;
+  background: rgba(244, 114, 182, 0.1);
+}
+
+.gameplay-session-panel__objective p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
 .gameplay-session-panel__choices,
 .gameplay-session-panel__input {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.gameplay-session-panel__choice {
+  min-height: 44px;
+  text-align: left;
 }
 
 .gameplay-session-panel__input input {
@@ -104,6 +148,57 @@
   gap: 12px;
 }
 
+.short-drama-template-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(244, 114, 182, 0.2);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(244, 114, 182, 0.14), transparent 36%),
+    rgba(15, 23, 42, 0.36);
+}
+
+.short-drama-template-panel__header {
+  display: grid;
+  gap: 2px;
+}
+
+.short-drama-template-panel__header small,
+.short-drama-template-card small {
+  color: var(--text-muted, #94a3b8);
+}
+
+.short-drama-template-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.short-drama-template-card {
+  display: grid;
+  gap: 4px;
+  min-height: 76px;
+  padding: 10px 12px;
+  text-align: left;
+  border-color: rgba(244, 114, 182, 0.24);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.52);
+}
+
+.short-drama-template-card:hover {
+  border-color: rgba(244, 114, 182, 0.48);
+  background: rgba(76, 29, 149, 0.28);
+}
+
+.short-drama-template-card span {
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(244, 114, 182, 0.18);
+  color: #fbcfe8;
+  font-size: 0.72rem;
+}
+
 .gameplay-manager__item {
   text-align: left;
   display: grid;
@@ -137,6 +232,11 @@
   .gameplay-launch-card {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .gameplay-launch-card button,
+  .gameplay-session-panel__input button {
+    width: 100%;
   }
 
   .tavern-gameplay-launcher,

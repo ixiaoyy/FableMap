@@ -7,13 +7,14 @@ function latestNarration(session, scene) {
   return lastEvent?.narration || '玩法正在进行。选择一个动作，或输入一句话交给 AI Director 主持。'
 }
 
-export default function GameplaySessionPanel({ session, scene = {}, busy = false, onChoice, onSubmit, onAbandon }) {
+export default function GameplaySessionPanel({ session, scene = {}, gameplay = null, busy = false, onChoice, onSubmit, onAbandon }) {
   const [message, setMessage] = useState('')
   if (!session) return null
 
   const choices = Array.isArray(scene?.choices) ? scene.choices : []
   const completion = session?.completion
   const completed = session.state === 'completed'
+  const goal = gameplay?.owner_brief?.goal || ''
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -35,6 +36,13 @@ export default function GameplaySessionPanel({ session, scene = {}, busy = false
         </button>
       </div>
 
+      {goal ? (
+        <div className="gameplay-session-panel__objective">
+          <span className="mini-label">本局目标</span>
+          <p>{goal}</p>
+        </div>
+      ) : null}
+
       <p className="gameplay-session-panel__narration">{latestNarration(session, scene)}</p>
 
       {completion ? (
@@ -48,7 +56,7 @@ export default function GameplaySessionPanel({ session, scene = {}, busy = false
       {!completed && choices.length > 0 ? (
         <div className="gameplay-session-panel__choices">
           {choices.map((choice) => (
-            <button key={choice.id} type="button" className="secondary" onClick={() => onChoice?.(choice)} disabled={busy}>
+            <button key={choice.id} type="button" className="gameplay-session-panel__choice secondary" onClick={() => onChoice?.(choice)} disabled={busy}>
               {choice.label || choice.id}
             </button>
           ))}
@@ -60,7 +68,7 @@ export default function GameplaySessionPanel({ session, scene = {}, busy = false
           <input
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            placeholder="也可以用一句话描述你想做什么"
+            placeholder="也可以补充一句话，让主持人接住这一幕"
             disabled={busy}
           />
           <button type="submit" className="primary" disabled={busy || !message.trim()}>
