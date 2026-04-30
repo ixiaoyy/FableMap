@@ -201,3 +201,100 @@ No external images, exact case prompts, runtime code, API, schema, or actual ima
 - `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
 - `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...prompt-as-code content validation..."` — passed via stdin script; confirmed Prompt-as-Code markers, JSON envelope fields, external-reference path note, Markdown code fence balance, and no accidental escaped-CRLF marker artifacts.
 - Backend/frontend build/test not run because this follow-up only updates skill/spec/docs/task documentation; no runtime code or image assets changed.
+
+## 2026-04-30 User Follow-up: Deep Extensibility Study
+
+User asked to study the external project more deeply and consider future extensibility.
+
+Additional audit:
+
+- Parsed `docs/gallery-part-1.md` and `docs/gallery-part-2.md` for prompt structure patterns.
+- The useful signal is not individual cases but the repeatable architecture: output type first, layout/grid/module count before style, explicit text policy, series consistency locks, and separate camera/material vs illustration/style controls.
+- Attempted image dimension analysis with PIL, but local Python lacks Pillow; skipped because the extensibility work is schema/template-only.
+
+Actions:
+
+- Expanded `.agents/skills/generate-character-prompt/references/prompt-as-code-techniques.md` from a technique note into an extensible architecture reference:
+  - layered architecture: rights/product guardrails → asset-use registry → capability modules → renderer profile → validation/landing;
+  - asset-use registry with future surfaces such as `exploded_diagram_card` and `editorial_mood_poster`;
+  - composable modules: rights, anchor, layout, text, identity, Style DNA, camera/material, diagram, series, validation;
+  - `schema_version: fablemap.visual_prompt.v1`, `renderer_profile`, and additive `extension_modules`;
+  - extension module shape and promotion rules.
+- Updated `.agents/skills/generate-character-prompt/references/prompt-templates.md` and `docs/IMAGE_ASSETS_SPEC.md` with the versioned envelope fields and extension-module convention.
+- Updated `.trellis/spec/frontend/image-asset-guidelines.md` with the extensibility baseline and required definition checklist for new `asset_use` values.
+- Updated `.trellis/spec/frontend/npc-art-guidelines.md` with NPC-specific extension guidance (`series.identity-locks.v1`, `sprite.expression-set.v1`) and a reminder not to change persisted schema for prompt convenience.
+
+No external images, exact case prompts, runtime code, API, schema, or actual image asset changed.
+
+## 2026-04-30 Deep Extensibility Study Verification Results
+
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/generate-character-prompt` — passed: `Skill is valid!`.
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/image-style-prompt-extractor` — passed: `Skill is valid!`.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...extensible prompt architecture validation..."` — passed via stdin script; confirmed versioned schema fields, renderer profile, extension modules, new asset-use values, capability-module markers, Markdown code fence balance, and no accidental escaped-CRLF marker artifacts.
+- Backend/frontend build/test not run because this follow-up only updates skill/spec/docs/task documentation; no runtime code or image assets changed.
+
+## 2026-04-30 User Follow-up: General Image Generation Memory
+
+User asked whether the learned image-generation content can be written into current project memory for any future session.
+
+Actions:
+
+- Added `.agents/skills/image-style-prompt-extractor/references/image-generation-principles.md` as general, product-agnostic project memory for pure image-generation technique.
+- The memory captures the distilled formula: clear use case, locked structure, controlled text, concrete composition, lighting/material physics, Style DNA, and task-specific negative constraints.
+- It also records reusable patterns for posters, characters, product/commercial images, infographics, maps/atlas cards, exploded views, series/batches, text control, camera realism, materials, and prompt self-checks.
+- Updated `.agents/skills/image-style-prompt-extractor/SKILL.md` so future sessions know to read this file when asked for pure image-generation methodology or when writing learned image-generation techniques into project memory.
+- Updated `.agents/skills/generate-character-prompt/SKILL.md` so character/NPC prompt workflows can also find the product-agnostic image-generation memory when needed.
+
+Scope note: this is repository-local memory. Future Codex/agent sessions in this project can use it when they load project skills/specs; it does not become a global memory outside this repository.
+
+## 2026-04-30 General Image Generation Memory Verification Results
+
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/generate-character-prompt` — passed: `Skill is valid!`.
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/image-style-prompt-extractor` — passed: `Skill is valid!`.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...general image-generation memory validation..."` — passed via stdin script; confirmed the new reference file, linked skill entries, key method markers, Markdown code fence balance, and no accidental escaped-CRLF marker artifacts.
+- Backend/frontend build/test not run because this follow-up only updates skill/task documentation; no runtime code or image assets changed.
+
+## 2026-04-30 User Follow-up: Prompt-first Image Generation Rule
+
+User feedback after preview images: future material generation must first use project skills to generate a Prompt, then use that Prompt to generate images; direct generation from hidden/ad-hoc instructions is not acceptable.
+
+Actions:
+
+- Updated `.agents/skills/image-style-prompt-extractor/SKILL.md` with a project hard rule: actual素材图生成 must follow prompt-first flow.
+- Updated `.agents/skills/generate-character-prompt/SKILL.md` with an image generation handoff: record final prompt(s), then generate, then report source path and accepted/reference-only status.
+- Updated `.agents/skills/image-style-prompt-extractor/references/image-generation-principles.md` with the product-agnostic prompt-first rule and minimum handoff record.
+- Updated `.trellis/spec/frontend/image-asset-guidelines.md` and `docs/IMAGE_ASSETS_SPEC.md` so image generation without a preserved prompt/prompt manifest is invalid/incomplete.
+- The two preview images generated earlier in this session remain reference-only drafts under `.codex/generated_images`; they were not accepted or landed into project asset paths.
+
+No runtime code, API, schema, or actual project image asset changed.
+
+## 2026-04-30 Prompt-first Image Generation Rule Verification Results
+
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/generate-character-prompt` — passed: `Skill is valid!`.
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/image-style-prompt-extractor` — passed: `Skill is valid!`.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...prompt-first memory validation..."` — passed via stdin script; confirmed prompt-first markers, final prompt / prompt manifest requirements, reference-only note, Markdown code fence balance, and no accidental escaped-CRLF marker artifacts.
+- Backend/frontend build/test not run because this follow-up only updates skill/spec/docs/task documentation; no runtime code or project image assets changed.
+
+## 2026-04-30 User Follow-up: Image Quality and Anti-sameness Rule
+
+User feedback: image quality is extremely important; generated assets must not be thousand-copy variations of the same tavern decor, warm wood, teal glow, centered subject, and generic anime concept-art look.
+
+Actions:
+
+- Updated `.agents/skills/image-style-prompt-extractor/references/image-generation-principles.md` with a quality and anti-sameness rule, a quality bar, and a required diversity matrix for batches.
+- Updated `.agents/skills/image-style-prompt-extractor/SKILL.md` with a project hard rule: Prompt-first is not enough; each actual image prompt needs a distinct visual thesis or a reason for being part of a unified series.
+- Updated `.agents/skills/generate-character-prompt/SKILL.md`, `references/prompt-as-code-techniques.md`, and `references/prompt-templates.md` with `quality_diversity` fields and guidance.
+- Updated `docs/IMAGE_ASSETS_SPEC.md`, `.trellis/spec/frontend/image-asset-guidelines.md`, and `.trellis/spec/frontend/npc-art-guidelines.md` so repeated decor/lighting/palette/camera formulas are a reject condition, not an acceptable style.
+
+No runtime code, API, schema, or project image asset changed.
+
+## 2026-04-30 Image Quality and Anti-sameness Rule Verification Results
+
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/generate-character-prompt` — passed: `Skill is valid!`.
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/image-style-prompt-extractor` — passed: `Skill is valid!`.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...image quality anti-sameness memory validation..."` — passed via stdin script; confirmed quality/anti-sameness markers, `quality_diversity`, diversity matrix, visual thesis, reject criteria, Markdown code fence balance, and no accidental escaped-CRLF marker artifacts.
+- Backend/frontend build/test not run because this follow-up only updates skill/spec/docs/task documentation; no runtime code or project image assets changed.
