@@ -386,3 +386,45 @@ interface TavernMetrics {
 - `04-30-quest-exploration-checklist-reframe`
 
 本轮之前已存在的子任务继续保留：Owner Dashboard、Create Wizard、Discovery Polish。
+
+## 2026-04-30 Completion Closure
+
+All 13 child tasks referenced by this brainstorm are now completed and traceable in Trellis.
+
+Completed child set:
+
+1. `04-29-04-29-owner-dashboard-presentational-mvp`
+2. `04-30-create-tavern-step-wizard-mvp`
+3. `04-30-tavern-discovery-experience-polish-mvp`
+4. `04-30-worldinfo-visual-editor-modern-mvp`
+5. `04-30-npc-batch-import-background-cast-mvp`
+6. `04-30-owner-ai-dialogue-preview-simulator`
+7. `04-30-gameplay-template-library-for-owners`
+8. `04-30-owner-token-usage-reference-status`
+9. `04-30-notification-center-presentational-followup`
+10. `04-30-mobile-critical-flow-first-screen-polish`
+11. `04-30-tavern-activity-signals-without-social-network`
+12. `04-30-home-real-coordinate-governance-review`
+13. `04-30-quest-exploration-checklist-reframe`
+
+Tracking repair performed during closure:
+
+* Parent `task.json` referenced `04-29-04-29-owner-dashboard-presentational-mvp` and `04-30-create-tavern-step-wizard-mvp`, but the completed task records had been archived under different directory names.
+* Rehydrated completed Trellis records into the exact child IDs expected by the parent, preserving archive provenance in each child `task.json.meta.rehydrated_from_archive` and appending fresh Playwright evidence to each PRD.
+
+Fresh verification supporting closure:
+
+* `node .\frontend\scripts\play-modes-test.mjs; node .\frontend\scripts\quest-guide-test.mjs; node .\frontend\scripts\mini-games-test.mjs` — passed.
+* `npm --prefix .\frontend run typecheck` — passed.
+* `npm --prefix .\frontend run build` — passed.
+* `npm --prefix .\frontend test` — passed.
+* Playwright visual self-acceptance passed for the newly completed/rehydrated visual surfaces:
+  * `/quests`: `.trellis/tmp/playwright-mainline/evidence/04-30-quest-exploration-checklist-visual-acceptance/`
+  * `/owner`: `.trellis/tmp/playwright-mainline/evidence/04-29-owner-dashboard-presentational-mvp-visual-acceptance/`
+  * `/create`: `.trellis/tmp/playwright-mainline/evidence/04-30-create-tavern-step-wizard-visual-acceptance/`
+
+Deferred / not done at parent scope:
+
+* No backend/API/schema migration was added by this closure step.
+* No platform token billing, ranking, visitor social network, combat/level/equipment loop, or auto-published AI content was introduced.
+* This parent is a brainstorm/roadmap implementation bundle; future new-feature ideas should be created as new Trellis tasks rather than extending this completed parent.

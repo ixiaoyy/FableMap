@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
+- **Total Sessions**: 11
 - **Last Active**: 2026-04-30
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~614 | Active |
+| `journal-1.md` | ~645 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-04-30 | Review Hospital Nurse NPC Asset | - | `main` |
 | 10 | 2026-04-30 | Review Character Asset Prompt Skill | - | `main` |
 | 9 | 2026-04-30 | Home Real-coordinate Governance Review | - | `main` |
 | 8 | 2026-04-30 | Research WorldInfo Visual Editor Modern MVP | - | `main` |
