@@ -1,0 +1,56 @@
+{
+  "id": "character-editor-prompt-risk-linter",
+  "name": "character-editor-prompt-risk-linter",
+  "title": "Character Editor Prompt Risk Linter",
+  "description": "为角色编辑器保留 prompt 风险检查任务，提示越权、PII、强制成人内容、用户代言等风险。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-29-npc-role-prompt-safety-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-29-npc-role-prompt-safety-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

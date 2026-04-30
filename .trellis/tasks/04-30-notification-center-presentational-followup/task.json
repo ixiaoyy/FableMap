@@ -1,0 +1,56 @@
+{
+  "id": "notification-center-presentational-followup",
+  "name": "notification-center-presentational-followup",
+  "title": "Notification Center Presentational Follow-up",
+  "description": "在已有通知 MVP 之后，保留前端通知中心表现化任务入口。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-28-new-features-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-28-new-features-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

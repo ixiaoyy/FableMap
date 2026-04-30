@@ -1,0 +1,56 @@
+{
+  "id": "persistent-preset-library-import-model-design",
+  "name": "persistent-preset-library-import-model-design",
+  "title": "Persistent Preset Library Import Model Design",
+  "description": "在 preview converter 之后，设计是否需要持久化 preset library/import model。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P3",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-29-npc-role-prompt-safety-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-29-npc-role-prompt-safety-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

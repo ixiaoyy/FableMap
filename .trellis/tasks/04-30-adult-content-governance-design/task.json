@@ -1,0 +1,56 @@
+{
+  "id": "adult-content-governance-design",
+  "name": "adult-content-governance-design",
+  "title": "Adult Content Governance Design",
+  "description": "仅作为治理/边界设计任务保留：如未来支持成人空间，必须先设计年龄声明、合意、访问控制、分级、退出机制。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P3",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-29-npc-role-prompt-safety-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-29-npc-role-prompt-safety-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

@@ -1,0 +1,56 @@
+{
+  "id": "confirmed-short-video-asset-pipeline-research",
+  "name": "confirmed-short-video-asset-pipeline-research",
+  "title": "Confirmed Short-video Asset Pipeline Research",
+  "description": "如果短剧模板验证有效，再研究店主确认的封面图/短视频素材与玩法节点结合。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P3",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-30-ai-video-story-mini-game-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-30-ai-video-story-mini-game-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

@@ -1,0 +1,58 @@
+{
+  "id": "ai-video-story-mini-game-brainstorm",
+  "name": "ai-video-story-mini-game-brainstorm",
+  "title": "brainstorm: AI video story mini-game direction",
+  "description": "Explore whether FableMap should adapt the AI-generated plot-video mini-game pattern seen in examples like 显眼包本包 into a tavern-native, owner-confirmed interactive story loop.",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "04-30-tavern-short-drama-gameplay-template-mvp",
+    "04-30-discovery-short-drama-teaser-cards",
+    "04-30-owner-ai-short-drama-draft-assistant",
+    "04-30-confirmed-short-video-asset-pipeline-research"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

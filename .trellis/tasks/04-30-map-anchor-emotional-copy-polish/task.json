@@ -1,0 +1,56 @@
+{
+  "id": "map-anchor-emotional-copy-polish",
+  "name": "map-anchor-emotional-copy-polish",
+  "title": "Map Anchor Emotional Copy Polish",
+  "description": "把真实坐标表达成“街角的门、巷口的灯牌、附近有人经营的酒馆”等产品语言。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-29-ai-creation-sites-research",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-29-ai-creation-sites-research/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

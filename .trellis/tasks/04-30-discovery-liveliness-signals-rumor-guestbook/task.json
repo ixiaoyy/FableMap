@@ -1,0 +1,56 @@
+{
+  "id": "discovery-liveliness-signals-rumor-guestbook",
+  "name": "discovery-liveliness-signals-rumor-guestbook",
+  "title": "Discovery Liveliness Signals from Rumors and Feedback",
+  "description": "在发现页用已有 rumor/guestbook/feedback 信号制造“附近有人经营”的活性。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-29-ai-creation-sites-research",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-29-ai-creation-sites-research/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

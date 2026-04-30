@@ -1,0 +1,56 @@
+{
+  "id": "revisit-care-proactive-notification-design",
+  "name": "revisit-care-proactive-notification-design",
+  "title": "Revisit-care Proactive Notification Design",
+  "description": "为主动回访关怀/通知调度保留设计任务，先解决 opt-in、quiet hours、频控和取消订阅。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-29-npc-role-prompt-safety-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-29-npc-role-prompt-safety-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}

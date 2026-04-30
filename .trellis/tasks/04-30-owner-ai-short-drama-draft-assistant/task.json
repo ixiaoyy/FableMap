@@ -1,0 +1,56 @@
+{
+  "id": "owner-ai-short-drama-draft-assistant",
+  "name": "owner-ai-short-drama-draft-assistant",
+  "title": "Owner AI Short-drama Draft Assistant",
+  "description": "让店主基于酒馆设定生成未发布的短剧玩法草稿，编辑确认后才能保存。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P3",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "04-30-ai-video-story-mini-game-brainstorm",
+  "relatedFiles": [
+    "prd.md",
+    ".trellis/tasks/04-30-ai-video-story-mini-game-brainstorm/"
+  ],
+  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "meta": {}
+}
