@@ -106,7 +106,9 @@ AI 不允许：
 - `.trellis/workspace/<developer>/`
 - `.trellis/spec/`
 
-`docs/AI_SHARED_TASKLIST.md` 仅作为历史 / 辅助参考；如果任务已经进入 Trellis，任务卡、PR、提交说明应优先引用 `.trellis/tasks/<task>/` 中的任务名、PRD、上下文文件或验收记录，而不是只引用聊天记录。
+`docs/AI_SHARED_TASKLIST.md` 仅作为历史全局记忆 / 辅助参考；如果任务已经进入 Trellis，任务卡、PR、提交说明必须优先引用 `.trellis/tasks/<task>/` 中的任务名、PRD、上下文文件或验收记录，而不是只引用聊天记录、旧共享清单或 `docs/claims/`。
+
+`docs/claims/` 已降级为历史 claim 归档，不再是活跃认领入口。新的任务领取、状态流转、验收记录必须写入 Trellis。
 
 ### Trellis 技能使用要求
 
@@ -138,7 +140,16 @@ AI 不允许：
 
 ## 开发前认领规则
 
-为了避免重复开发、边界冲突和 AI 自由扩写，中高风险任务在进入实现前，必须先提交一份模块认领说明。
+为了避免重复开发、边界冲突和 AI 自由扩写，中高风险任务在进入实现前，必须先在 Trellis 中完成认领。
+
+认领位置只接受：
+
+- `.trellis/tasks/<task>/task.json`：`assignee`、`status`、`current_phase`、`scope`、`notes`
+- `.trellis/tasks/<task>/prd.md`：目标、范围、验收标准、不可改边界
+- `.trellis/tasks/<task>/implementation-plan.md` 或同目录实现记录：执行计划、验证记录
+- `.trellis/tasks/<task>/implement.jsonl` / `check.jsonl`：需要注入给实现和检查阶段的上下文
+
+`docs/claims/*.md` 只能作为历史证据或迁移来源；不得作为新任务的唯一认领说明，也不得让 `docs/claims` 中的“认领中”状态覆盖 Trellis 状态。
 
 ### 强制适用场景
 
@@ -155,7 +166,7 @@ AI 不允许：
 - 小范围文档润色
 - 不改变边界的轻量测试修正
 
-### 认领说明至少应声明
+### Trellis 认领说明至少应声明
 
 - 模块名 / 区域名
 - 负责人
@@ -170,6 +181,12 @@ AI 不允许：
 
 认领说明的作用是防止重复开发和边界失控；
 它不能替代每次 commit 对实际改动的文档说明。
+
+### 旧共享任务迁移规则
+
+- 旧 `docs/AI_SHARED_TASKLIST.md` 中已经完成的任务，不再需要创建新的 active Trellis 任务；可以只保留 done 状态索引。
+- 旧共享任务中仍未完成或预留的任务，必须创建 Trellis 任务并补 `prd.md`、`task.json` 状态。
+- 截至 2026-04-30，旧共享任务中唯一明确未闭环项为 `SC-03：状态卡 Prompt 注入`，已迁移到 `.trellis/tasks/04-30-state-card-prompt-injection-sc-03/`。
 
 ## 每次 AI 参与都必须带的输入声明
 

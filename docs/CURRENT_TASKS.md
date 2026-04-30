@@ -2,11 +2,11 @@
 
 ## 下一轮共享任务入口
 
-VisionTale 轻量 Web 酒馆参考后的新一轮待办，统一放在：
+本仓库任务领取、状态流转和验收统一迁移到 Trellis：
 
-> [AI_SHARED_TASKLIST.md](AI_SHARED_TASKLIST.md)
+> `.trellis/tasks/`
 
-该共享清单覆盖：
+旧的 [AI_SHARED_TASKLIST.md](AI_SHARED_TASKLIST.md) 已降级为历史全局记忆 / 状态索引，不再作为活跃认领入口。旧共享清单覆盖过：
 
 - 轻量首页 / 新手路径
 - 3 分钟开店向导
@@ -19,7 +19,11 @@ VisionTale 轻量 Web 酒馆参考后的新一轮待办，统一放在：
 - Prompt Block 段落引擎
 - 结构化记忆与自动提炼
 
-后续认领和实现优先从 `AI_SHARED_TASKLIST.md` 的 `FM-VT-*` 任务 ID 开始。
+后续认领和实现必须从 `.trellis/tasks/<task>/` 开始；若旧共享清单中仍有未完成项，必须先补 Trellis 任务。当前旧共享清单唯一未闭环项为 `SC-03：状态卡 Prompt 注入`，已补到：
+
+> `.trellis/tasks/04-30-state-card-prompt-injection-sc-03/`
+
+当前口径：SC-03 已进入 `review`；runtime chat / prompt preview 接线已补并通过验证，等待 review/commit 后再标 completed。
 
 ---
 
