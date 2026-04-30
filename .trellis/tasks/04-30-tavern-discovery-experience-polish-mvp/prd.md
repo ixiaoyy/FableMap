@@ -27,4 +27,25 @@
 
 * 不新增 Schema/API。
 * 不做全局访客社交网络。
-* 不做传统地图 POI/路线/导航能力。
+
+
+## 2026-04-30 Implementation Notes
+
+### Relevant Specs
+
+* `.trellis/spec/frontend/component-guidelines.md`: discovery cards must meet consumer-grade FableMap UI quality and mobile touch target rules.
+* `.trellis/spec/frontend/quality-guidelines.md`: route-level visual work requires `npm --prefix .\frontend run build`.
+* `.trellis/spec/frontend/type-safety.md`: dynamic `Tavern` payload fields such as `access`, `status`, `characters`, and `visit_count` need safe display fallbacks.
+
+### Code Patterns Found
+
+* `frontend/app/routes/discover.tsx`: already uses `listTaverns`, `DISCOVERABLE_PLACE_TYPES`, `derivePlaceTypeDisplay`, local pure helpers, and route-local cards.
+* `frontend/app/lib/place-types.js`: shared place-type display metadata is the source of truth for labels, icons, tone, and discoverability.
+
+### Implementation Approach
+
+* Keep the task frontend-only and avoid Schema/API changes.
+* Polish existing `/discover` cards by replacing raw access/status strings with tavern-entry language and adding compact atmosphere/role/return signals from existing Tavern fields.
+* Do not add rankings, POI/navigation features, public visitor social surfaces, or token/commercial UI.
+
+

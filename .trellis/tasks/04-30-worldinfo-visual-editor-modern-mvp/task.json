@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 1,
+  "current_phase": 2,
   "next_action": [
     {
       "phase": 1,
@@ -51,6 +51,6 @@
     "prd.md",
     ".trellis/tasks/04-28-new-features-brainstorm/"
   ],
-  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
+  "notes": "Research complete: WorldBookEditor.jsx (588 lines) analyzed, all features documented. MVP scope defined: loading state, mobile layout, keyboard shortcuts, visual polish. Implementation files created.",
   "meta": {}
 }

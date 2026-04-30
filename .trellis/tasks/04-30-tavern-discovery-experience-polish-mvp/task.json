@@ -3,7 +3,7 @@
   "name": "04-30-tavern-discovery-experience-polish-mvp",
   "title": "Tavern Discovery Experience Polish MVP",
   "description": "Split from 04-28-new-features-brainstorm candidate C: improve /discover browsing cards and filters with existing data only, preserving map/tavern boundaries.",
-  "status": "in_progress",
+  "status": "review",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 1,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,20 @@
   "subtasks": [],
   "children": [],
   "parent": "04-28-new-features-brainstorm",
-  "relatedFiles": [],
-  "notes": "",
-  "meta": {}
+  "relatedFiles": [
+    "prd.md",
+    "implement.jsonl",
+    "check.jsonl",
+    "frontend/app/routes/discover.tsx"
+  ],
+  "notes": "Polished /discover cards with tavern-entry language, atmosphere/role/return signals, and access/status display fallbacks using existing Tavern fields only. No Schema/API changes. Verified typecheck, build, frontend test, and targeted discover scripts.",
+  "meta": {
+    "pending_review_note": "Implementation validated; awaiting human review/acceptance, commit, and record-session.",
+    "verification": {
+      "typecheck": "npm --prefix .\\frontend run typecheck: passed",
+      "build": "npm --prefix .\\frontend run build: passed",
+      "targeted_discover_tests": "node .\\frontend\\scripts\\discover-view-mode-test.mjs; node .\\frontend\\scripts\\discover-pc-polish-test.mjs: passed",
+      "frontend_test": "npm --prefix .\\frontend test: passed"
+    }
+  }
 }

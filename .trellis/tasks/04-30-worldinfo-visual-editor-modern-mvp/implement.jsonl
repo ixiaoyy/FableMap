@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend guidelines and patterns"}
+{"file": "frontend/app/product/WorldBookEditor.jsx", "reason": "Main component to be modernized"}
+{"file": "frontend/app/product/WorldBookTester.jsx", "reason": "Related component for comparison"}
+{"file": "frontend/app/product/PromptBlockEditor.jsx", "reason": "Reference for modernization patterns"}

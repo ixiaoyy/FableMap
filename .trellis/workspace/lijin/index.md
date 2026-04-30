@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-04-30
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~521 | Active |
+| `journal-1.md` | ~552 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-04-30 | Research WorldInfo Visual Editor Modern MVP | - | `main` |
 | 7 | 2026-04-30 | Review and complete easysdd migration task | - | `main` |
 | 6 | 2026-04-30 | StateCard MVP review — already implemented, all tests pass | - | `main` |
 | 5 | 2026-04-29 | Archive public welfare NPC polish | `fef2439` | `main` |
