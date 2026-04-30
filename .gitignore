@@ -17,6 +17,10 @@ artifacts/pytest-tmp/
 artifacts/pytest-*/
 artifacts/dev-server/
 
+# Artifacts
+artifacts/runlogs/
+test-results/
+
 # Generated outputs
 .fablemap-api/
 demo-output/
