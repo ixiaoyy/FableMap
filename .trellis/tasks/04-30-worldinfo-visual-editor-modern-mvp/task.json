@@ -1,6 +1,6 @@
 {
-  "id": "worldinfo-visual-editor-modern-mvp",
-  "name": "worldinfo-visual-editor-modern-mvp",
+  "id": "04-30-worldinfo-visual-editor-modern-mvp",
+  "name": "04-30-worldinfo-visual-editor-modern-mvp",
   "title": "WorldInfo Visual Editor Modern MVP",
   "description": "把世界书/WorldInfo 编辑体验整理为当前 React Router 前端可继续打磨的现代化任务；优先复用既有 world_info 数据，不新增 schema。",
   "status": "in_progress",

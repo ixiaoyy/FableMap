@@ -1,6 +1,6 @@
 {
-  "id": "revisit-care-proactive-notification-design",
-  "name": "revisit-care-proactive-notification-design",
+  "id": "04-30-revisit-care-proactive-notification-design",
+  "name": "04-30-revisit-care-proactive-notification-design",
   "title": "Revisit-care Proactive Notification Design",
   "description": "为主动回访关怀/通知调度保留设计任务，先解决 opt-in、quiet hours、频控和取消订阅。",
   "status": "in_progress",

@@ -1,6 +1,6 @@
 {
-  "id": "persistent-preset-library-import-model-design",
-  "name": "persistent-preset-library-import-model-design",
+  "id": "04-30-persistent-preset-library-import-model-design",
+  "name": "04-30-persistent-preset-library-import-model-design",
   "title": "Persistent Preset Library Import Model Design",
   "description": "在 preview converter 之后，设计是否需要持久化 preset library/import model。",
   "status": "in_progress",

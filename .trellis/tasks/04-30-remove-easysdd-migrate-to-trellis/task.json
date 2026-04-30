@@ -1,6 +1,6 @@
 {
-  "id": "remove-easysdd-migrate-to-trellis",
-  "name": "remove-easysdd-migrate-to-trellis",
+  "id": "04-30-remove-easysdd-migrate-to-trellis",
+  "name": "04-30-remove-easysdd-migrate-to-trellis",
   "title": "Remove easysdd and migrate legacy notes to Trellis",
   "description": "Migrate remaining easysdd notes into Trellis task artifacts, remove legacy easysdd directory, and clear active references.",
   "status": "review",

@@ -1,6 +1,6 @@
 {
-  "id": "notification-center-presentational-followup",
-  "name": "notification-center-presentational-followup",
+  "id": "04-30-notification-center-presentational-followup",
+  "name": "04-30-notification-center-presentational-followup",
   "title": "Notification Center Presentational Follow-up",
   "description": "在已有通知 MVP 之后，保留前端通知中心表现化任务入口。",
   "status": "in_progress",

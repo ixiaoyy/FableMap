@@ -51,8 +51,9 @@
     "prd.md",
     "mainline-audit.md",
     "feature-classification.md",
-    "freeze-list.md"
+    "freeze-list.md",
+    "reality-audit.md"
   ],
-  "notes": "Audit docs created: PRD, mainline audit, feature classification, and freeze list. Verification passed: task validate, backend compileall, focused mainline pytest (10 passed), frontend script tests.",
+  "notes": "Audit docs created: PRD, mainline audit, feature classification, and freeze list. Verification passed: task validate, backend compileall, focused mainline pytest (10 passed), frontend script tests. Added migrated reality-audit evidence note.",
   "meta": {}
 }

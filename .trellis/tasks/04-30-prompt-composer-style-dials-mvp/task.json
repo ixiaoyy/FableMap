@@ -1,6 +1,6 @@
 {
-  "id": "prompt-composer-style-dials-mvp",
-  "name": "prompt-composer-style-dials-mvp",
+  "id": "04-30-prompt-composer-style-dials-mvp",
+  "name": "04-30-prompt-composer-style-dials-mvp",
   "title": "Prompt Composer and Style Dials MVP",
   "description": "保留 owner-facing prompt layer preview 和安全风格拨盘任务。",
   "status": "in_progress",

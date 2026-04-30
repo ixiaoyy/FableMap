@@ -1,6 +1,6 @@
 {
-  "id": "character-editor-prompt-risk-linter",
-  "name": "character-editor-prompt-risk-linter",
+  "id": "04-30-character-editor-prompt-risk-linter",
+  "name": "04-30-character-editor-prompt-risk-linter",
   "title": "Character Editor Prompt Risk Linter",
   "description": "为角色编辑器保留 prompt 风险检查任务，提示越权、PII、强制成人内容、用户代言等风险。",
   "status": "in_progress",

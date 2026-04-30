@@ -158,7 +158,7 @@ These skipped paths are ignored/generated and can be removed later with correcte
 * Deleted `artifacts/crew-plan/`: tracked old local multi-agent workflow validation artifact, no references found outside itself.
 * Kept `artifacts/codex-generated-unmatched/`: README explicitly marks these as reference/draft archive assets, not runtime files.
 * Kept `artifacts/art-upgrade-image-surfaces/`, `artifacts/mimi-nya-anime-art-upgrade/`, and `artifacts/design-reference-contact-sheet.png`: task/audit/design reference assets.
-* Kept `设计参考/`: referenced by docs/easysdd notes as design reference material.
+* Kept `设计参考/`: retained as design reference material used by project notes and audit history.
 * Kept untracked `frontend/public/assets/npcs/char_pw_*.png`: although literal grep finds no direct URL refs, backend now derives expression URLs from neutral sprites; AST audit confirmed 13 neutral NPCs × 4 expression suffixes = 52 expected expression files, all present.
 * Kept `.claude/settings.local.json` changes: pre-existing local settings diff; not safe to treat as obsolete without owner-specific confirmation.
 * Kept `frontend/node_modules/` and `.idea/`: ignored local dependency/IDE state, but not invalid project content.

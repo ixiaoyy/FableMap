@@ -1,6 +1,6 @@
 {
-  "id": "owner-token-usage-reference-status",
-  "name": "owner-token-usage-reference-status",
+  "id": "04-30-owner-token-usage-reference-status",
+  "name": "04-30-owner-token-usage-reference-status",
   "title": "Owner Token Usage Reference Status",
   "description": "为店主保留 token 使用参考状态任务，但明确不做平台充值、结算、抽成或访客可见账单。",
   "status": "in_progress",

@@ -1,6 +1,6 @@
 {
-  "id": "tavern-discovery-experience-polish-mvp",
-  "name": "tavern-discovery-experience-polish-mvp",
+  "id": "04-30-tavern-discovery-experience-polish-mvp",
+  "name": "04-30-tavern-discovery-experience-polish-mvp",
   "title": "Tavern Discovery Experience Polish MVP",
   "description": "Split from 04-28-new-features-brainstorm candidate C: improve /discover browsing cards and filters with existing data only, preserving map/tavern boundaries.",
   "status": "in_progress",

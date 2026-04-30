@@ -1,6 +1,6 @@
 {
-  "id": "adult-content-governance-design",
-  "name": "adult-content-governance-design",
+  "id": "04-30-adult-content-governance-design",
+  "name": "04-30-adult-content-governance-design",
   "title": "Adult Content Governance Design",
   "description": "仅作为治理/边界设计任务保留：如未来支持成人空间，必须先设计年龄声明、合意、访问控制、分级、退出机制。",
   "status": "in_progress",

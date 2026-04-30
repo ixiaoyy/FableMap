@@ -1,6 +1,6 @@
 {
-  "id": "npc-batch-import-background-cast-mvp",
-  "name": "npc-batch-import-background-cast-mvp",
+  "id": "04-30-npc-batch-import-background-cast-mvp",
+  "name": "04-30-npc-batch-import-background-cast-mvp",
   "title": "NPC Batch Import and Background Cast MVP",
   "description": "为店主保留“批量导入/创建背景 NPC”的安全任务入口，降低配置多角色酒馆成本。",
   "status": "in_progress",

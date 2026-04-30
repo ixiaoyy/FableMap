@@ -81,7 +81,14 @@ Not run:
 ## 2026-04-30 Playwright Browser Simulation
 
 - Ran a Playwright-driven browser simulation against the built frontend served by the backend at `http://127.0.0.1:8951`.
-- Result: passed. Browser form creation, tavern page navigation, visitor enter/chat/writeback/revisit, and owner-visible visitor feedback all verified.
+- Result: passed. Browser form creation, tavern page navigation, visitor enter/chat/writeback/revisit, and owner-visible visitor feedback all verified. After the initial system-Chrome run, the flow was rerun with the existing Playwright-managed Chromium cache at `%LOCALAPPDATA%\\ms-playwright\\chromium-1208\\chrome-win64\\chrome.exe`.
 - Report: `.trellis/tasks/04-30-mainline-golden-path-smoke/playwright-mainline-report.json`.
 - Summary: `.trellis/tasks/04-30-mainline-golden-path-smoke/playwright-simulation.md`.
 - Runtime screenshots are in `.trellis/tmp/playwright-mainline/evidence/`.
+## 2026-04-30 Playwright Managed Chromium Rerun
+
+- Installed Playwright-managed Chromium through local proxy `http://127.0.0.1:7890` after identifying that previous install attempts had cleared `HTTP_PROXY/HTTPS_PROXY`.
+- Reran the browser simulation with the newly installed managed Chromium at `%LOCALAPPDATA%\ms-playwright\chromium-1217\chrome-win64\chrome.exe`.
+- Result: passed. Latest report: `.trellis/tasks/archive/2026-04/mainline-golden-path-smoke/playwright-mainline-report.json`.
+- Latest run tavern: `tavern_53e992f5a4f8`; writeback: `memoryAtoms=4`, `pendingStateCards=3`; revisit: `visit_count=2`.
+

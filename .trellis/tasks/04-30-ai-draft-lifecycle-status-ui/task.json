@@ -1,6 +1,6 @@
 {
-  "id": "ai-draft-lifecycle-status-ui",
-  "name": "ai-draft-lifecycle-status-ui",
+  "id": "04-30-ai-draft-lifecycle-status-ui",
+  "name": "04-30-ai-draft-lifecycle-status-ui",
   "title": "AI Draft Lifecycle Status UI",
   "description": "明确“草稿/待确认/已发布”的 UI 语义，防止 AI 辅助内容被误解为平台自动发布。",
   "status": "in_progress",

@@ -1,6 +1,6 @@
 {
-  "id": "owner-ai-dialogue-preview-simulator",
-  "name": "owner-ai-dialogue-preview-simulator",
+  "id": "04-30-owner-ai-dialogue-preview-simulator",
+  "name": "04-30-owner-ai-dialogue-preview-simulator",
   "title": "Owner AI Dialogue Preview Simulator",
   "description": "让店主在发布前预览 NPC 回复效果，但不写入访客聊天历史或公开内容。",
   "status": "in_progress",

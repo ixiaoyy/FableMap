@@ -1,6 +1,6 @@
 {
-  "id": "visual-souvenir-full-image-asset-pipeline",
-  "name": "visual-souvenir-full-image-asset-pipeline",
+  "id": "04-30-visual-souvenir-full-image-asset-pipeline",
+  "name": "04-30-visual-souvenir-full-image-asset-pipeline",
   "title": "Visual Souvenir Full Image Asset Pipeline",
   "description": "在 prompt preview 之后，设计/实现真正图像生成、资产落盘、引用和保留/删除策略。",
   "status": "in_progress",

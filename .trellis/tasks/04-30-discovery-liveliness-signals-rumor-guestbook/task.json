@@ -1,6 +1,6 @@
 {
-  "id": "discovery-liveliness-signals-rumor-guestbook",
-  "name": "discovery-liveliness-signals-rumor-guestbook",
+  "id": "04-30-discovery-liveliness-signals-rumor-guestbook",
+  "name": "04-30-discovery-liveliness-signals-rumor-guestbook",
   "title": "Discovery Liveliness Signals from Rumors and Feedback",
   "description": "在发现页用已有 rumor/guestbook/feedback 信号制造“附近有人经营”的活性。",
   "status": "in_progress",

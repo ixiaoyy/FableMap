@@ -1,6 +1,6 @@
 {
-  "id": "worldinfo-trigger-pack-cat-empire-quest-draft",
-  "name": "worldinfo-trigger-pack-cat-empire-quest-draft",
+  "id": "04-30-worldinfo-trigger-pack-cat-empire-quest-draft",
+  "name": "04-30-worldinfo-trigger-pack-cat-empire-quest-draft",
   "title": "WorldInfo Trigger Pack and Cat Empire Quest Draft",
   "description": "把“猫帝国/复国”等设定拆成 WorldInfo trigger pack 和轻任务草稿，而不是塞进 system prompt。",
   "status": "in_progress",

@@ -1,6 +1,6 @@
 {
-  "id": "model-profile-preset-compatibility-report",
-  "name": "model-profile-preset-compatibility-report",
+  "id": "04-30-model-profile-preset-compatibility-report",
+  "name": "04-30-model-profile-preset-compatibility-report",
   "title": "Model Profile and Preset Compatibility Report",
   "description": "为不同模型/预设兼容性报告保留任务入口，帮助店主理解 preset 风险与能力边界。",
   "status": "in_progress",

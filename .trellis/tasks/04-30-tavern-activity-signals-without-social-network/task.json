@@ -1,6 +1,6 @@
 {
-  "id": "tavern-activity-signals-without-social-network",
-  "name": "tavern-activity-signals-without-social-network",
+  "id": "04-30-tavern-activity-signals-without-social-network",
+  "name": "04-30-tavern-activity-signals-without-social-network",
   "title": "Tavern Activity Signals Without Social Network",
   "description": "保留“有活性但不做社交网络”的产品任务，用 rumor/feedback/activity 摘要替代公开访客社交。",
   "status": "in_progress",
