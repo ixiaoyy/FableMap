@@ -3,7 +3,7 @@
   "name": "owner-ai-short-drama-draft-assistant",
   "title": "Owner AI Short-drama Draft Assistant",
   "description": "让店主基于酒馆设定生成未发布的短剧玩法草稿，编辑确认后才能保存。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

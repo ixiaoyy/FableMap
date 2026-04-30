@@ -3,7 +3,7 @@
   "name": "quest-exploration-checklist-reframe",
   "title": "Quest Reframe to Exploration Checklist",
   "description": "把 Quest/任务系统继续收敛为“探索清单/酒馆委托”，避免传统 RPG 化。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

@@ -3,7 +3,7 @@
   "name": "revisit-memory-feedback-surface",
   "title": "Revisit Memory Feedback Surface",
   "description": "让访客和店主感知“NPC 记住了什么”，增强回访理由。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

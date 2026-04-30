@@ -3,7 +3,7 @@
   "name": "tavern-discovery-experience-polish-mvp",
   "title": "Tavern Discovery Experience Polish MVP",
   "description": "Split from 04-28-new-features-brainstorm candidate C: improve /discover browsing cards and filters with existing data only, preserving map/tavern boundaries.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

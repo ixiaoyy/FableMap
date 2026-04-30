@@ -3,7 +3,7 @@
   "name": "public-site-reference-matrix-research",
   "title": "Public Site Reference Matrix Research",
   "description": "把“调研 5 个公开首页/产品页”的规划落成可继续执行的研究任务。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

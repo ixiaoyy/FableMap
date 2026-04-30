@@ -3,7 +3,7 @@
   "name": "notification-center-presentational-followup",
   "title": "Notification Center Presentational Follow-up",
   "description": "在已有通知 MVP 之后，保留前端通知中心表现化任务入口。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

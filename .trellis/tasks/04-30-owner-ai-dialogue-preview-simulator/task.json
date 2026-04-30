@@ -3,7 +3,7 @@
   "name": "owner-ai-dialogue-preview-simulator",
   "title": "Owner AI Dialogue Preview Simulator",
   "description": "让店主在发布前预览 NPC 回复效果，但不写入访客聊天历史或公开内容。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

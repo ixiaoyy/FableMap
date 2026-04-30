@@ -3,7 +3,7 @@
   "name": "ai-draft-lifecycle-status-ui",
   "title": "AI Draft Lifecycle Status UI",
   "description": "明确“草稿/待确认/已发布”的 UI 语义，防止 AI 辅助内容被误解为平台自动发布。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

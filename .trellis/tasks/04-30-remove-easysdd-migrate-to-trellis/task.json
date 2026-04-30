@@ -1,0 +1,57 @@
+{
+  "id": "remove-easysdd-migrate-to-trellis",
+  "name": "remove-easysdd-migrate-to-trellis",
+  "title": "Remove easysdd and migrate legacy notes to Trellis",
+  "description": "Migrate remaining easysdd notes into Trellis task artifacts, remove legacy easysdd directory, and clear active references.",
+  "status": "review",
+  "dev_type": "docs",
+  "scope": "workflow-cleanup/easysdd-migration",
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-04-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 4,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "prd.md",
+    "migration-inventory.md",
+    "homepage-serves-stale-dist-fix-note.md"
+  ],
+  "notes": "Migrated legacy workflow notes to Trellis and removed the old directory. Ready for review after migration, directory removal, context validation, and reference checks.",
+  "meta": {}
+}

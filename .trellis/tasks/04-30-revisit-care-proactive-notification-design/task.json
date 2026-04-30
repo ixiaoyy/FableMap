@@ -3,7 +3,7 @@
   "name": "revisit-care-proactive-notification-design",
   "title": "Revisit-care Proactive Notification Design",
   "description": "为主动回访关怀/通知调度保留设计任务，先解决 opt-in、quiet hours、频控和取消订阅。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

@@ -3,7 +3,7 @@
   "name": "external-channel-companion-integration-research",
   "title": "External Channel Companion Integration Research",
   "description": "保留外部频道/伴侣模式集成研究，但不把它作为 FableMap MVP 中心。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

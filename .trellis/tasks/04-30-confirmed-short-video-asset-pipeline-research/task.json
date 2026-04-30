@@ -3,7 +3,7 @@
   "name": "confirmed-short-video-asset-pipeline-research",
   "title": "Confirmed Short-video Asset Pipeline Research",
   "description": "如果短剧模板验证有效，再研究店主确认的封面图/短视频素材与玩法节点结合。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

@@ -3,7 +3,7 @@
   "name": "prompt-composer-style-dials-mvp",
   "title": "Prompt Composer and Style Dials MVP",
   "description": "保留 owner-facing prompt layer preview 和安全风格拨盘任务。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

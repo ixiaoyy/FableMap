@@ -3,7 +3,7 @@
   "name": "discovery-liveliness-signals-rumor-guestbook",
   "title": "Discovery Liveliness Signals from Rumors and Feedback",
   "description": "在发现页用已有 rumor/guestbook/feedback 信号制造“附近有人经营”的活性。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

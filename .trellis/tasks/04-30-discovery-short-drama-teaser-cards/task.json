@@ -3,7 +3,7 @@
   "name": "discovery-short-drama-teaser-cards",
   "title": "Discovery Short-drama Teaser Cards",
   "description": "在发现页/酒馆入口展示短剧式冲突标题和 CTA，引导进入对应酒馆玩法。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

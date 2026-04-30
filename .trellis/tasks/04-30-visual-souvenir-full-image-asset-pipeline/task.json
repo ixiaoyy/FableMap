@@ -3,7 +3,7 @@
   "name": "visual-souvenir-full-image-asset-pipeline",
   "title": "Visual Souvenir Full Image Asset Pipeline",
   "description": "在 prompt preview 之后，设计/实现真正图像生成、资产落盘、引用和保留/删除策略。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

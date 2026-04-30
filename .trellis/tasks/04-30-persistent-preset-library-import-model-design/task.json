@@ -3,7 +3,7 @@
   "name": "persistent-preset-library-import-model-design",
   "title": "Persistent Preset Library Import Model Design",
   "description": "在 preview converter 之后，设计是否需要持久化 preset library/import model。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

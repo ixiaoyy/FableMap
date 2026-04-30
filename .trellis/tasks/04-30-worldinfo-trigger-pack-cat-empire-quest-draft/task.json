@@ -3,7 +3,7 @@
   "name": "worldinfo-trigger-pack-cat-empire-quest-draft",
   "title": "WorldInfo Trigger Pack and Cat Empire Quest Draft",
   "description": "把“猫帝国/复国”等设定拆成 WorldInfo trigger pack 和轻任务草稿，而不是塞进 system prompt。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

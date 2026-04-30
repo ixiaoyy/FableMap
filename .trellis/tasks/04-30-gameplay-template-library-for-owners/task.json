@@ -3,7 +3,7 @@
   "name": "gameplay-template-library-for-owners",
   "title": "Gameplay Template Library for Tavern Owners",
   "description": "沉淀店主可选择的轻量酒馆玩法模板库，复用现有 GameplayDefinition，不走 RPG 战斗/等级路线。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,
