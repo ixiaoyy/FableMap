@@ -6,10 +6,48 @@ import { cn } from "../lib/utils"
 const navItems = [
   { to: "/", label: "首页", icon: Home },
   { to: "/discover", label: "发现", icon: Compass },
-  { to: "/quests", label: "任务", icon: ClipboardList },
+  { to: "/quests", label: "清单", icon: ClipboardList },
   { to: "/create", label: "创建空间", icon: PlusCircle },
   { to: "/owner", label: "主人", icon: UserRound },
 ]
+
+const MOBILE_CRITICAL_FLOW_GUIDES: Record<string, {
+  title: string
+  helper: string
+  primaryLabel: string
+  href: string
+}> = {
+  Discover: {
+    title: "先找到一个可进入的坐标",
+    helper: "移动首屏只保留搜索、筛选、预览入店这一条主线，更多面板往下看。",
+    primaryLabel: "查看发现主线",
+    href: "#discover-mainline",
+  },
+  Checklist: {
+    title: "先选一个安全探索项目",
+    helper: "探索清单只做完成记录、文字纪念章和回访提示，不做等级、装备或排名。",
+    primaryLabel: "查看探索清单",
+    href: "#checklist-mainline",
+  },
+  Create: {
+    title: "先钉真实坐标，再填内容",
+    helper: "移动端优先完成坐标、名称、首个 NPC；AI 草稿始终等店主确认。",
+    primaryLabel: "开始创建主线",
+    href: "#create-mainline",
+  },
+  Tavern: {
+    title: "先进入酒馆或查看主人入口",
+    helper: "移动首屏聚焦入店、角色和 owner-visible 操作，不把高级管理挤进第一屏。",
+    primaryLabel: "查看入店主线",
+    href: "#tavern-mainline",
+  },
+  Owner: {
+    title: "先处理一个店主待办",
+    helper: "移动端先看经营摘要、通知和下一步建议，再展开图表与明细。",
+    primaryLabel: "查看店主主线",
+    href: "#owner-mainline",
+  },
+}
 
 export function ProductShell({
   eyebrow,
@@ -18,6 +56,8 @@ export function ProductShell({
   eyebrow: string
   children: React.ReactNode
 }) {
+  const mobileGuide = MOBILE_CRITICAL_FLOW_GUIDES[eyebrow]
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#030512] text-violet-50">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_14%_8%,rgba(217,70,239,0.16),transparent_28rem),radial-gradient(circle_at_86%_14%,rgba(0,214,201,0.14),transparent_30rem),linear-gradient(180deg,rgba(3,5,18,0),rgba(3,5,18,0.92))]" />
@@ -84,6 +124,23 @@ export function ProductShell({
           <Sparkles className="h-3.5 w-3.5" />
           {eyebrow}
         </div>
+        {mobileGuide ? (
+          <section
+            data-mobile-critical-flow
+            className="mb-5 rounded-[1.75rem] border border-cyan-300/18 bg-cyan-300/[0.08] p-4 shadow-[0_18px_70px_rgba(34,211,238,0.08)] lg:hidden"
+            aria-label="Mobile critical flow"
+          >
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/70">Mobile first-screen</p>
+            <h2 className="mt-2 text-xl font-black leading-tight text-white">{mobileGuide.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-violet-100/66">{mobileGuide.helper}</p>
+            <a
+              href={mobileGuide.href}
+              className="mt-4 inline-flex min-h-14 w-full touch-manipulation items-center justify-center rounded-2xl border border-cyan-300/32 bg-cyan-300/14 px-4 text-sm font-black text-cyan-50 shadow-[0_0_28px_rgba(0,214,201,0.12)]"
+            >
+              {mobileGuide.primaryLabel}
+            </a>
+          </section>
+        ) : null}
         {children}
         <footer className="mt-16 flex flex-col gap-2 border-t border-white/10 pt-6 text-sm text-violet-100/45 sm:flex-row sm:items-center">
           <MapPinned className="h-4 w-4 text-cyan-100/60" />

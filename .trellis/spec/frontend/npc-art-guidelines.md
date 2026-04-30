@@ -19,7 +19,7 @@ NPC art must be real tavern-themed character art, not symbolic placeholders.
 
 Required:
 
-- Real cartoon/anime/game-style human NPC portrait, bust or waist-up.
+- Real cartoon/anime/game-style NPC portrait, bust or waist-up. The NPC may be human, humanoid, beastkin, spirit, robot, alien, object-folk, or another original non-human tavern regular when the tavern theme supports it.
 - The NPC must visibly belong inside a tavern: bar counter, wooden shelves, mugs, lanterns, menu board, bottles, map-table, glowing terminal, door signage, or equivalent tavern interior cues.
 - The role should read as tavern staff, host, guide, storyteller, keeper, attendant, or regular NPC.
 - The style can vary by tavern skin, but must preserve FableMap's product meaning: real place → owner-authored tavern → AI NPC → memory/revisit.
@@ -31,6 +31,35 @@ Forbidden:
 - Generic anime portraits with no tavern environment or tavern props.
 - Platform-generated character content being saved as if it were owner-authored role/card data.
 - Specific copyrighted IP, franchise logos/UI, recognizable existing characters, or imitation of a living artist's personal style.
+- Fantasy / isekai shop casts that default every role to ordinary humans without a deliberate owner or setting reason.
+
+## Scenario: Fantasy / Isekai Species Diversity Contract
+
+Use this contract when generating or rebuilding NPC role drafts, portrait prompts, expression sprites, public-welfare seed casts, tavern presets, or owner-facing character prompt templates for fantasy, isekai, alien, mythic, magical, monster-town, spirit-market, or otherwise non-realistic tavern themes.
+
+Contracts:
+
+- Do not default a fantasy / isekai cast to all ordinary human NPCs. At least one primary role in a multi-NPC fantasy shop should have a clear original non-human or non-ordinary body plan unless the owner explicitly requested an all-human cast.
+- Treat species / body plan as a design dimension inside existing fields and prompt text, not a new persisted schema field. Encode it through `description`, `personality`, `scenario`, `system_prompt`, `tags`, and visual prompts.
+- Non-human does not mean random decoration. The species/body plan must support the NPC's tavern job and chat behavior: e.g. a lantern moth archivist who navigates dusty shelves, a stone golem bouncer who remembers house rules, a slime tea brewer who senses cup temperature, a clockwork fox courier who tracks route cards.
+- Keep the character original. Avoid specific copyrighted races, named franchise species, recognizable monster designs, or brand/franchise visual marks.
+- Maintain chat readability: even non-human NPCs need understandable facial/body expression cues across `neutral`, `joy/happy`, `anger/angry`, `embarrassment/shy`, and `curiosity/curious`.
+
+Validation matrix:
+
+| Case | Expected |
+| --- | --- |
+| Fantasy shop has 3 NPCs and all are ordinary humans by accident | Weak cast; revise at least one role into an original non-human or non-ordinary tavern regular |
+| Owner explicitly requests all-human fantasy inn staff | Acceptable; record the owner intent and differentiate by role, silhouette, outfit, and props |
+| Non-human visual prompt has no tavern job or no readable expression | Invalid; add role-specific props and expression readability |
+| Prompt adds a new `species` schema field | Invalid; keep it in existing text/tags unless a separate schema task is approved |
+| Non-human design resembles a specific franchise race/character | Invalid for project assets; convert to generic original anatomy, motifs, and color language |
+
+Good: A floating candle-spirit bartender, a beetle-shell map keeper, and a human runaway knight each have different silhouettes, jobs, props, and chat boundaries inside the same tavern.
+
+Base: Mostly human cast, but one role is a clearly original robot, spirit, animal-folk, or object-folk NPC tied to the tavern's service loop.
+
+Bad: Three attractive human anime staff with only hair color and outfit color changed in an isekai tavern.
 
 ## Frontend Fallback Contract
 
@@ -205,14 +234,74 @@ Use this structure when generating new NPC fallback art:
 ```text
 Use case: stylized-concept
 Asset type: FableMap cyber tavern NPC portrait asset
-Primary request: actual finished cartoon/anime/game-style human NPC portrait, not placeholder, not icon, not UI mockup.
+Primary request: actual finished cartoon/anime/game-style NPC portrait; choose human or original non-human species/body plan according to tavern theme, not placeholder, not icon, not UI mockup.
 Core tavern requirement: the NPC must visibly belong inside a tavern with bar/counter, mugs, shelves, lanterns, menu board, bottles, map-table, cyber terminal glow, or equivalent tavern interior details.
-Subject: <role + age range + outfit + tavern job>
+Subject: <species/body plan + role + age/maturity range + outfit/surface texture + tavern job>
 Style/medium: polished original anime game concept art, expressive eyes, clean linework, soft cel shading.
 Composition/framing: bust or waist-up portrait, tavern interior background visible.
 Lighting/mood: cozy indoor tavern lighting with theme-specific accents.
 Constraints: original character only; no text; no logos; no watermark; no abstract placeholder; no specific IP; no living-artist imitation.
 ```
+
+## Character Prompt Meta-Generation Contract
+
+Use this contract whenever a task asks AI to create or refine prompts for NPC role drafts, portrait prompts, expression sprite prompts, or reusable visual style prompts.
+
+Rules:
+
+- Treat generated character content as an owner-reviewable draft only. Do not save or present it as published `TavernCharacter` content before owner confirmation.
+- Keep generated role prompts aligned with existing `NpcDraftPreview` / `TavernCharacter` fields: `name`, `description`, `personality`, `scenario`, `gender`, `system_prompt`, `first_mes`, `mes_example`, `alternate_greetings`, and `tags`.
+- Do not invent persisted schema fields for prompt convenience.
+- Decompose prompts into explicit layers: subject identity, species/body plan, real-place tavern anchor, owner intent, visitor feeling, interaction boundary, visual composition, color/light, medium/texture, and constraints.
+- For fantasy / isekai / non-realistic taverns, actively decide the cast's species/body-plan mix; do not let every NPC become an ordinary human by default. Keep species details inside existing character text/tags and visual prompts unless a schema task explicitly adds a field.
+- When adapting a visual reference, extract a transferable style kernel and remove source-specific characters, story text, brands, franchise marks, and living-artist style imitation.
+- For reusable image style templates, split the result into:
+  - **Style DNA Prompt**: the transferable aesthetic constant (art style/genre, color science, lighting, medium/texture, mood, render/post-processing, era/cultural context, detail-density zoning, dynamic state, symbolic visual language). It must contain the subject placeholder and remain usable without a separate composition module.
+  - **Composition Module**: optional, abstract space/framing instructions only (composition technique, shot type/angle, perspective/spatial logic, and foreground/midground/background visual roles), with no concrete scene objects.
+  - **Subject Recommendations**: high-affinity, cross-genre, and contrast-mashup subject suggestions to help owners choose a fitting original tavern subject.
+- Keep abstraction strict: do not preserve source-image characters, readable text, specific story events, brands, logos, living-artist imitation, or fixed props; convert concrete objects into visual-function categories such as ritual display items, lived-in prop clusters, abstract coordinate traces, or archive fragments.
+- Distinguish medium texture from medium carrier. For example, "Risograph halftone texture" is allowed as a rendering/texture technique; do not imply the final asset must be a full magazine cover, barcode poster, or branded commercial layout unless that carrier itself is explicitly in scope.
+- Prefer one or two strong visual style families over long keyword piles. The style must support the NPC's tavern role and desired visitor emotion.
+- For expression sets, require identity consistency across `neutral`, `joy/happy`, `anger/angry`, `embarrassment/shy`, and `curiosity/curious`; expression changes must not alter core face, outfit silhouette, palette, or signature prop.
+- For deliverable generated images, follow `image-asset-guidelines.md`; prompt text alone is not a shipped asset.
+- When a user contributes a tested reusable visual prompt recipe, preserve the full recipe in a skill reference before reducing it to a short style keyword. Keep user notes such as palette fatigue, element pile-up, or favorite/use-case guidance because they affect future prompt selection.
+- For future FableMap material resources, use `image-style-prompt-extractor` by default as the style extraction/normalization step before generating images or final visual prompts. If a needed project style is missing, add a complete recipe to `style-recipes.md` before relying on it.
+- For batch or Agent-generated NPC assets, use the Prompt-as-Code technique reference before writing final prose prompts. Lock `schema_version`, `asset_use`, species/body-plan, identity continuity, tavern cues, Style DNA, composition, text policy, and negative constraints separately so sprite sets and public-welfare batches remain consistent.
+- NPC-specific extensions should be additive modules such as `series.identity-locks.v1` or `sprite.expression-set.v1`; do not add persisted character fields or mutate `TavernCharacter` schema to support prompt convenience.
+- NPC image quality and diversity are mandatory. Do not accept a cast where every NPC is the same centered anime bust in the same warm wooden cyber bar with the same teal glow. For non-series NPC batches, vary at least one major visual axis per asset: tavern skin/interior architecture, material system, palette, lighting, shot/composition, species/body-plan silhouette, or style family.
+
+Reusable project skill:
+
+```text
+.agents/skills/generate-character-prompt/SKILL.md
+.agents/skills/generate-character-prompt/references/prompt-as-code-techniques.md
+.agents/skills/generate-character-prompt/references/style-recipes.md
+.agents/skills/image-style-prompt-extractor/SKILL.md
+```
+
+Use `generate-character-prompt` when turning owner briefs or style-reference notes into character-card generator prompts and NPC visual asset prompts. Use `image-style-prompt-extractor` first when the input is an actual reference image, when the requested output is a reusable style prompt, or when a material-generation task needs a normalized style prompt before image generation.
+
+Validation matrix:
+
+| Case | Expected |
+| --- | --- |
+| Prompt generator outputs fields outside `TavernCharacter` / `NpcDraftPreview` | Invalid; revise to existing fields or design a separate schema task |
+| Character draft omits tavern place, role, or visitor interaction purpose | Weak prompt; add real-place tavern anchor and job-to-be-done |
+| Fantasy / isekai cast prompt makes every NPC human by default | Weak prompt; add original non-human or non-ordinary species/body-plan options tied to tavern jobs |
+| Batch NPC portraits share the same decor, pose, lighting, and generic anime finish | Weak prompt; add a diversity matrix and distinct visual theses |
+| Visual prompt references a specific IP character, logo, or living artist | Invalid for project assets; convert to generic style/shape/color language |
+| Expression prompts change hair, face, outfit silhouette, or signature prop across emotions | Invalid sprite set; enforce identity consistency |
+| Generated image is accepted for runtime use but remains outside the repository | Not complete; move to a project asset path and verify per `image-asset-guidelines.md` |
+
+Good:
+
+- Generate a prompt that asks for `name`, `description`, `personality`, `scenario`, `gender`, `system_prompt`, `first_mes`, `mes_example`, `alternate_greetings`, and `tags`, while stating the result is an owner-confirmable draft.
+- Generate a five-expression visual prompt set with the same character identity, explicit species/body-plan continuity, and explicit tavern interior cues.
+
+Bad:
+
+- Generate a complete NPC persona and claim it is already saved to the tavern.
+- Ask for “in the style of <living artist>” or “as <copyrighted character>” for a project-shipped NPC asset.
 
 ## Good / Base / Bad Cases
 
@@ -220,16 +309,19 @@ Good:
 
 - A warm tavern guide behind a wooden bar with mugs, candlelight, copper apron, and a glowing map tablet.
 - A neon night host at a rain-window bar booth with bottle shelves, old microphone, and cyberpunk tavern lighting.
+- An original non-human tavern regular, such as a lantern-moth archivist or clockwork fox courier, whose anatomy, props, and service role are readable in the tavern space.
 
 Base:
 
 - A portrait where the person is clear and the background contains at least two tavern cues.
+- A mostly human cast where one clearly original non-human NPC provides visual contrast and a job-relevant chat role.
 
 Bad:
 
 - A pretty anime face on a blank gradient background.
 - A circular initial avatar or geometric dummy body.
 - A fantasy warrior portrait with no tavern role or tavern setting.
+- An isekai tavern roster where every NPC is the same human anime template with only hair/outfit color changes.
 
 ## Tests Required
 

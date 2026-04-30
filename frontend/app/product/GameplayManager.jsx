@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getGameplays, saveGameplays } from '../lib/taverns'
+import { getGameplays, saveGameplays as persistGameplays } from '../lib/taverns'
 import GameplayDefinitionEditor, { createBlankGameplay } from './GameplayDefinitionEditor'
+import {
+  OWNER_GAMEPLAY_TEMPLATE_CATEGORIES,
+  createOwnerGameplayFromTemplate,
+  filterOwnerGameplayTemplates,
+} from './ownerGameplayTemplates'
 import {
   createShortDramaGameplayFromTemplate,
   SHORT_DRAMA_GAMEPLAY_TEMPLATES,
@@ -17,6 +22,10 @@ function normalizeGameplays(value) {
   return Array.isArray(value) ? value.filter((item) => item && typeof item === 'object') : []
 }
 
+function responseGameplays(result) {
+  return result?.gameplays ?? result?.gameplay_definitions
+}
+
 export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClose }) {
   const [gameplays, setGameplays] = useState(() => normalizeGameplays(tavern?.gameplay_definitions))
   const [selectedId, setSelectedId] = useState(gameplays[0]?.id || '')
@@ -24,10 +33,16 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const [templateQuery, setTemplateQuery] = useState('')
+  const [templateCategory, setTemplateCategory] = useState('全部')
 
   const selectedGameplay = useMemo(() => (
     gameplays.find((item) => item.id === selectedId) || gameplays[0] || null
   ), [gameplays, selectedId])
+  const ownerTemplates = useMemo(
+    () => filterOwnerGameplayTemplates({ query: templateQuery, category: templateCategory }),
+    [templateCategory, templateQuery],
+  )
 
   useEffect(() => {
     let ignore = false
@@ -38,7 +53,7 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
       try {
         const result = await getGameplays(tavern.id, ownerId)
         if (ignore) return
-        const next = normalizeGameplays(result.gameplays)
+        const next = normalizeGameplays(responseGameplays(result))
         setGameplays(next)
         setSelectedId((current) => current && next.some((item) => item.id === current) ? current : (next[0]?.id || ''))
       } catch (err) {
@@ -66,6 +81,14 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     setStatus('短剧模板已生成本地草稿；请检查内容、按本酒馆调整，并保存/发布后访客才可见。')
   }
 
+  function addOwnerTemplateGameplay(template) {
+    const next = createOwnerGameplayFromTemplate(template, gameplays.length + 1)
+    if (!next) return
+    setGameplays((prev) => [next, ...prev])
+    setSelectedId(next.id)
+    setStatus('玩法模板已生成本地草稿；店主检查并点击“保存玩法”后才会写入酒馆，发布状态为 draft。')
+  }
+
   function updateGameplay(nextGameplay) {
     setGameplays((prev) => prev.map((item) => item.id === nextGameplay.id ? nextGameplay : item))
     setStatus('')
@@ -80,14 +103,14 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     setStatus('已从本地列表移除，保存后生效。')
   }
 
-  async function saveGameplays() {
+  async function saveGameplayDefinitions() {
     if (!tavern?.id) return
     setSaving(true)
     setError('')
     setStatus('')
     try {
-      const result = await saveGameplays(tavern.id, gameplays, ownerId)
-      const next = normalizeGameplays(result.gameplays)
+      const result = await persistGameplays(tavern.id, gameplays, ownerId)
+      const next = normalizeGameplays(responseGameplays(result))
       setGameplays(next)
       setSelectedId((current) => current && next.some((item) => item.id === current) ? current : (next[0]?.id || ''))
       setStatus('玩法已保存。published 对访客可见，disabled 会从入口隐藏。')
@@ -118,6 +141,51 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
         <div className="gameplay-manager__layout">
           <aside className="gameplay-manager__list">
             <button type="button" className="btn-primary" onClick={addGameplay}>+ 添加玩法</button>
+            <section className="owner-gameplay-template-panel" aria-label="店主玩法模板库">
+              <div className="owner-gameplay-template-panel__header">
+                <span className="mini-label">玩法模板库</span>
+                <small>复用 GameplayDefinition，只生成草稿；不含战斗、等级、装备、排行或交易奖励。</small>
+              </div>
+              <label className="owner-gameplay-template-search">
+                <span>搜索模板</span>
+                <input
+                  type="search"
+                  value={templateQuery}
+                  onChange={(event) => setTemplateQuery(event.target.value)}
+                  placeholder="线索、回访、陪伴、物件..."
+                />
+              </label>
+              <div className="owner-gameplay-template-filters" aria-label="玩法模板分类">
+                {OWNER_GAMEPLAY_TEMPLATE_CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={templateCategory === category ? 'is-active' : ''}
+                    onClick={() => setTemplateCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              <div className="owner-gameplay-template-grid">
+                {ownerTemplates.length > 0 ? ownerTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className="owner-gameplay-template-card"
+                    onClick={() => addOwnerTemplateGameplay(template)}
+                    title={template.bestFor}
+                  >
+                    <span>{template.badge}</span>
+                    <strong>{template.title}</strong>
+                    <small>{template.duration} · {template.bestFor}</small>
+                    <em>{template.summary}</em>
+                  </button>
+                )) : (
+                  <p className="note muted">没有匹配模板。换个关键词或切回“全部”。</p>
+                )}
+              </div>
+            </section>
             <section className="short-drama-template-panel" aria-label="短剧玩法模板">
               <div className="short-drama-template-panel__header">
                 <span className="mini-label">短剧模板</span>
@@ -161,7 +229,7 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
                 <div className="modal-actions gameplay-manager__actions">
                   <button type="button" className="secondary" onClick={() => removeGameplay(selectedGameplay.id)}>删除草稿</button>
                   <button type="button" className="secondary" onClick={onClose}>关闭</button>
-                  <button type="button" className="primary" onClick={saveGameplays} disabled={saving}>
+                  <button type="button" className="primary" onClick={saveGameplayDefinitions} disabled={saving}>
                     {saving ? '保存中...' : '保存玩法'}
                   </button>
                 </div>

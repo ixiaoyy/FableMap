@@ -2,17 +2,17 @@ const QUEST_TYPES = {
   exploration: '探索引导',
   npc: 'NPC 互动',
   creation: '创作引导',
-  gameplay: '酒馆玩法',
+  gameplay: '探索玩法',
 }
 
 export const PLATFORM_QUEST_GUIDES = [
   {
     id: 'visit-first-open-tavern',
-    title: '拜访第一间营业酒馆',
+    title: '记录第一间营业酒馆',
     type: 'exploration',
     targetCount: 1,
     icon: '🧭',
-    description: '从真实坐标锚定的公开酒馆开始，完成一次安全入场体验。',
+    description: '从真实坐标锚定的公开酒馆开始，记录一次安全入场体验。',
     ctaLabel: '去发现页找酒馆',
     ctaTo: '/discover',
     measure: ({ openTaverns }) => openTaverns,
@@ -41,11 +41,11 @@ export const PLATFORM_QUEST_GUIDES = [
   },
   {
     id: 'try-quest-play-tavern',
-    title: '试一间玩法型酒馆',
+    title: '试一间探索玩法酒馆',
     type: 'gameplay',
     targetCount: 1,
     icon: '📜',
-    description: '体验店主发布的轻量文本玩法；不引入战斗、数值成长或竞赛榜单。',
+    description: '体验店主发布的轻量文本玩法；只记录完成与回访提示，不引入战斗、数值成长或竞赛榜单。',
     ctaLabel: '寻找玩法酒馆',
     ctaTo: '/discover',
     measure: ({ questPlayTaverns }) => questPlayTaverns,
@@ -105,8 +105,8 @@ export function buildQuestGuideSummary({ taverns = [], ownerId = '' } = {}) {
       target,
       progress: Math.min(1, current / target),
       status: completed ? 'completed' : current > 0 ? 'in_progress' : 'available',
-      statusLabel: completed ? '可完成' : current > 0 ? '进行中' : '可开始',
-      rewardText: completed ? '获得一段文字反馈和下一步探索建议' : '完成后显示温和文字反馈',
+      statusLabel: completed ? '可记录' : current > 0 ? '进行中' : '可开始',
+      rewardText: completed ? '可获得一段文字纪念章和下一步探索建议' : '完成后显示温和文字反馈与回访提示',
     }
   })
 

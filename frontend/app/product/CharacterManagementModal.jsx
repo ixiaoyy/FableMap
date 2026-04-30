@@ -4,6 +4,7 @@ import { addCharacter, deleteCharacter, generateCharacterDraft, importCharacterC
 import CharacterEditor, { createEmptyCharacterDraft, normalizeCharacterPayload } from './CharacterEditor'
 import CharacterAvatar from './CharacterAvatar'
 import CharacterLookSummary from './CharacterLookSummary'
+import OwnerDialoguePreviewSimulator from './OwnerDialoguePreviewSimulator'
 import SystemCharacterPresetPicker from './SystemCharacterPresetPicker'
 import { createCharacterDraftFromPreset } from './systemCharacterPresets'
 import {
@@ -12,6 +13,10 @@ import {
   createAiCharacterDraftRequest,
   draftResponseToEditorDraft,
 } from './aiCharacterDrafts'
+import {
+  NPC_BATCH_IMPORT_EXAMPLE,
+  parseNpcBatchInput,
+} from './npcBatchImport'
 
 /**
  * CharacterManagementModal — 酒馆角色管理面板
@@ -50,6 +55,14 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   const [aiDraftForbiddenText, setAiDraftForbiddenText] = useState(DEFAULT_AI_DRAFT_FORBIDDEN.join(', '))
   const [aiDraftTone, setAiDraftTone] = useState('温暖、短句、有酒馆陪伴感')
 
+  // 批量背景 NPC：先预览，店主确认后才逐个走现有 addCharacter API
+  const [batchInput, setBatchInput] = useState('')
+  const [batchPreview, setBatchPreview] = useState([])
+  const [batchSource, setBatchSource] = useState('')
+  const [batchError, setBatchError] = useState('')
+  const [batchStatus, setBatchStatus] = useState('')
+  const [batchSaving, setBatchSaving] = useState(false)
+
   // 拉取最新角色列表
   async function refreshCharacters() {
     try {
@@ -76,6 +89,56 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
       ...createCharacterDraftFromPreset(preset),
     })
     setEditorError('')
+  }
+
+  function handlePreviewBatchInput() {
+    setBatchError('')
+    setBatchStatus('')
+    try {
+      const parsed = parseNpcBatchInput(batchInput)
+      setBatchPreview(parsed.characters)
+      setBatchSource(parsed.source)
+    } catch (err) {
+      setBatchPreview([])
+      setBatchSource('')
+      setBatchError(err.message)
+    }
+  }
+
+  function handleFillBatchExample() {
+    setBatchInput(NPC_BATCH_IMPORT_EXAMPLE)
+    setBatchPreview([])
+    setBatchSource('')
+    setBatchError('')
+    setBatchStatus('已填入示例；点击“预览批量清单”后再确认创建。')
+  }
+
+  async function handleConfirmBatchImport() {
+    if (batchPreview.length === 0) {
+      handlePreviewBatchInput()
+      return
+    }
+    setBatchSaving(true)
+    setBatchError('')
+    setBatchStatus('')
+    try {
+      const savedCharacters = []
+      for (const draft of batchPreview) {
+        const saved = await addCharacter(tavern.id, draft, ownerId)
+        savedCharacters.push(saved)
+      }
+      const updated = [...characters, ...savedCharacters]
+      setCharacters(updated)
+      if (onCharactersChanged) onCharactersChanged(updated)
+      setBatchInput('')
+      setBatchPreview([])
+      setBatchSource('')
+      setBatchStatus(`已由店主确认创建 ${savedCharacters.length} 个背景 NPC；可继续逐个编辑精修。`)
+    } catch (err) {
+      setBatchError(`批量创建失败：${err.message}`)
+    } finally {
+      setBatchSaving(false)
+    }
   }
 
   async function handleGenerateAiDraft() {
@@ -318,6 +381,84 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
           <div className="char-mgmt-editor-area">
             {!editingChar ? (
               <div className="char-mgmt-editor-placeholder char-mgmt-editor-placeholder--picker">
+                <section className="char-mgmt-batch-panel" aria-label="批量创建背景 NPC">
+                  <div className="character-editor-section-heading">
+                    <span>批量创建背景 NPC</span>
+                    <small>粘贴 JSON 数组或每行一个“名称 | 描述 | 标签”。先生成待确认清单；不自动发布、不会覆盖已有角色。</small>
+                  </div>
+                  <label className="character-editor-full">
+                    <span>背景演员清单</span>
+                    <textarea
+                      value={batchInput}
+                      onChange={(event) => {
+                        setBatchInput(event.target.value)
+                        setBatchPreview([])
+                        setBatchSource('')
+                        setBatchError('')
+                        setBatchStatus('')
+                      }}
+                      disabled={batchSaving || saving || importing || deleting || drafting}
+                      rows={4}
+                      placeholder="夜班灯叔 | 调暗霓虹灯的背景店员 | 后勤, 低干扰"
+                    />
+                  </label>
+                  <div className="char-mgmt-batch-actions">
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={handleFillBatchExample}
+                      disabled={batchSaving || saving || importing || deleting || drafting}
+                    >
+                      填入示例
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={handlePreviewBatchInput}
+                      disabled={batchSaving || saving || importing || deleting || drafting || !batchInput.trim()}
+                    >
+                      预览批量清单
+                    </button>
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={handleConfirmBatchImport}
+                      disabled={batchSaving || saving || importing || deleting || drafting || batchPreview.length === 0}
+                    >
+                      {batchSaving
+                        ? '创建中...'
+                        : batchPreview.length
+                          ? `确认创建 ${batchPreview.length} 个背景 NPC`
+                          : '确认创建背景 NPC'}
+                    </button>
+                  </div>
+                  {batchPreview.length > 0 ? (
+                    <div className="char-mgmt-batch-preview" role="status">
+                      <div className="char-mgmt-batch-preview__summary">
+                        <strong>{batchPreview.length} 个待确认 NPC</strong>
+                        <span>{batchSource === 'json' ? '来自 JSON / 角色卡字段' : '来自逐行文本草稿'}</span>
+                      </div>
+                      <ul>
+                        {batchPreview.map((draft, index) => (
+                          <li key={`${draft.name}-${index}`}>
+                            <strong>{draft.name}</strong>
+                            <span>{draft.description || '未填写描述，保存后建议补齐。'}</span>
+                            {draft.tags?.length ? <small>{draft.tags.slice(0, 4).join(' · ')}</small> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {batchStatus && <div className="char-mgmt-batch-status">{batchStatus}</div>}
+                  {batchError && <div className="char-mgmt-error">{batchError}</div>}
+                </section>
+
+                <OwnerDialoguePreviewSimulator
+                  tavern={tavern}
+                  characters={characters}
+                  disabled={batchSaving || saving || importing || deleting || drafting}
+                />
+
                 <section className="char-mgmt-ai-draft">
                   <div className="character-editor-section-heading">
                     <span>生成 AI 草稿</span>

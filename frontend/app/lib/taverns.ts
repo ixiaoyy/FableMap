@@ -35,6 +35,7 @@ export type PlaceType =
   | "convenience-store"
   | "bookstore"
   | "school"
+  | "hospital"
   | "home"
 
 export type RoleplayClaimStatus = "pending" | "approved" | "rejected" | "revoked"

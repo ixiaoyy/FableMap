@@ -6,6 +6,7 @@ const PLACE_TYPE_KEYWORDS = {
   cafe: ["咖啡", "拿铁", "美式", "咖啡师", "读书角"],
   bookstore: ["书店", "书屋", "旧书", "书架", "阅读"],
   restaurant: ["餐馆", "餐厅", "饭店", "牛排", "食堂", "主厨", "侍者"],
+  hospital: ["医院", "诊所", "护士", "护士站", "分诊", "护理", "夜间护理", "急诊"],
   tavern: ["酒馆", "酒吧", "酒保", "吧台", "tavern", "bar"],
 }
 
@@ -79,6 +80,16 @@ export const PLACE_TYPES = [
     tone: "校园、传达室、铃声与受控公共空间",
     cardClass: "border-sky-300/28 bg-sky-300/10 text-sky-50",
     description: "高隐私风险类型，仅作为受控地点语义展示。",
+  },
+  {
+    id: "hospital",
+    label: "医院",
+    shortLabel: "医院",
+    icon: "🏥",
+    discoverable: true,
+    tone: "夜间分诊、护士站、安静照护与现实求助边界",
+    cardClass: "border-teal-200/30 bg-teal-300/10 text-teal-50",
+    description: "适合护理陪伴、分诊便签、健康安全边界和现实求助提醒。",
   },
   {
     id: "home",

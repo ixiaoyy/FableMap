@@ -151,7 +151,7 @@ npm --prefix .\frontend test
 When route components create or display Place/Home data, shared types and runtime normalizers belong in `frontend/app/lib/taverns.ts`, `frontend/app/lib/place-types.js`, and `frontend/app/lib/place-home.js`.
 
 ```typescript
-type PlaceType = "tavern" | "cafe" | "milk-tea-shop" | "restaurant" | "convenience-store" | "bookstore" | "school" | "home"
+type PlaceType = "tavern" | "cafe" | "milk-tea-shop" | "restaurant" | "convenience-store" | "bookstore" | "school" | "hospital" | "home"
 type HomeMemberType = "conversational_character" | "silent_member" | "display_object"
 type PlaceRelationshipType = "school_enrollment" | "care_link" | "membership" | "work_affiliation" | "story_link"
 type PlaceRelationshipStatus = "pending" | "approved" | "rejected" | "revoked"
@@ -161,6 +161,7 @@ Contracts:
 
 - Use persisted `tavern.place_type` when present; keyword inference is only a fallback for old payloads.
 - Do not include `home` in public discovery filter chips.
+- Include public `hospital` chips through the shared `PLACE_TYPES` config only; hospital copy must stay in safe nursing/triage wording and avoid diagnosis, prescription, or emergency-care replacement claims.
 - Normalize Home create payloads through `normalizeCreatePlacePayload(...)` so public access becomes private before POST.
 - Normalize Home member drafts so `silent_member` and `display_object` cannot drift into conversational speech modes.
 - Components must call service helpers (`addHomeMember`, `createPlaceRelationship`, `createSchoolEnrollment`, `decidePlaceRelationship`) instead of ad hoc `fetch`.
@@ -241,6 +242,7 @@ POST /api/v1/owners/me/tavern-drafts/generate
 - Draft helper code must normalize dynamic UI text at the boundary: comma/Chinese-comma lists, numeric coordinates, blank strings.
 - `draftResponseToCreateForm` must reject missing `draft` / `character` instead of silently filling undefined values.
 - The AI draft panel may fill `name`, `description`, `scene_prompt`, `character_name`, `character_description`, and `first_mes`; it must not call `createTavern` or `addCharacter`.
+- The create-page submit path must require `character_name` before calling `createTavern`; every UI-created shop needs at least one formal NPC so the core character chat loop is available immediately after creation.
 - `LLMConfigForm` is controlled: pass both `value` and `onChange`; do not keep owner API keys in `localStorage`.
 - UI copy must tell the owner that the draft is editable and only becomes real after clicking `创建酒馆`.
 
@@ -252,7 +254,8 @@ POST /api/v1/owners/me/tavern-drafts/generate
 | Owner edits style/forbidden/tone | Request sends normalized arrays/text |
 | Draft response missing `character` | Helper throws user-readable draft-empty error |
 | Draft generation succeeds | Existing create form fields are filled; no create request is sent |
-| Owner clicks `创建酒馆` | Existing create flow calls `createTavern` / `addCharacter` with owner-confirmed form data |
+| Owner clicks `创建酒馆` without NPC name | UI blocks submission with a user-readable error and sends no create request |
+| Owner clicks `创建酒馆` with NPC name | Existing create flow calls `createTavern` / `addCharacter` with owner-confirmed form data |
 | Typecheck on LLM form props | `LLMConfigForm` receives `value` and `onChange` |
 
 ### 5. Good/Base/Bad Cases

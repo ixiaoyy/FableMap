@@ -8,6 +8,10 @@ frontend/.vite/
 frontend/.react-router/
 frontend/build/
 
+# Trellis local harness dependencies/caches
+.trellis/tmp/**/node_modules/
+.trellis/tmp/**/.vite/
+
 # Python
 .pytest_cache/
 tmp_pytest/

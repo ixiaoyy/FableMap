@@ -58,7 +58,23 @@
       "Bash(py -3 .trellis/scripts/task.py list)",
       "Bash(py -3 .trellis/scripts/task.py --help)",
       "Bash(py -3 .trellis/scripts/task.py start 04-27-affinity-system-mvp)",
-      "Bash(py -3 -m pytest tests/test_affinity.py -v)"
+      "Bash(py -3 -m pytest tests/test_affinity.py -v)",
+      "Bash(python .trellis/scripts/task.py start 04-30-remove-easysdd-migrate-to-trellis)",
+      "Bash(python .trellis/scripts/task.py validate .trellis/tasks/04-30-remove-easysdd-migrate-to-trellis)",
+      "Bash(python .trellis/scripts/task.py finish)",
+      "Bash(python .trellis/scripts/add_session.py --title \"Review and complete easysdd migration task\" --summary \"Reviewed 04-30-remove-easysdd-migrate-to-trellis task; verified easysdd directory removed, migration files preserved, validation passed\")",
+      "Bash(python .trellis/scripts/task.py start 04-30-worldinfo-visual-editor-modern-mvp)",
+      "Bash(python .trellis/scripts/add_session.py --title \"Research WorldInfo Visual Editor Modern MVP\" --summary \"Analyzed existing WorldBookEditor.jsx \\(588 lines\\), documented all features, compared with PromptBlockEditor, defined MVP scope \\(loading state, mobile layout, keyboard shortcuts, visual polish\\), updated PRD and created implementation files\")",
+      "Bash(python .trellis/scripts/task.py start 04-30-home-real-coordinate-governance-review)",
+      "Bash(python -c \"from src.fablemap_api.api.v1 import homes; print\\('Home API OK'\\)\")",
+      "Bash(python -c \"import sys; sys.path.insert\\(0, 'backend/src'\\); from fablemap_api.core.home import Home, HomeStatus, HomeMemberType; print\\('Home governance methods OK'\\)\")",
+      "Bash(python .trellis/scripts/add_session.py --title \"Home Real-coordinate Governance Review\" --summary \"Reviewed Home system governance alignment. Verified existing Home implementation \\(home.py 305 lines\\) aligns with product-direction-decision.md framework. Access control, member classification, nonliving silence, and owner sovereignty confirmed. No code changes required. Three minor documentation gaps documented but not blocking.\")",
+      "Bash(python .trellis/scripts/task.py start 04-30-gameplay-template-library-for-owners)",
+      "Bash(python .trellis/scripts/task.py start 04-30-owner-token-usage-reference-status)",
+      "Bash(python .trellis/scripts/task.py start 04-30-character-asset-prompt-skill)",
+      "Bash(python .trellis/scripts/add_session.py --title \"Review Character Asset Prompt Skill\" --summary \"Reviewed 04-30-character-asset-prompt-skill task. Comprehensive skill/spec work including: generate-character-prompt and image-style-prompt-extractor skills with 15-dimension analysis, Style DNA templates, Prompt-as-Code techniques, image generation principles, Prompt-first rule, and anti-sameness quality rules. All verification passed.\")",
+      "Bash(python .trellis/scripts/task.py start 04-30-hospital-nurse-npc-asset)",
+      "Bash(python .trellis/scripts/add_session.py --title \"Review Hospital Nurse NPC Asset\" --summary \"Reviewed 04-30-hospital-nurse-npc-asset task. Added hospital Place type with 3 NPC roles \\(弥夏/青柚/南星\\), 512x512 expression assets \\(15 sprites\\), role-division gameplay, and verified core per-character chat. All verification passed including 32 pytest tests, frontend typecheck/build, and PNG audit.\")"
     ],
     "additionalDirectories": [
       "d:\\work\\ai-\\fablemap\\web"

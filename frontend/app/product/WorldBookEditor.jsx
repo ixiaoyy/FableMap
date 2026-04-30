@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createWorldInfo, deleteWorldInfo, listWorldInfo, testWorldInfo, updateTavern, updateWorldInfo } from '../lib/taverns'
 
 function makeWorldInfoId() {
@@ -131,9 +131,10 @@ function getTestStatusLabel(entry) {
 export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoChanged }) {
   const initialEntries = useMemo(
     () => (tavern?.world_info || []).map((entry) => normalizeEntry(entry, tavern?.id)),
-    [tavern?.id],
+    [tavern?.id, tavern?.world_info],
   )
 
+  const [initializing, setInitializing] = useState(true)
   const [entries, setEntries] = useState(initialEntries)
   const [selectedId, setSelectedId] = useState(initialEntries[0]?.id || '')
   const [draft, setDraft] = useState(initialEntries[0] ? entryToDraft(initialEntries[0]) : null)
@@ -146,8 +147,12 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
   const [testing, setTesting] = useState(false)
   const [testError, setTestError] = useState('')
   const [testResult, setTestResult] = useState(null)
+  const lastTavernIdRef = useRef('')
 
   useEffect(() => {
+    setInitializing(true)
+    const tavernChanged = lastTavernIdRef.current !== tavern?.id
+    lastTavernIdRef.current = tavern?.id || ''
     const next = (tavern?.world_info || []).map((entry) => normalizeEntry(entry, tavern?.id))
     setEntries(next)
     setSelectedId(next[0]?.id || '')
@@ -155,12 +160,18 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
     setDirty(false)
     setDraftTouched(false)
     setError('')
-    setStatus('')
-    setTestMessage('')
-    setTesting(false)
-    setTestError('')
-    setTestResult(null)
-  }, [tavern?.id])
+    if (tavernChanged) {
+      setStatus('')
+      setTestMessage('')
+      setTesting(false)
+      setTestError('')
+      setTestResult(null)
+    }
+    const timer = typeof window !== 'undefined' ? window.setTimeout(() => setInitializing(false), 280) : null
+    return () => {
+      if (timer !== null) window.clearTimeout(timer)
+    }
+  }, [tavern?.id, tavern?.world_info])
 
   const selectedEntry = entries.find((entry) => entry.id === selectedId) || null
   const enabledCount = entries.filter((entry) => !entry.disable).length
@@ -336,6 +347,31 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
     }
   }
 
+  function handleEditorKeyDown(event) {
+    if (event.defaultPrevented) return
+    const key = String(event.key || '').toLowerCase()
+    const shortcut = event.ctrlKey || event.metaKey
+    if (shortcut && key === 's') {
+      event.preventDefault()
+      if (!saving && tavern?.id) {
+        handlePersist()
+      }
+      return
+    }
+    if (shortcut && key === 'enter') {
+      event.preventDefault()
+      if (!testing && tavern?.id) {
+        handleTestWorldInfo()
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined
+    document.addEventListener('keydown', handleEditorKeyDown)
+    return () => document.removeEventListener('keydown', handleEditorKeyDown)
+  }, [saving, testing, tavern?.id, testMessage, draft, entries, draftTouched, selectedId, ownerId])
+
   return (
     <div className="modal-overlay world-book-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal-content panel world-book-modal">
@@ -345,11 +381,20 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
             <h3>{tavern?.name || '当前酒馆'} 的背景资料</h3>
             <p className="note muted">
               把地点、传闻、规则和隐藏设定写成条目，AI 会按关键词或常驻规则读取。
+              <span className="world-book-shortcut-hint"> Ctrl/⌘+S 保存，Ctrl/⌘+Enter 测试命中。</span>
             </p>
           </div>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </header>
 
+        {initializing || !tavern ? (
+          <div className="world-book-loading" role="status" aria-live="polite">
+            <span className="world-book-loading__orb" aria-hidden="true" />
+            <strong>正在加载世界书...</strong>
+            <p>正在把酒馆的 WorldInfo 条目整理成可编辑草稿，不会自动改写或发布内容。</p>
+          </div>
+        ) : (
+          <>
         <div className="world-book-summary">
           <span>{entries.length} 条设定</span>
           <span>{enabledCount} 条启用</span>
@@ -582,6 +627,8 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
             </button>
           </div>
         </footer>
+          </>
+        )}
       </div>
     </div>
   )

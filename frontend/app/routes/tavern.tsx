@@ -5,6 +5,7 @@ import { Link, useLoaderData } from "react-router"
 
 import { TavernLayoutShowcase } from "../features/tavern-layout-showcase"
 import { NeighborhoodRumorBubble } from "../components/NeighborhoodRumorBubble"
+import { TavernActivitySignalsCard } from "../components/TavernActivitySignalsCard"
 import { buildCreatorConversionLink, buildCreatorProfileLink } from "../lib/creator-conversion.js"
 import { buildTavernShareDisplay, buildTavernSharePayload } from "../lib/tavern-share.js"
 import {
@@ -682,18 +683,22 @@ export default function TavernRoute() {
 
   return (
     <ProductShell eyebrow="Tavern">
-      <TavernLayoutShowcase
-        tavernId={tavernId}
-        tavern={tavern}
-        error={error}
-        characters={characters}
-        selectedCharacter={selectedCharacter}
-        selectedCharacterId={selectedCharacter?.id || selectedCharacterId}
-        roleplay={effectiveRoleplay}
-        onSelectCharacter={(character: TavernCharacter) => setSelectedCharacterId(character.id)}
-        shareSlot={tavern ? <TavernShareCard tavern={tavern} /> : null}
-        creatorSlot={tavern ? <CreatorConversionCard tavern={tavern} /> : null}
-      />
+      <div id="tavern-mainline" className="scroll-mt-28">
+        <TavernLayoutShowcase
+          tavernId={tavernId}
+          tavern={tavern}
+          error={error}
+          characters={characters}
+          selectedCharacter={selectedCharacter}
+          selectedCharacterId={selectedCharacter?.id || selectedCharacterId}
+          roleplay={effectiveRoleplay}
+          onSelectCharacter={(character: TavernCharacter) => setSelectedCharacterId(character.id)}
+          shareSlot={tavern ? <TavernShareCard tavern={tavern} /> : null}
+          creatorSlot={tavern ? <CreatorConversionCard tavern={tavern} /> : null}
+        />
+      </div>
+
+      {tavern ? <TavernActivitySignalsCard tavern={tavern} /> : null}
 
       {tavern && effectiveRoleplay ? (
         <details className="mt-6">

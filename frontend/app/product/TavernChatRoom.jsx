@@ -11,6 +11,8 @@ import {
   buildGuildActionPrompt,
   GUILD_REPUTATION_TIERS,
   getGuildQuestBoard,
+  getQuestRecordLabel,
+  getQuestReturnHint,
   getGuildTier,
   inferTavernPlayMode,
   loadGuildProgress,
@@ -495,7 +497,7 @@ function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, t
 }
 
 // ─────────────────────────────────────────
-// Guild Quest Panel
+// Exploration checklist panel
 // ─────────────────────────────────────────
 
 function GuildQuestPanel({
@@ -513,10 +515,10 @@ function GuildQuestPanel({
   const nextTier = getNextGuildTier(progress.reputation)
 
   return (
-    <section className="guild-quest-panel" aria-label="冒险工会任务板">
+    <section className="guild-quest-panel" aria-label="探索清单与酒馆委托">
       <div className="guild-quest-panel__header">
         <div>
-          <span className="guild-kicker">🛡️ 冒险工会任务板</span>
+          <span className="guild-kicker">🗺️ 探索清单 / 酒馆委托</span>
           <h4>{tier.title} · {tier.badge}</h4>
           <p>{tier.treatment}</p>
         </div>
@@ -527,7 +529,7 @@ function GuildQuestPanel({
             onClick={() => onAction('status')}
             disabled={sending}
           >
-            查看身份
+            查看记录
           </button>
           <button
             type="button"
@@ -535,19 +537,19 @@ function GuildQuestPanel({
             onClick={() => onAction('post')}
             disabled={sending}
           >
-            发委托
+            提委托草稿
           </button>
         </div>
       </div>
 
       <div className="guild-progress-row">
-        <span>声望 <strong>{progress.reputation}</strong></span>
+        <span>完成点 <strong>{progress.reputation}</strong></span>
         <span>进行中 <strong>{acceptedCount}</strong></span>
-        <span>已完成 <strong>{completedCount}</strong></span>
+        <span>已记录 <strong>{completedCount}</strong></span>
         {nextTier ? (
           <span>距 {nextTier.title} 还差 <strong>{Math.max(0, nextTier.min - progress.reputation)}</strong></span>
         ) : (
-          <span>已达最高身份</span>
+          <span>已完成当前清单记录</span>
         )}
       </div>
 
@@ -556,23 +558,23 @@ function GuildQuestPanel({
           <article key={quest.id} className={`guild-quest-card is-${quest.status}`}>
             <div className="guild-quest-card__top">
               <strong>{quest.title}</strong>
-              <span>{quest.difficulty} · +{quest.reward} 声望</span>
+              <span>{quest.difficulty} · +{quest.reward} 完成点</span>
             </div>
             <p>{quest.summary}</p>
-            <small>奖励身份：{quest.identityReward} · 待遇：{quest.treatment}</small>
+            <small>完成记录：{getQuestRecordLabel(quest)} · 回访提示：{getQuestReturnHint(quest)}</small>
             <div className="guild-quest-card__actions">
               {quest.status === 'available' ? (
                 <button type="button" onClick={() => onAction('accept', quest)} disabled={sending}>
-                  接任务
+                  领取清单
                 </button>
               ) : null}
               {quest.status === 'accepted' ? (
                 <button type="button" onClick={() => onAction('complete', quest)} disabled={sending}>
-                  提交完成
+                  记录完成
                 </button>
               ) : null}
               {quest.status === 'completed' ? (
-                <span className="guild-quest-done">已完成</span>
+                <span className="guild-quest-done">已记录</span>
               ) : null}
             </div>
           </article>

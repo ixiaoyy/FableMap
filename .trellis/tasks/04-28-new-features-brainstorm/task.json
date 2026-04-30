@@ -76,9 +76,10 @@
     ".trellis/tasks/04-30-mobile-critical-flow-first-screen-polish/",
     ".trellis/tasks/04-30-tavern-activity-signals-without-social-network/",
     ".trellis/tasks/04-30-home-real-coordinate-governance-review/",
-    ".trellis/tasks/04-30-quest-exploration-checklist-reframe/"
+    ".trellis/tasks/04-30-quest-exploration-checklist-reframe/",
+    "risk-closure.md"
   ],
-  "notes": "Completed all 13 children. Restored two archived child records to the exact parent-referenced IDs and added fresh Playwright desktop/mobile acceptance for /owner, /create, and /quests surfaces. Frontend typecheck/build/test passed.",
+  "notes": "Completed all 13 children. Restored two archived child records to the exact parent-referenced IDs and added fresh Playwright desktop/mobile acceptance for /owner, /create, and /quests surfaces. Frontend typecheck/build/test passed. Risk closure recorded in risk-closure.md; no functional acceptance blocker remains, only commit-staging hygiene is deferred.",
   "meta": {
     "done": [
       "All 13 child tasks are completed and listed by Trellis as 13/13 done.",
@@ -87,9 +88,10 @@
       "Playwright desktop/mobile evidence captured for /quests, /owner, and /create closure surfaces."
     ],
     "deferred_not_done": [
-      "No parent-level backend/API/schema migration in closure step.",
-      "No token billing, visitor social network, ranking, combat/level/equipment, or auto-published AI content.",
-      "Future feature ideas should use new Trellis tasks rather than extending this completed parent."
+      "No parent-level backend/API/schema migration in closure step; intentionally out of scope.",
+      "No token billing, visitor social network, ranking, combat/level/equipment, or auto-published AI content; intentionally excluded by product boundary.",
+      "No git commit from dirty workspace; requires separate explicit commit-prep/staging review.",
+      "No archive deletion; archive copies preserved as provenance for rehydrated child task records."
     ],
     "verification": [
       "node .\\frontend\\scripts\\play-modes-test.mjs; node .\\frontend\\scripts\\quest-guide-test.mjs; node .\\frontend\\scripts\\mini-games-test.mjs (passed)",
@@ -112,6 +114,21 @@
       ".trellis/tmp/playwright-mainline/evidence/04-30-create-tavern-step-wizard-visual-acceptance/create-wizard-desktop.png",
       ".trellis/tmp/playwright-mainline/evidence/04-30-create-tavern-step-wizard-visual-acceptance/create-wizard-mobile.png",
       ".trellis/tmp/playwright-mainline/evidence/04-30-create-tavern-step-wizard-visual-acceptance/create-wizard-visual-acceptance-report.json"
-    ]
+    ],
+    "risk_closure": {
+      "status": "functional_acceptance_clear",
+      "remaining_operational_risk": "dirty workspace requires explicit commit-prep/staging review before any git commit",
+      "mitigated": [
+        "Restored parent child tracking to 13/13 done.",
+        "Preserved archive provenance instead of deleting historical records.",
+        "Recorded Playwright evidence paths for /quests, /owner, and /create.",
+        "Classified backend/API/schema non-change as intentional out of scope."
+      ],
+      "accepted_open_items": [
+        "No git commit from this dirty workspace without a separate explicit staging review.",
+        ".trellis/tmp evidence retained for visual acceptance; scratch temp cleanup deferred unless requested."
+      ],
+      "document": "risk-closure.md"
+    }
   }
 }

@@ -33,6 +33,12 @@ import TavernGroupSettingsModal from './TavernGroupSettingsModal'
 import GameplayManager from './GameplayManager'
 import OwnerStateCardPanel from './OwnerStateCardPanel'
 import { OwnerAdvancedToolPanel, OwnerNextActionPanel, OwnerSectionNav } from './OwnerConsoleSections'
+import {
+  OWNER_TOKEN_REFERENCE_BOUNDARIES,
+  buildOwnerTokenStats,
+  formatOwnerTokenUnits,
+  getOwnerTokenUsage,
+} from './ownerTokenStatus'
 
 const STATUS_FILTERS = [
   { id: 'all', label: '全部状态' },
@@ -61,11 +67,7 @@ function formatCoordinate(value) {
 }
 
 function formatTokens(value) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric) || numeric <= 0) return '—'
-  if (numeric >= 1000000) return `${(numeric / 1000000).toFixed(2)}M`
-  if (numeric >= 1000) return `${(numeric / 1000).toFixed(1)}K`
-  return numeric.toLocaleString()
+  return formatOwnerTokenUnits(value)
 }
 
 function formatChatTimestamp(value) {
@@ -120,8 +122,7 @@ function buildChatTranscript(session, messages = []) {
 }
 
 function getTavernTokenUsage(tavern) {
-  const usage = Number(tavern?.llm_config?.token_used || 0)
-  return Number.isFinite(usage) && usage > 0 ? usage : 0
+  return getOwnerTokenUsage(tavern)
 }
 
 function slugifyFilename(value) {
@@ -236,28 +237,7 @@ export default function TavernOwnerPanel({
   }, [myTaverns])
 
   const tokenStats = useMemo(() => {
-    const rows = myTaverns
-      .map((tavern) => ({
-        tavern,
-        tokens: getTavernTokenUsage(tavern),
-        backend: tavern?.llm_config?.backend || '未配置',
-        model: tavern?.llm_config?.model || '未配置模型',
-      }))
-      .sort((a, b) => b.tokens - a.tokens || String(a.tavern.name || '').localeCompare(String(b.tavern.name || '')))
-
-    const total = rows.reduce((sum, row) => sum + row.tokens, 0)
-    const usedRows = rows.filter((row) => row.tokens > 0)
-    const topTokens = rows[0]?.tokens || 0
-
-    return {
-      rows,
-      total,
-      average: rows.length ? Math.round(total / rows.length) : 0,
-      usedCount: usedRows.length,
-      unusedCount: rows.length - usedRows.length,
-      topTokens,
-      topTavernName: usedRows[0]?.tavern?.name || '',
-    }
+    return buildOwnerTokenStats(myTaverns)
   }, [myTaverns])
 
   const chatStats = useMemo(() => {
@@ -885,6 +865,11 @@ export default function TavernOwnerPanel({
     setLlmSaveResult(null)
   }
 
+  function openLlmEditByTavernId(tavernId) {
+    const tavern = myTaverns.find((item) => item.id === tavernId)
+    if (tavern) openLlmEdit(tavern)
+  }
+
   function closeLlmEdit() {
     setEditingLlmTavern(null)
     setLlmFormData(null)
@@ -1008,7 +993,7 @@ export default function TavernOwnerPanel({
       {ownerSection === 'ai' && (
         <TokenUsagePanel
           tokenStats={tokenStats}
-          onManageLlm={openLlmEdit}
+          onManageLlm={openLlmEditByTavernId}
         />
       )}
 
@@ -1423,18 +1408,18 @@ function OwnerTavernManagementSection({
   )
 }
 
-function TokenUsagePanel({ tokenStats, onManageLlm }) {
+export function TokenUsagePanel({ tokenStats, onManageLlm }) {
   const rows = tokenStats.rows.slice(0, 8)
   const hasUsage = tokenStats.total > 0
 
   return (
-    <section className="owner-token-panel panel" aria-label="AI 消耗统计面板">
+    <section className="owner-token-panel panel" aria-label="AI 用量参考状态面板">
       <div className="owner-token-panel__header">
         <div>
-          <p className="mini-label">AI 消耗</p>
-          <h2>模型使用量</h2>
+          <p className="mini-label">AI 用量参考</p>
+          <h2>模型使用参考状态</h2>
           <p className="note muted">
-            统计来自酒馆聊天记录的模型用量，用于店主观察成本趋势。
+            只汇总已记录的模型用量，供店主估算外部 LLM 成本；不含充值、结算、抽成或访客可见账单。
           </p>
         </div>
         <div className="owner-token-total">
@@ -1444,17 +1429,31 @@ function TokenUsagePanel({ tokenStats, onManageLlm }) {
         </div>
       </div>
 
+      <ul className="owner-token-boundaries" aria-label="Token 用量边界">
+        {OWNER_TOKEN_REFERENCE_BOUNDARIES.map((boundary) => (
+          <li key={boundary}>{boundary}</li>
+        ))}
+      </ul>
+
       <div className="owner-token-summary">
         <div>
           <span className="mini-label">平均每馆</span>
           <strong>{formatTokens(tokenStats.average)}</strong>
         </div>
         <div>
-          <span className="mini-label">已有消耗</span>
+          <span className="mini-label">已有记录</span>
           <strong>{tokenStats.usedCount}</strong>
         </div>
         <div>
-          <span className="mini-label">尚未消耗</span>
+          <span className="mini-label">AI 已配置</span>
+          <strong>{tokenStats.configuredCount}</strong>
+        </div>
+        <div>
+          <span className="mini-label">待配置 AI</span>
+          <strong>{tokenStats.unconfiguredCount}</strong>
+        </div>
+        <div>
+          <span className="mini-label">暂无记录</span>
           <strong>{tokenStats.unusedCount}</strong>
         </div>
         <div>
@@ -1464,16 +1463,17 @@ function TokenUsagePanel({ tokenStats, onManageLlm }) {
       </div>
 
       {rows.length === 0 ? (
-        <div className="owner-token-empty">创建酒馆后，这里会显示每间酒馆的 AI 使用量。</div>
+        <div className="owner-token-empty">创建酒馆后，这里会显示每间酒馆的 AI 用量参考状态，不会生成平台账单。</div>
       ) : (
         <div className="owner-token-list">
-          {rows.map(({ tavern, tokens, backend, model }) => {
+          {rows.map((row) => {
+            const { tavernId, name, tokens, backend, model, configured, llmStatusLabel, statusLabel, usageLabel } = row
             const percent = tokenStats.topTokens ? Math.round((tokens / tokenStats.topTokens) * 100) : 0
             return (
-              <article key={tavern.id} className="owner-token-row">
+              <article key={tavernId} className="owner-token-row">
                 <div className="owner-token-row__main">
                   <div>
-                    <strong>{tavern.name}</strong>
+                    <strong>{name}</strong>
                     <span>{backend} · {model}</span>
                   </div>
                   <div className="owner-token-row__usage">
@@ -1485,8 +1485,9 @@ function TokenUsagePanel({ tokenStats, onManageLlm }) {
                   <span style={{ width: `${percent}%` }} />
                 </div>
                 <div className="owner-token-row__footer">
-                  <span>{tavern.status === 'open' ? '营业中' : '歇业中'}</span>
-                  <button type="button" className="button-link" onClick={() => onManageLlm(tavern)}>
+                  <span>{statusLabel} · {usageLabel}</span>
+                  <span className={`owner-token-status ${configured ? 'is-configured' : ''}`}>{llmStatusLabel}</span>
+                  <button type="button" className="button-link" onClick={() => onManageLlm(tavernId)}>
                     AI 配置
                   </button>
                 </div>

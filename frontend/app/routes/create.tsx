@@ -166,6 +166,11 @@ export default function CreateRoute() {
     const form = new FormData(event.currentTarget)
     const ownerIdSubmit = String(form.get("owner_id") || ownerId).trim() || ownerId
     const characterName = String(form.get("character_name") || "").trim()
+    if (!characterName) {
+      setError("每个店都需要至少一名可聊天 NPC；请先填写首个 NPC 名称。")
+      setCreatedId("")
+      return
+    }
     setBusy(true)
     setError("")
     setCreatedId("")
@@ -207,7 +212,7 @@ export default function CreateRoute() {
 
   return (
     <ProductShell eyebrow="Create">
-      <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+      <section id="create-mainline" className="grid scroll-mt-28 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
         <div className="rounded-[2.2rem] border border-white/12 bg-slate-950/72 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-6">
           <div className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -407,8 +412,8 @@ export default function CreateRoute() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1.5 text-sm">
-                  <span className="text-violet-100/65">首个 NPC</span>
-                  <input name="character_name" placeholder="阿珀" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+                  <span className="text-violet-100/65">首个 NPC（必填）</span>
+                  <input name="character_name" required placeholder="阿珀" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
                 </label>
                 <label className="space-y-1.5 text-sm">
                   <span className="text-violet-100/65">NPC 简介</span>

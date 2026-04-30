@@ -148,41 +148,100 @@
   gap: 12px;
 }
 
+.owner-gameplay-template-panel,
 .short-drama-template-panel {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(244, 114, 182, 0.2);
   border-radius: 16px;
+}
+
+.owner-gameplay-template-panel {
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 36%),
+    rgba(15, 23, 42, 0.36);
+}
+
+.short-drama-template-panel {
+  border: 1px solid rgba(244, 114, 182, 0.2);
   background:
     radial-gradient(circle at top right, rgba(244, 114, 182, 0.14), transparent 36%),
     rgba(15, 23, 42, 0.36);
 }
 
+.owner-gameplay-template-panel__header,
 .short-drama-template-panel__header {
   display: grid;
   gap: 2px;
 }
 
+.owner-gameplay-template-panel__header small,
+.owner-gameplay-template-card small,
 .short-drama-template-panel__header small,
 .short-drama-template-card small {
   color: var(--text-muted, #94a3b8);
 }
 
+.owner-gameplay-template-search {
+  display: grid;
+  gap: 5px;
+}
+
+.owner-gameplay-template-search span {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.owner-gameplay-template-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.owner-gameplay-template-filters button {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.owner-gameplay-template-filters button.is-active {
+  color: #cffafe;
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(14, 165, 233, 0.2);
+}
+
+.owner-gameplay-template-grid,
 .short-drama-template-grid {
   display: grid;
   gap: 8px;
 }
 
+.owner-gameplay-template-card,
 .short-drama-template-card {
   display: grid;
   gap: 4px;
   min-height: 76px;
   padding: 10px 12px;
   text-align: left;
-  border-color: rgba(244, 114, 182, 0.24);
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.52);
+}
+
+.owner-gameplay-template-card {
+  border-color: rgba(56, 189, 248, 0.24);
+}
+
+.short-drama-template-card {
+  border-color: rgba(244, 114, 182, 0.24);
+}
+
+.owner-gameplay-template-card:hover {
+  border-color: rgba(56, 189, 248, 0.52);
+  background: rgba(8, 47, 73, 0.34);
 }
 
 .short-drama-template-card:hover {
@@ -190,13 +249,29 @@
   background: rgba(76, 29, 149, 0.28);
 }
 
+.owner-gameplay-template-card span,
 .short-drama-template-card span {
   width: fit-content;
   padding: 2px 8px;
   border-radius: 999px;
+  font-size: 0.72rem;
+}
+
+.owner-gameplay-template-card span {
+  background: rgba(56, 189, 248, 0.16);
+  color: #cffafe;
+}
+
+.short-drama-template-card span {
   background: rgba(244, 114, 182, 0.18);
   color: #fbcfe8;
-  font-size: 0.72rem;
+}
+
+.owner-gameplay-template-card em {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.45;
 }
 
 .gameplay-manager__item {

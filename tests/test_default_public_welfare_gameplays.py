@@ -20,6 +20,7 @@ def test_default_public_welfare_taverns_have_theme_gameplays_and_rules_fallback_
         "pw_midnight_commission_board": ["线索", "委托", "异常"],
         "pw_after_school_hero_supply": ["英雄名", "旧道具", "小英雄"],
         "pw_jingan_catbell_refuge": ["猫铃", "复国", "静安"],
+        "pw_hospital_night_care": ["护理", "分诊", "安全"],
     }
 
     with TemporaryDirectory() as tmpdir:

@@ -98,6 +98,7 @@ type PlaceType =
   | 'convenience-store'
   | 'bookstore'
   | 'school'
+  | 'hospital'
   | 'home';
 
 type Gender =
@@ -113,6 +114,7 @@ type Gender =
 - `place_type` 缺省为 `tavern`，旧数据读取时必须向后兼容。
 - `home` 是保留地点类型，默认 `access='private'`，不进入公开发现列表。
 - 非 Home 的公开地点仍按原 Tavern 访问控制展示。
+- `hospital` 是公开 Place 类型；可用于护理陪伴、分诊便签和现实求助边界提醒，但不得把 NPC 内容当作医学诊断、处方或急救替代。
 - 非法 `place_type` 不得静默存储到新数据；创建/更新 API 必须拒绝或归一化为文档定义的有限枚举。
 
 ---
@@ -824,6 +826,7 @@ type QueueStatus = "waiting" | "promoted" | "expired";
 
 ## 版本历史
 
+- v1.3 (2026-04-30): `PlaceType` 增加公开 `hospital` 类型，用于医院 / 护士站 / 分诊便签等地点语义；医院类 NPC 内容必须保留现实医疗安全边界，不替代医生诊疗、处方或急救。
 - v1.2 (2026-04-29): 增加 Tavern Skill Packs MVP：`Tavern.skill_packs` 持久字段、`local-rumor` 环境传闻技能包、店主 `GET/PUT /skill-packs` 配置端点；技能包只能启用显式能力，不自动改写角色、世界书、记忆或正史状态卡。
 - v1.1 (2026-04-29): 增加 StateCard / Canon Ledger 连续性状态卡：Chat 可生成 pending 任务、资源、冲突、事件台账候选；确认后进入结构化正史记录；状态卡存储在 `_state_cards` 私有桶，不进入公开 Tavern payload 或酒馆包。
 - v1.0 (2026-04-28): 增加 NpcPublicBond（NPC 公开关系 / 结缘系统）：16 种系统内置关系类型（9 种 1:1 排他 + 7 种多人），close_friend（strength ≥ 0.70）触发申请，经店主审批生效，1:1 冲突进入等待队列，店主可随时撤销。数据库表 `npc_public_bonds`、`npc_public_bond_queues`；完整 API 路由 + 服务层；前端 BondBadge / BondApplyModal 组件；`docs/WORLD_SCHEMA.md` 更新。

@@ -46,6 +46,7 @@ PLACE_TYPES = {
     "convenience-store",
     "bookstore",
     "school",
+    "hospital",
     "home",
 }
 HOME_MEMBER_TYPES = {"conversational_character", "silent_member", "display_object"}
@@ -472,7 +473,7 @@ class Tavern:
     status: str = "closed"  # 'open' | 'closed'
     roleplay_mode: str = "ai_only"  # 'ai_only' | 'hybrid'
     layout_style: str = "lobby"  # 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'
-    place_type: str = "tavern"  # 'tavern' | 'cafe' | ... | 'home'
+    place_type: str = "tavern"  # 'tavern' | 'cafe' | ... | 'hospital' | 'home'
     characters: list[TavernCharacter] = field(default_factory=list)
     character_claims: list[dict[str, Any]] = field(default_factory=list)
     world_info: list[WorldInfoEntry] = field(default_factory=list)

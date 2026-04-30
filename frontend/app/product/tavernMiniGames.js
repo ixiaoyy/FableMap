@@ -49,9 +49,9 @@ export const MINI_GAME_TEMPLATES = [
     title: '小委托',
     icon: '📜',
     duration: '3-8 分钟',
-    summary: '接一张短任务，换一份文字奖励。',
+    summary: '领取一张短探索卡，得到一段文字纪念。',
     tags: ['quest', 'family-friendly'],
-    startInstruction: '请发布一个 3 分钟内可完成的安全小委托，并给出【委托标题】【目标】【完成条件】【可选行动】【文字奖励】。',
+    startInstruction: '请设计一个 3 分钟内可完成的安全小委托探索卡，并给出【委托标题】【目标】【完成条件】【可选行动】【文字纪念】【回访提示】。',
   },
 ]
 

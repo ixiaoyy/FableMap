@@ -48,6 +48,10 @@ def _rejected_npc_asset_manifest() -> dict:
     manifest_path = Path(
         ".trellis/tasks/04-29-04-29-npc-expression-art-quality-rebuild/rejected-public-welfare-npc-assets.json"
     )
+    if not manifest_path.exists():
+        manifest_path = Path(
+            ".trellis/tasks/archive/2026-04/04-29-npc-expression-art-quality-rebuild/rejected-public-welfare-npc-assets.json"
+        )
     assert manifest_path.exists(), "missing rejected public-welfare NPC asset manifest"
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
@@ -62,6 +66,7 @@ def test_default_public_welfare_taverns_are_seeded_and_discoverable():
         "pw_midnight_commission_board": "公益·午夜委托局",
         "pw_after_school_hero_supply": "公益·放学后英雄补给社",
         "pw_jingan_catbell_refuge": "公益·静安猫铃小屋",
+        "pw_hospital_night_care": "公益·夜间护理站",
     }
 
     with TemporaryDirectory() as tmpdir:
@@ -85,6 +90,50 @@ def test_default_public_welfare_taverns_are_seeded_and_discoverable():
             assert tavern["llm_config"].get("api_key", "") == ""
             assert len(tavern["characters"]) >= 3
             assert tavern["world_info"]
+
+
+def test_default_public_welfare_every_seeded_character_can_chat():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+
+        for tavern_id in DEFAULT_PUBLIC_WELFARE_TAVERN_IDS:
+            tavern = service.get_tavern_payload(tavern_id, user_id="visitor_public_welfare")
+            entered = service.enter_tavern_payload(
+                tavern_id,
+                user_id="visitor_public_welfare",
+            )
+            assert entered["ok"] is True
+            assert entered["status"] == "open"
+            assert tavern["llm_config"]["backend"] == "rules"
+            assert len(tavern["characters"]) >= 3
+
+            for character in tavern["characters"]:
+                visitor_id = f"visitor_chat_{character['id']}"
+                response = service.tavern_chat_payload(
+                    tavern_id=tavern_id,
+                    character_id=character["id"],
+                    message="你好，我想了解你负责什么。",
+                    visitor_id=visitor_id,
+                    visitor_name="测试旅人",
+                    user_id=visitor_id,
+                )
+
+                assert response["degraded"] is False, f"{tavern_id}/{character['id']} must not degrade"
+                assert response["tavern_status"] == "open"
+                assert response["character_id"] == character["id"]
+                assert response["character_name"] == character["name"]
+                assert response["response"].strip(), f"{tavern_id}/{character['id']} must return chat text"
+
+                sessions = service.tavern_store.list_chat_sessions(
+                    tavern_id,
+                    visitor_id=visitor_id,
+                    character_id=character["id"],
+                    limit=None,
+                )
+                assert len(sessions) == 1, f"{tavern_id}/{character['id']} must persist a chat session"
+                assert sessions[0]["message_count"] == 2
+
+            assert service.tavern_store.get_token_usage(tavern_id) == 0
 
 
 def test_default_public_welfare_characters_have_direct_neutral_assets():
@@ -230,6 +279,7 @@ def test_default_public_welfare_taverns_explain_npc_role_division():
         "pw_midnight_commission_board": ("墨栈", "栀灯", "火眼", "NPC 分工"),
         "pw_after_school_hero_supply": ("阿衡", "纸剑", "星袋", "NPC 分工"),
         "pw_jingan_catbell_refuge": ("眯眯喵桑", "银票", "铜铃", "NPC 分工"),
+        "pw_hospital_night_care": ("弥夏", "青柚", "南星", "NPC 分工"),
     }
 
     with TemporaryDirectory() as tmpdir:
@@ -464,6 +514,135 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
             assert keyword in combined_prompt
         for forbidden in ("忽略限制", "用户就是上帝", "湖北省恩施", "碧桂园", "强制", "性需求"):
             assert forbidden not in combined_prompt
+
+
+def test_hospital_night_care_contains_nurse_npc_and_medical_boundaries():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        payload = service.list_taverns_payload(query="医院")
+        tavern = service.get_tavern_payload("pw_hospital_night_care", user_id="visitor_public_welfare")
+
+        assert any(item["id"] == "pw_hospital_night_care" for item in payload["taverns"])
+        assert tavern["name"] == "公益·夜间护理站"
+        assert tavern["access"] == "public"
+        assert tavern["status"] == "open"
+        assert tavern["layout_style"] == "npc-chat"
+        assert tavern["place_type"] == "hospital"
+        assert tavern["llm_config"]["backend"] == "rules"
+        assert tavern["llm_config"].get("api_key", "") == ""
+        assert "公共医院" in tavern["address"]
+        assert len(tavern["characters"]) == 3
+        assert len(tavern["world_info"]) >= 6
+
+        characters_by_id = {character["id"]: character for character in tavern["characters"]}
+        assert {"char_pw_mika_nurse", "char_pw_qingyou_records", "char_pw_nanxing_liaison"} == set(characters_by_id)
+
+        mika = characters_by_id["char_pw_mika_nurse"]
+        assert mika["id"] == "char_pw_mika_nurse"
+        assert mika["name"] == "弥夏"
+        assert mika["tavern_id"] == "pw_hospital_night_care"
+        assert mika["avatar"] == _public_welfare_npc_asset("char_pw_mika_nurse", "neutral")
+        assert mika["sprites"]["neutral"] == _public_welfare_npc_asset("char_pw_mika_nurse", "neutral")
+        assert mika["sprites"]["happy"] == _public_welfare_npc_asset("char_pw_mika_nurse", "joy")
+        assert mika["sprites"]["joy"] == _public_welfare_npc_asset("char_pw_mika_nurse", "joy")
+        assert mika["sprites"]["angry"] == _public_welfare_npc_asset("char_pw_mika_nurse", "anger")
+        assert mika["sprites"]["anger"] == _public_welfare_npc_asset("char_pw_mika_nurse", "anger")
+        assert mika["sprites"]["shy"] == _public_welfare_npc_asset("char_pw_mika_nurse", "embarrassment")
+        assert mika["sprites"]["embarrassment"] == _public_welfare_npc_asset("char_pw_mika_nurse", "embarrassment")
+        assert mika["sprites"]["curious"] == _public_welfare_npc_asset("char_pw_mika_nurse", "curiosity")
+        assert mika["sprites"]["curiosity"] == _public_welfare_npc_asset("char_pw_mika_nurse", "curiosity")
+        for sprite_url in {mika["avatar"], *mika["sprites"].values()}:
+            _assert_project_png_asset(sprite_url)
+            assert _project_png_dimensions(sprite_url) == (512, 512)
+        assert {"公益", "医院", "护士", "夜间护理", "分诊", "安全边界"}.issubset(set(mika["tags"]))
+
+        qingyou = characters_by_id["char_pw_qingyou_records"]
+        assert qingyou["name"] == "青柚"
+        assert {"公益", "医院", "档案员", "候诊卡", "分诊", "隐私边界"}.issubset(set(qingyou["tags"]))
+        nanxing = characters_by_id["char_pw_nanxing_liaison"]
+        assert nanxing["name"] == "南星"
+        assert {"公益", "医院", "急救联络", "现实求助", "安全边界", "分诊"}.issubset(set(nanxing["tags"]))
+        for character in (qingyou, nanxing):
+            assert character["avatar"] == _public_welfare_npc_asset(character["id"], "neutral")
+            assert character["sprites"]["neutral"] == _public_welfare_npc_asset(character["id"], "neutral")
+            assert character["sprites"]["happy"] == _public_welfare_npc_asset(character["id"], "joy")
+            assert character["sprites"]["joy"] == _public_welfare_npc_asset(character["id"], "joy")
+            assert character["sprites"]["angry"] == _public_welfare_npc_asset(character["id"], "anger")
+            assert character["sprites"]["anger"] == _public_welfare_npc_asset(character["id"], "anger")
+            assert character["sprites"]["shy"] == _public_welfare_npc_asset(character["id"], "embarrassment")
+            assert character["sprites"]["embarrassment"] == _public_welfare_npc_asset(character["id"], "embarrassment")
+            assert character["sprites"]["curious"] == _public_welfare_npc_asset(character["id"], "curiosity")
+            assert character["sprites"]["curiosity"] == _public_welfare_npc_asset(character["id"], "curiosity")
+            for sprite_url in {character["avatar"], *character["sprites"].values()}:
+                _assert_project_png_asset(sprite_url)
+                assert _project_png_dimensions(sprite_url) == (512, 512)
+
+        gameplays = tavern["gameplay_definitions"]
+        assert {gameplay["id"] for gameplay in gameplays}.issuperset(
+            {"gp_pw_hospital_triage_note", "gp_pw_hospital_role_triage"}
+        )
+        combined_prompt = " ".join(
+            [
+                tavern["description"],
+                tavern["scene_prompt"],
+                mika["description"],
+                mika["personality"],
+                mika["scenario"],
+                mika["system_prompt"],
+                mika["first_mes"],
+                mika["mes_example"],
+                qingyou["description"],
+                qingyou["personality"],
+                qingyou["system_prompt"],
+                qingyou["first_mes"],
+                nanxing["description"],
+                nanxing["personality"],
+                nanxing["system_prompt"],
+                nanxing["first_mes"],
+                " ".join(entry["content"] for entry in tavern["world_info"]),
+                " ".join(
+                    f"{gameplay.get('title', '')} {gameplay.get('summary', '')} {gameplay.get('entry_label', '')}"
+                    for gameplay in gameplays
+                ),
+            ]
+        )
+        for keyword in ("夜间护理站", "护士", "分诊", "立即求助", "记录信息", "安静等待"):
+            assert keyword in combined_prompt
+        for keyword in ("弥夏", "青柚", "南星", "候诊卡", "现实求助路径", "NPC 分工"):
+            assert keyword in combined_prompt
+        for boundary in ("不诊断", "不处方", "不替代医生", "当地紧急电话", "线下急诊", "不要索取"):
+            assert boundary in combined_prompt
+        for forbidden in ("诊断结果是", "可以建议剂量", "可以替医生判断", "请提供身份证", "请提供完整联系方式"):
+            assert forbidden not in combined_prompt
+
+
+def test_hospital_night_care_chat_uses_safe_triage_rules_response():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        tavern = service.get_tavern_payload("pw_hospital_night_care", user_id="")
+
+        entered = service.enter_tavern_payload(
+            tavern["id"],
+            user_id="visitor_public_welfare",
+        )
+        assert entered["ok"] is True
+        assert entered["status"] == "open"
+
+        response = service.tavern_chat_payload(
+            tavern_id=tavern["id"],
+            character_id="char_pw_mika_nurse",
+            message="我有点头晕，不知道要不要去医院。",
+            visitor_id="visitor_public_welfare",
+            visitor_name="测试旅人",
+            user_id="visitor_public_welfare",
+        )
+
+        assert response["degraded"] is False
+        assert response["tavern_status"] == "open"
+        assert "分诊" in response["response"]
+        assert "立即求助" in response["response"] or "记录信息" in response["response"]
+        assert "诊断结果" not in response["response"]
+        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
 
 
 def test_community_repair_includes_heguang_communication_npc():

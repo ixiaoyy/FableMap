@@ -8,6 +8,10 @@
 
 ## AI 生成图片落盘总规则
 
+- 所有实际素材图生成必须遵守 Prompt-first：先用项目 skill 生成并记录最终 Prompt / Prompt manifest，再用该 Prompt 调用生图工具；不允许直接从未记录的临时描述调图。
+- Prompt 必须保存在任务记录、prompt artifact、实现说明、最终报告或项目 recipe 中；只存在于 tool call 里的 Prompt 不算项目记忆。
+- 图片质量与差异化是验收要求，不是锦上添花。素材图不能因为“安全、合规、有关酒馆”就算合格；若画面仍是千篇一律的暖木吧台、青色终端光、居中头像/门面、普通 anime concept art，应视为质量不足。
+- 非同一系列的多张素材必须刻意区分视觉 thesis、构图装置、材质系统、色彩策略、光影哲学或媒介语境；批量素材生成前应有 diversity matrix 或等价说明。
 - 任何用于代码、默认 seed、文档验收或前端展示的 AI 生成图片，必须复制/转换到本仓库内的规范路径后才算完成。
 - `.codex/generated_images`、系统临时目录、浏览器下载目录和聊天预览只算生成来源，不算项目资源目录。
 - 替换既有图片时，必须覆盖实际被代码/文档引用的项目文件；如果只是生成了新图但引用路径仍指向旧图，视为未替换。
@@ -177,26 +181,130 @@ frontend/public/faction-emblems/
 
 ## 图片生成提示词模板
 
+### Prompt-as-Code 结构化协议
+
+图片生成先锁定用途和结构，再写风格。对于批量 NPC、表情组、发现页卡片、坐标纪念图、科普信息图等任务，优先使用结构化 envelope，然后再改写成自然语言 Prompt。
+
+```json
+{
+  "schema_version": "fablemap.visual_prompt.v1",
+  "type": "FableMap Visual Asset Prompt",
+  "asset_use": "npc_portrait | npc_expression_sprite_set | tavern_entry_card | discovery_campaign_card | coordinate_map_card | owner_guide_infographic | visual_souvenir_prompt_preview | series_grid_or_contact_sheet | exploded_diagram_card | editorial_mood_poster",
+  "renderer_profile": "single_image_prompt | batch_prompt_manifest | prompt_preview_only | future_api_payload",
+  "real_coordinate_anchor": {
+    "place_name_or_area": "",
+    "privacy_level": "public_area_only | approximate | abstracted",
+    "must_not_include": ["exact private address", "official map-provider imitation"]
+  },
+  "owner_confirmed_content": {
+    "tavern_name": "",
+    "tavern_theme": "",
+    "npc_or_subject_role": "",
+    "visitor_feeling": "",
+    "must_keep": [],
+    "must_avoid": []
+  },
+  "subject": {
+    "description": "",
+    "species_or_body_plan": "",
+    "identity_locks": ["silhouette", "main palette", "signature prop"],
+    "allowed_variations": ["expression", "gesture", "local accent light"]
+  },
+  "style_dna": {
+    "art_style_and_genre": "",
+    "palette_color_science": "",
+    "lighting_signature": "",
+    "medium_texture": "",
+    "mood": "",
+    "era_context": "",
+    "detail_density": "",
+    "post_processing": "",
+    "symbolic_motifs": []
+  },
+  "quality_diversity": {
+    "visual_thesis": "",
+    "must_differ_from_recent_assets": ["composition", "palette", "material system", "lighting", "style family"],
+    "anti_repetition_notes": ["avoid repeating the same warm wood bar + teal glow formula unless intentional"],
+    "rejection_criteria": ["generic AI concept art", "same decor as previous batch", "weak focal hierarchy"]
+  },
+  "composition": {
+    "aspect_ratio": "",
+    "layout": "",
+    "shot_type_angle": "",
+    "spatial_logic": "",
+    "module_budget": "",
+    "mobile_crop_safe_area": ""
+  },
+  "text_policy": {
+    "mode": "none | owner_exact | simulated",
+    "allowed_text": [],
+    "forbidden_text": ["logos", "fake brand slogans", "visitor-private data"]
+  },
+  "constraints": ["original asset only", "no existing IP", "no living-artist imitation", "no watermark"],
+  "extension_modules": []
+}
+```
+
+使用规则：
+
+- `asset_use` 决定模板，不要把头像、海报、地图、信息图混成一个泛 prompt。
+- `composition` 必须先于风格确定，尤其是网格、系列图、信息图和移动端竖图。
+- `text_policy` 必须明确：头像默认 `none`；店主明确给出的招牌/标题才用 `owner_exact`；装饰性出版物纹理用 `simulated`。
+- 坐标/地图类素材只能做 `coordinate-inspired` 或 `abstracted` 表达，不替代真实地图，不生成私密精确地址。
+- 外部参考项目可用于学习结构化技巧；不要复制第三方图片、品牌、角色、案例文本或未授权 Logo。
+- 未来新能力优先作为 versioned extension module 增加，例如 `diagram.callouts.v1`、`series.identity-locks.v1`、`map.coordinate-memory.v1`，不要破坏基础 envelope。
+
+### 可扩展能力注册表
+
+| 能力模块 | 适用资产 | 作用 | 自动检查方向 |
+| --- | --- | --- | --- |
+| `layout_module` | 全部 | 锁定比例、网格、层级、安全裁切区 | aspect ratio、移动端裁切说明 |
+| `text_module` | 海报/卡片/信息图 | 限定 none / owner_exact / simulated | 禁止未授权 Logo、假品牌、访客隐私 |
+| `identity_module` | NPC / 表情组 / 批量角色 | 固定物种体态、轮廓、主色、标志道具 | 表情变体不换脸/换装 |
+| `style_dna_module` | 全部 | 复用风格 DNA，避免短关键词 | 是否覆盖色彩、光影、材质、情绪 |
+| `quality_diversity_module` | 全部 | 防止默认 AI 图和同质化装修/光影/构图 | 是否有视觉 thesis、差异点、拒收条件 |
+| `diagram_module` | 拆解图 / 科普图 | 控制 callout、箭头、编号、部件层级 | callout 数量和文字长度 |
+| `series_module` | 宫格 / contact sheet | 控制面板数量、行列语义、一致性 | panel count、allowed variations |
+| `anchor_module` | 地图/坐标/入口卡 | 维持真实坐标锚点但不伪装导航 | 禁止精确私址和地图供应商仿制 |
+
+### 风格 DNA 抽取/选择模板（生成前置）
+
+生成任何可交付图片前，先从参考图、用户风格说明或 `.agents/skills/generate-character-prompt/references/style-recipes.md` 中确定一段可复用 Style DNA。不要只写“赛博朋克 / 二次元 / 复古”这类短标签。
+
+```
+[在此处替换为您想要生成的主体内容 / Replace with your subject here]，以可被店主确认的原创 FableMap 素材身份呈现；整体采用 [具体艺术流派/混合风格及品位分支]，主色为 [主色]，辅以 [辅色] 与 [点缀色]，形成 [冷暖/互补/类似色/限色印刷] 的色彩科学策略。光影为 [方向与光质]，明暗对比 [强/弱/平面化]，阴影 [硬边/柔边/装饰性]。画面借鉴 [媒介纹理技法，如 Risograph 半调、胶片颗粒、水彩晕染、赛璐璐平涂、复印机碳粉]，但不强制生成完整海报/杂志/出版物载体；线稿 [粗细/硬边/流动感]，材质触感 [纸张、油墨、金属、玻璃、织物等]。情绪是 [精准情绪：是……而非……]，带有 [时代/文化圈层] 的品位语境；信息密度 [高/中/低]，在 [细节区类型] 保持高精度，在 [概括区类型] 使用平涂、留白或抽象纹理。保留 [符号化视觉语言类型] 作为风格签名。original, no readable text unless explicitly required, no logo, no watermark, no existing IP, no living-artist imitation.
+```
+
+### 可选构图骨架模块
+
+可拼接在 Style DNA 后，也可按用途替换。构图模块只描述空间结构，不写具体故事内容。
+
+```
+Composition module: [composition technique: centered / rule of thirds / diagonal tension / asymmetrical balance / frame within frame / large negative space], [shot type and angle: bust / waist-up / medium shot / wide shot, eye-level / low angle / high angle], [spatial logic: flattened layers / one-point perspective / two-point perspective / compressed depth / collage windows / axonometric space]. Foreground acts as visual framing and depth cue, midground carries the main subject, background supplies atmosphere, rhythm, texture and color blocks without stealing focus.
+```
+
 ### 角色头像通用模板
 
 ```
-A finished original anime / game-style tavern NPC portrait of [character description],
-clean lineart with soft cel shading, [lighting: warm / neon / dramatic tavern light],
-waist-up or bust framing, visible tavern interior background with at least two cues
-(bar counter, mugs, shelves, lanterns, menu board, bottles, map-table, terminal glow),
-no transparent background, no logo, no watermark, no existing IP,
-[intentional imperfections, hand-crafted feel]
+A finished original anime / game-style FableMap cyber-tavern NPC portrait of [species/body plan + role + maturity range + stable silhouette + signature tavern prop],
+visibly anchored inside a real-place tavern interior with at least two cues
+(bar counter, mugs, shelves, lanterns, menu board, bottles, map-table, door signage, cyber terminal glow),
+[paste or summarize Style DNA here: art style, palette, lighting, medium texture, mood, era, post-processing],
+[paste optional Composition module here: bust or waist-up portrait preferred unless usage requires otherwise],
+identity-consistent character design, readable expression and body language, owner-reviewable draft only,
+no transparent background, no blank placeholder, no readable text, no logo, no watermark, no existing IP, no living-artist imitation, no owner API keys or visitor-private data
 ```
 
 ### 地点氛围图通用模板
 
 ```
-[scene description], fantasy watercolor or digital painting style,
-[viewing angle: slightly elevated bird's-eye / eye-level],
-[lighting: golden-hour / moonlight / firelight / mystical glow],
-[composition: centered / rule of thirds],
-[atmosphere keywords],
-[dramatic sky / atmospheric fog / magical particles]
+[real place or coordinate-inspired tavern atmosphere description, abstracted enough to avoid copying private/business marks],
+[paste or summarize Style DNA here: art style, palette, lighting, medium texture, mood, era, post-processing],
+[viewing angle: slightly elevated bird's-eye / eye-level / low-angle entry view],
+[composition: centered / rule of thirds / diagonal pathway / large negative space],
+visible tavern-entry or interior cues that support FableMap's real-coordinate anchor,
+[atmosphere keywords: welcoming / mysterious / quiet / lively / memory-rich],
+no readable brand signage, no private address details, no logo, no watermark, no existing IP
 ```
 
 ---

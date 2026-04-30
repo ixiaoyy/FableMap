@@ -213,7 +213,7 @@ export default function OwnerRoute() {
 
   return (
     <ProductShell eyebrow="Owner">
-      <section className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+      <section id="owner-mainline" className="grid scroll-mt-28 gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
         <aside className="space-y-5">
           <Card className="overflow-hidden">
             <CardHeader>

@@ -69,6 +69,28 @@ tavern-create-readiness-test.mjs
 
 If a change affects a specific script-tested service/rule, run `npm --prefix .\frontend test`; for visual/component-only changes, at least run build.
 
+### Playwright self-acceptance before human visual review
+
+For any user-facing visual / interaction change that needs browser visual acceptance, run a Playwright self-acceptance pass before asking the human reviewer to inspect it.
+
+Required minimum:
+
+```powershell
+# 1) Start a local frontend server for the changed surface.
+# 2) Run a Playwright script/spec against the changed route.
+# 3) Capture desktop and mobile/narrow screenshots into a task/evidence path.
+```
+
+The Playwright pass must check:
+
+- the changed route loads without uncaught page errors;
+- the primary changed UI text/states are visible;
+- at least one desktop viewport and one narrow/mobile viewport;
+- no obvious horizontal overflow on the narrow viewport;
+- screenshot paths are recorded in the Trellis task notes or final report.
+
+Playwright self-acceptance does **not** replace `npm --prefix .\frontend run build`; it is an additional browser sanity pass before human visual acceptance. If Playwright cannot run, explicitly report the failure command and reason instead of claiming visual acceptance.
+
 ---
 
 ## Code review checklist

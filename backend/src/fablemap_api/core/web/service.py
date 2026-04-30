@@ -2455,6 +2455,37 @@ class WebService:
             return f"欢迎来到{tavern_name}。我是{char_name}，你可以先说说现在最想解决的一件小事。"
 
         tavern_id = getattr(tavern, "id", "") or ""
+        if tavern_id == "pw_hospital_night_care" and any(
+            keyword in text
+            for keyword in (
+                "医院",
+                "护士",
+                "分诊",
+                "护理",
+                "头晕",
+                "胸痛",
+                "呼吸困难",
+                "急救",
+                "发烧",
+                "不舒服",
+                "用药",
+            )
+        ):
+            if any(keyword in text for keyword in ("胸痛", "呼吸困难", "昏厥", "意识不清", "大量出血", "急救")):
+                return (
+                    f"{char_name}立刻把分诊卡翻到“立即求助”：这些可能是危险信号。"
+                    "我不能诊断，请马上联系当地紧急电话或前往最近急诊，并让身边可信任的人陪同。"
+                )
+            if any(keyword in text for keyword in ("用药", "吃药", "剂量", "药")):
+                return (
+                    f"{char_name}把记录板推近一点：我不能给处方或剂量建议。"
+                    "可以先写下药名、服用时间、过敏史和不适变化，然后带给现实医生或药师确认。"
+                )
+            return (
+                f"{char_name}把分诊便签分成三栏：立即求助、记录信息、安静等待。"
+                "先告诉我开始时间、现在最明显的感受、有没有危险信号；如果你觉得不安全，就优先联系现实急救或线下医院。"
+            )
+
         if tavern_id == "pw_after_school_hero_supply" and any(
             keyword in text
             for keyword in (

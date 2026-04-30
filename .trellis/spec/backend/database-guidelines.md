@@ -216,6 +216,7 @@ type PlaceType =
   | "convenience-store"
   | "bookstore"
   | "school"
+  | "hospital"
   | "home"
 ```
 
@@ -223,6 +224,7 @@ type PlaceType =
 
 - Persistent key `place_type` is finite and backward-compatible; missing legacy values read as `tavern`.
 - Home is still a Tavern with real `lat/lon`; creating/updating `place_type="home"` must coerce public access to private/password, never public.
+- Hospital is a public Place type for safe nursing/triage-themed NPC spaces; content must preserve medical safety boundaries and cannot imply diagnosis, prescriptions, or emergency-care replacement.
 - Public list/discover responses must exclude Home records unless an owner-scoped list is requested.
 - Public Tavern payloads must not expose `home_members` or `place_relationships`; owner/private payloads may include them.
 - `silent_member` and `display_object` Home members must normalize to non-conversational speech modes and must not become `characters` in enter/chat payloads.
@@ -369,6 +371,30 @@ There is no formal migration runner. Compatibility is handled by:
 - idempotent seed/update logic such as default public-welfare tavern seeding.
 
 If a change cannot be handled by backward-compatible readers, stop and design an explicit migration plan with the user.
+
+---
+
+## Scenario: Default Public-Welfare Tavern Seed Runtime Contract
+
+Use this contract when changing `backend/src/fablemap_api/core/default_taverns.py`, public-welfare NPC seed data, default seed merge/backfill logic, or tests that validate built-in example shops.
+
+Contracts:
+
+- Every default public-welfare tavern / shop must have at least 3 formal `TavernCharacter` entries. One-character demo shops are not complete.
+- Every seeded character must expose complete project-owned direct assets per `frontend/npc-art-guidelines.md`: `avatar`, `sprites.neutral`, and expression aliases for `joy/happy`, `anger/angry`, `embarrassment/shy`, and `curiosity/curious`.
+- Every default shop must provide the core character chat loop: visitor can enter the shop, select any seeded character, send a normal greeting, receive non-empty assistant text, and persist a two-message chat session.
+- Default shops must keep `llm_config.backend="rules"` with `api_key=""`; core chat for these seeds must not call an external LLM and token usage must remain `0`.
+- Public-welfare shops should include `NPC 分工` world info and role-triage gameplay so the 3+ roles have clear boundaries instead of duplicate personalities.
+
+Required tests:
+
+```powershell
+py -3 -m pytest -q tests/test_default_public_welfare_taverns.py tests/test_default_public_welfare_gameplays.py --tb=short
+```
+
+Good: A new default hospital shop has nurse, records clerk, and emergency liaison NPCs; all three can chat through the local rules backend and have five local expression PNGs.
+
+Bad: A visually complete shop with only one character, or a three-character shop where secondary characters have portraits but cannot complete a chat session.
 
 ---
 

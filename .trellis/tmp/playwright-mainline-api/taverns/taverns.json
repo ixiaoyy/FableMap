@@ -4153,5 +4153,1213 @@
         "tavern_id": "pw_third_shelf_observatory"
       }
     ]
+  },
+  "tavern_53e992f5a4f8": {
+    "_memory_atoms": {
+      "mem_2edf46323d37": {
+        "character_id": "char_75987c468197",
+        "confidence": 0.82,
+        "content": "我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:43:53.648996+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_2edf46323d37",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "visitor"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_f45496a78cf1"
+        ],
+        "subject": "visitor-playwright-mainline-20260430034349",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "updated_at": "2026-04-30T03:43:53.648996+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      },
+      "mem_33c0f6ec70d3": {
+        "character_id": "char_75987c468197",
+        "confidence": 0.72,
+        "content": "验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:43:53.659157+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_33c0f6ec70d3",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "验收店员望向你轻声回应我听见了我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "assistant"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_937660fb76fd"
+        ],
+        "subject": "验收店员",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "updated_at": "2026-04-30T03:43:53.659157+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      },
+      "mem_a189bb56f785": {
+        "character_id": "char_75987c468197",
+        "confidence": 0.82,
+        "content": "今天我接下桥边委托，找到铜钥匙和旧照片线索",
+        "created_at": "2026-04-30T03:43:53.652770+00:00",
+        "created_by": "auto_memory",
+        "dimension": "event",
+        "horizon": "mid",
+        "id": "mem_a189bb56f785",
+        "importance": 0.7,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "今天我接下桥边委托找到铜钥匙和旧照片线索",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_937660fb76fd",
+          "msg_f45496a78cf1"
+        ],
+        "subject": "visitor-playwright-mainline-20260430034349",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "updated_at": "2026-04-30T03:43:53.662359+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      },
+      "mem_cd21abf03402": {
+        "character_id": "char_75987c468197",
+        "confidence": 0.82,
+        "content": "我答应下次带照片回来",
+        "created_at": "2026-04-30T03:43:53.656019+00:00",
+        "created_by": "auto_memory",
+        "dimension": "promise",
+        "horizon": "long",
+        "id": "mem_cd21abf03402",
+        "importance": 0.88,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "我答应下次带照片回来",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_937660fb76fd",
+          "msg_f45496a78cf1"
+        ],
+        "subject": "visitor-playwright-mainline-20260430034349",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "updated_at": "2026-04-30T03:43:53.665788+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      }
+    },
+    "_state_cards": {
+      "card_14c93a2aef4f": {
+        "canon_scope": "visitor",
+        "category": "event_log",
+        "character_id": "char_75987c468197",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:43:53Z",
+        "fixed_canon": false,
+        "id": "card_14c93a2aef4f",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430034349",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_f45496a78cf1",
+          "msg_937660fb76fd"
+        ],
+        "status": "pending",
+        "summary": "本轮可观察事件：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "title": "本轮事件摘要",
+        "updated_at": "2026-04-30T03:43:53Z",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      },
+      "card_40de23270726": {
+        "canon_scope": "visitor",
+        "category": "resource",
+        "character_id": "char_75987c468197",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:43:53Z",
+        "fixed_canon": false,
+        "id": "card_40de23270726",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430034349",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_f45496a78cf1",
+          "msg_937660fb76fd"
+        ],
+        "status": "pending",
+        "summary": "资源/线索候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "title": "待确认资源/线索",
+        "updated_at": "2026-04-30T03:43:53Z",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      },
+      "card_b87812da8716": {
+        "canon_scope": "visitor",
+        "category": "task",
+        "character_id": "char_75987c468197",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:43:53Z",
+        "fixed_canon": false,
+        "id": "card_b87812da8716",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430034349",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_f45496a78cf1",
+          "msg_937660fb76fd"
+        ],
+        "status": "pending",
+        "summary": "任务/委托候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_53e992f5a4f8",
+        "title": "待确认任务变化",
+        "updated_at": "2026-04-30T03:43:53Z",
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      }
+    },
+    "_visitors": {
+      "visitor-playwright-mainline-20260430034349": {
+        "first_visit": "2026-04-30T03:43:53Z",
+        "gender": "unspecified",
+        "last_visit": "2026-04-30T03:43:53Z",
+        "relationship": {
+          "stage": "acquaintance",
+          "strength": 0.03
+        },
+        "tavern_id": "tavern_53e992f5a4f8",
+        "visit_count": 2,
+        "visitor_id": "visitor-playwright-mainline-20260430034349"
+      }
+    },
+    "access": "public",
+    "active_preset_id": "",
+    "address": "上海市黄浦区 Playwright 验收点",
+    "bookmarks": [],
+    "character_claims": [],
+    "characters": [
+      {
+        "alternate_greetings": [],
+        "appearance": {},
+        "avatar": "",
+        "description": "负责确认访客记忆和回访线索的店员。",
+        "first_mes": "欢迎光临，今晚我会把重要线索先记成待确认。",
+        "gender": "unspecified",
+        "id": "char_75987c468197",
+        "mes_example": "",
+        "name": "验收店员",
+        "personality": "",
+        "scenario": "",
+        "sprites": {},
+        "system_prompt": "",
+        "tags": [],
+        "talkativeness": 0.5,
+        "tavern_id": "tavern_53e992f5a4f8"
+      }
+    ],
+    "chat_templates": [],
+    "created_at": "2026-04-30T03:43:51Z",
+    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "gameplay_definitions": [],
+    "group_chat_config": {
+      "max_responses_per_turn": 2,
+      "require_name_prefix": true,
+      "response_cooldown_seconds": 0,
+      "strategy": "balanced"
+    },
+    "group_chat_enabled": false,
+    "groups": [],
+    "home_members": [],
+    "id": "tavern_53e992f5a4f8",
+    "lat": 31.230416,
+    "layout_style": "lobby",
+    "llm_config": {
+      "api_key": "",
+      "backend": "rules",
+      "base_url": "",
+      "max_tokens": 512,
+      "model": "rules",
+      "temperature": 0.8,
+      "token_used": 34,
+      "top_p": 1.0
+    },
+    "lon": 121.473701,
+    "memory_policy": {},
+    "name": "Playwright 主链路酒馆 20260430034349",
+    "operating_hours": {},
+    "output_rules": [],
+    "owner_id": "owner-playwright-mainline-20260430034349",
+    "password_hash": "",
+    "place_relationships": [],
+    "place_type": "tavern",
+    "prompt_blocks": [],
+    "roleplay_mode": "ai_only",
+    "runtime_presets": [],
+    "scene_prompt": "雨夜、吧台灯和一块写着回访者名字的小黑板。",
+    "skill_packs": [],
+    "status": "open",
+    "timezone": null,
+    "visit_count": 2,
+    "voice_config": {
+      "auto_play": false,
+      "enabled": false,
+      "stt_model": "base",
+      "stt_provider": "browser",
+      "tts_language": "",
+      "tts_model": "",
+      "tts_provider": "elevenlabs",
+      "tts_speed": 1.0,
+      "tts_voice": ""
+    },
+    "world_info": []
+  },
+  "tavern_988397b323b2": {
+    "_memory_atoms": {
+      "mem_11ab87903284": {
+        "character_id": "char_4c8d7868678e",
+        "confidence": 0.72,
+        "content": "验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:27:58.136067+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_11ab87903284",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "验收店员望向你轻声回应我听见了我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "assistant"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_9a73b8b314d4"
+        ],
+        "subject": "验收店员",
+        "tavern_id": "tavern_988397b323b2",
+        "updated_at": "2026-04-30T03:27:58.136067+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      },
+      "mem_56663d0ae9d4": {
+        "character_id": "char_4c8d7868678e",
+        "confidence": 0.82,
+        "content": "今天我接下桥边委托，找到铜钥匙和旧照片线索",
+        "created_at": "2026-04-30T03:27:58.127001+00:00",
+        "created_by": "auto_memory",
+        "dimension": "event",
+        "horizon": "mid",
+        "id": "mem_56663d0ae9d4",
+        "importance": 0.7,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "今天我接下桥边委托找到铜钥匙和旧照片线索",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_9a73b8b314d4",
+          "msg_9c6a2022001c"
+        ],
+        "subject": "visitor-playwright-mainline-20260430032754",
+        "tavern_id": "tavern_988397b323b2",
+        "updated_at": "2026-04-30T03:27:58.140159+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      },
+      "mem_6a1df41faf96": {
+        "character_id": "char_4c8d7868678e",
+        "confidence": 0.82,
+        "content": "我答应下次带照片回来",
+        "created_at": "2026-04-30T03:27:58.131050+00:00",
+        "created_by": "auto_memory",
+        "dimension": "promise",
+        "horizon": "long",
+        "id": "mem_6a1df41faf96",
+        "importance": 0.88,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "我答应下次带照片回来",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_9a73b8b314d4",
+          "msg_9c6a2022001c"
+        ],
+        "subject": "visitor-playwright-mainline-20260430032754",
+        "tavern_id": "tavern_988397b323b2",
+        "updated_at": "2026-04-30T03:27:58.143806+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      },
+      "mem_ee4c560cb41f": {
+        "character_id": "char_4c8d7868678e",
+        "confidence": 0.82,
+        "content": "我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:27:58.123138+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_ee4c560cb41f",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "visitor"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_9c6a2022001c"
+        ],
+        "subject": "visitor-playwright-mainline-20260430032754",
+        "tavern_id": "tavern_988397b323b2",
+        "updated_at": "2026-04-30T03:27:58.123138+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      }
+    },
+    "_state_cards": {
+      "card_0f51f9f9bfbe": {
+        "canon_scope": "visitor",
+        "category": "event_log",
+        "character_id": "char_4c8d7868678e",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:27:58Z",
+        "fixed_canon": false,
+        "id": "card_0f51f9f9bfbe",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430032754",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_9c6a2022001c",
+          "msg_9a73b8b314d4"
+        ],
+        "status": "pending",
+        "summary": "本轮可观察事件：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_988397b323b2",
+        "title": "本轮事件摘要",
+        "updated_at": "2026-04-30T03:27:58Z",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      },
+      "card_25b15c51d0ad": {
+        "canon_scope": "visitor",
+        "category": "resource",
+        "character_id": "char_4c8d7868678e",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:27:58Z",
+        "fixed_canon": false,
+        "id": "card_25b15c51d0ad",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430032754",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_9c6a2022001c",
+          "msg_9a73b8b314d4"
+        ],
+        "status": "pending",
+        "summary": "资源/线索候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_988397b323b2",
+        "title": "待确认资源/线索",
+        "updated_at": "2026-04-30T03:27:58Z",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      },
+      "card_2a9996a74a99": {
+        "canon_scope": "visitor",
+        "category": "task",
+        "character_id": "char_4c8d7868678e",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:27:58Z",
+        "fixed_canon": false,
+        "id": "card_2a9996a74a99",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430032754",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_9c6a2022001c",
+          "msg_9a73b8b314d4"
+        ],
+        "status": "pending",
+        "summary": "任务/委托候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_988397b323b2",
+        "title": "待确认任务变化",
+        "updated_at": "2026-04-30T03:27:58Z",
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      }
+    },
+    "_visitors": {
+      "visitor-playwright-mainline-20260430032754": {
+        "first_visit": "2026-04-30T03:27:58Z",
+        "gender": "unspecified",
+        "last_visit": "2026-04-30T03:27:58Z",
+        "relationship": {
+          "stage": "acquaintance",
+          "strength": 0.03
+        },
+        "tavern_id": "tavern_988397b323b2",
+        "visit_count": 2,
+        "visitor_id": "visitor-playwright-mainline-20260430032754"
+      }
+    },
+    "access": "public",
+    "active_preset_id": "",
+    "address": "上海市黄浦区 Playwright 验收点",
+    "bookmarks": [],
+    "character_claims": [],
+    "characters": [
+      {
+        "alternate_greetings": [],
+        "appearance": {},
+        "avatar": "",
+        "description": "负责确认访客记忆和回访线索的店员。",
+        "first_mes": "欢迎光临，今晚我会把重要线索先记成待确认。",
+        "gender": "unspecified",
+        "id": "char_4c8d7868678e",
+        "mes_example": "",
+        "name": "验收店员",
+        "personality": "",
+        "scenario": "",
+        "sprites": {},
+        "system_prompt": "",
+        "tags": [],
+        "talkativeness": 0.5,
+        "tavern_id": "tavern_988397b323b2"
+      }
+    ],
+    "chat_templates": [],
+    "created_at": "2026-04-30T03:27:55Z",
+    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "gameplay_definitions": [],
+    "group_chat_config": {
+      "max_responses_per_turn": 2,
+      "require_name_prefix": true,
+      "response_cooldown_seconds": 0,
+      "strategy": "balanced"
+    },
+    "group_chat_enabled": false,
+    "groups": [],
+    "home_members": [],
+    "id": "tavern_988397b323b2",
+    "lat": 31.230416,
+    "layout_style": "lobby",
+    "llm_config": {
+      "api_key": "",
+      "backend": "rules",
+      "base_url": "",
+      "max_tokens": 512,
+      "model": "rules",
+      "temperature": 0.8,
+      "token_used": 34,
+      "top_p": 1.0
+    },
+    "lon": 121.473701,
+    "memory_policy": {},
+    "name": "Playwright 主链路酒馆 20260430032754",
+    "operating_hours": {},
+    "output_rules": [],
+    "owner_id": "owner-playwright-mainline-20260430032754",
+    "password_hash": "",
+    "place_relationships": [],
+    "place_type": "tavern",
+    "prompt_blocks": [],
+    "roleplay_mode": "ai_only",
+    "runtime_presets": [],
+    "scene_prompt": "雨夜、吧台灯和一块写着回访者名字的小黑板。",
+    "skill_packs": [],
+    "status": "open",
+    "timezone": null,
+    "visit_count": 2,
+    "voice_config": {
+      "auto_play": false,
+      "enabled": false,
+      "stt_model": "base",
+      "stt_provider": "browser",
+      "tts_language": "",
+      "tts_model": "",
+      "tts_provider": "elevenlabs",
+      "tts_speed": 1.0,
+      "tts_voice": ""
+    },
+    "world_info": []
+  },
+  "tavern_ca92f02d00bf": {
+    "_memory_atoms": {
+      "mem_67982013467a": {
+        "character_id": "char_74514e5af521",
+        "confidence": 0.82,
+        "content": "今天我接下桥边委托，找到铜钥匙和旧照片线索",
+        "created_at": "2026-04-30T03:27:43.460280+00:00",
+        "created_by": "auto_memory",
+        "dimension": "event",
+        "horizon": "mid",
+        "id": "mem_67982013467a",
+        "importance": 0.7,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "今天我接下桥边委托找到铜钥匙和旧照片线索",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_661a7213d0ac",
+          "msg_845c1e3c56fa"
+        ],
+        "subject": "visitor-playwright-mainline-20260430032739",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "updated_at": "2026-04-30T03:27:43.469854+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      },
+      "mem_a83c064092ff": {
+        "character_id": "char_74514e5af521",
+        "confidence": 0.82,
+        "content": "我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:27:43.457892+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_a83c064092ff",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "visitor"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_845c1e3c56fa"
+        ],
+        "subject": "visitor-playwright-mainline-20260430032739",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "updated_at": "2026-04-30T03:27:43.457892+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      },
+      "mem_c2b3221e8da1": {
+        "character_id": "char_74514e5af521",
+        "confidence": 0.72,
+        "content": "验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:27:43.467435+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_c2b3221e8da1",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "验收店员望向你轻声回应我听见了我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "assistant"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_661a7213d0ac"
+        ],
+        "subject": "验收店员",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "updated_at": "2026-04-30T03:27:43.467435+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      },
+      "mem_e72d41dee4c3": {
+        "character_id": "char_74514e5af521",
+        "confidence": 0.82,
+        "content": "我答应下次带照片回来",
+        "created_at": "2026-04-30T03:27:43.464771+00:00",
+        "created_by": "auto_memory",
+        "dimension": "promise",
+        "horizon": "long",
+        "id": "mem_e72d41dee4c3",
+        "importance": 0.88,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "我答应下次带照片回来",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_661a7213d0ac",
+          "msg_845c1e3c56fa"
+        ],
+        "subject": "visitor-playwright-mainline-20260430032739",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "updated_at": "2026-04-30T03:27:43.472291+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      }
+    },
+    "_state_cards": {
+      "card_0884a83b640e": {
+        "canon_scope": "visitor",
+        "category": "resource",
+        "character_id": "char_74514e5af521",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:27:43Z",
+        "fixed_canon": false,
+        "id": "card_0884a83b640e",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430032739",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_845c1e3c56fa",
+          "msg_661a7213d0ac"
+        ],
+        "status": "pending",
+        "summary": "资源/线索候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "title": "待确认资源/线索",
+        "updated_at": "2026-04-30T03:27:43Z",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      },
+      "card_7a4822757c93": {
+        "canon_scope": "visitor",
+        "category": "event_log",
+        "character_id": "char_74514e5af521",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:27:43Z",
+        "fixed_canon": false,
+        "id": "card_7a4822757c93",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430032739",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_845c1e3c56fa",
+          "msg_661a7213d0ac"
+        ],
+        "status": "pending",
+        "summary": "本轮可观察事件：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "title": "本轮事件摘要",
+        "updated_at": "2026-04-30T03:27:43Z",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      },
+      "card_d7c941afabe8": {
+        "canon_scope": "visitor",
+        "category": "task",
+        "character_id": "char_74514e5af521",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:27:43Z",
+        "fixed_canon": false,
+        "id": "card_d7c941afabe8",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430032739",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_845c1e3c56fa",
+          "msg_661a7213d0ac"
+        ],
+        "status": "pending",
+        "summary": "任务/委托候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_ca92f02d00bf",
+        "title": "待确认任务变化",
+        "updated_at": "2026-04-30T03:27:43Z",
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      }
+    },
+    "_visitors": {
+      "visitor-playwright-mainline-20260430032739": {
+        "first_visit": "2026-04-30T03:27:43Z",
+        "gender": "unspecified",
+        "last_visit": "2026-04-30T03:27:43Z",
+        "relationship": {
+          "stage": "stranger",
+          "strength": 0.03
+        },
+        "tavern_id": "tavern_ca92f02d00bf",
+        "visit_count": 1,
+        "visitor_id": "visitor-playwright-mainline-20260430032739"
+      }
+    },
+    "access": "public",
+    "active_preset_id": "",
+    "address": "上海市黄浦区 Playwright 验收点",
+    "bookmarks": [],
+    "character_claims": [],
+    "characters": [
+      {
+        "alternate_greetings": [],
+        "appearance": {},
+        "avatar": "",
+        "description": "负责确认访客记忆和回访线索的店员。",
+        "first_mes": "欢迎光临，今晚我会把重要线索先记成待确认。",
+        "gender": "unspecified",
+        "id": "char_74514e5af521",
+        "mes_example": "",
+        "name": "验收店员",
+        "personality": "",
+        "scenario": "",
+        "sprites": {},
+        "system_prompt": "",
+        "tags": [],
+        "talkativeness": 0.5,
+        "tavern_id": "tavern_ca92f02d00bf"
+      }
+    ],
+    "chat_templates": [],
+    "created_at": "2026-04-30T03:27:41Z",
+    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "gameplay_definitions": [],
+    "group_chat_config": {
+      "max_responses_per_turn": 2,
+      "require_name_prefix": true,
+      "response_cooldown_seconds": 0,
+      "strategy": "balanced"
+    },
+    "group_chat_enabled": false,
+    "groups": [],
+    "home_members": [],
+    "id": "tavern_ca92f02d00bf",
+    "lat": 31.230416,
+    "layout_style": "lobby",
+    "llm_config": {
+      "api_key": "",
+      "backend": "rules",
+      "base_url": "",
+      "max_tokens": 512,
+      "model": "rules",
+      "temperature": 0.8,
+      "token_used": 34,
+      "top_p": 1.0
+    },
+    "lon": 121.473701,
+    "memory_policy": {},
+    "name": "Playwright 主链路酒馆 20260430032739",
+    "operating_hours": {},
+    "output_rules": [],
+    "owner_id": "owner-playwright-mainline-20260430032739",
+    "password_hash": "",
+    "place_relationships": [],
+    "place_type": "tavern",
+    "prompt_blocks": [],
+    "roleplay_mode": "ai_only",
+    "runtime_presets": [],
+    "scene_prompt": "雨夜、吧台灯和一块写着回访者名字的小黑板。",
+    "skill_packs": [],
+    "status": "open",
+    "timezone": null,
+    "visit_count": 1,
+    "voice_config": {
+      "auto_play": false,
+      "enabled": false,
+      "stt_model": "base",
+      "stt_provider": "browser",
+      "tts_language": "",
+      "tts_model": "",
+      "tts_provider": "elevenlabs",
+      "tts_speed": 1.0,
+      "tts_voice": ""
+    },
+    "world_info": []
+  },
+  "tavern_f832d4d6389a": {
+    "_memory_atoms": {
+      "mem_29fc7f64bd59": {
+        "character_id": "char_eb18097649f5",
+        "confidence": 0.82,
+        "content": "今天我接下桥边委托，找到铜钥匙和旧照片线索",
+        "created_at": "2026-04-30T03:31:29.282257+00:00",
+        "created_by": "auto_memory",
+        "dimension": "event",
+        "horizon": "mid",
+        "id": "mem_29fc7f64bd59",
+        "importance": 0.7,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "今天我接下桥边委托找到铜钥匙和旧照片线索",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_1f7ed99868ba",
+          "msg_29cc4c7c6234"
+        ],
+        "subject": "visitor-playwright-mainline-20260430033124",
+        "tavern_id": "tavern_f832d4d6389a",
+        "updated_at": "2026-04-30T03:31:29.298896+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      },
+      "mem_4bace21cfe47": {
+        "character_id": "char_eb18097649f5",
+        "confidence": 0.82,
+        "content": "我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:31:29.279590+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_4bace21cfe47",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "visitor"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_29cc4c7c6234"
+        ],
+        "subject": "visitor-playwright-mainline-20260430033124",
+        "tavern_id": "tavern_f832d4d6389a",
+        "updated_at": "2026-04-30T03:31:29.279590+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      },
+      "mem_4d955cc485b1": {
+        "character_id": "char_eb18097649f5",
+        "confidence": 0.82,
+        "content": "我答应下次带照片回来",
+        "created_at": "2026-04-30T03:31:29.285083+00:00",
+        "created_by": "auto_memory",
+        "dimension": "promise",
+        "horizon": "long",
+        "id": "mem_4d955cc485b1",
+        "importance": 0.88,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 2,
+          "memory_fingerprint": "我答应下次带照片回来",
+          "source": "auto_chat",
+          "source_role": "visitor",
+          "source_roles": [
+            "assistant"
+          ]
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_1f7ed99868ba",
+          "msg_29cc4c7c6234"
+        ],
+        "subject": "visitor-playwright-mainline-20260430033124",
+        "tavern_id": "tavern_f832d4d6389a",
+        "updated_at": "2026-04-30T03:31:29.304736+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      },
+      "mem_f15801a35207": {
+        "character_id": "char_eb18097649f5",
+        "confidence": 0.72,
+        "content": "验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶",
+        "created_at": "2026-04-30T03:31:29.289445+00:00",
+        "created_by": "auto_memory",
+        "dimension": "preference",
+        "horizon": "long",
+        "id": "mem_f15801a35207",
+        "importance": 0.76,
+        "metadata": {
+          "flagged_wrong": false,
+          "hit_count": 1,
+          "memory_fingerprint": "验收店员望向你轻声回应我听见了我喜欢茉莉茶",
+          "source": "auto_chat",
+          "source_role": "assistant"
+        },
+        "pinned": false,
+        "place_id": "",
+        "scope": "visitor_character",
+        "source_message_ids": [
+          "msg_1f7ed99868ba"
+        ],
+        "subject": "验收店员",
+        "tavern_id": "tavern_f832d4d6389a",
+        "updated_at": "2026-04-30T03:31:29.289445+00:00",
+        "visibility": "private",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      }
+    },
+    "_state_cards": {
+      "card_3629bdd99dd3": {
+        "canon_scope": "visitor",
+        "category": "task",
+        "character_id": "char_eb18097649f5",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:31:29Z",
+        "fixed_canon": false,
+        "id": "card_3629bdd99dd3",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430033124",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_29cc4c7c6234",
+          "msg_1f7ed99868ba"
+        ],
+        "status": "pending",
+        "summary": "任务/委托候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_f832d4d6389a",
+        "title": "待确认任务变化",
+        "updated_at": "2026-04-30T03:31:29Z",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      },
+      "card_5f0e4e787498": {
+        "canon_scope": "visitor",
+        "category": "resource",
+        "character_id": "char_eb18097649f5",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:31:29Z",
+        "fixed_canon": false,
+        "id": "card_5f0e4e787498",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430033124",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_29cc4c7c6234",
+          "msg_1f7ed99868ba"
+        ],
+        "status": "pending",
+        "summary": "资源/线索候选：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_f832d4d6389a",
+        "title": "待确认资源/线索",
+        "updated_at": "2026-04-30T03:31:29Z",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      },
+      "card_8eb5248a0f27": {
+        "canon_scope": "visitor",
+        "category": "event_log",
+        "character_id": "char_eb18097649f5",
+        "confirmed_by": "",
+        "created_at": "2026-04-30T03:31:29Z",
+        "fixed_canon": false,
+        "id": "card_8eb5248a0f27",
+        "metadata": {
+          "contradiction_candidate": false,
+          "extraction": "rule_based_v1",
+          "requires_confirmation": true
+        },
+        "proposed_by": "visitor-playwright-mainline-20260430033124",
+        "source": "chat",
+        "source_message_ids": [
+          "msg_29cc4c7c6234",
+          "msg_1f7ed99868ba"
+        ],
+        "status": "pending",
+        "summary": "本轮可观察事件：我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。 验收店员望向你，轻声回应：“我听见了——我喜欢茉莉茶。今天我接下桥边委托，找到铜钥匙和旧照片线索。我答应下次带照片回来。。”这里的气味和灯光让我想到：雨夜、吧台灯和一块写着回访者名字的小黑板。",
+        "tavern_id": "tavern_f832d4d6389a",
+        "title": "本轮事件摘要",
+        "updated_at": "2026-04-30T03:31:29Z",
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      }
+    },
+    "_visitors": {
+      "visitor-playwright-mainline-20260430033124": {
+        "first_visit": "2026-04-30T03:31:29Z",
+        "gender": "unspecified",
+        "last_visit": "2026-04-30T03:31:29Z",
+        "relationship": {
+          "stage": "acquaintance",
+          "strength": 0.03
+        },
+        "tavern_id": "tavern_f832d4d6389a",
+        "visit_count": 2,
+        "visitor_id": "visitor-playwright-mainline-20260430033124"
+      }
+    },
+    "access": "public",
+    "active_preset_id": "",
+    "address": "上海市黄浦区 Playwright 验收点",
+    "bookmarks": [],
+    "character_claims": [],
+    "characters": [
+      {
+        "alternate_greetings": [],
+        "appearance": {},
+        "avatar": "",
+        "description": "负责确认访客记忆和回访线索的店员。",
+        "first_mes": "欢迎光临，今晚我会把重要线索先记成待确认。",
+        "gender": "unspecified",
+        "id": "char_eb18097649f5",
+        "mes_example": "",
+        "name": "验收店员",
+        "personality": "",
+        "scenario": "",
+        "sprites": {},
+        "system_prompt": "",
+        "tags": [],
+        "talkativeness": 0.5,
+        "tavern_id": "tavern_f832d4d6389a"
+      }
+    ],
+    "chat_templates": [],
+    "created_at": "2026-04-30T03:31:26Z",
+    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "gameplay_definitions": [],
+    "group_chat_config": {
+      "max_responses_per_turn": 2,
+      "require_name_prefix": true,
+      "response_cooldown_seconds": 0,
+      "strategy": "balanced"
+    },
+    "group_chat_enabled": false,
+    "groups": [],
+    "home_members": [],
+    "id": "tavern_f832d4d6389a",
+    "lat": 31.230416,
+    "layout_style": "lobby",
+    "llm_config": {
+      "api_key": "",
+      "backend": "rules",
+      "base_url": "",
+      "max_tokens": 512,
+      "model": "rules",
+      "temperature": 0.8,
+      "token_used": 34,
+      "top_p": 1.0
+    },
+    "lon": 121.473701,
+    "memory_policy": {},
+    "name": "Playwright 主链路酒馆 20260430033124",
+    "operating_hours": {},
+    "output_rules": [],
+    "owner_id": "owner-playwright-mainline-20260430033124",
+    "password_hash": "",
+    "place_relationships": [],
+    "place_type": "tavern",
+    "prompt_blocks": [],
+    "roleplay_mode": "ai_only",
+    "runtime_presets": [],
+    "scene_prompt": "雨夜、吧台灯和一块写着回访者名字的小黑板。",
+    "skill_packs": [],
+    "status": "open",
+    "timezone": null,
+    "visit_count": 2,
+    "voice_config": {
+      "auto_play": false,
+      "enabled": false,
+      "stt_model": "base",
+      "stt_provider": "browser",
+      "tts_language": "",
+      "tts_model": "",
+      "tts_provider": "elevenlabs",
+      "tts_speed": 1.0,
+      "tts_voice": ""
+    },
+    "world_info": []
   }
 }

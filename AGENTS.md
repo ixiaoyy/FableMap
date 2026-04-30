@@ -83,7 +83,7 @@ FableMap 是一个赛博酒馆 UGC 平台：每个人都可以在真实地图上
 - 前端位于 `frontend/`；React Router Framework Mode + Vite + TypeScript 入口位于 `frontend/app/`，迁移后的产品兼容模块位于 `frontend/app/product/`。
 - 不要无批准引入大型 UI 框架、状态管理库或地图渲染依赖。
 - 组件改动应保持服务层边界：新路由 API 调用优先放在 `frontend/app/lib/`；产品兼容模块 API 调用放在 `frontend/app/product/services/`；可复用逻辑优先放在 hooks / utility 模块。
-- 前端 UI 改动要考虑移动端和窄屏体验；涉及视觉/交互的改动应至少做 build，并在可行时浏览器人工验证。
+- 前端 UI 改动要考虑移动端和窄屏体验；涉及视觉/交互的改动应至少做 build，并在可行时浏览器人工验证；进入人工视觉验收前，AI 必须先用 Playwright 对改动页面做一轮自验收（至少桌面 + 窄屏/移动视口），保存截图/报告路径并写入任务或汇报，若 Playwright 无法运行需如实说明原因。
 - 前端图片资源改动必须遵守 `docs/IMAGE_ASSETS_SPEC.md` 与 `.trellis/spec/frontend/image-asset-guidelines.md`：生成图先落到项目资源目录，再更新引用和验证，不允许报告“已替换”但实际仍引用旧图。
 
 ### 数据与兼容
@@ -117,7 +117,7 @@ npm --prefix .\frontend test
 - 只改文档：检查目标文件内容与链接路径，通常无需跑全量测试。
 - 只改图片资源：检查目标图片文件路径、尺寸/格式、hash 或修改时间；如果前端会加载该资源，运行 `npm --prefix .\frontend run build`。
 - 改 Python：至少运行 `py -3 -m compileall -q backend/src`；涉及行为时运行相关 pytest 或全量 pytest。
-- 改前端：至少运行 `npm --prefix .\frontend run build`；涉及服务/规则脚本时运行 `npm --prefix .\frontend test`。
+- 改前端：至少运行 `npm --prefix .\frontend run build`；涉及服务/规则脚本时运行 `npm --prefix .\frontend test`；涉及用户可见视觉/交互并需要浏览器人工验收时，先运行 Playwright 自验收并记录桌面/窄屏截图或报告路径。
 - 改 API / 数据模型 / 协议：必须同步或补充测试，并更新对应文档。
 - 验证失败要如实报告失败命令、失败原因和下一步，不要包装成成功。
 

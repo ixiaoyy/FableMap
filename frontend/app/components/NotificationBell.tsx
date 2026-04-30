@@ -153,7 +153,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                 {/* View All Link */}
                 <div className="mt-3 border-t border-white/10 pt-3">
                   <Link
-                    to={`/notifications`}
+                    to={`/notifications?user_id=${encodeURIComponent(userId)}`}
                     onClick={() => setShowDropdown(false)}
                     className="block text-center text-sm text-cyan-300 hover:text-cyan-200"
                   >

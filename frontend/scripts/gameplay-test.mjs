@@ -5,6 +5,11 @@ import { dirname, join } from 'node:path'
 
 import { createTavernService } from '../app/product/services/tavernService.js'
 import {
+  OWNER_GAMEPLAY_TEMPLATES,
+  createOwnerGameplayFromTemplate,
+  filterOwnerGameplayTemplates,
+} from '../app/product/ownerGameplayTemplates.js'
+import {
   createShortDramaGameplayFromTemplate,
   isShortDramaCandidate,
   SHORT_DRAMA_GAMEPLAY_TEMPLATES,
@@ -38,6 +43,38 @@ assert.equal(captured[3].options.method, 'POST')
 assert.ok(captured[3].url.includes('/gameplay-sessions/gps_one/advance'))
 assert.ok(captured[4].url.includes('state=active'))
 assert.ok(captured[5].url.includes('/abandon'))
+
+assert.equal(OWNER_GAMEPLAY_TEMPLATES.length, 4)
+assert.deepEqual(OWNER_GAMEPLAY_TEMPLATES.map((template) => template.id), [
+  'three-step-clue-ledger',
+  'returning-note',
+  'kindness-checklist',
+  'quiet-object-reading',
+])
+
+for (const template of OWNER_GAMEPLAY_TEMPLATES) {
+  assert.ok(template.title)
+  assert.ok(template.summary)
+  assert.ok(template.category)
+  assert.ok(template.bestFor)
+  assert.ok(Array.isArray(template.nodes))
+  assert.ok(template.nodes.length >= 3)
+  assert.ok(!/战斗|等级|装备|排行|交易奖励/.test(`${template.title}${template.summary}`))
+}
+
+const ownerTemplateDraft = createOwnerGameplayFromTemplate(OWNER_GAMEPLAY_TEMPLATES[0], 7)
+assert.ok(ownerTemplateDraft.id.startsWith('gp_template_three-step-clue-ledger_'))
+assert.equal(ownerTemplateDraft.status, 'draft')
+assert.equal(ownerTemplateDraft.mode, 'ai_directed_branch')
+assert.equal(ownerTemplateDraft.completion.memory_atom.enabled, false)
+assert.ok(ownerTemplateDraft.owner_brief.forbidden.includes('不使用战斗、等级、装备、排行榜或可交易奖励'))
+assert.ok(ownerTemplateDraft.owner_brief.forbidden.includes('不绕过店主确认自动发布剧情、NPC 或酒馆内容'))
+assert.ok(ownerTemplateDraft.nodes.some((node) => node.id === 'complete'))
+
+const clueTemplates = filterOwnerGameplayTemplates({ category: '线索' }).map((template) => template.id)
+assert.deepEqual(clueTemplates, ['three-step-clue-ledger'])
+const kindnessSearch = filterOwnerGameplayTemplates({ query: '医院' }).map((template) => template.id)
+assert.deepEqual(kindnessSearch, ['kindness-checklist'])
 
 assert.equal(SHORT_DRAMA_GAMEPLAY_TEMPLATES.length, 4)
 assert.deepEqual(SHORT_DRAMA_GAMEPLAY_TEMPLATES.map((template) => template.id), [
@@ -80,9 +117,16 @@ for (const node of shortDramaDraft.nodes) {
 const here = dirname(fileURLToPath(import.meta.url))
 const managerSource = readFileSync(join(here, '../app/product/GameplayManager.jsx'), 'utf8')
 assert.ok(managerSource.includes('GameplayDefinitionEditor'))
-assert.ok(managerSource.includes('saveGameplays'))
+assert.ok(managerSource.includes('saveGameplays as persistGameplays'))
+assert.ok(managerSource.includes('async function saveGameplayDefinitions'))
+assert.ok(managerSource.includes('persistGameplays(tavern.id, gameplays, ownerId)'))
+assert.ok(managerSource.includes('responseGameplays(result)'))
 assert.ok(managerSource.includes('published'))
 assert.ok(managerSource.includes('disabled'))
+assert.ok(managerSource.includes('OWNER_GAMEPLAY_TEMPLATE_CATEGORIES'))
+assert.ok(managerSource.includes('filterOwnerGameplayTemplates'))
+assert.ok(managerSource.includes('玩法模板库'))
+assert.ok(managerSource.includes('不含战斗、等级、装备、排行或交易奖励'))
 assert.ok(managerSource.includes('SHORT_DRAMA_GAMEPLAY_TEMPLATES'))
 assert.ok(managerSource.includes('只生成草稿，不会自动发布'))
 
@@ -119,6 +163,8 @@ assert.ok(ownerSource.includes('GameplayManager'))
 const styleSource = readFileSync(join(here, '../app/product/tavernGameplay.css'), 'utf8')
 assert.ok(styleSource.includes('.tavern-gameplay-launcher'))
 assert.ok(styleSource.includes('.gameplay-session-panel'))
+assert.ok(styleSource.includes('.owner-gameplay-template-panel'))
+assert.ok(styleSource.includes('.owner-gameplay-template-card'))
 assert.ok(styleSource.includes('.short-drama-template-grid'))
 assert.ok(styleSource.includes('.gameplay-launch-card.is-drama'))
 

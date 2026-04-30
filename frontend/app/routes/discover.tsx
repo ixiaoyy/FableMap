@@ -49,6 +49,19 @@ type FilterState = {
   openOnly: boolean
 }
 
+type EntrySignal = {
+  label: string
+  value: string
+  helper: string
+  className: string
+}
+
+type EntryStatusDisplay = {
+  label: string
+  helper: string
+  className: string
+}
+
 const CATEGORIES: Category[] = [
   { label: "异星街角", tags: ["外星人", "便利店"], color: "text-green-300 border-green-300/30 bg-green-300/10" },
   { label: "委托故事", tags: ["文游", "委托板"], color: "text-amber-300 border-amber-300/30 bg-amber-300/10" },
@@ -91,6 +104,81 @@ function signalStrength(tavern: Tavern, index: number) {
   const openBoost = tavern.status === "open" || tavern.is_open ? 10 : 0
   const visitBoost = Math.min(Math.floor((tavern.visit_count ?? 0) / 10), 10)
   return Math.min(99, 58 + (index % 4) * 5 + characterBoost + openBoost + visitBoost)
+}
+
+function compactDisplayText(value: unknown, fallback: string, maxLength = 34) {
+  const text = typeof value === "string" ? value.trim() : ""
+  const display = text || fallback
+  return display.length > maxLength ? `${display.slice(0, maxLength)}…` : display
+}
+
+function entryStatusDisplay(tavern: TavernWithTimeStatus | Tavern): EntryStatusDisplay {
+  const access = typeof tavern.access === "string" ? tavern.access : "public"
+  const status = typeof tavern.status === "string" ? tavern.status : "open"
+  const isClosed = (tavern as TavernWithTimeStatus).is_open === false || status === "closed"
+
+  if (isClosed) {
+    return {
+      label: "今日熄灯",
+      helper: "可预览，稍后再入店",
+      className: "border-white/10 bg-white/[0.04] text-white/52",
+    }
+  }
+
+  if (access === "password") {
+    return {
+      label: "口令门扉",
+      helper: "带口令进入，不公开扩散",
+      className: "border-amber-300/24 bg-amber-300/10 text-amber-50",
+    }
+  }
+
+  if (access === "private") {
+    return {
+      label: "主人私域",
+      helper: "仅主人或授权访客可见",
+      className: "border-violet-300/24 bg-violet-300/10 text-violet-50",
+    }
+  }
+
+  return {
+    label: "公开入店",
+    helper: "可直接进入和 NPC 对话",
+    className: "border-cyan-300/24 bg-cyan-300/10 text-cyan-50",
+  }
+}
+
+function buildEntrySignals(tavern: TavernWithTimeStatus | Tavern, placeType: ReturnType<typeof derivePlaceTypeDisplay>): EntrySignal[] {
+  const entry = entryStatusDisplay(tavern)
+  const characterCount = Array.isArray(tavern.characters) ? tavern.characters.length : 0
+  const visitCount = Number.isFinite(tavern.visit_count) ? Number(tavern.visit_count) : 0
+
+  return [
+    {
+      label: "入口",
+      value: entry.label,
+      helper: entry.helper,
+      className: entry.className,
+    },
+    {
+      label: "氛围",
+      value: placeType.shortLabel || placeType.label || "酒馆",
+      helper: compactDisplayText(placeType.tone, placeType.description || "真实坐标上的酒馆入口"),
+      className: placeType.cardClass || "border-cyan-300/24 bg-cyan-300/10 text-cyan-50",
+    },
+    {
+      label: "角色",
+      value: characterCount ? `${characterCount} 位 NPC` : "待配置 NPC",
+      helper: characterCount ? "已有角色驻场" : "先看坐标氛围",
+      className: "border-fuchsia-300/22 bg-fuchsia-300/10 text-fuchsia-50",
+    },
+    {
+      label: "回访",
+      value: visitCount ? `${visitCount} 次到访` : "新入口",
+      helper: visitCount ? "聚合到访热度" : "等待第一位旅人",
+      className: "border-emerald-300/22 bg-emerald-300/10 text-emerald-50",
+    },
+  ]
 }
 
 function tavernMatchesCategory(
@@ -174,6 +262,39 @@ function CharacterStack({ characters = [], muted = false }: { characters?: Taver
         {characters.slice(0, 2).map((character) => character.name || "未命名").join(" · ")}
         {characters.length > 2 ? " · ..." : ""}
       </span>
+    </div>
+  )
+}
+
+function EntrySignalGrid({
+  tavern,
+  placeType,
+  compact = false,
+  muted = false,
+}: {
+  tavern: TavernWithTimeStatus | Tavern
+  placeType: ReturnType<typeof derivePlaceTypeDisplay>
+  compact?: boolean
+  muted?: boolean
+}) {
+  const signals = buildEntrySignals(tavern, placeType)
+
+  return (
+    <div className={`grid gap-2 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`} aria-label="入店探索线索">
+      {signals.map((signal) => (
+        <div
+          key={signal.label}
+          className={`min-w-0 rounded-2xl border px-3 py-2 ${
+            muted ? "border-white/10 bg-white/[0.025] text-white/42" : signal.className
+          }`}
+        >
+          <p className={`text-[0.62rem] font-black uppercase tracking-[0.18em] ${muted ? "text-white/24" : "text-white/45"}`}>
+            {signal.label}
+          </p>
+          <p className={`mt-1 truncate text-xs font-black ${muted ? "text-white/42" : "text-white"}`}>{signal.value}</p>
+          <p className={`mt-0.5 truncate text-[0.68rem] ${muted ? "text-white/26" : "text-white/55"}`}>{signal.helper}</p>
+        </div>
+      ))}
     </div>
   )
 }
@@ -349,6 +470,7 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
   const tavernWithTimeStatus = tavern as TavernWithTimeStatus
   const isClosed = tavernWithTimeStatus.is_open === false
   const placeType = derivePlaceTypeDisplay(tavern)
+  const entry = entryStatusDisplay(tavernWithTimeStatus)
   const strength = signalStrength(tavern, index)
 
   return (
@@ -386,6 +508,13 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
                 <span aria-hidden="true">{placeType.icon}</span>
                 {placeType.shortLabel || placeType.label}
               </span>
+              <span
+                className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${
+                  isClosed ? "border-white/10 bg-white/5 text-white/40" : entry.className
+                }`}
+              >
+                {entry.label}
+              </span>
               <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${isClosed ? "border-white/10 bg-white/5 text-white/40" : "border-fuchsia-300/18 bg-fuchsia-300/10 text-fuchsia-100"}`}>
                 Signal {strength}%
               </span>
@@ -396,6 +525,9 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
           </p>
           <div className="mt-3">
             <CharacterStack characters={tavern.characters} muted={isClosed} />
+          </div>
+          <div className="mt-3">
+            <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} compact muted={isClosed} />
           </div>
           <div className={`mt-3 flex flex-wrap items-center gap-2 text-xs ${isClosed ? "text-white/24" : "text-violet-100/48"}`}>
             <span>{coordinateLabel(tavern)}</span>
@@ -416,6 +548,7 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
 function ResultCard({ tavern, index, onPreview }: { tavern: Tavern; index: number; onPreview: (tavern: Tavern) => void }) {
   const tavernWithTimeStatus = tavern as TavernWithTimeStatus
   const placeType = derivePlaceTypeDisplay(tavern)
+  const entry = entryStatusDisplay(tavernWithTimeStatus)
   const isClosed = tavernWithTimeStatus.is_open === false
 
   return (
@@ -435,6 +568,13 @@ function ResultCard({ tavern, index, onPreview }: { tavern: Tavern; index: numbe
         <span className="absolute right-4 top-4 rounded-full border border-fuchsia-300/22 bg-fuchsia-300/12 px-3 py-1 text-xs font-bold text-fuchsia-100 backdrop-blur-md">
           {placeType.shortLabel || placeType.label}
         </span>
+        <span
+          className={`absolute left-4 top-14 rounded-full border px-3 py-1 text-xs font-bold backdrop-blur-md ${
+            isClosed ? "border-white/10 bg-slate-950/68 text-white/45" : entry.className
+          }`}
+        >
+          {entry.label}
+        </span>
         <div className="absolute bottom-4 left-4 right-4">
           <CharacterStack characters={tavern.characters} muted={isClosed} />
         </div>
@@ -445,10 +585,14 @@ function ResultCard({ tavern, index, onPreview }: { tavern: Tavern; index: numbe
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-violet-100/62">
             {tavern.description || "这个区域还没有公开简介，但坐标已经亮起。"}
           </p>
+          <p className="mt-2 line-clamp-1 text-xs font-bold text-cyan-100/68">
+            氛围线索：{compactDisplayText(placeType.tone, tavern.scene_prompt || "真实坐标上的赛博入口", 42)}
+          </p>
         </div>
+        <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} muted={isClosed} />
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
           <span className="rounded-full border border-cyan-300/18 bg-cyan-300/10 px-2.5 py-1 text-cyan-100">Signal {signalStrength(tavern, index)}%</span>
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-violet-100/62">{tavern.access || "public"}</span>
+          <span className={`rounded-full border px-2.5 py-1 ${isClosed ? "border-white/10 bg-white/[0.04] text-violet-100/42" : entry.className}`}>{entry.label}</span>
           {tavernWithTimeStatus.local_time_display ? (
             <span className="rounded-full border border-emerald-300/18 bg-emerald-300/10 px-2.5 py-1 text-emerald-100">
               {isClosed ? "已熄灯" : "亮起中"} · {tavernWithTimeStatus.local_time_display}
@@ -651,7 +795,7 @@ export default function DiscoverRoute() {
 
   return (
     <ProductShell eyebrow="Discover">
-      <section className="grid gap-6 lg:grid-cols-[0.62fr_1.38fr] lg:items-start">
+      <section id="discover-mainline" className="grid scroll-mt-28 gap-6 lg:grid-cols-[0.62fr_1.38fr] lg:items-start">
         <aside className="space-y-5 lg:sticky lg:top-28">
           <div className="rounded-[2rem] border border-cyan-300/18 bg-slate-950/72 p-6 shadow-2xl shadow-black/25 backdrop-blur-xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">

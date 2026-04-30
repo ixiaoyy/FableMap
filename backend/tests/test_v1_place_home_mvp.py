@@ -43,6 +43,9 @@ def test_place_type_defaults_and_round_trips_through_v1_api(tmp_path: Path) -> N
     school = _create_tavern(client, name="第三中学", place_type="school")
     assert school["place_type"] == "school"
 
+    hospital = _create_tavern(client, name="夜间护理站", place_type="hospital")
+    assert hospital["place_type"] == "hospital"
+
     tavern_id = str(school["id"])
     visitor_view = client.get(f"/api/v1/taverns/{tavern_id}", headers={"X-User-Id": VISITOR_ID})
     assert visitor_view.status_code == 200

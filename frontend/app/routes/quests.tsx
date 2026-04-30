@@ -18,7 +18,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
     const result = await listTaverns({})
     taverns = result.taverns || []
   } catch (error) {
-    errors.push(`读取任务引导数据失败：${errorMessage(error)}`)
+    errors.push(`读取探索清单数据失败：${errorMessage(error)}`)
   }
 
   return {
@@ -36,18 +36,18 @@ export default function QuestsRoute() {
   const { ownerId, errors, summary } = useLoaderData<typeof clientLoader>()
 
   return (
-    <ProductShell eyebrow="Quests">
-      <section className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+    <ProductShell eyebrow="Checklist">
+      <section id="checklist-mainline" className="scroll-mt-28 grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
         <aside className="space-y-5">
           <Card className="overflow-hidden">
             <CardHeader>
               <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-100">
                 <Compass className="h-3.5 w-3.5" />
-                Explorer guide
+                Explorer checklist
               </div>
-              <CardTitle className="text-4xl font-black leading-tight">探索任务板</CardTitle>
+              <CardTitle className="text-4xl font-black leading-tight">探索清单</CardTitle>
               <CardDescription className="text-base leading-7">
-                这是赛博酒馆的轻量引导，不是传统 RPG 主线、数值成长或竞赛榜单。目标只帮助你找到下一间真实坐标酒馆、认识 NPC、体验店主发布的玩法。
+                这是赛博酒馆的轻量引导，不是传统 RPG 主线、数值成长或竞赛榜单。目标只帮助你找到下一间真实坐标酒馆、认识 NPC、记录完成与回访提示。
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -72,7 +72,7 @@ export default function QuestsRoute() {
                   边界说明
                 </p>
                 <p className="mt-2 text-sm leading-7 text-violet-100/72">
-                  本 MVP 只根据现有酒馆列表做前端引导与进度估算；不新增持久化 Quest schema，不发放可交易奖励，不展示访客排名。
+                  本 MVP 只根据现有酒馆列表做前端引导与进度估算；不新增持久化清单 Schema，不发放可交易奖励，不展示任何排名。
                 </p>
               </div>
 
@@ -111,7 +111,7 @@ export default function QuestsRoute() {
             <Card className="p-5">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/62">已满足</p>
               <p className="mt-3 text-3xl font-black text-white">{summary.completedCount}</p>
-              <p className="mt-2 text-sm text-violet-100/58">达到当前数据条件的引导任务</p>
+              <p className="mt-2 text-sm text-violet-100/58">达到当前数据条件的清单项目</p>
             </Card>
             <Card className="p-5">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-fuchsia-100/62">待探索</p>
@@ -121,7 +121,7 @@ export default function QuestsRoute() {
             <Card className="p-5">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100/62">玩法酒馆</p>
               <p className="mt-3 text-3xl font-black text-white">{summary.metrics.questPlayTaverns}</p>
-              <p className="mt-2 text-sm text-violet-100/58">含 quest-play 或已发布玩法</p>
+              <p className="mt-2 text-sm text-violet-100/58">含探索布局或已发布玩法</p>
             </Card>
           </div>
 
