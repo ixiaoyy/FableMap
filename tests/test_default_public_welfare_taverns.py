@@ -241,6 +241,58 @@ def test_rejected_public_welfare_npc_assets_do_not_pass_after_regeneration():
         assert expressions == expected_rejected_expressions, f"{char_id} must regenerate rejected expressions"
 
 
+def test_batch1_rebuilt_public_welfare_assets_no_longer_use_pending_rejected_hashes():
+    manifest = _rejected_npc_asset_manifest()
+    batch1_character_ids = {
+        "char_pw_9_delta",
+        "char_pw_mu_mu",
+        "char_pw_v17",
+        "char_pw_pi_pi",
+        "char_pw_mozhan",
+        "char_pw_zhideng",
+        "char_pw_huoyan",
+        "char_pw_ahuai",
+        "char_pw_heguang",
+        "char_pw_qiaoshou",
+    }
+    checked = 0
+
+    for entry in manifest["entries"]:
+        if entry["char_id"] not in batch1_character_ids:
+            continue
+        if entry["status"] != "pending_regeneration":
+            continue
+
+        path = entry["path"]
+        assert Path(path).exists(), f"missing Batch 1 asset path: {path}"
+        current_hash = _project_png_file_hash(path)
+        assert current_hash != entry["sha256"], f"Batch 1 asset still uses rejected hash: {path}"
+        sprite_url = "/" + str(Path(path).relative_to("frontend/public")).replace("\\", "/")
+        assert _project_png_dimensions(sprite_url) == (256, 256)
+        checked += 1
+
+    assert checked == 32
+
+
+def test_all_rebuilt_public_welfare_pending_assets_no_longer_use_rejected_hashes():
+    manifest = _rejected_npc_asset_manifest()
+    checked = 0
+
+    for entry in manifest["entries"]:
+        if entry["status"] != "pending_regeneration":
+            continue
+
+        path = entry["path"]
+        assert Path(path).exists(), f"missing rebuilt asset path: {path}"
+        current_hash = _project_png_file_hash(path)
+        assert current_hash != entry["sha256"], f"rebuilt asset still uses rejected hash: {path}"
+        sprite_url = "/" + str(Path(path).relative_to("frontend/public")).replace("\\", "/")
+        assert _project_png_dimensions(sprite_url) == (256, 256)
+        checked += 1
+
+    assert checked == 48
+
+
 def test_default_public_welfare_npc_assets_are_grouped_by_character_directory():
     flat_pngs = list(Path("frontend/public/assets/npcs").glob("*.png"))
     assert flat_pngs == []
@@ -335,6 +387,35 @@ def test_third_shelf_observatory_contains_complete_alien_convenience_tavern():
         )
         for keyword in ("外星", "便利店", "随便", "第二件半价", "关东煮"):
             assert keyword in combined_prompt
+
+
+def test_third_shelf_observatory_encodes_distinct_alien_body_plans():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        tavern = service.get_tavern_payload("pw_third_shelf_observatory", user_id="visitor_public_welfare")
+        characters = {character["id"]: character for character in tavern["characters"]}
+
+        expected_body_plan_keywords = {
+            "char_pw_9_delta": ("细长", "观察镜片"),
+            "char_pw_mu_mu": ("软胶", "触腕"),
+            "char_pw_v17": ("半机械", "透明"),
+            "char_pw_pi_pi": ("漂浮", "触角"),
+        }
+
+        for character_id, keywords in expected_body_plan_keywords.items():
+            character = characters[character_id]
+            combined_prompt = " ".join(
+                [
+                    character["description"],
+                    character["personality"],
+                    character["scenario"],
+                    character["system_prompt"],
+                    character["first_mes"],
+                    " ".join(character["tags"]),
+                ]
+            )
+            for keyword in keywords:
+                assert keyword in combined_prompt, f"{character_id} missing alien body-plan keyword {keyword}"
 
 
 def test_midnight_commission_board_contains_text_adventure_tavern():
