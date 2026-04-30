@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 8
+- **Total Sessions**: 9
 - **Last Active**: 2026-04-30
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~552 | Active |
+| `journal-1.md` | ~583 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 9 | 2026-04-30 | Home Real-coordinate Governance Review | - | `main` |
 | 8 | 2026-04-30 | Research WorldInfo Visual Editor Modern MVP | - | `main` |
 | 7 | 2026-04-30 | Review and complete easysdd migration task | - | `main` |
 | 6 | 2026-04-30 | StateCard MVP review — already implemented, all tests pass | - | `main` |

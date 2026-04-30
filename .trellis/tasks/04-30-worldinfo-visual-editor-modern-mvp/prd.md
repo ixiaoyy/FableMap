@@ -101,14 +101,14 @@ PromptBlockEditor has some patterns that WorldBookEditor could learn from:
   - ✅ WorldBookTester.jsx analyzed (274 lines)
   - ✅ Backend API analyzed (worldinfo.py, contracts/worldinfo.py)
   - ✅ PromptBlockEditor patterns compared
-- [ ] MVP scope is confirmed against `docs/WHAT_NOT_TO_BUILD.md` and owner-sovereignty rules.
+- [x] MVP scope is confirmed against `docs/WHAT_NOT_TO_BUILD.md` and owner-sovereignty rules.
   - ✅ No new schema fields needed
   - ✅ SillyTavern compatible
   - ✅ Owner sovereignty maintained
-- [ ] Implementation, if any, uses existing schema/API where possible; any contract change updates tests and docs.
-  - 🔄 To be confirmed during implementation
-- [ ] Verification commands are recorded in this PRD before moving to review/completed.
-  - 🔄 To be added
+- [x] Implementation, if any, uses existing schema/API where possible; any contract change updates tests and docs.
+  - ✅ Used existing `tavern.world_info` shape and existing world_info API endpoints; no schema/API contract change.
+- [x] Verification commands are recorded in this PRD before moving to review/completed.
+  - ✅ Recorded below on 2026-04-30.
 
 ## Verification Plan
 
@@ -137,3 +137,51 @@ npm --prefix .\frontend run build
 
 * Created during 2026-04-30 backlog hardening at user request: “把所有的规划全部拆成子任务，防止未来丢失”.
 * This task is intentionally a planning/backlog placeholder until selected for implementation.
+
+## 2026-04-30 Implementation Notes
+
+- Updated `frontend/app/product/WorldBookEditor.jsx` within the existing WorldInfo editor rather than introducing a parallel editor.
+- Added an initialization/loading affordance (`正在加载世界书...`) while the editor hydrates from `tavern.world_info`.
+- Added keyboard shortcut support and in-panel hint text:
+  - `Ctrl`/`⌘` + `S` saves the current world book draft.
+  - `Ctrl`/`⌘` + `Enter` runs the inline hit test.
+- Preserved the existing world_info data shape and save/test API usage; no backend contract, schema, or persistence field changed.
+- Added focused static regression coverage in `frontend/scripts/worldbook-editor-test.mjs` and wired it into `npm --prefix .\frontend test`.
+- Added responsive/visual CSS for the loading state and shortcut hint in `frontend/app/product/styles.css`.
+
+## 2026-04-30 Verification
+
+Fresh verification run after implementation:
+
+```powershell
+npm --prefix .rontend run typecheck
+npm --prefix .rontend run build
+npm --prefix .rontend test
+```
+
+Result: all commands passed, including the new `worldbook-editor-test: ok` static regression check.
+
+## 2026-04-30 Playwright Visual Self-Acceptance
+
+Per project rule, browser visual/interaction acceptance was first self-checked with Playwright before marking this child task complete.
+
+```powershell
+$env:WORLDBOOK_HARNESS_URL='http://127.0.0.1:5174'
+node .\.trellis	mp\playwright-mainline\worldbook-visual-acceptance.cjs
+```
+
+Result: passed. Coverage included desktop modal, mobile/narrow layout, loading state, `Ctrl+Enter` hit-test POST, `Ctrl+S` save PUT, no horizontal overflow, and no console/page/request failures.
+
+Evidence files:
+
+- `.trellis/tmp/playwright-mainline/evidence/04-30-worldbook-visual-acceptance/worldbook-desktop.png`
+- `.trellis/tmp/playwright-mainline/evidence/04-30-worldbook-visual-acceptance/worldbook-mobile.png`
+- `.trellis/tmp/playwright-mainline/evidence/04-30-worldbook-visual-acceptance/worldbook-shortcuts.png`
+- `.trellis/tmp/playwright-mainline/evidence/04-30-worldbook-visual-acceptance/worldbook-visual-acceptance-report.json`
+
+## 2026-04-30 Completion
+
+Done: WorldInfo visual editor MVP modernization is complete for the scoped slice: loading state, mobile/responsive polish, keyboard shortcuts, regression script, build/test/typecheck, and Playwright visual self-acceptance.
+
+Not done / intentionally deferred: tag-chip keyword input, bulk operations, import/export, and a tabbed integration with `WorldBookTester`; these remain deferred future phases from the original PRD.
+

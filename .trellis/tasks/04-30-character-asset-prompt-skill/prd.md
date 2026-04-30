@@ -152,3 +152,52 @@ Actions:
 - Updated `.trellis/tasks/04-30-public-welfare-npc-batch-upgrade/prd.md` so Batch 0 audit records species/body-plan and flags non-realistic shops that are all ordinary humans.
 
 No runtime code, API, schema, or image asset changed.
+
+## 2026-04-30 User Follow-up: Style DNA Template Optimization
+
+User provided a more detailed reverse-prompt-engineering reference and asked to optimize the project image generation template.
+
+Actions:
+
+- Updated `.agents/skills/image-style-prompt-extractor/SKILL.md` so the default reusable-template output is now `Style DNA Prompt` + optional `Composition Module` + `Subject Recommendations`, while preserving a strict single-prompt mode for requests that explicitly ask for one copyable prompt only.
+- Updated `.agents/skills/generate-character-prompt/SKILL.md` so character visual prompts compose around Style DNA and optional composition modules instead of treating style as a short keyword.
+- Expanded `.agents/skills/generate-character-prompt/references/prompt-templates.md` so FableMap NPC visual prompts can receive a reusable Style DNA recipe and optional composition module, and so the image-style reverse prompt includes abstraction, medium-vs-carrier, and subject recommendation rules.
+- Updated `docs/IMAGE_ASSETS_SPEC.md` with a project-level Style DNA pre-generation template, optional composition module, and stronger NPC/place asset prompt templates.
+- Updated `.trellis/spec/frontend/image-asset-guidelines.md` and `.trellis/spec/frontend/npc-art-guidelines.md` so future image assets preserve the three-part style template and avoid leaking source-image content or unintended poster/magazine carrier details.
+
+No runtime code, API, schema, or actual image asset changed.
+
+## 2026-04-30 Style DNA Template Optimization Verification Results
+
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/generate-character-prompt` — passed: `Skill is valid!`.
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/image-style-prompt-extractor` — passed: `Skill is valid!`.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...style DNA template content validation..."` — first attempted as a one-liner and failed due shell quoting; reran via stdin script and passed, confirming required Style DNA / Composition / Subject Recommendation markers, placeholder text, no accidental escaped-CRLF marker artifacts, and balanced Markdown code fences.
+- Backend/frontend build/test not run because this follow-up only updates skill/spec/docs/task documentation; no runtime code or image assets changed.
+
+## 2026-04-30 User Follow-up: Learn from `awesome-gpt-image-2`
+
+User asked to continue referencing `D:\work\awesome-gpt-image-2` as a complete project to learn image-making techniques or reuse capabilities.
+
+External project audit:
+
+- Reviewed `README.md`, `LICENSE`, `docs/templates.md`, and selected gallery cases.
+- License file is MIT, but the README/disclaimer states some cases derive from public community sources and third-party prompt/image platforms.
+- Decision: reuse only general methodology and prompt-structuring techniques; do not copy gallery images, brand/character examples, long case prompts, third-party logos, or exact layouts into FableMap shipped assets.
+
+Actions:
+
+- Added `.agents/skills/generate-character-prompt/references/prompt-as-code-techniques.md`, summarizing reusable Prompt-as-Code methods for FableMap image assets: asset type first, layout before style, text policy, Style DNA separation, series consistency locks, module budgets, tavern-safe adaptation, camera/material parameters, coordinate-map guardrails, and negative constraints.
+- Updated `.agents/skills/generate-character-prompt/SKILL.md` so future users/agents know to read the new reference when learning from external image-prompt projects, batching assets, or creating structured schemas.
+- Added a FableMap Prompt-as-Code JSON envelope to `.agents/skills/generate-character-prompt/references/prompt-templates.md` and `docs/IMAGE_ASSETS_SPEC.md`.
+- Updated `.trellis/spec/frontend/image-asset-guidelines.md` and `.trellis/spec/frontend/npc-art-guidelines.md` so future image-asset work uses structured envelopes for Agent/batch workflows and respects external-reference licensing/IP boundaries.
+
+No external images, exact case prompts, runtime code, API, schema, or actual image asset changed.
+
+## 2026-04-30 `awesome-gpt-image-2` Reference Verification Results
+
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/generate-character-prompt` — passed: `Skill is valid!`.
+- `$env:PYTHONUTF8='1'; & 'C:\Users\phpxi\miniconda3\python.exe' C:\Users\phpxi\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents/skills/image-style-prompt-extractor` — passed: `Skill is valid!`.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-character-asset-prompt-skill` — passed all implement/check/debug context validation.
+- `& 'C:\Users\phpxi\miniconda3\python.exe' -c "...prompt-as-code content validation..."` — passed via stdin script; confirmed Prompt-as-Code markers, JSON envelope fields, external-reference path note, Markdown code fence balance, and no accidental escaped-CRLF marker artifacts.
+- Backend/frontend build/test not run because this follow-up only updates skill/spec/docs/task documentation; no runtime code or image assets changed.

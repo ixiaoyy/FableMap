@@ -47,5 +47,20 @@
 * Keep the task frontend-only and avoid Schema/API changes.
 * Polish existing `/discover` cards by replacing raw access/status strings with tavern-entry language and adding compact atmosphere/role/return signals from existing Tavern fields.
 * Do not add rankings, POI/navigation features, public visitor social surfaces, or token/commercial UI.
+## 2026-04-30 Playwright Visual Self-Acceptance
 
+Per user rule, browser visual acceptance now starts with AI-run Playwright self-acceptance before human review.
+
+* Command: `FABLEMAP_BASE_URL=http://127.0.0.1:5173 node .\.trellis\tmp\playwright-mainline\discover-visual-acceptance.cjs`
+* Result: passed.
+* Checked: `/discover` loads, entry states `公开入店` / `口令门扉` / `主人私域` / `今日熄灯` are visible, `入店探索线索` grids render, no raw `password/private` enum leak, no desktop/mobile horizontal overflow, no console/page errors, no failed requests.
+* Evidence:
+  * `.trellis/tmp/playwright-mainline/evidence/04-30-discover-visual-acceptance/discover-desktop.png`
+  * `.trellis/tmp/playwright-mainline/evidence/04-30-discover-visual-acceptance/discover-mobile.png`
+  * `.trellis/tmp/playwright-mainline/evidence/04-30-discover-visual-acceptance/discover-visual-acceptance-report.json`
+
+Rule update recorded in `AGENTS.md` and `.trellis/spec/frontend/quality-guidelines.md`.
+## 2026-04-30 Completion
+
+Human acceptance: user confirmed that passing Playwright visual acceptance can be treated as task completion. Task status updated to `completed`.
 

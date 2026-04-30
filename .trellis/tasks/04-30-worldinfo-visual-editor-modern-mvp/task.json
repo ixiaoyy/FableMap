@@ -3,7 +3,7 @@
   "name": "04-30-worldinfo-visual-editor-modern-mvp",
   "title": "WorldInfo Visual Editor Modern MVP",
   "description": "把世界书/WorldInfo 编辑体验整理为当前 React Router 前端可继续打磨的现代化任务；优先复用既有 world_info 数据，不新增 schema。",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-04-30",
-  "completedAt": null,
+  "completedAt": "2026-04-30",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 2,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -49,8 +49,39 @@
   "parent": "04-28-new-features-brainstorm",
   "relatedFiles": [
     "prd.md",
-    ".trellis/tasks/04-28-new-features-brainstorm/"
+    ".trellis/tasks/04-28-new-features-brainstorm/",
+    "task.json",
+    "implement.jsonl",
+    "check.jsonl",
+    "frontend/app/product/WorldBookEditor.jsx",
+    "frontend/app/product/styles.css",
+    "frontend/scripts/worldbook-editor-test.mjs",
+    "frontend/package.json",
+    ".trellis/tmp/playwright-mainline/worldbook-visual-acceptance.cjs",
+    ".trellis/tmp/playwright-mainline/evidence/04-30-worldbook-visual-acceptance/worldbook-visual-acceptance-report.json",
+    ".trellis/tmp/worldbook-visual-harness/"
   ],
-  "notes": "Research complete: WorldBookEditor.jsx (588 lines) analyzed, all features documented. MVP scope defined: loading state, mobile layout, keyboard shortcuts, visual polish. Implementation files created.",
-  "meta": {}
+  "notes": "Completed 2026-04-30: modernized existing WorldBookEditor with loading state, responsive/visual polish, Ctrl/Cmd+S save and Ctrl/Cmd+Enter test shortcuts, static regression test, build/typecheck/test, and Playwright visual acceptance evidence. No schema/API changes; deferred tag chips, bulk operations, import/export, and tabbed tester integration.",
+  "meta": {
+    "verification": {
+      "typecheck": "npm --prefix .\\frontend run typecheck (passed)",
+      "build": "npm --prefix .\\frontend run build (passed)",
+      "test": "npm --prefix .\\frontend test (passed, includes worldbook-editor-test: ok)",
+      "playwright_visual_acceptance": "node .\\.trellis\\tmp\\playwright-mainline\\worldbook-visual-acceptance.cjs against http://127.0.0.1:5174 (passed)"
+    },
+    "done": [
+      "Existing WorldBookEditor reused and modernized.",
+      "Loading state added during initialization from tavern.world_info.",
+      "Responsive/visual polish for modal loading and shortcut hint.",
+      "Ctrl/Cmd+S save and Ctrl/Cmd+Enter test keyboard shortcuts.",
+      "Static regression script added to frontend test command.",
+      "Playwright desktop/mobile/shortcut acceptance evidence recorded."
+    ],
+    "deferred_not_done": [
+      "Keyword tag-chip input.",
+      "Bulk entry operations.",
+      "WorldInfo import/export.",
+      "Tabbed integration with WorldBookTester."
+    ]
+  }
 }
