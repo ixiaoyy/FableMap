@@ -24,6 +24,7 @@ Required:
 - The role should read as tavern staff, host, guide, storyteller, keeper, attendant, or regular NPC.
 - The style can vary by tavern skin, but must preserve FableMap's product meaning: real place → owner-authored tavern → AI NPC → memory/revisit.
 - Generated portrait files must follow `image-asset-guidelines.md`: final deliverables live in repository asset paths, not only in `.codex/generated_images` or chat previews.
+- Formal NPC portraits/sprites must also ship with same-directory prompt provenance. Single portraits use `<image-stem>.prompt.md`; one character's expression sprite set should use a single `expression-set.prompt.md` that records each expression asset, a neutral/natural single-image prompt or clearly marked reverse-engineered neutral prompt, current dimensions, SHA-256 values, Style DNA source, and shared identity locks.
 
 Forbidden:
 
@@ -141,6 +142,13 @@ frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/anger.png
 frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/embarrassment.png
 frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/curiosity.png
 ```
+- Each expression set should have one same-directory group sidecar:
+
+```text
+frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/expression-set.prompt.md
+```
+
+The group sidecar must list all five assets, expressions, dimensions, and hashes, but `## Final prompt` must contain only one natural/neutral single-image prompt. Do not list five expression prompts under `## Final prompt`; that pattern causes image models to generate a contact sheet or five expressions in one image. It must preserve one shared identity-lock set so high-quality redraw does not change face, outfit, palette, body plan, or signature prop. Legacy one-sidecar-per-expression files are acceptable only as migration input; new deliverables should collapse them into `expression-set.prompt.md`.
 
 ### 4. Validation & Error Matrix
 
@@ -151,6 +159,10 @@ frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/curiosity.png
 | `sprites.neutral` points to missing file | Test failure; fix path or asset |
 | Has `joy/anger/embarrassment/curiosity` but no semantic aliases | Acceptable for current engine; prefer adding `happy/angry/shy/curious` aliases for user-facing clarity |
 | Owner uploads/imports `sprites.neutral` or `avatar` | Owner art wins over project fallback |
+| Expression sprite set exists but `expression-set.prompt.md` is missing or has stale hashes | Not complete; add/update the group sidecar before claiming the NPC asset is shipped |
+| Five expression sidecars duplicate the same prompt with only expression suffix changes | Wasteful; collapse them into one `expression-set.prompt.md` |
+| Expression set prompts use unrelated identity locks | Invalid; fix prompts so high-quality redraw preserves the same character |
+| `expression-set.prompt.md` final prompt includes all five expression prompt blocks | Invalid; keep only the natural/neutral prompt and generate expression variants one at a time |
 
 ### 5. Good / Base / Bad Cases
 
@@ -186,6 +198,8 @@ sprite_path = Path("frontend/public") / sprite_url.removeprefix("/")
 assert sprite_path.exists()
 assert sprite_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 ```
+
+For prompt provenance, also verify each project-owned sprite is covered by same-directory prompt provenance: either a matching single-image sidecar or, preferably for expression sets, `expression-set.prompt.md` whose `assets` and `sha256s` include the current file.
 
 Run at least:
 
@@ -263,6 +277,7 @@ Rules:
 - Distinguish medium texture from medium carrier. For example, "Risograph halftone texture" is allowed as a rendering/texture technique; do not imply the final asset must be a full magazine cover, barcode poster, or branded commercial layout unless that carrier itself is explicitly in scope.
 - Prefer one or two strong visual style families over long keyword piles. The style must support the NPC's tavern role and desired visitor emotion.
 - For expression sets, require identity consistency across `neutral`, `joy/happy`, `anger/angry`, `embarrassment/shy`, and `curiosity/curious`; expression changes must not alter core face, outfit silhouette, palette, or signature prop.
+- Preserve the final expression-set prompt once per accepted NPC expression set as `expression-set.prompt.md`; if generated from a manifest, cite `source_manifest`; if backfilled later, set `prompt_type: reverse-engineered` and state that it is not the original prompt. The reusable `## Final prompt` is the natural/neutral single-image prompt only; expression variants should be generated one at a time by changing the expression suffix outside the sidecar. Do not create one near-identical prompt file per expression unless there is a concrete asset-management reason.
 - For deliverable generated images, follow `image-asset-guidelines.md`; prompt text alone is not a shipped asset.
 - When a user contributes a tested reusable visual prompt recipe, preserve the full recipe in a skill reference before reducing it to a short style keyword. Keep user notes such as palette fatigue, element pile-up, or favorite/use-case guidance because they affect future prompt selection.
 - For future FableMap material resources, use `image-style-prompt-extractor` by default as the style extraction/normalization step before generating images or final visual prompts. If a needed project style is missing, add a complete recipe to `style-recipes.md` before relying on it.

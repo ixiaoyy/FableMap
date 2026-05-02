@@ -700,32 +700,45 @@ export default function TavernRoute() {
 
       {tavern ? <TavernActivitySignalsCard tavern={tavern} /> : null}
 
-      {tavern && effectiveRoleplay ? (
-        <details className="mt-6">
+      {/* Secondary panels: hidden on mobile by default, expand via <details> */}
+      {tavern ? (
+        <details className="mt-6 lg:hidden">
           <summary className="cursor-pointer rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-semibold text-violet-100/70 hover:border-cyan-300/30 hover:text-cyan-100">
-            角色扮演管理（已批准：{effectiveRoleplay.claims?.filter((claim) => claim.status === "approved").length || 0} · 待处理：{effectiveRoleplay.claims?.filter((claim) => claim.status === "pending").length || 0}）
+            更多酒馆信息
           </summary>
-          <div className="mt-4">
-            <RoleplayPanel
-              tavern={tavern}
-              characters={characters}
-              roleplay={effectiveRoleplay}
-              onRoleplayChange={setRoleplayState}
-            />
+          <div className="mt-4 space-y-4">
+            <PlaceHomePanel tavern={tavern} />
+            <VisitorNotesPanel tavern={tavern} />
+            <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
           </div>
         </details>
       ) : null}
 
-      {tavern ? <PlaceHomePanel tavern={tavern} /> : null}
-
-      {tavern ? <VisitorNotesPanel tavern={tavern} /> : null}
-
-      {/* Neighborhood Rumors */}
-      {tavern ? (
-        <div className="mt-6">
-          <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
-        </div>
-      ) : null}
+      {/* Desktop: always show secondary panels */}
+      <div className="hidden lg:block">
+        {tavern && effectiveRoleplay ? (
+          <details className="mt-6">
+            <summary className="cursor-pointer rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-semibold text-violet-100/70 hover:border-cyan-300/30 hover:text-cyan-100">
+              角色扮演管理（已批准：{effectiveRoleplay.claims?.filter((claim) => claim.status === "approved").length || 0} · 待处理：{effectiveRoleplay.claims?.filter((claim) => claim.status === "pending").length || 0}）
+            </summary>
+            <div className="mt-4">
+              <RoleplayPanel
+                tavern={tavern}
+                characters={characters}
+                roleplay={effectiveRoleplay}
+                onRoleplayChange={setRoleplayState}
+              />
+            </div>
+          </details>
+        ) : null}
+        {tavern ? <PlaceHomePanel tavern={tavern} /> : null}
+        {tavern ? <VisitorNotesPanel tavern={tavern} /> : null}
+        {tavern ? (
+          <div className="mt-6">
+            <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
+          </div>
+        ) : null}
+      </div>
     </ProductShell>
   )
 }

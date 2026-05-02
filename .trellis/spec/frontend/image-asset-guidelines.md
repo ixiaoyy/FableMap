@@ -53,6 +53,12 @@ frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png -> /asse
 - Code, seed payloads, markdown, and tests must reference repository paths or served URLs, never `C:\Users\...\generated_images\...`.
 - When replacing an existing asset, overwrite the exact path only when replacement was requested; otherwise use a versioned sibling name.
 - After replacement, verify the project path, dimensions/format, and if applicable the build output or runtime copy.
+- Every formal project image must have same-directory prompt provenance. Single independent images use `<image-stem>.prompt.md`; NPC expression sprite sets may share one same-directory `expression-set.prompt.md` per character directory.
+- Single-image sidecar frontmatter must include `asset`, `prompt_type`, `source_type`, `width`, `height`, `sha256`, `updated_at`, and `can_regenerate_higher_quality`; include `character_id`, `expression`, and `source_manifest` when applicable.
+- NPC expression-set sidecar frontmatter must include `prompt_scope: npc-expression-set`, `asset_group`, `assets`, `expressions`, `asset_count`, `prompt_type`, `source_type`, `character_id`, `widths`, `heights`, `sha256s`, `updated_at`, and `can_regenerate_higher_quality`; include `source_manifest` when applicable. Use a semicolon-separated asset/hash map if the validation script does not parse YAML arrays. Its `## Final prompt` must contain only the neutral/natural single-image prompt; do not include five per-expression prompt blocks.
+- Valid `prompt_type` values are `original-final`, `reverse-engineered`, `reference-only`, and `unknown-needs-human`. Do not label a reverse prompt as original.
+- Sidecar body must include `## Final prompt`, `## Negative constraints`, `## Style recipe / Style DNA source`, `## Identity locks`, and `## Provenance notes`.
+- If the original prompt is missing, reverse-engineer the current image with the `image-style-prompt-extractor` 15D framework and explicitly state that the sidecar is not the original generation prompt.
 
 ### 4. Validation & Error Matrix
 
@@ -63,6 +69,12 @@ frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png -> /asse
 | Existing public image was meant to be replaced but file size/hash/mtime is unchanged | Not complete; overwrite the actual referenced file |
 | Resized/optimized image exists in `frontend/public/...` and source remains in `.codex` | Acceptable; report project path as deliverable |
 | Unused generation variants remain in `.codex` | Acceptable only if final report identifies them as unused drafts or reference-only |
+| Independent formal project image has no same-directory `<image-stem>.prompt.md` | Incomplete; add an `original-final`, `reverse-engineered`, or `reference-only` sidecar before reporting done |
+| NPC expression sprite set has five duplicated per-expression sidecars | Wasteful; collapse to one same-directory `expression-set.prompt.md` that lists each expression asset, dimensions, and SHA-256 |
+| NPC expression sprite set has neither per-image sidecars nor `expression-set.prompt.md` | Incomplete; add grouped prompt provenance before reporting done |
+| `expression-set.prompt.md` final prompt lists `neutral`, `joy`, `anger`, `embarrassment`, and `curiosity` prompt blocks | Invalid; keep only the natural/neutral single-image prompt to avoid five-expression contact-sheet generation |
+| Sidecar hash does not match current image bytes | Invalid; regenerate/update the sidecar after the image changes |
+| Reverse-engineered sidecar is labeled `original-final` | Invalid provenance; relabel as `reverse-engineered` and preserve the warning |
 
 ### 5. Good / Base / Bad Cases
 
@@ -93,6 +105,12 @@ For assets loaded by frontend routes:
 
 ```powershell
 npm --prefix .\frontend run build
+```
+
+For prompt sidecar inventory / schema validation:
+
+```powershell
+py -3 artifacts/04-30-image-asset-prompt-sidecars/validate_image_prompt_sidecars.py
 ```
 
 For backend seed/public URL assets:
@@ -129,7 +147,7 @@ Default skill and recipe memory:
 ### 3. Contracts
 
 - **Prompt-first is mandatory.** Before any bitmap generation call, produce and preserve the final image Prompt (or prompt manifest for batches). Do not generate images directly from unstated assistant reasoning.
-- The preserved Prompt must be available in one of: task artifact, prompt manifest, implementation note, final report, or project-local recipe. A tool-call-only prompt is not sufficient for project memory.
+- The preserved Prompt must be available in same-directory prompt provenance once the image is accepted as a formal project asset: `<image-stem>.prompt.md` for independent images, or `expression-set.prompt.md` for one character's NPC expression set. For expression-set sidecars, preserve the neutral/natural single-image prompt only; expression variants are generated one at a time by changing the expression suffix, not by submitting a five-expression prompt block. During draft work it may also appear in a task artifact, prompt manifest, implementation note, final report, or project-local recipe. A tool-call-only prompt is not sufficient for project memory.
 - **Image quality and diversity are mandatory.** A generated asset is not acceptable merely because it is compliant and tavern-related. Reject generic AI concept art, weak focal hierarchy, and repeated decor/lighting/palette/camera formulas unless the task explicitly asks for a unified series.
 - For any batch or sequence, define a diversity matrix or equivalent plan before generation: asset, visual thesis, layout, palette, lighting, material system, style family, camera/composition, and unique motif.
 - Before generating a material image, first establish a reusable style prompt with `image-style-prompt-extractor` or its Style DNA + Composition framework.

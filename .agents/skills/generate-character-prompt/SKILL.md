@@ -27,6 +27,7 @@ Use this skill to turn an owner brief, tavern concept, or visual-style reference
 - Avoid specific IP characters, franchise marks, brand logos, and living-artist imitation unless the task is explicitly a private reference draft and final project assets remain original.
 - If images are actually generated for delivery, follow `.trellis/spec/frontend/image-asset-guidelines.md`: move accepted outputs into project paths and verify them.
 - Prompt-first is mandatory for actual image generation: first generate and preserve the final visual Prompt (or expression-prompt set), then call the image tool with that Prompt. Do not directly generate images from unstated/hidden instructions.
+- Once an image is accepted as a formal project asset, preserve the final visual Prompt in same-directory prompt provenance. Use `<image-stem>.prompt.md` for independent images. For one character's expression set, prefer a single `expression-set.prompt.md` that lists every sprite, expression, dimensions, SHA-256, and shared identity locks, but keep `## Final prompt` to one natural/neutral single-image prompt only. Do not place all five expression prompts in `## Final prompt`, because that can generate a five-expression contact sheet.
 - Image quality and diversity are mandatory: do not default every NPC/tavern image to the same warm wooden cyber bar, amber/teal lighting, centered bust, shelves, and generic anime concept-art finish. Define a distinct visual thesis, material system, palette, and composition for each non-series asset; for batches, use a diversity matrix before generation.
 
 ## Style DNA method
@@ -54,6 +55,7 @@ When the user asks to actually create bitmap素材:
 2. For single images, use the exact recorded prompt for generation.
 3. For expression sets or batches, generate a prompt manifest first, including identity locks and allowed variations.
 4. After generation, report source generated-image path and whether each image is accepted, project-landed, or reference-only.
+5. For every accepted/project-landed image, write or update same-directory prompt provenance with `prompt_type: original-final`, current dimensions, SHA-256, Style DNA source, negative constraints, and identity locks. Use `<image-stem>.prompt.md` for independent images; use one `expression-set.prompt.md` for an NPC expression set. If only a reverse prompt is available, use `prompt_type: reverse-engineered` and do not present it as original.
 
 ## Output format
 

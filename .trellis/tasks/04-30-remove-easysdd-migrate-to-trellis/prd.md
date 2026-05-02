@@ -57,3 +57,12 @@ Docs/task cleanup only; no backend/frontend build is required because no runtime
 - `git grep -n -I -e easysdd -e EasySDD -e SDD -- ':!easysdd/**' ':!.trellis/tmp/**' ':!**/node_modules/**'` — no tracked text references outside the deleted path.
 - Text-reference scan over `docs/`, `.trellis/`, `.agents/`, `.codex/`, and `.claude/` excluding `.trellis/tmp`, `node_modules`, this migration task, and `.trellis/.current-task` — no remaining references.
 - Backend/frontend build/test not run because this was a docs/task cleanup with no runtime source changes.
+
+## 2026-05-02 Review Results
+
+- `python .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-remove-easysdd-migrate-to-trellis` — passed; implement/check/debug context files valid.
+- `python .\.trellis\scripts\task.py validate .\.trellis\tasks\archive\2026-04\04-30-mainline-convergence-audit` — passed; implement/check/debug context files valid.
+- `Test-Path .\easysdd` — returned `False`; the legacy project directory is absent.
+- `git -c safe.directory=D:/work/ai- grep -n -I -e 'easysdd/' -e 'EasySDD' -e 'SDD' -- ':!easysdd/**' ':!.trellis/tmp/**' ':!**/node_modules/**' ':!.trellis/tasks/04-30-remove-easysdd-migrate-to-trellis/**' ':!.trellis/workspace/**' ':!.claude/settings.json'` — returned no matches; remaining mentions are limited to expected migration/audit/journal/tooling history, not active workflow references to the removed directory.
+- `git -c safe.directory=D:/work/ai- diff --name-only HEAD` showed unrelated uncommitted work in image-asset/NPC/public-welfare files; no product runtime changes were made for this review.
+- Backend/frontend build/test still not run because this remains a docs/task cleanup with no runtime source changes.

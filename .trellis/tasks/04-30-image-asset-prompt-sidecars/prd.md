@@ -22,7 +22,7 @@
 
 1. **制定 sidecar 规范**
    - 每张正式项目图片旁边必须有同目录 prompt sidecar。
-   - 推荐命名：`<image-stem>.prompt.md`。
+   - 独立单图推荐命名：`<image-stem>.prompt.md`；同一 NPC 的一组表情图可共用 `expression-set.prompt.md`。
    - 若一个目录内有一组强绑定 sprite（如 NPC 五表情），允许额外提供目录级 `prompts.md` 或 `prompt-manifest.json`，但不能替代单图可追溯记录，除非规范明确说明映射关系。
    - Sidecar 必须注明：
      - 对应图片相对路径。

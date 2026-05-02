@@ -17,6 +17,97 @@
 - 替换既有图片时，必须覆盖实际被代码/文档引用的项目文件；如果只是生成了新图但引用路径仍指向旧图，视为未替换。
 - 允许保留废稿或参考图，但必须放入 `artifacts/` / 设计参考目录，或在交付说明里明确标记为“未采用/参考-only”。
 - 图片类任务完成前，要核对本轮 `.codex/generated_images` 输出与项目目标路径的对应关系；必要时用 hash、尺寸、修改时间或源→目标映射证明已落盘。
+- 正式项目图片必须在同目录保留 prompt sidecar。单张独立图片推荐命名为 `<image-stem>.prompt.md`；NPC 同一角色的一组表情图可共用一个 `expression-set.prompt.md`，避免为 `neutral` / `joy` / `anger` / `embarrassment` / `curiosity` 重复保存几乎相同的 prompt。组级 sidecar 的 `## Final prompt` 只保留自然/neutral 单图 prompt；不要把五个表情 prompt 都写进去，以免生图工具生成五表情同框或表情表。已有最终 prompt / prompt manifest 时使用 `prompt_type: original-final`；找不到原始 prompt 时必须反向解析当前图片并使用 `prompt_type: reverse-engineered`，正文明确说明“不是原始生成 prompt”；仅作证据或非生成式参考的图片可使用 `reference-only`。
+
+### Prompt sidecar 格式
+
+Sidecar 使用 Markdown + YAML frontmatter。单张独立图片至少包含：
+
+```markdown
+---
+asset: frontend/public/assets/npcs/public-welfare/char_pw_demo/neutral.png
+prompt_type: original-final
+source_type: prompt-manifest
+source_manifest: artifacts/<task>/prompt-manifest.json
+character_id: char_pw_demo
+expression: neutral
+width: 256
+height: 256
+sha256: <current image sha256>
+updated_at: 2026-05-02
+can_regenerate_higher_quality: true
+---
+
+## Final prompt
+
+<最终正向 prompt；反推时写 reverse-engineered prompt，并声明不是原始 prompt。>
+
+## Negative constraints
+
+- No readable brand text / logo / watermark.
+- No existing IP or living-artist imitation.
+- No private data / API key / exact private address.
+
+## Style recipe / Style DNA source
+
+<Style DNA 来源、prompt manifest、人工反推依据或 reference-only 说明。>
+
+## Identity locks
+
+- <角色轮廓 / 主色 / 标志道具 / 表情组一致性约束>
+
+## Provenance notes
+
+<生成模型、脚本、历史 manifest、人工反推、或需要人工复核的说明。>
+```
+
+NPC 表情组推荐改用同目录一个 `expression-set.prompt.md`，至少包含：
+
+```markdown
+---
+prompt_scope: npc-expression-set
+asset_group: frontend/public/assets/npcs/public-welfare/char_pw_demo/
+assets: frontend/public/assets/npcs/public-welfare/char_pw_demo/neutral.png; frontend/public/assets/npcs/public-welfare/char_pw_demo/joy.png
+expressions: neutral, joy, anger, embarrassment, curiosity
+asset_count: 5
+prompt_type: original-final
+source_type: prompt-manifest
+source_manifest: artifacts/<task>/prompt-manifest.json
+character_id: char_pw_demo
+widths: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
+heights: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
+sha256s: neutral=<hash>; joy=<hash>; anger=<hash>; embarrassment=<hash>; curiosity=<hash>
+updated_at: 2026-05-02
+can_regenerate_higher_quality: true
+---
+
+## Final prompt
+
+<自然/neutral 单图 prompt；必须明确“只生成一张自然表情头像”，不要在这里列出 joy / anger / embarrassment / curiosity 的生成 prompt。>
+
+## Expression assets
+
+- `neutral.png` — neutral
+- `joy.png` — joy
+
+## Negative constraints
+
+...
+
+## Style recipe / Style DNA source
+
+...
+
+## Identity locks
+
+...
+
+## Provenance notes
+
+...
+```
+
+NPC 表情组的组级 sidecar 必须保留同一组 identity locks，并用 `expressions` / `## Expression assets` 覆盖每张表情图的路径、尺寸和 hash；`## Final prompt` 只放自然/neutral 单图 prompt。其它表情的差异可在 provenance 中说明“生成时逐张替换 expression suffix”，但不要把五段表情 prompt 放进 `## Final prompt`。目录级 `prompts.md` / `prompt-manifest.json` 只能作为额外索引，不能替代可校验的 `expression-set.prompt.md`。
 
 ---
 

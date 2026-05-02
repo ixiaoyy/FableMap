@@ -3,12 +3,23 @@ import { NavLink } from "react-router"
 
 import { cn } from "../lib/utils"
 
-const navItems = [
+// Bottom dock order: visitor-first mainline = 首页 / 发现 / 进店(创建入口) / 清单 / 店主
+// 创建入口移至底部dock，作为访客发现后"进店"的行动入口
+const bottomDockOrder = [
+  { to: "/", label: "首页", icon: Home },
+  { to: "/discover", label: "发现", icon: Compass },
+  { to: "/create", label: "进店", icon: PlusCircle },
+  { to: "/quests", label: "清单", icon: ClipboardList },
+  { to: "/owner", label: "管理", icon: UserRound },
+]
+
+// 顶部导航保留完整功能，不做降级
+const topNavItems = [
   { to: "/", label: "首页", icon: Home },
   { to: "/discover", label: "发现", icon: Compass },
   { to: "/quests", label: "清单", icon: ClipboardList },
   { to: "/create", label: "创建空间", icon: PlusCircle },
-  { to: "/owner", label: "主人", icon: UserRound },
+  { to: "/owner", label: "管理入口", icon: UserRound },
 ]
 
 const MOBILE_CRITICAL_FLOW_GUIDES: Record<string, {
@@ -72,8 +83,8 @@ export function ProductShell({
               <p className="text-xs text-violet-100/45">Cyber life on real coordinates</p>
             </div>
           </NavLink>
-          <nav className="-mx-1 flex max-w-full flex-wrap items-center gap-2 overflow-x-auto px-1 pb-1">
-            {navItems.map((item) => (
+          <nav className="-mx-1 flex max-w-full flex-wrap items-center gap-2 overflow-x-auto px-1 pb-1" aria-label="Primary navigation">
+            {topNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -99,7 +110,7 @@ export function ProductShell({
         className="mobile-bottom-dock fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 gap-1 rounded-[1.5rem] border border-white/12 bg-slate-950/88 p-1.5 shadow-2xl shadow-black/45 backdrop-blur-xl lg:hidden"
         aria-label="Mobile navigation"
       >
-        {navItems.map((item) => (
+        {bottomDockOrder.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

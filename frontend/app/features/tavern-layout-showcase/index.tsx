@@ -259,6 +259,8 @@ function LayoutHeader({
   tavernId,
   tavern,
   error,
+  characters,
+  selectedCharacter,
   activeLayout,
   activeLayoutId,
   stats,
@@ -267,6 +269,8 @@ function LayoutHeader({
   tavernId: string
   tavern: Tavern | null
   error: string
+  characters: TavernCharacter[]
+  selectedCharacter?: TavernCharacter
   activeLayout: TavernLayout
   activeLayoutId: string
   stats: TavernLayoutStats
@@ -275,6 +279,13 @@ function LayoutHeader({
   const accent = accentFor(activeLayout)
   const backgroundImage = layoutBackgroundImages[activeLayout.id] || tavernNeonImage
   const timeStatus = stats.timeStatus
+  const primaryCharacter = selectedCharacter || characters[0]
+  const primaryAvatar = characterAvatar(primaryCharacter)
+  const doorwayScene = tavern
+    ? previewText(toText(tavern.scene_prompt, tavern.description || "店主还没有写下场景提示。"), 118)
+    : "从发现页选择一个真实坐标上的酒馆入口。"
+  const worldPreview = tavern ? worldInfoPreviews(tavern)[0] : null
+  const doorwayLocation = tavern?.address || stats.location
 
   return (
     <section className="relative min-w-0 overflow-hidden rounded-[2.4rem] border border-white/12 bg-slate-950/78 shadow-2xl shadow-black/35">
@@ -320,6 +331,63 @@ function LayoutHeader({
               <p className="text-xs text-violet-100/45">Roleplay</p>
               <p className="mt-2 font-black text-white">批准 {stats.claims.approved} · 待处理 {stats.claims.pending}</p>
             </div>
+          </div>
+        </div>
+
+        <div data-entry-surface="tavern-doorway" className="mt-7 grid gap-3 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(280px,0.7fr)]">
+          <div className="rounded-3xl border border-cyan-300/18 bg-black/38 p-4 backdrop-blur-md">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100/70">
+              <MapPinned className="h-4 w-4" />
+              真实坐标门牌
+            </div>
+            <p className="mt-3 break-words text-lg font-black text-white">{doorwayLocation}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-bold text-violet-50/70">{stats.accessStatus}</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-bold text-violet-50/70">{stats.location}</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-amber-300/18 bg-amber-300/8 p-4 backdrop-blur-md">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-amber-100/72">
+              <Martini className="h-4 w-4" />
+              今晚在店里
+            </div>
+            <p className="mt-3 text-sm leading-6 text-violet-50/76">{doorwayScene}</p>
+            {worldPreview ? (
+              <p className="mt-3 rounded-2xl border border-white/10 bg-black/32 p-3 text-xs leading-5 text-violet-100/62">
+                <span className="font-black text-amber-100">{worldPreview.title}</span> · {worldPreview.text}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-3xl border border-fuchsia-300/18 bg-fuchsia-300/8 p-4 backdrop-blur-md">
+            <div className="flex min-w-0 items-center gap-3">
+              {primaryAvatar ? (
+                <img src={primaryAvatar} alt={primaryCharacter?.name || "当前 NPC"} className="h-16 w-16 shrink-0 rounded-2xl border border-white/12 object-cover" loading="eager" decoding="async" />
+              ) : (
+                <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-white/12 bg-gradient-to-br from-cyan-300/20 to-fuchsia-300/20 text-xl font-black text-white">
+                  {initialFor(primaryCharacter?.name || "NPC")}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-fuchsia-100/70">当前 NPC 预览</p>
+                <p className="mt-1 truncate text-lg font-black text-white">{primaryCharacter?.name || "等待店主邀请 NPC"}</p>
+                <p className="mt-1 truncate text-xs text-violet-100/55">{primaryCharacter?.description || "进入后可选择角色开始对话。"}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={!tavern}
+              aria-label="进入吧台，和当前 NPC 对话"
+              onClick={() => onLayoutChange("npc-chat")}
+              className="mt-4 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/28 bg-cyan-300/14 px-4 py-3 text-left font-black text-cyan-50 transition hover:border-cyan-200/60 hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+            >
+              <span>
+                <span className="block">进入吧台</span>
+                <span className="text-xs font-bold text-cyan-100/72">{primaryCharacter ? `和 ${primaryCharacter.name || "当前 NPC"} 对话` : "和当前 NPC 对话"}</span>
+              </span>
+              <MessageCircle className="h-5 w-5 shrink-0" />
+            </button>
           </div>
         </div>
 
@@ -571,7 +639,7 @@ function LobbyLayout(props: LayoutProps) {
             </CardContent>
           </Card>
           {shareSlot}
-          {creatorSlot}
+          <div className="hidden lg:block">{creatorSlot}</div>
         </div>
       </section>
       <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(280px,0.42fr)_minmax(0,0.58fr)]">
@@ -826,6 +894,8 @@ export function TavernLayoutShowcase(props: TavernLayoutShowcaseProps) {
           tavernId={tavernId}
           tavern={tavern}
           error={error}
+          characters={characters}
+          selectedCharacter={props.selectedCharacter}
           activeLayout={activeLayout}
           activeLayoutId={activeLayoutId}
           stats={stats}
@@ -859,6 +929,8 @@ export function TavernLayoutShowcase(props: TavernLayoutShowcaseProps) {
         tavernId={tavernId}
         tavern={tavern}
         error={error}
+        characters={characters}
+        selectedCharacter={props.selectedCharacter}
         activeLayout={activeLayout}
         activeLayoutId={activeLayoutId}
         stats={stats}

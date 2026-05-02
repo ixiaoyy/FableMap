@@ -1,7 +1,8 @@
-import { History, Send } from "lucide-react"
+import { Heart, History, Send } from "lucide-react"
 import { useMemo, useState, type FormEvent } from "react"
 
-import { buildRevisitCue } from "../../lib/revisit-summary.js"
+import { buildRevisitCue, formatRevisitTime } from "../../lib/revisit-summary.js"
+import { formatRelationshipStage } from "../../lib/owner-summary.js"
 import { GENDER_OPTIONS, genderLabel, normalizeGender } from "../../lib/gender.js"
 import { DEFAULT_VISITOR_ID, enterTavern, errorMessage, sendTavernChat, type ChatMessage, type Tavern, type TavernCharacter, type VisitorStatePayload } from "../../lib/taverns"
 import { Button } from "../../ui/button"
@@ -40,6 +41,41 @@ function RevisitCuePanel({ cue }: { cue: ReturnType<typeof buildRevisitCue> }) {
         ))}
       </div>
       <p className="mt-3 rounded-2xl bg-slate-950/35 px-3 py-2 text-xs text-violet-50/70">{cue.promptHint}</p>
+    </div>
+  )
+}
+
+function VisitorStateSummary({ state }: { state: VisitorStatePayload }) {
+  const relationship = state?.relationship || {}
+  const stageLabel = formatRelationshipStage(String(relationship.stage || "stranger"))
+  const visitCount = Number(state.visit_count ?? 0)
+  const strength = Math.round(Number(relationship.strength ?? 0) * 100)
+  const lastVisit = formatRevisitTime(state.last_visit)
+
+  return (
+    <div
+      aria-label="访客关系状态"
+      className="flex min-h-11 flex-wrap items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/8 px-4 py-2 text-xs"
+    >
+      <Heart className="h-3.5 w-3.5 shrink-0 text-cyan-200" />
+      <span className="font-bold text-cyan-100">
+        {stageLabel}
+      </span>
+      {visitCount > 0 && (
+        <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 text-violet-100/70">
+          {visitCount} 次到访
+        </span>
+      )}
+      {strength > 0 && (
+        <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 text-violet-100/70">
+          关系 {strength}%
+        </span>
+      )}
+      {lastVisit && lastVisit !== "暂无记录" && (
+        <span className="rounded-full border border-white/12 bg-white/5 px-2 py-0.5 text-violet-100/70">
+          最近 {lastVisit}
+        </span>
+      )}
     </div>
   )
 }
@@ -156,6 +192,7 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
         <Button type="button" variant="secondary" disabled={busy} onClick={handleEnter}>
           进入酒馆
         </Button>
+        {visitorState ? <VisitorStateSummary state={visitorState} /> : null}
         <RevisitCuePanel cue={revisitCue} />
         <div className="min-h-52 space-y-3 rounded-3xl border border-white/10 bg-slate-950/70 p-4">
           {lines.length ? (
