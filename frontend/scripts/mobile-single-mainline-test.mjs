@@ -1,0 +1,104 @@
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const shellSource = readFileSync(resolve(__dirname, "../app/shell/product-shell.tsx"), "utf8")
+const tavernSource = readFileSync(resolve(__dirname, "../app/routes/tavern.tsx"), "utf8")
+const layoutShowcaseSource = readFileSync(resolve(__dirname, "../app/features/tavern-layout-showcase/index.tsx"), "utf8")
+const packageJson = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8"))
+
+function sectionBetween(source, startMarker, endMarker, label) {
+  const start = source.indexOf(startMarker)
+  assert.notEqual(start, -1, `${label} should include start marker: ${startMarker}`)
+  const end = source.indexOf(endMarker, start)
+  assert.notEqual(end, -1, `${label} should include end marker: ${endMarker}`)
+  return source.slice(start, end)
+}
+
+const bottomDockSection = sectionBetween(
+  shellSource,
+  "const bottomDockOrder = [",
+  "]\n\n// 顶部导航",
+  "mobile bottom dock",
+)
+const bottomDockLabels = Array.from(bottomDockSection.matchAll(/label: "([^"]+)"/g), (match) => match[1])
+
+assert.deepEqual(
+  bottomDockLabels,
+  ["首页", "发现", "进店", "清单", "管理"],
+  "mobile bottom dock should follow one visitor-first line: 首页 / 发现 / 进店 / 清单 / 管理",
+)
+assert.ok(bottomDockSection.includes('{ to: "/create", label: "进店"'), "mobile /create dock label should be visitor-facing 进店")
+assert.ok(!bottomDockSection.includes("创建空间"), "mobile bottom dock should not expose the owner/create wording in first-line navigation")
+assert.ok(!shellSource.includes("进店(创建入口)"), "source comments should not describe the mobile CTA as a creation-first entry")
+assert.ok(!shellSource.includes("创建入口移至底部dock"), "source comments should keep owner creation secondary instead of saying it moved into the mobile dock")
+assert.ok(shellSource.includes("aria-label=\"Mobile navigation\""), "mobile dock should keep an accessible label")
+assert.ok(shellSource.includes("mobile-bottom-dock fixed inset-x-3 bottom-3"), "mobile dock should stay fixed near the bottom")
+assert.ok(shellSource.includes("min-h-14 touch-manipulation"), "mobile dock items should keep touch-safe targets")
+assert.ok(shellSource.includes("px-4 py-8 pb-28 sm:px-6"), "main content should reserve bottom padding for the fixed mobile dock")
+assert.ok(shellSource.includes("lg:hidden"), "mobile dock and mobile guide should be hidden on large screens")
+
+const topNavSection = sectionBetween(
+  shellSource,
+  "const topNavItems = [",
+  "]\n\nconst MOBILE_CRITICAL_FLOW_GUIDES",
+  "desktop top nav",
+)
+assert.ok(topNavSection.includes('{ to: "/create", label: "创建空间"'), "desktop top navigation should keep the explicit owner/create entry")
+assert.ok(topNavSection.includes('{ to: "/owner", label: "管理入口"'), "desktop top navigation should keep the management entry explicit")
+const topNavMarkup = sectionBetween(
+  shellSource,
+  '<nav className="-mx-1',
+  'aria-label="Primary navigation"',
+  "desktop top navigation markup",
+)
+assert.ok(topNavMarkup.includes("hidden"), "primary top navigation should be hidden on mobile so it does not duplicate the bottom dock")
+assert.ok(topNavMarkup.includes("lg:flex"), "primary top navigation should return on desktop widths")
+
+assert.ok(shellSource.includes("MOBILE_CRITICAL_FLOW_GUIDES"), "product shell should keep mobile critical-flow copy")
+assert.ok(shellSource.includes("移动首屏只保留搜索、筛选、预览入店这一条主线"), "discover mobile guide should preserve one-mainline wording")
+assert.ok(shellSource.includes("移动端优先完成坐标、名称、首个 NPC"), "create mobile guide should preserve minimal creation scope")
+assert.ok(shellSource.includes("不把高级管理挤进第一屏"), "tavern mobile guide should keep advanced management out of the first screen")
+
+const activityIndex = tavernSource.indexOf("<TavernActivitySignalsCard")
+const mobileDetailsIndex = tavernSource.indexOf('<details className="mt-6 lg:hidden">')
+assert.ok(activityIndex !== -1 && mobileDetailsIndex !== -1 && activityIndex < mobileDetailsIndex, "tavern activity signals should render before the mobile secondary details")
+
+const mobileDetailsSection = sectionBetween(
+  tavernSource,
+  '<details className="mt-6 lg:hidden">',
+  "{/* Desktop: always show secondary panels */}",
+  "tavern mobile secondary details",
+)
+assert.ok(mobileDetailsSection.includes("更多酒馆信息"), "mobile secondary panels should be behind a 更多酒馆信息 summary")
+assert.ok(mobileDetailsSection.includes("<PlaceHomePanel tavern={tavern} />"), "mobile details should contain PlaceHomePanel")
+assert.ok(mobileDetailsSection.includes("<VisitorNotesPanel tavern={tavern} />"), "mobile details should contain VisitorNotesPanel")
+assert.ok(mobileDetailsSection.includes("<NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />"), "mobile details should contain NeighborhoodRumorBubble")
+assert.ok(!mobileDetailsSection.includes("<RoleplayPanel"), "mobile details should not put advanced roleplay management into the first collapsible secondary set")
+
+const desktopSecondarySection = tavernSource.slice(tavernSource.indexOf('{/* Desktop: always show secondary panels */}'))
+assert.ok(desktopSecondarySection.includes('<div className="hidden lg:block">'), "desktop secondary panels should be in the lg-only block")
+assert.ok(desktopSecondarySection.includes("<RoleplayPanel"), "desktop can expose roleplay management in the secondary area")
+assert.ok(desktopSecondarySection.includes("<PlaceHomePanel tavern={tavern} />"), "desktop secondary block should include PlaceHomePanel")
+assert.ok(desktopSecondarySection.includes("<VisitorNotesPanel tavern={tavern} />"), "desktop secondary block should include VisitorNotesPanel")
+assert.ok(desktopSecondarySection.includes("<NeighborhoodRumorBubble"), "desktop secondary block should include NeighborhoodRumorBubble")
+
+const creatorSlotIndex = layoutShowcaseSource.indexOf("{creatorSlot}")
+assert.notEqual(creatorSlotIndex, -1, "layout showcase should still accept a creator conversion slot")
+assert.ok(
+  layoutShowcaseSource.slice(Math.max(0, creatorSlotIndex - 80), creatorSlotIndex + 80).includes('className="hidden lg:block"'),
+  "creator conversion slot should stay desktop-only so mobile first screen remains visitor-first",
+)
+
+for (const forbidden of ["@capacitor", "ionic", "react-native", "onsenui"]) {
+  assert.ok(!JSON.stringify(packageJson).toLowerCase().includes(forbidden), `should not introduce mobile framework dependency: ${forbidden}`)
+}
+
+assert.ok(
+  packageJson.scripts.test.includes("mobile-single-mainline-test.mjs"),
+  "focused mobile single-mainline regression should be wired into npm test",
+)
+
+console.log("mobile-single-mainline-test: ok")

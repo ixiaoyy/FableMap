@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router"
 import tavernStreetImage from "../assets/homepage/reference/modules/tavern-street.png"
 import merchantPortrait from "../assets/npc-style-cast/portraits/merchant-a.png"
 import { readCreatePrefill } from "../lib/creator-conversion.js"
+import { buildAiDraftLifecycle } from "../lib/ai-draft-lifecycle.js"
 import { normalizeCreatePlacePayload } from "../lib/place-home.js"
 import { derivePlaceTypeDisplay, PLACE_TYPES } from "../lib/place-types.js"
 import { createTavernDraftRequest, draftResponseToCreateForm } from "../lib/tavern-drafts.js"
@@ -64,6 +65,7 @@ export default function CreateRoute() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [forbiddenText, setForbiddenText] = useState("")
   const [tone, setTone] = useState("角色扮演")
+  const tavernDraftLifecycle = buildAiDraftLifecycle("tavern")
 
   // Check LLM config status on mount
   useEffect(() => {
@@ -465,6 +467,23 @@ export default function CreateRoute() {
                 <p className="text-xs text-violet-100/60">用 AI 生成酒馆创意</p>
               </div>
             </div>
+            <section aria-label="AI 草稿生命周期" className="mb-4 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-100/65">{tavernDraftLifecycle.title}</p>
+              <div className="mt-3 grid gap-2">
+                {tavernDraftLifecycle.steps.map((step) => (
+                  <div key={step.id} className="rounded-xl border border-white/10 bg-slate-950/44 px-3 py-2">
+                    <span className="text-xs font-black text-white">{step.label}</span>
+                    <p className="mt-1 text-[0.7rem] leading-4 text-violet-100/55">{step.helper}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-5 text-violet-100/62">{tavernDraftLifecycle.summary}</p>
+              <ul className="mt-3 grid gap-1.5 text-[0.7rem] leading-4 text-emerald-100/72">
+                {tavernDraftLifecycle.guardrails.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </section>
 
             {llmConfigured === null ? (
               <div className="flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] p-4">

@@ -8,6 +8,7 @@ import {
   getTavernStatusColor,
   getTavernStatusLabel,
 } from './services/tavernService'
+import { buildMapAnchorCardCopy, buildMapAnchorSummaryCopy } from './mapAnchorCopy'
 import { inferTavernPlayMode } from './tavernPlayModes'
 
 const ACCESS_OPTIONS = [
@@ -37,7 +38,7 @@ function getCharacterCount(tavern) {
 }
 
 function getTavernDescription(tavern) {
-  return tavern?.description || tavern?.scene_prompt || '店主还没有留下公开介绍。'
+  return tavern?.description || tavern?.scene_prompt || buildMapAnchorCardCopy(tavern).descriptionFallback
 }
 
 function getDistanceLabel(tavern) {
@@ -68,7 +69,7 @@ function LoadingOverlay() {
   return (
     <div className="tavern-discovery-loading-overlay" aria-live="polite">
       <ShimmerLoader />
-      <span className="loading-text">正在扫描附近酒馆</span>
+      <span className="loading-text">正在寻找附近亮起的灯牌</span>
     </div>
   )
 }
@@ -99,9 +100,7 @@ export default function WorldStageTavernDiscoveryLane({
   const visibleTaverns = useMemo(() => taverns.slice(0, visibleCount), [taverns, visibleCount])
   const hiddenCount = Math.max(0, taverns.length - visibleTaverns.length)
   const markerHiddenCount = Math.max(0, taverns.length - mapMarkerCount)
-  const summary = totalTaverns
-    ? `匹配 ${taverns.length} / ${totalTaverns} 间附近酒馆`
-    : '附近暂无可发现酒馆'
+  const summary = buildMapAnchorSummaryCopy({ matching: taverns.length, total: totalTaverns })
 
   useEffect(() => {
     setVisibleCount(DISCOVERY_BATCH_SIZE)
@@ -132,12 +131,12 @@ export default function WorldStageTavernDiscoveryLane({
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="名称、介绍、地址、角色或状态"
+            placeholder="门牌、灯牌、店主介绍、角色或状态"
           />
         </label>
 
         <label className="tavern-discovery-field">
-          <span>入口</span>
+          <span>门口规则</span>
           <select value={accessFilter} onChange={(event) => setAccessFilter(event.target.value)}>
             {ACCESS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -180,14 +179,14 @@ export default function WorldStageTavernDiscoveryLane({
         <span>{summary}</span>
         {activeTavernId ? <span className="tavern-discovery-active">已选中酒馆</span> : null}
         {hiddenCount ? <span>列表还有 {hiddenCount} 间未展开</span> : null}
-        {markerHiddenCount ? <span>地图显示 {mapMarkerCount} / {taverns.length} 个 marker</span> : null}
+        {markerHiddenCount ? <span>地图点亮 {mapMarkerCount} / {taverns.length} 盏灯牌</span> : null}
       </div>
 
       {onQuickStartTavern ? (
         <div className="tavern-discovery-quick-start">
           <div>
             <span className="mini-label">新手直达</span>
-            <strong>先体验一次完整聊天，再决定要不要调地图。</strong>
+            <strong>先推开一扇公开的门，再决定要不要换街角。</strong>
             <p>进入平台内置公益酒馆：公开、营业中、本地规则回应，不需要 API Key。</p>
           </div>
           <button
@@ -230,6 +229,7 @@ export default function WorldStageTavernDiscoveryLane({
             const isActive = tavern.id === activeTavernId
             const characterCount = getCharacterCount(tavern)
             const playMode = inferTavernPlayMode(tavern)
+            const anchorCopy = buildMapAnchorCardCopy(tavern)
             return (
               <button
                 key={tavern.id}
@@ -247,6 +247,11 @@ export default function WorldStageTavernDiscoveryLane({
                   </span>
                 </div>
                 <p>{getTavernDescription(tavern)}</p>
+                <div className="map-anchor-card" aria-label={`${tavern.name || '酒馆'}的真实地图锚点`}>
+                  <span className="map-anchor-card__eyebrow">{anchorCopy.eyebrow}</span>
+                  <strong>{anchorCopy.anchorLine}</strong>
+                  <small>{anchorCopy.statusLine} · {anchorCopy.accessLine}</small>
+                </div>
                 <div className="tavern-discovery-card__meta">
                   <span
                     className={`tavern-access-chip tavern-access-chip--${getTavernAccessTone(tavern.access)}`}
@@ -260,7 +265,8 @@ export default function WorldStageTavernDiscoveryLane({
                   <span>{tavern.visit_count || 0} 次访问</span>
                 </div>
                 <div className="tavern-discovery-card__footer">
-                  <span>{tavern.address || `${Number(tavern.lat || 0).toFixed(4)}, ${Number(tavern.lon || 0).toFixed(4)}`}</span>
+                  <span>{anchorCopy.statusLine}</span>
+                  <span>{anchorCopy.accessLine}</span>
                 </div>
               </button>
             )
@@ -268,15 +274,15 @@ export default function WorldStageTavernDiscoveryLane({
           {hiddenCount ? (
             <button type="button" className="tavern-discovery-load-more" onClick={loadMore}>
               <strong>加载更多酒馆</strong>
-              <span>再显示 {Math.min(DISCOVERY_BATCH_SIZE, hiddenCount)} 间；地图最多显示 {mapMarkerLimit || mapMarkerCount} 个 marker</span>
+              <span>再显示 {Math.min(DISCOVERY_BATCH_SIZE, hiddenCount)} 间；地图最多点亮 {mapMarkerLimit || mapMarkerCount} 盏灯牌</span>
             </button>
           ) : null}
         </div>
       ) : (
         <div className="storyboard-placeholder-card tavern-discovery-empty">
           <span className="empty-icon">🏮</span>
-          <strong>{totalTaverns ? '没有匹配的酒馆' : '附近还没有公开酒馆'}</strong>
-          <p>{totalTaverns ? '可以放宽搜索词、入口或营业状态。' : '切换入口位置或扩大半径，再刷新附近酒馆。'}</p>
+          <strong>{totalTaverns ? '没有匹配的灯牌' : '这片街区还没有灯牌亮起'}</strong>
+          <p>{totalTaverns ? '可以放宽搜索词、门口规则或营业状态。' : '切换入口位置或扩大半径，再看看附近有没有人开店。'}</p>
           {onQuickStartTavern ? (
             <button
               type="button"

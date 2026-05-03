@@ -43,6 +43,10 @@ Frontend work must preserve:
 | [Visual Souvenir Preview Boundary](./visual-souvenir-preview-boundary.md) | No-image shared-moment prompt preview and future asset guardrail | Current |
 | [Tavern Skill Pack UI Boundary](./skill-pack-ui-boundary.md) | Owner-visible skill-pack service/UI contract | Current |
 | [Preset Import Preview UI Boundary](./preset-import-preview-ui-boundary.md) | Owner-only preview modal/service contract for community preset risk reports | Current |
+| [Character Prompt Risk Linter](./character-prompt-risk-linter.md) | Owner-facing NPC prompt linting before character save/import | Current |
+| [Map Anchor Emotional Copy](./map-anchor-copy.md) | Real-coordinate tavern entrance copy and marker/card wording | Current |
+| [Discovery Liveliness Signals](./discovery-liveliness-signals.md) | Discovery page rumor/feedback/activity labels without visitor social features | Current |
+| [Mobile Single-mainline Experience](./mobile-single-mainline.md) | Mobile dock and tavern first-screen contracts for the visitor-first entry path | Current |
 
 ---
 
@@ -61,7 +65,11 @@ Frontend work must preserve:
 11. For Visual Souvenir Preview UI/service changes, read `visual-souvenir-preview-boundary.md` and `image-asset-guidelines.md`.
 12. For Tavern Skill Pack UI/service changes, read `skill-pack-ui-boundary.md`.
 13. For preset import preview UI/service changes, read `preset-import-preview-ui-boundary.md`.
-14. Run the right verification:
+14. For character editor prompt risk checks, role-card import safety, or NPC prompt linter tests, read `character-prompt-risk-linter.md`.
+15. For map/discovery card copy that describes real coordinates, tavern markers, or street entrance wording, read `map-anchor-copy.md`.
+16. For discovery liveliness labels using rumor, guestbook/feedback, visits, or activity summaries, read `discovery-liveliness-signals.md`.
+17. For mobile dock order, mobile first-screen tavern entry, or collapsed tavern secondary panels, read `mobile-single-mainline.md`.
+18. Run the right verification:
    - UI/build change: `npm --prefix .\frontend run build`
    - Service/rule script change: `npm --prefix .\frontend test`
 

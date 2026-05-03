@@ -49,3 +49,52 @@
 * Memory feedback is surfaced via RevisitCuePanel (already existed) + new VisitorStateSummary chip.
 * Owner-side summary uses existing `buildOwnerOperatingSummary` returning visitor relationship data.
 * No new API endpoints or schema fields required.
+
+## 2026-05-03 Implementation Log
+
+### Research Summary
+
+* Relevant specs/docs: `.trellis/spec/frontend/component-guidelines.md`, `.trellis/spec/frontend/quality-guidelines.md`, `.trellis/spec/frontend/type-safety.md`, `docs/WORLD_SCHEMA.md`, `docs/WHAT_NOT_TO_BUILD.md`.
+* Existing code patterns: `frontend/app/lib/revisit-summary.js` builds visitor-facing cues from existing `VisitorStatePayload`; `frontend/app/lib/owner-summary.js` builds owner dashboard returning visitor summaries; `frontend/app/lib/affinity.js` is the canonical frontend affinity stage label/legacy-normalization helper.
+* No API/schema/data contract expansion required.
+
+### Implementation
+
+* Reused `getAffinityStageMeta` for owner/revisit relationship labels so visitor and owner feedback surfaces match the current AffinityStage contract while keeping legacy `regular` / `confidant` inputs normalized.
+* Passed relationship strength into relationship-label formatting when stage is missing or stale.
+* Added script test coverage for canonical stages, legacy stage normalization, and strength fallback.
+
+### Verification Results
+
+* RED check: `node frontend/scripts/revisit-summary-test.mjs; node frontend/scripts/owner-summary-test.mjs` failed on old labels (`初访者` vs `陌生人`) before implementation.
+* GREEN targeted checks: `node frontend/scripts/revisit-summary-test.mjs; node frontend/scripts/owner-summary-test.mjs` passed.
+* `node frontend/scripts/owner-dashboard-layout-test.mjs` passed.
+* `npm --prefix .\frontend test` passed.
+* `npm --prefix .\frontend run typecheck` passed.
+* `npm --prefix .\frontend run build` passed.
+* `python .\.trellis\scripts\task.py validate .\.trellis\tasks\04-30-revisit-memory-feedback-surface` passed.
+
+### Visual Acceptance
+
+* Not run in browser: this change only centralizes label formatting and script/build/type checks passed. If human visual acceptance is requested, run Playwright desktop + mobile screenshots for tavern entry/chat and owner dashboard before review.
+
+## 2026-05-03 Playwright Visual Self-Acceptance
+
+Command:
+
+```powershell
+$env:REVISIT_MEMORY_URL='http://127.0.0.1:5173'; node .\.trellis\tmp\playwright-mainline\revisit-memory-visual-acceptance.cjs
+```
+
+Result: passed.
+
+Evidence:
+
+* `.trellis/tmp/playwright-mainline/revisit-memory-visual-acceptance.cjs`
+* `.trellis/tmp/playwright-mainline/evidence/04-30-revisit-memory-feedback-surface-visual-acceptance/revisit-tavern-desktop.png`
+* `.trellis/tmp/playwright-mainline/evidence/04-30-revisit-memory-feedback-surface-visual-acceptance/revisit-tavern-mobile.png`
+* `.trellis/tmp/playwright-mainline/evidence/04-30-revisit-memory-feedback-surface-visual-acceptance/revisit-owner-desktop.png`
+* `.trellis/tmp/playwright-mainline/evidence/04-30-revisit-memory-feedback-surface-visual-acceptance/revisit-owner-mobile.png`
+* `.trellis/tmp/playwright-mainline/evidence/04-30-revisit-memory-feedback-surface-visual-acceptance/revisit-memory-visual-acceptance-report.json`
+
+Checks covered: tavern route loads, visitor state summary appears after enter, canonical `friend` label/52% strength visible, returning revisit cue visible, owner returning visitor panel uses `close_friend` label, no raw `api_key`, and no horizontal overflow on desktop/mobile.

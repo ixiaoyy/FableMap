@@ -1,4 +1,5 @@
 import { MapAdapter } from './MapAdapter'
+import { buildMapAnchorMarkerCopy } from '../mapAnchorCopy'
 
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY
 const AMAP_SECURITY_CODE = import.meta.env.VITE_AMAP_SECURITY_CODE
@@ -116,7 +117,11 @@ function buildLandmarkMarkerContent(landmark) {
 function buildTavernMarkerContent({ tavern, isActive }) {
   const accessTheme = getTavernAccessMarkerTheme(tavern?.access)
   const statusColor = tavern?.status === 'open' ? '#22c55e' : '#ef4444'
-  const label = escapeHtml(tavern?.name || '酒馆')
+  const copy = buildMapAnchorMarkerCopy(tavern)
+  const label = escapeHtml(copy.name)
+  const badgeLabel = escapeHtml(copy.badgeLabel)
+  const statusText = escapeHtml(copy.statusText)
+  const title = escapeHtml(copy.title)
 
   return `
     <div style="
@@ -131,7 +136,7 @@ function buildTavernMarkerContent({ tavern, isActive }) {
       box-shadow:0 8px 24px ${accessTheme.shadow};
       white-space:nowrap;
       font:600 12px/1.2 Segoe UI,Arial,sans-serif;
-    ">
+    " title="${title}">
       <span style="
         display:inline-flex;
         align-items:center;
@@ -142,8 +147,9 @@ function buildTavernMarkerContent({ tavern, isActive }) {
         border:1px solid rgba(255,255,255,0.18);
         font-size:11px;
         font-weight:800;
-      ">${accessTheme.icon} ${accessTheme.label}</span>
+      ">${badgeLabel}</span>
       <span style="font-weight:800;max-width:180px;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+      <span style="opacity:0.82;font-size:11px;font-weight:700;">${statusText}</span>
       <span style="
         width:8px;
         height:8px;

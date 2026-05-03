@@ -3,19 +3,19 @@
   "name": "04-30-character-editor-prompt-risk-linter",
   "title": "Character Editor Prompt Risk Linter",
   "description": "为角色编辑器保留 prompt 风险检查任务，提示越权、PII、强制成人内容、用户代言等风险。",
-  "status": "in_progress",
-  "dev_type": null,
-  "scope": null,
-  "package": null,
+  "status": "completed",
+  "dev_type": "frontend",
+  "scope": "Frontend-only NPC prompt risk linter for CharacterEditor save, SillyTavern card import, and batch NPC confirm paths; no schema/API changes.",
+  "package": "frontend",
   "priority": "P2",
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-04-30",
-  "completedAt": null,
+  "completedAt": "2026-05-03",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 1,
+  "current_phase": 5,
   "next_action": [
     {
       "phase": 1,
@@ -48,9 +48,33 @@
   "children": [],
   "parent": "04-29-npc-role-prompt-safety-brainstorm",
   "relatedFiles": [
-    "prd.md",
-    ".trellis/tasks/04-29-npc-role-prompt-safety-brainstorm/"
+    ".trellis/spec/frontend/character-prompt-risk-linter.md",
+    ".trellis/spec/frontend/index.md",
+    ".trellis/tasks/04-29-npc-role-prompt-safety-brainstorm/",
+    ".trellis/tmp/playwright-mainline/character-prompt-risk-visual-acceptance.cjs",
+    "frontend/app/product/CharacterEditor.jsx",
+    "frontend/app/product/CharacterManagementModal.jsx",
+    "frontend/app/product/characterPromptRiskLinter.js",
+    "frontend/app/product/styles.css",
+    "frontend/package.json",
+    "frontend/scripts/character-prompt-risk-linter-test.mjs",
+    "prd.md"
   ],
-  "notes": "Backlog child task created from prior brainstorm/planning so the idea is not lost; not implemented yet.",
-  "meta": {}
+  "notes": "Implemented frontend-only Character Prompt Risk Linter. Blocks unsafe prompt saves/imports for jailbreak, absolute obedience, CoT forcing, PII/secrets, and forced/minor adult-content patterns; warns on visitor agency and real-person visual prompt risks; no schema/API changes. Verification recorded in prd.md.",
+  "meta": {
+    "verification": {
+      "tdd_red": "node frontend/scripts/character-prompt-risk-linter-test.mjs -> ERR_MODULE_NOT_FOUND before implementation",
+      "focused_test": "node frontend/scripts/character-prompt-risk-linter-test.mjs -> ok",
+      "frontend_test": "npm --prefix .\\frontend test -> passed",
+      "typecheck": "npm --prefix .\\frontend run typecheck -> passed",
+      "build": "npm --prefix .\\frontend run build -> passed",
+      "playwright": "node .trellis/tmp/playwright-mainline/character-prompt-risk-visual-acceptance.cjs -> passed",
+      "task_validate": "py -3 .\\.trellis\\scripts\\task.py validate .\\.trellis\\tasks\\04-30-character-editor-prompt-risk-linter -> passed"
+    },
+    "deferred_not_done": [
+      "No backend moderation API or persistent prompt_risk_status.",
+      "No adult-content governance system beyond local blocked patterns.",
+      "No full preset conversion or prompt composer."
+    ]
+  }
 }

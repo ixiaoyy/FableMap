@@ -17,9 +17,12 @@ import discoverCozyShopImage from "../assets/discover/reference/discover-cover-c
 import discoverNeonAlleyImage from "../assets/discover/reference/discover-cover-neon-alley.png"
 import discoverQuietSanctuaryImage from "../assets/discover/reference/discover-cover-quiet-sanctuary.png"
 import discoverRadarSurfaceImage from "../assets/discover/reference/discover-radar-surface.png"
+import { DiscoveryLivelinessStrip } from "../components/DiscoveryLivelinessStrip"
 import { TavernPreviewModal } from "../components/tavern-preview-modal"
+import { buildDiscoveryLiveliness, getDiscoveryLivelinessSearchText } from "../lib/discovery-liveliness.js"
 import { DISCOVERABLE_PLACE_TYPES, derivePlaceTypeDisplay, placeTypeMatchesTavern } from "../lib/place-types.js"
 import { errorMessage, listTaverns, type Tavern, type TavernCharacter, type TavernListResponse } from "../lib/taverns"
+import { buildMapAnchorCardCopy, formatTavernAnchorLocation } from "../product/mapAnchorCopy.js"
 import { ProductShell } from "../shell/product-shell"
 import { Button } from "../ui/button"
 
@@ -91,8 +94,13 @@ function initialFor(value = "?") {
   return value.trim().slice(0, 1).toUpperCase() || "?"
 }
 
-function coordinateLabel(tavern: Pick<Tavern, "lat" | "lon">) {
-  return `${Number(tavern.lat).toFixed(4)}, ${Number(tavern.lon).toFixed(4)}`
+function locationLabel(tavern: Tavern) {
+  const anchor = formatTavernAnchorLocation(tavern)
+  return anchor.line
+}
+
+function coordinateLabel(tavern: Tavern) {
+  return buildMapAnchorCardCopy(tavern).locationLabel
 }
 
 function coverForIndex(index: number) {
@@ -195,6 +203,7 @@ function tavernSearchText(tavern: TavernListResponse["taverns"][number]) {
     tavern.description,
     tavern.address,
     tavern.scene_prompt,
+    getDiscoveryLivelinessSearchText(tavern),
     ...(tavern.characters?.flatMap((character) => [character.name, ...(character.tags ?? [])]) ?? []),
   ]
     .filter(Boolean)
@@ -529,8 +538,11 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
           <div className="mt-3">
             <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} compact muted={isClosed} />
           </div>
+          <div className="mt-3">
+            <DiscoveryLivelinessStrip tavern={tavernWithTimeStatus} compact muted={isClosed} />
+          </div>
           <div className={`mt-3 flex flex-wrap items-center gap-2 text-xs ${isClosed ? "text-white/24" : "text-violet-100/48"}`}>
-            <span>{coordinateLabel(tavern)}</span>
+            <span>{locationLabel(tavern)}</span>
             {tavernWithTimeStatus.local_time_display ? (
               <span>{isClosed ? "已熄灯" : "亮起中"} · {tavernWithTimeStatus.local_time_display}</span>
             ) : null}
@@ -563,7 +575,7 @@ function ResultCard({ tavern, index, onPreview }: { tavern: Tavern; index: numbe
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
         <span className="absolute left-4 top-4 rounded-full border border-white/16 bg-slate-950/68 px-3 py-1 text-xs font-bold text-cyan-100 backdrop-blur-md">
-          {coordinateLabel(tavern)}
+          {locationLabel(tavern)}
         </span>
         <span className="absolute right-4 top-4 rounded-full border border-fuchsia-300/22 bg-fuchsia-300/12 px-3 py-1 text-xs font-bold text-fuchsia-100 backdrop-blur-md">
           {placeType.shortLabel || placeType.label}
@@ -590,6 +602,7 @@ function ResultCard({ tavern, index, onPreview }: { tavern: Tavern; index: numbe
           </p>
         </div>
         <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} muted={isClosed} />
+        <DiscoveryLivelinessStrip tavern={tavernWithTimeStatus} muted={isClosed} />
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
           <span className="rounded-full border border-cyan-300/18 bg-cyan-300/10 px-2.5 py-1 text-cyan-100">Signal {signalStrength(tavern, index)}%</span>
           <span className={`rounded-full border px-2.5 py-1 ${isClosed ? "border-white/10 bg-white/[0.04] text-violet-100/42" : entry.className}`}>{entry.label}</span>
@@ -631,7 +644,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 
 function DesktopRadarTelemetry({ taverns }: { taverns: Tavern[] }) {
   const openSignals = taverns.filter((tavern) => tavern.status === "open" || (tavern as TavernWithTimeStatus).is_open).length
-  const characterCount = taverns.reduce((total, tavern) => total + (tavern.characters?.length ?? 0), 0)
+  const activeOperationCount = taverns.filter((tavern) => buildDiscoveryLiveliness(tavern).headline === "附近有人经营").length
   const averageSignal = taverns.length
     ? Math.round(taverns.reduce((total, tavern, index) => total + signalStrength(tavern, index), 0) / taverns.length)
     : 0
@@ -641,7 +654,7 @@ function DesktopRadarTelemetry({ taverns }: { taverns: Tavern[] }) {
       {[
         { label: "Live telemetry", value: `${taverns.length}`, helper: "坐标信号" },
         { label: "Open sectors", value: `${openSignals}`, helper: "正在亮起" },
-        { label: "NPC signal", value: `${characterCount}`, helper: "角色回声" },
+        { label: "Operated nearby", value: `${activeOperationCount}`, helper: "有人经营" },
         { label: "Avg strength", value: `${averageSignal}%`, helper: "平均强度" },
       ].map((item) => (
         <div key={item.label} className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl">
@@ -816,7 +829,7 @@ export default function DiscoverRoute() {
               </div>
               <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                 <UsersRound className="h-5 w-5 text-fuchsia-100" />
-                <span>角色、记忆和入口状态都汇入同一条信号流</span>
+                <span>角色、传闻和店主可见回访反馈都汇入同一条信号流</span>
               </div>
             </div>
             <div className="mt-6 space-y-3">
@@ -873,4 +886,3 @@ export default function DiscoverRoute() {
     </ProductShell>
   )
 }
-

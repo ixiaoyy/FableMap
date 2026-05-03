@@ -19,7 +19,7 @@ NPC art must be real tavern-themed character art, not symbolic placeholders.
 
 Required:
 
-- Real cartoon/anime/game-style NPC portrait, bust or waist-up. The NPC may be human, humanoid, beastkin, spirit, robot, alien, object-folk, or another original non-human tavern regular when the tavern theme supports it.
+- Stylized, non-photoreal original NPC portrait, bust or waist-up, in cartoon/anime/game-style. Human-like NPCs are allowed only as fictional illustrated designs; they must not read as real-person photos, actor/model portraits, influencer photos, or live-action cosplay. The NPC may be human-like, humanoid, beastkin, spirit, robot, alien, object-folk, or another original non-human tavern regular when the tavern theme supports it.
 - The NPC must visibly belong inside a tavern: bar counter, wooden shelves, mugs, lanterns, menu board, bottles, map-table, glowing terminal, door signage, or equivalent tavern interior cues.
 - The role should read as tavern staff, host, guide, storyteller, keeper, attendant, or regular NPC.
 - The style can vary by tavern skin, but must preserve FableMap's product meaning: real place → owner-authored tavern → AI NPC → memory/revisit.
@@ -33,6 +33,36 @@ Forbidden:
 - Platform-generated character content being saved as if it were owner-authored role/card data.
 - Specific copyrighted IP, franchise logos/UI, recognizable existing characters, or imitation of a living artist's personal style.
 - Fantasy / isekai shop casts that default every role to ordinary humans without a deliberate owner or setting reason.
+- Photorealistic humans, real-person headshots, stock-photo portraits, actor/model/influencer likeness, celebrity lookalikes, live-action cosplay, DSLR/camera-lens photography language, or hyperreal skin-pore rendering.
+
+## Scenario: Non-Photoreal Fictional NPC Contract
+
+Use this contract whenever generating, reviewing, replacing, or documenting NPC portraits, expression sprites, public-welfare seed art, tavern presets, or owner-facing NPC visual prompt templates.
+
+Contracts:
+
+- NPC image policy is **non-photoreal fictional character art**. A human or human-like role can be accepted only when it is clearly an original cartoon/anime/game-style illustration, not a photograph or real-person likeness.
+- Positive prompts for NPC art must explicitly lock the policy with wording equivalent to: `stylized anime/game illustration`, `non-photoreal fictional NPC`, `original character`, `not a real person`, and `no celebrity likeness`.
+- Negative constraints for NPC art must include wording equivalent to: `no photorealistic human`, `no real-person portrait`, `no live-action cosplay`, `no stock photo`, `no celebrity likeness`, `no hyperreal skin pores`, and `no DSLR/camera-lens look`.
+- Fantasy, isekai, alien, mythic, magical, monster-town, and spirit-market taverns should prefer at least one clearly original non-human or non-ordinary body plan unless the owner explicitly requested an all-human cast.
+- If a generated output looks like a real human photo, cosplay photo, influencer/model shoot, or recognizable existing person, reject it before it enters project assets; regenerate with stronger non-photoreal and fictional-character locks.
+- Same-directory prompt sidecars for accepted NPC assets should record the human-likeness policy, for example: `human-likeness policy: non-photoreal fictional NPC`.
+
+Validation matrix:
+
+| Case | Expected |
+| --- | --- |
+| Prompt asks for a “realistic portrait photo” or “DSLR headshot” of a tavern NPC | Invalid; rewrite as stylized non-photoreal fictional character art |
+| Output is technically tavern-themed but looks like a real actor/model/cosplayer photo | Invalid; reject/regenerate before importing |
+| Human-like bartender is clearly anime/game-style illustration with tavern cues | Acceptable; keep non-photoreal and original-character constraints in sidecar |
+| Fantasy tavern batch defaults to multiple ordinary photoreal humans | Invalid; revise species/body-plan diversity and non-photoreal prompt locks |
+| Sidecar omits non-photoreal / no-real-person constraints | Incomplete; update provenance before claiming the asset is shippable |
+
+Good: A stylized original lantern-moth archivist, clockwork fox courier, or illustrated human-like bartender whose tavern job, props, expression, and non-photoreal rendering are obvious.
+
+Base: An original human-like anime/game NPC portrait with visible tavern cues and explicit negative constraints against real-person/photo output.
+
+Bad: A photorealistic bartender headshot, model shoot, celebrity-like NPC, stock-photo tavern server, or live-action cosplay portrait.
 
 ## Scenario: Fantasy / Isekai Species Diversity Contract
 
@@ -248,13 +278,14 @@ Use this structure when generating new NPC fallback art:
 ```text
 Use case: stylized-concept
 Asset type: FableMap cyber tavern NPC portrait asset
-Primary request: actual finished cartoon/anime/game-style NPC portrait; choose human or original non-human species/body plan according to tavern theme, not placeholder, not icon, not UI mockup.
+Primary request: actual finished stylized non-photoreal original cartoon/anime/game-style NPC portrait; choose human-like or original non-human species/body plan according to tavern theme, not placeholder, not icon, not UI mockup, not real-person photo.
 Core tavern requirement: the NPC must visibly belong inside a tavern with bar/counter, mugs, shelves, lanterns, menu board, bottles, map-table, cyber terminal glow, or equivalent tavern interior details.
 Subject: <species/body plan + role + age/maturity range + outfit/surface texture + tavern job>
-Style/medium: polished original anime game concept art, expressive eyes, clean linework, soft cel shading.
+Style/medium: polished original anime game concept art, non-photoreal illustrated rendering, expressive eyes, clean linework, soft cel shading.
 Composition/framing: bust or waist-up portrait, tavern interior background visible.
 Lighting/mood: cozy indoor tavern lighting with theme-specific accents.
-Constraints: original character only; no text; no logos; no watermark; no abstract placeholder; no specific IP; no living-artist imitation.
+Human-likeness policy: non-photoreal fictional NPC; human-like designs must remain illustrated and must not resemble a real person.
+Constraints: original character only; no text; no logos; no watermark; no abstract placeholder; no specific IP; no living-artist imitation; no photorealistic human; no real-person portrait; no celebrity likeness; no live-action cosplay; no stock photo; no hyperreal skin pores; no DSLR/camera-lens look.
 ```
 
 ## Character Prompt Meta-Generation Contract
@@ -267,6 +298,8 @@ Rules:
 - Keep generated role prompts aligned with existing `NpcDraftPreview` / `TavernCharacter` fields: `name`, `description`, `personality`, `scenario`, `gender`, `system_prompt`, `first_mes`, `mes_example`, `alternate_greetings`, and `tags`.
 - Do not invent persisted schema fields for prompt convenience.
 - Decompose prompts into explicit layers: subject identity, species/body plan, real-place tavern anchor, owner intent, visitor feeling, interaction boundary, visual composition, color/light, medium/texture, and constraints.
+- Default every NPC visual prompt to non-photoreal fictional character art. Human-like characters must be original anime/game-style illustrations, not real-person photos, actors/models/influencers, celebrity lookalikes, or cosplay photos.
+- Include explicit positive locks such as `non-photoreal fictional NPC` / `stylized anime-game illustration`, and explicit negative constraints such as `no photorealistic human`, `no real-person portrait`, `no celebrity likeness`, `no live-action cosplay`, `no stock photo`, and `no DSLR/camera-lens look`.
 - For fantasy / isekai / non-realistic taverns, actively decide the cast's species/body-plan mix; do not let every NPC become an ordinary human by default. Keep species details inside existing character text/tags and visual prompts unless a schema task explicitly adds a field.
 - When adapting a visual reference, extract a transferable style kernel and remove source-specific characters, story text, brands, franchise marks, and living-artist style imitation.
 - For reusable image style templates, split the result into:
@@ -304,6 +337,8 @@ Validation matrix:
 | Character draft omits tavern place, role, or visitor interaction purpose | Weak prompt; add real-place tavern anchor and job-to-be-done |
 | Fantasy / isekai cast prompt makes every NPC human by default | Weak prompt; add original non-human or non-ordinary species/body-plan options tied to tavern jobs |
 | Batch NPC portraits share the same decor, pose, lighting, and generic anime finish | Weak prompt; add a diversity matrix and distinct visual theses |
+| NPC visual prompt or output reads as a real-person photo, model shoot, celebrity likeness, or cosplay photo | Invalid; rewrite/regenerate as non-photoreal fictional character art |
+| Accepted NPC asset sidecar omits the non-photoreal / no-real-person policy | Incomplete; add the policy to prompt provenance before shipping |
 | Visual prompt references a specific IP character, logo, or living artist | Invalid for project assets; convert to generic style/shape/color language |
 | Expression prompts change hair, face, outfit silhouette, or signature prop across emotions | Invalid sprite set; enforce identity consistency |
 | Generated image is accepted for runtime use but remains outside the repository | Not complete; move to a project asset path and verify per `image-asset-guidelines.md` |
@@ -322,13 +357,13 @@ Bad:
 
 Good:
 
-- A warm tavern guide behind a wooden bar with mugs, candlelight, copper apron, and a glowing map tablet.
+- A stylized non-photoreal tavern guide behind a wooden bar with mugs, candlelight, copper apron, and a glowing map tablet.
 - A neon night host at a rain-window bar booth with bottle shelves, old microphone, and cyberpunk tavern lighting.
 - An original non-human tavern regular, such as a lantern-moth archivist or clockwork fox courier, whose anatomy, props, and service role are readable in the tavern space.
 
 Base:
 
-- A portrait where the person is clear and the background contains at least two tavern cues.
+- A stylized human-like illustrated NPC where the character is clear, non-photoreal, and the background contains at least two tavern cues.
 - A mostly human cast where one clearly original non-human NPC provides visual contrast and a job-relevant chat role.
 
 Bad:
@@ -337,6 +372,7 @@ Bad:
 - A circular initial avatar or geometric dummy body.
 - A fantasy warrior portrait with no tavern role or tavern setting.
 - An isekai tavern roster where every NPC is the same human anime template with only hair/outfit color changes.
+- A photorealistic real-person bartender/server portrait, celebrity-like face, stock photo, or live-action cosplay image.
 
 ## Tests Required
 

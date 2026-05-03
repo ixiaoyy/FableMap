@@ -24,11 +24,11 @@ const firstVisit = buildRevisitCue(
 assert.equal(firstVisit.available, true)
 assert.equal(firstVisit.isReturning, false)
 assert.equal(firstVisit.title, "第一次到访「星尘酒馆」")
-assert.equal(firstVisit.stageLabel, "初访者")
+assert.equal(firstVisit.stageLabel, "陌生人")
 assert.equal(firstVisit.visitCount, 1)
 assert.equal(firstVisit.strengthPercent, 4)
 assert.ok(firstVisit.detail.includes("莉娜"))
-assert.ok(firstVisit.chips.includes("初访者"))
+assert.ok(firstVisit.chips.includes("陌生人"))
 assert.ok(firstVisit.chips.includes("1 次到访"))
 
 const returningVisit = buildRevisitCue(
@@ -45,7 +45,7 @@ const returningVisit = buildRevisitCue(
 assert.equal(returningVisit.available, true)
 assert.equal(returningVisit.isReturning, true)
 assert.equal(returningVisit.title, "欢迎回来，已第 3 次到访「星尘酒馆」")
-assert.equal(returningVisit.stageLabel, "熟面孔")
+assert.equal(returningVisit.stageLabel, "点头之交")
 assert.equal(returningVisit.visitCount, 3)
 assert.equal(returningVisit.strengthPercent, 42)
 assert.ok(returningVisit.detail.includes("关系上下文"))
@@ -58,14 +58,36 @@ const refreshedAfterChat = buildRevisitCue(
     tavern_id: "tavern-1",
     visit_count: 2,
     last_visit: "2026-04-27T10:30:00Z",
-    relationship: { stage: "regular", strength: 0.51 },
+    relationship: { stage: "friend", strength: 0.51 },
   },
   { tavernName: "星尘酒馆" },
 )
 assert.equal(refreshedAfterChat.isReturning, true)
-assert.equal(refreshedAfterChat.stageLabel, "常客")
+assert.equal(refreshedAfterChat.stageLabel, "朋友")
 assert.ok(refreshedAfterChat.title.includes("欢迎回来"))
 assert.ok(refreshedAfterChat.promptHint.includes("继续"))
+
+const legacyRegular = buildRevisitCue(
+  {
+    visitor_id: "visitor-legacy",
+    tavern_id: "tavern-1",
+    visit_count: 2,
+    relationship: { stage: "regular", strength: 0.44 },
+  },
+  { tavernName: "星尘酒馆" },
+)
+assert.equal(legacyRegular.stageLabel, "熟面孔")
+
+const closeFriend = buildRevisitCue(
+  {
+    visitor_id: "visitor-close",
+    tavern_id: "tavern-1",
+    visit_count: 5,
+    relationship: { stage: "close_friend", strength: 0.75 },
+  },
+  { tavernName: "星尘酒馆" },
+)
+assert.equal(closeFriend.stageLabel, "挚友")
 
 assert.equal(formatRevisitTime("not-a-date"), "not-a-date")
 assert.equal(formatRevisitTime(""), "暂无记录")

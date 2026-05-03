@@ -201,3 +201,7 @@ FableMap 应借鉴的是 **竖屏短剧情互动表达**，不是复制小游戏
 - `04-30-discovery-short-drama-teaser-cards`
 - `04-30-owner-ai-short-drama-draft-assistant`
 - `04-30-confirmed-short-video-asset-pipeline-research`
+
+2026-05-03 update:
+
+- `04-30-tavern-short-drama-gameplay-template-mvp` 已补齐缺失的 child task 目录，并基于现有 tracked frontend implementation 完成 Trellis 验证闭环；父任务进度现在为 1/4 done。

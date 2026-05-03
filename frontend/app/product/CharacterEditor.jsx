@@ -12,6 +12,10 @@ import {
   applyNpcPersonalityTemplateToDraft,
   filterNpcPersonalityTemplates,
 } from './personalityTemplates'
+import {
+  analyzeCharacterPromptRisk,
+  formatPromptRiskBlockMessage,
+} from './characterPromptRiskLinter.js'
 
 const SPRITE_FIELDS = [
   ['neutral', '中性'],
@@ -177,6 +181,7 @@ export default function CharacterEditor({
     draft,
     limit: 4,
   }), [activeTemplateCategory, draft, templateQuery])
+  const promptRiskReport = useMemo(() => analyzeCharacterPromptRisk(draft), [draft])
   const completion = useMemo(() => {
     const checks = [
       { label: '名称', done: Boolean(draft.name.trim()) },
@@ -288,6 +293,11 @@ export default function CharacterEditor({
       setError('请填写角色名称')
       return
     }
+    const saveRiskReport = analyzeCharacterPromptRisk(payload)
+    if (!saveRiskReport.canSave) {
+      setError(formatPromptRiskBlockMessage(saveRiskReport))
+      return
+    }
     setError('')
     onSave(payload)
   }
@@ -322,6 +332,9 @@ export default function CharacterEditor({
               </span>
             )
           })}
+          <span className={promptRiskReport.canSave ? 'is-done' : 'is-blocked'}>
+            {promptRiskReport.canSave ? '✓' : '!'} Prompt 风险
+          </span>
         </div>
       </div>
 
@@ -425,6 +438,55 @@ export default function CharacterEditor({
             {preview.tags.map((tag) => <small key={tag}>{tag}</small>)}
           </div>
         ) : null}
+      </section>
+
+      <section
+        className={[
+          'character-prompt-risk',
+          `character-prompt-risk--${promptRiskReport.highestLevel}`,
+          promptRiskReport.canSave ? '' : 'character-prompt-risk--blocked',
+        ].filter(Boolean).join(' ')}
+        aria-label="角色 Prompt 风险检查"
+      >
+        <div className="character-prompt-risk__header">
+          <div>
+            <span className="mini-label">Prompt 风险检查</span>
+            <strong>
+              {promptRiskReport.summary.blocked
+                ? '保存前需要清理阻断项'
+                : promptRiskReport.summary.warning
+                  ? '发现需店主复核的提示'
+                  : '未发现阻断风险'}
+            </strong>
+          </div>
+          <div className="character-prompt-risk__counts" aria-label="风险分级统计">
+            <span className={promptRiskReport.summary.blocked ? 'is-blocked' : ''}>
+              阻断 {promptRiskReport.summary.blocked}
+            </span>
+            <span className={promptRiskReport.summary.warning ? 'is-warning' : ''}>
+              提醒 {promptRiskReport.summary.warning}
+            </span>
+            <span>
+              信息 {promptRiskReport.summary.info}
+            </span>
+          </div>
+        </div>
+        {promptRiskReport.items.length ? (
+          <ul className="character-prompt-risk__list">
+            {promptRiskReport.items.slice(0, 8).map((item) => (
+              <li key={item.id} className={`is-${item.level}`}>
+                <b>{item.level === 'blocked' ? '阻断' : item.level === 'warning' ? '提醒' : '信息'}</b>
+                <span>{item.field_label} · {item.label}</span>
+                <p>{item.message}</p>
+                <small>{item.suggestion}</small>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="character-prompt-risk__empty">
+            仍需店主自行确认角色设定；本检查只覆盖越权、PII、思维链、访客主权和真人照片化等常见风险。
+          </p>
+        )}
       </section>
 
       <div className="character-editor-grid">

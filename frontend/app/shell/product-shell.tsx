@@ -3,8 +3,8 @@ import { NavLink } from "react-router"
 
 import { cn } from "../lib/utils"
 
-// Bottom dock order: visitor-first mainline = 首页 / 发现 / 进店(创建入口) / 清单 / 店主
-// 创建入口移至底部dock，作为访客发现后"进店"的行动入口
+// Bottom dock order: visitor-first mainline = 首页 / 发现 / 进店 / 清单 / 管理
+// 桌面顶部保留“创建空间”；移动底部只暴露访客主线标签，避免把店主创建挤进第一屏。
 const bottomDockOrder = [
   { to: "/", label: "首页", icon: Home },
   { to: "/discover", label: "发现", icon: Compass },
@@ -83,7 +83,7 @@ export function ProductShell({
               <p className="text-xs text-violet-100/45">Cyber life on real coordinates</p>
             </div>
           </NavLink>
-          <nav className="-mx-1 flex max-w-full flex-wrap items-center gap-2 overflow-x-auto px-1 pb-1" aria-label="Primary navigation">
+          <nav className="-mx-1 hidden max-w-full flex-wrap items-center gap-2 overflow-x-auto px-1 pb-1 lg:flex" aria-label="Primary navigation">
             {topNavItems.map((item) => (
               <NavLink
                 key={item.to}

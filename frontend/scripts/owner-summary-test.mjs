@@ -1,4 +1,4 @@
-import { buildOwnerOperatingSummary } from '../app/lib/owner-summary.js'
+import { buildOwnerOperatingSummary, formatRelationshipStage } from '../app/lib/owner-summary.js'
 
 function assert(condition, message) {
   if (!condition) {
@@ -138,8 +138,22 @@ function testConfiguredLlmDoesNotSuggestSetup() {
   assert(!summary.nextActions.some((item) => item.kind === 'configure_owner_llm'), 'does not suggest LLM setup when configured')
 }
 
+function testRelationshipStageLabelsUseAffinityNames() {
+  assertEqual(formatRelationshipStage('stranger'), '陌生人', 'formats stranger affinity stage')
+  assertEqual(formatRelationshipStage('acquaintance'), '点头之交', 'formats acquaintance affinity stage')
+  assertEqual(formatRelationshipStage('familiar'), '熟面孔', 'formats familiar affinity stage')
+  assertEqual(formatRelationshipStage('friend'), '朋友', 'formats friend affinity stage')
+  assertEqual(formatRelationshipStage('close_friend'), '挚友', 'formats close friend affinity stage')
+  assertEqual(formatRelationshipStage('best_friend'), '知己', 'formats best friend affinity stage')
+  assertEqual(formatRelationshipStage('regular'), '熟面孔', 'normalizes legacy regular stage')
+  assertEqual(formatRelationshipStage('confidant'), '挚友', 'normalizes legacy confidant stage')
+  assertEqual(formatRelationshipStage('', 0.52), '朋友', 'falls back to relationship strength when stage is missing')
+  assertEqual(formatRelationshipStage('unknown-stage'), '陌生人', 'unknown stage falls back to safe affinity label')
+}
+
 testSummaryMetricsAndHighlights()
 testEmptySummaryHasOnboardingAction()
 testConfiguredLlmDoesNotSuggestSetup()
+testRelationshipStageLabelsUseAffinityNames()
 
 console.log('owner-summary-test: ok')

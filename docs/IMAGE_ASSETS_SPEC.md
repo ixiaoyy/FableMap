@@ -46,6 +46,8 @@ can_regenerate_higher_quality: true
 
 - No readable brand text / logo / watermark.
 - No existing IP or living-artist imitation.
+- No photorealistic human / real-person portrait / celebrity likeness / live-action cosplay / stock photo.
+- No DSLR or camera-lens photography look, no hyperreal skin-pore rendering for NPC assets.
 - No private data / API key / exact private address.
 
 ## Style recipe / Style DNA source
@@ -83,7 +85,7 @@ can_regenerate_higher_quality: true
 
 ## Final prompt
 
-<自然/neutral 单图 prompt；必须明确“只生成一张自然表情头像”，不要在这里列出 joy / anger / embarrassment / curiosity 的生成 prompt。>
+<自然/neutral 单图 prompt；必须明确“只生成一张自然表情头像”，并锁定 non-photoreal fictional NPC / 非真人照片化形象；不要在这里列出 joy / anger / embarrassment / curiosity 的生成 prompt。>
 
 ## Expression assets
 
@@ -125,8 +127,15 @@ NPC 表情组的组级 sidecar 必须保留同一组 identity locks，并用 `ex
 |------|-----|
 | 尺寸 | 256×256 px |
 | 格式 | PNG |
-| 风格 | 原创 anime / game-style tavern NPC portrait，半身或腰部以上 |
+| 风格 | 原创 anime / game-style tavern NPC portrait，半身或腰部以上；非真人、非照片、非写实真人感 |
 | 背景 | 酒馆内景，不是透明背景，不是纯色占位 |
+
+#### 非真人形象约束
+
+- 角色头像必须是原创虚构 NPC 的非照片化插画形象；允许人形 / 类人角色，但只能是 anime / game-style / cartoon 风格，不得生成真人照片、写实人像、演员/模特/网红感、明星脸或真人 cosplay。
+- NPC Prompt 正向约束必须包含等价语义：`stylized anime/game illustration`、`non-photoreal fictional NPC`、`original character`、`not a real person`、`no celebrity likeness`。
+- NPC Prompt / sidecar 的 Negative constraints 必须包含等价语义：`no photorealistic human`、`no real-person portrait`、`no live-action cosplay`、`no stock photo`、`no celebrity likeness`、`no hyperreal skin pores`、`no DSLR/camera-lens look`。
+- 生成结果如果看起来像真人照片、摄影棚人像、cosplay 照或可识别现实人物，不能进入 `frontend/public/...` / `frontend/app/assets/...` 等项目资源路径；必须先退回重生或改作明确废稿/参考图。
 
 #### 角色原型清单
 
@@ -331,7 +340,7 @@ frontend/public/faction-emblems/
     "allowed_text": [],
     "forbidden_text": ["logos", "fake brand slogans", "visitor-private data"]
   },
-  "constraints": ["original asset only", "no existing IP", "no living-artist imitation", "no watermark"],
+  "constraints": ["original asset only", "non-photoreal fictional NPC for NPC assets", "not a real person", "no photorealistic human", "no real-person portrait", "no celebrity likeness", "no live-action cosplay", "no existing IP", "no living-artist imitation", "no watermark"],
   "extension_modules": []
 }
 ```
@@ -377,13 +386,14 @@ Composition module: [composition technique: centered / rule of thirds / diagonal
 ### 角色头像通用模板
 
 ```
-A finished original anime / game-style FableMap cyber-tavern NPC portrait of [species/body plan + role + maturity range + stable silhouette + signature tavern prop],
+A finished original non-photoreal anime / game-style FableMap cyber-tavern NPC portrait of [species/body plan + role + maturity range + stable silhouette + signature tavern prop],
+stylized fictional character art, not a real person or photo,
 visibly anchored inside a real-place tavern interior with at least two cues
 (bar counter, mugs, shelves, lanterns, menu board, bottles, map-table, door signage, cyber terminal glow),
 [paste or summarize Style DNA here: art style, palette, lighting, medium texture, mood, era, post-processing],
 [paste optional Composition module here: bust or waist-up portrait preferred unless usage requires otherwise],
 identity-consistent character design, readable expression and body language, owner-reviewable draft only,
-no transparent background, no blank placeholder, no readable text, no logo, no watermark, no existing IP, no living-artist imitation, no owner API keys or visitor-private data
+no transparent background, no blank placeholder, no readable text, no logo, no watermark, no existing IP, no living-artist imitation, no photorealistic human, no real-person portrait, no celebrity likeness, no live-action cosplay, no stock photo, no hyperreal skin pores, no DSLR/camera-lens look, no owner API keys or visitor-private data
 ```
 
 ### 地点氛围图通用模板

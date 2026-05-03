@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { parseCharacterCard, extractCharacterCardFromPng } from './services/tavernService'
+import { buildAiDraftLifecycle } from '../lib/ai-draft-lifecycle.js'
 import { addCharacter, deleteCharacter, generateCharacterDraft, importCharacterCard, listCharacters, updateCharacter } from '../lib/taverns'
 import CharacterEditor, { createEmptyCharacterDraft, normalizeCharacterPayload } from './CharacterEditor'
 import CharacterAvatar from './CharacterAvatar'
@@ -17,6 +18,10 @@ import {
   NPC_BATCH_IMPORT_EXAMPLE,
   parseNpcBatchInput,
 } from './npcBatchImport'
+import {
+  assertCharacterPromptRiskCanSave,
+  formatPromptRiskBlockMessage,
+} from './characterPromptRiskLinter.js'
 
 /**
  * CharacterManagementModal — 酒馆角色管理面板
@@ -54,6 +59,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   const [aiDraftStyleText, setAiDraftStyleText] = useState(DEFAULT_AI_DRAFT_STYLE_TAGS.join(', '))
   const [aiDraftForbiddenText, setAiDraftForbiddenText] = useState(DEFAULT_AI_DRAFT_FORBIDDEN.join(', '))
   const [aiDraftTone, setAiDraftTone] = useState('温暖、短句、有酒馆陪伴感')
+  const characterDraftLifecycle = buildAiDraftLifecycle('character')
 
   // 批量背景 NPC：先预览，店主确认后才逐个走现有 addCharacter API
   const [batchInput, setBatchInput] = useState('')
@@ -122,6 +128,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
     setBatchError('')
     setBatchStatus('')
     try {
+      batchPreview.forEach((draft) => assertCharacterPromptRiskCanSave(draft))
       const savedCharacters = []
       for (const draft of batchPreview) {
         const saved = await addCharacter(tavern.id, draft, ownerId)
@@ -135,7 +142,11 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
       setBatchSource('')
       setBatchStatus(`已由店主确认创建 ${savedCharacters.length} 个背景 NPC；可继续逐个编辑精修。`)
     } catch (err) {
-      setBatchError(`批量创建失败：${err.message}`)
+      if (err.report) {
+        setBatchError(`批量创建被阻断：${formatPromptRiskBlockMessage(err.report)}`)
+      } else {
+        setBatchError(`批量创建失败：${err.message}`)
+      }
     } finally {
       setBatchSaving(false)
     }
@@ -238,13 +249,18 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
         const text = await file.text()
         cardData = parseCharacterCard(JSON.parse(text))
       }
+      assertCharacterPromptRiskCanSave(cardData)
       const saved = await importCharacterCard(tavern.id, cardData, ownerId)
       const updated = [...characters, saved]
       setCharacters(updated)
       if (onCharactersChanged) onCharactersChanged(updated)
       setEditingChar(null)
     } catch (err) {
-      setImportError(`导入失败：${err.message}`)
+      if (err.report) {
+        setImportError(`导入被阻断：${formatPromptRiskBlockMessage(err.report)}`)
+      } else {
+        setImportError(`导入失败：${err.message}`)
+      }
     } finally {
       setImporting(false)
     }
@@ -463,6 +479,23 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                   <div className="character-editor-section-heading">
                     <span>生成 AI 草稿</span>
                     <small>只放进右侧编辑器；店主保存后才会成为正式角色。</small>
+                  </div>
+                  <div className="ai-draft-lifecycle" aria-label="AI 草稿生命周期">
+                    <strong>{characterDraftLifecycle.title}</strong>
+                    <p>{characterDraftLifecycle.summary}</p>
+                    <div className="ai-draft-lifecycle__steps">
+                      {characterDraftLifecycle.steps.map((step) => (
+                        <span key={step.id}>
+                          <b>{step.label}</b>
+                          <small>{step.helper}</small>
+                        </span>
+                      ))}
+                    </div>
+                    <ul>
+                      {characterDraftLifecycle.guardrails.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
                   </div>
                   <div className="form-grid">
                     <label>

@@ -4,7 +4,7 @@
   "title": "Multi-NPC Tavern Room Full UX",
   "description": "在已有 group-chat 基础上，保留完整多人 NPC 房间 UX 的未来任务。",
   "status": "in_progress",
-  "dev_type": null,
+  "dev_type": "frontend",
   "scope": null,
   "package": null,
   "priority": "P3",

@@ -41,7 +41,7 @@ export function buildRevisitCue(visitorState, options = {}) {
   const relationshipStage = String(relationship.stage || "")
   const relationshipStrength = clamp(toNumber(relationship.strength), 0, 1)
   const strengthPercent = Math.round(relationshipStrength * 100)
-  const stageLabel = formatRelationshipStage(relationshipStage)
+  const stageLabel = formatRelationshipStage(relationshipStage, relationshipStrength)
   const lastVisitLabel = formatRevisitTime(state.last_visit)
   const available = Boolean(
     visitCount > 0

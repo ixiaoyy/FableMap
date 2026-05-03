@@ -1,3 +1,5 @@
+import { formatTavernAnchorLocation } from '../product/mapAnchorCopy.js'
+
 export const TAVERN_LAYOUTS = [
   {
     id: "lobby",
@@ -113,13 +115,15 @@ function extractTimeStatus(tavern) {
 }
 
 export function buildTavernLayoutStats(tavern, characters = [], claims = []) {
-  const lat = formatCoordinate(tavern?.lat, "N")
-  const lon = formatCoordinate(tavern?.lon, "E")
   const tavernCharacters = Array.isArray(tavern?.characters) ? tavern.characters : []
   const safeCharacters = Array.isArray(characters) ? characters : []
 
+  // Use emotional location copy instead of raw coordinates
+  const anchor = formatTavernAnchorLocation(tavern)
+  const locationLabel = anchor.line || '坐标未设置'
+
   return {
-    location: lat && lon ? `${lat} · ${lon}` : "坐标未设置",
+    location: locationLabel,
     accessStatus: `${tavern?.status || "unknown"} · ${tavern?.access || "public"}`,
     characterCount: safeCharacters.length || tavernCharacters.length,
     worldInfoCount: Array.isArray(tavern?.world_info) ? tavern.world_info.length : 0,

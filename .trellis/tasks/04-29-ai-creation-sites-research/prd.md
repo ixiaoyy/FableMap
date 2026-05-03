@@ -31,3 +31,17 @@
 - `04-30-revisit-memory-feedback-surface`
 - `04-30-mobile-single-mainline-experience`
 - `04-30-discovery-liveliness-signals-rumor-guestbook`
+
+## 2026-05-03 Completion Summary
+
+All seven research-derived Trellis child tasks are now completed:
+
+- `04-30-public-site-reference-matrix-research`
+- `04-30-map-anchor-emotional-copy-polish`
+- `04-30-tavern-entry-surface-polish`
+- `04-30-ai-draft-lifecycle-status-ui`
+- `04-30-revisit-memory-feedback-surface`
+- `04-30-mobile-single-mainline-experience`
+- `04-30-discovery-liveliness-signals-rumor-guestbook`
+
+Research artifacts are under `artifacts/research/ai-creation-sites/`. Product-facing follow-up slices remain constrained by FableMap guardrails: owner-authored content, owner-confirmed AI drafts, real coordinate anchoring, no platform token billing, and no unbounded visitor social graph.

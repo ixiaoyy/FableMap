@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { buildAiDraftLifecycle } from '../lib/ai-draft-lifecycle.js'
 import { getGameplays, saveGameplays as persistGameplays } from '../lib/taverns'
 import GameplayDefinitionEditor, { createBlankGameplay } from './GameplayDefinitionEditor'
 import {
@@ -43,6 +44,7 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     () => filterOwnerGameplayTemplates({ query: templateQuery, category: templateCategory }),
     [templateCategory, templateQuery],
   )
+  const gameplayDraftLifecycle = buildAiDraftLifecycle('gameplay')
 
   useEffect(() => {
     let ignore = false
@@ -137,6 +139,23 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
         {loading ? <div className="owner-loading">正在读取玩法...</div> : null}
         {error ? <div className="owner-error">{error}</div> : null}
         {status ? <div className="owner-package-status">{status}</div> : null}
+        <section className="ai-draft-lifecycle gameplay-manager__lifecycle" aria-label="AI 草稿生命周期">
+          <strong>{gameplayDraftLifecycle.title}</strong>
+          <p>{gameplayDraftLifecycle.summary}</p>
+          <div className="ai-draft-lifecycle__steps">
+            {gameplayDraftLifecycle.steps.map((step) => (
+              <span key={step.id}>
+                <b>{step.label}</b>
+                <small>{step.helper}</small>
+              </span>
+            ))}
+          </div>
+          <ul>
+            {gameplayDraftLifecycle.guardrails.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
 
         <div className="gameplay-manager__layout">
           <aside className="gameplay-manager__list">

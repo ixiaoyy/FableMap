@@ -47,9 +47,9 @@ function RevisitCuePanel({ cue }: { cue: ReturnType<typeof buildRevisitCue> }) {
 
 function VisitorStateSummary({ state }: { state: VisitorStatePayload }) {
   const relationship = state?.relationship || {}
-  const stageLabel = formatRelationshipStage(String(relationship.stage || "stranger"))
   const visitCount = Number(state.visit_count ?? 0)
   const strength = Math.round(Number(relationship.strength ?? 0) * 100)
+  const stageLabel = formatRelationshipStage(String(relationship.stage || ""), Number(relationship.strength ?? 0))
   const lastVisit = formatRevisitTime(state.last_visit)
 
   return (

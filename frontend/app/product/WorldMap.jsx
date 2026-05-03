@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createMapAdapter } from './mapAdapter'
+import { buildMapAnchorSummaryCopy } from './mapAnchorCopy'
 import { TAVERN_ACCESS_META, getTavernAccessDescription } from './services/tavernService'
 
 const SNAPSHOT_STORAGE_KEY = 'fablemap.activeMapSnapshot'
@@ -101,6 +102,10 @@ export default function WorldMap({
   const center = useMemo(() => computeMapCenter(world, pois, landmarks), [world, pois, landmarks])
   const usingSnapshot = preferSnapshot && Boolean(snapshotManifest)
   const hiddenTavernMarkerCount = Math.max(0, Number(totalTavernMatches || 0) - taverns.length)
+  const tavernAnchorSummary = buildMapAnchorSummaryCopy({
+    matching: taverns.length,
+    total: totalTavernMatches,
+  })
   const tavernAccessLegend = useMemo(() => {
     const counts = taverns.reduce((acc, tavern) => {
       const access = tavern?.access || 'unknown'
@@ -446,10 +451,10 @@ export default function WorldMap({
           }}
         >
           <strong style={{ display: 'block', marginBottom: 6 }}>
-            {usingSnapshot ? '本地地图快照' : '地图已接入'}
+            {usingSnapshot ? '本地街区快照' : '街区底图已接入'}
           </strong>
           <span style={{ fontSize: 13, color: '#cbd5e1', display: 'block', marginBottom: 10 }}>
-            {originLabel || '当前地点'} · {pois.length} 个地点 · {landmarks.length} 个地标 · 酒馆标记 {taverns.length} / {totalTavernMatches}
+            {originLabel || '当前街角'} · {pois.length} 个地点 · {landmarks.length} 个地标 · {tavernAnchorSummary}
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
@@ -508,14 +513,14 @@ export default function WorldMap({
         </div>
       </div>
 
-      <div className="tavern-map-legend" aria-label="酒馆入口分类">
+      <div className="tavern-map-legend" aria-label="酒馆灯牌分类">
         <div className="tavern-map-legend__header">
-          <span>酒馆标记</span>
+          <span>酒馆灯牌</span>
           <strong>{taverns.length}/{totalTavernMatches}</strong>
         </div>
         {hiddenTavernMarkerCount ? (
           <p className="tavern-map-legend__note">
-            已优先显示前 {tavernMarkerLimit || taverns.length} 间；继续搜索或筛选可缩小 marker 数量。
+            已优先点亮前 {tavernMarkerLimit || taverns.length} 间；继续搜索或筛选可缩小地图灯牌数量。
           </p>
         ) : null}
         <div className="tavern-map-legend__items">

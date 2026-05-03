@@ -1,9 +1,4 @@
-const RELATIONSHIP_STAGE_LABELS = {
-  stranger: "初访者",
-  acquaintance: "熟面孔",
-  regular: "常客",
-  confidant: "熟客盟友",
-}
+import { getAffinityStageMeta } from "./affinity.js"
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
@@ -36,8 +31,8 @@ export function formatOwnerSummaryTime(value) {
   })
 }
 
-export function formatRelationshipStage(stage) {
-  return RELATIONSHIP_STAGE_LABELS[stage] || stage || "未建立"
+export function formatRelationshipStage(stage, strength = 0) {
+  return getAffinityStageMeta(stage, strength).name_zh
 }
 
 export function getOwnerVisitorLabel(visitor = {}) {
@@ -61,7 +56,7 @@ function summarizeReturningVisitors(visitors) {
         visitCount: toNumber(visitor.visit_count),
         messageCount: toNumber(visitor.message_count),
         relationshipStage: String(relationship.stage || ""),
-        relationshipLabel: formatRelationshipStage(relationship.stage),
+        relationshipLabel: formatRelationshipStage(relationship.stage, relationship.strength),
         relationshipStrength: toNumber(relationship.strength),
         lastVisit: visitor.last_visit || "",
       }

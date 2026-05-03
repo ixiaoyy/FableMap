@@ -61,12 +61,12 @@ assert.deepEqual(stats.claims, { approved: 1, pending: 1, rejected: 0, revoked: 
 assert.equal(stats.characterCount, 3)
 assert.equal(stats.worldInfoCount, 2)
 assert.equal(stats.gameplayCount, 1)
-assert.equal(stats.location, "31.23040°N · 121.47370°E")
+assert.equal(stats.location, "坐标门牌 · 31.2304, 121.4737")
 assert.equal(stats.accessStatus, "open · password")
 assert.equal(stats.visitCount, 7)
 
 const emptyStats = buildTavernLayoutStats(null, [], [])
-assert.equal(emptyStats.location, "坐标未设置")
+assert.equal(emptyStats.location, "真实锚点 · 坐标待确认")
 assert.equal(emptyStats.accessStatus, "unknown · public")
 assert.equal(emptyStats.characterCount, 0)
 
