@@ -128,6 +128,21 @@ const GROUP_STRATEGY_LABELS = {
   relevance: '减少重复',
 }
 
+const GROUP_ROOM_RULES = [
+  {
+    id: 'speaker-rules',
+    label: '发言规则',
+  },
+  {
+    id: 'visitor-agency',
+    label: '访客主导',
+  },
+  {
+    id: 'canon-boundary',
+    label: '正史边界',
+  },
+]
+
 function getExpressionLabel(expression) {
   return EXPRESSION_LABELS[expression] || expression || EXPRESSION_LABELS.neutral
 }
@@ -144,6 +159,54 @@ function getGroupResponseCapLabel(maxResponses) {
   const parsed = Number.parseInt(maxResponses, 10)
   const count = Number.isFinite(parsed) ? Math.max(1, Math.min(3, parsed)) : 2
   return `每轮最多 ${count} 人`
+}
+
+function getGroupCooldownLabel(seconds) {
+  const parsed = Number.parseInt(seconds, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return '无额外冷却'
+  return `${Math.min(30, parsed)} 秒冷却`
+}
+
+function getGroupRoomRules(groupChatConfig = {}) {
+  const strategyLabel = getGroupStrategyLabel(groupChatConfig.strategy)
+  const responseCapLabel = getGroupResponseCapLabel(groupChatConfig.max_responses_per_turn)
+  const cooldownLabel = getGroupCooldownLabel(groupChatConfig.response_cooldown_seconds)
+  const namePrefixLabel = groupChatConfig.require_name_prefix === false
+    ? '当前不强制角色名前缀'
+    : '回复保留角色名前缀'
+
+  return GROUP_ROOM_RULES.map((rule) => {
+    if (rule.id === 'speaker-rules') {
+      return {
+        ...rule,
+        text: `店主设定谁更爱接话；当前按${strategyLabel}选择发言者，${responseCapLabel}，${cooldownLabel}，${namePrefixLabel}。`,
+      }
+    }
+    if (rule.id === 'visitor-agency') {
+      return {
+        ...rule,
+        text: 'NPC 只回应你放到桌上的话，不替你发言、不替你决定动作。',
+      }
+    }
+    return {
+      ...rule,
+      text: '群聊可能提出记忆或状态卡候选；确认前不是酒馆正史，也不会改写店主设定。',
+    }
+  })
+}
+
+function normalizeGroupTalkativeness(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 0.5
+  return Math.max(0, Math.min(1, parsed))
+}
+
+function getGroupParticipantTone(character) {
+  const talkativeness = normalizeGroupTalkativeness(character.talkativeness)
+  if (talkativeness <= 0) return '暂不接话'
+  if (talkativeness < 0.35) return `低积极度 · ${Math.round(talkativeness * 100)}%`
+  if (talkativeness > 0.75) return `高积极度 · ${Math.round(talkativeness * 100)}%`
+  return `中积极度 · ${Math.round(talkativeness * 100)}%`
 }
 
 function mergeStateCards(currentCards, incomingCards) {
@@ -579,6 +642,61 @@ function GuildQuestPanel({
             </div>
           </article>
         ))}
+      </div>
+    </section>
+  )
+}
+
+function MultiNpcRoomGuide({ characters = [], groupChatConfig = {} }) {
+  const roomRules = getGroupRoomRules(groupChatConfig)
+  const participants = (Array.isArray(characters) ? characters : []).filter(Boolean)
+  const activeCount = participants.filter((character) => normalizeGroupTalkativeness(character.talkativeness) > 0).length
+
+  if (participants.length <= 1) return null
+
+  return (
+    <section className="group-room-guide" aria-label="多人 NPC 房间说明">
+      <div className="group-room-guide__header">
+        <div>
+          <span className="mini-label">多人 NPC 房间</span>
+          <h4>把一句话放到桌上，NPC 轮流接住</h4>
+          <p>群聊参与者会围绕你的输入回应；NPC 只回应，不替你发言、不替你决定动作。</p>
+        </div>
+        <div className="group-room-guide__meter" aria-label="可接话 NPC 数">
+          <strong>{activeCount}/{participants.length}</strong>
+          <span>可接话</span>
+        </div>
+      </div>
+
+      <div className="group-room-guide__rules" aria-label="多人 NPC 房间规则">
+        {roomRules.map((rule) => (
+          <article key={rule.id} className={`group-room-rule-card is-${rule.id}`}>
+            <span>{rule.label}</span>
+            <p>{rule.text}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="group-room-participants" aria-label="群聊参与者">
+        <div className="group-room-participants__head">
+          <strong>群聊参与者</strong>
+          <small>按店主设定的接话积极度展示</small>
+        </div>
+        <div className="group-room-participants__list">
+          {participants.map((character) => (
+            <div
+              key={character.id || character.name}
+              className={`group-room-participant ${normalizeGroupTalkativeness(character.talkativeness) <= 0 ? 'is-muted' : ''}`}
+            >
+              <CharacterAvatar character={character} size="small" />
+              <div>
+                <strong>{character.name || '未命名 NPC'}</strong>
+                <span>{character.archetype || character.personality?.slice(0, 18) || '酒馆 NPC'}</span>
+                <small>{getGroupParticipantTone(character)}</small>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )
@@ -1537,6 +1655,13 @@ export default function TavernChatRoom({
                   <strong>群聊会话暂时不可用</strong>
                   <span>{groupSessionError}</span>
                 </div>
+              ) : null}
+
+              {groupChatEnabled ? (
+                <MultiNpcRoomGuide
+                  characters={characters}
+                  groupChatConfig={groupChatConfig}
+                />
               ) : null}
 
               <GuildQuestPanel
