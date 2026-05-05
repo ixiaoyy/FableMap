@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const shellSource = readFileSync(resolve(__dirname, "../app/shell/product-shell.tsx"), "utf8")
 const tavernSource = readFileSync(resolve(__dirname, "../app/routes/tavern.tsx"), "utf8")
-const layoutShowcaseSource = readFileSync(resolve(__dirname, "../app/features/tavern-layout-showcase/index.tsx"), "utf8")
+const workbenchSource = readFileSync(resolve(__dirname, "../app/features/tavern-chat-workbench/index.tsx"), "utf8")
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8"))
 
 function sectionBetween(source, startMarker, endMarker, label) {
@@ -62,35 +62,27 @@ assert.ok(shellSource.includes("移动首屏只保留搜索、筛选、预览入
 assert.ok(shellSource.includes("移动端优先完成坐标、名称、首个 NPC"), "create mobile guide should preserve minimal creation scope")
 assert.ok(shellSource.includes("不把高级管理挤进第一屏"), "tavern mobile guide should keep advanced management out of the first screen")
 
+assert.ok(tavernSource.includes("<TavernChatWorkbench"), "tavern route should render the chat workbench as the first mobile mainline")
+assert.ok(!tavernSource.includes('<details className="mt-6 lg:hidden">'), "tavern route should not keep a separate pre-chat mobile secondary details block")
+
+const workbenchIndex = tavernSource.indexOf("<TavernChatWorkbench")
 const activityIndex = tavernSource.indexOf("<TavernActivitySignalsCard")
-const mobileDetailsIndex = tavernSource.indexOf('<details className="mt-6 lg:hidden">')
-assert.ok(activityIndex !== -1 && mobileDetailsIndex !== -1 && activityIndex < mobileDetailsIndex, "tavern activity signals should render before the mobile secondary details")
+assert.ok(workbenchIndex !== -1 && activityIndex !== -1 && workbenchIndex < activityIndex, "tavern activity signals should be folded inside the workbench after the chat surface")
 
-const mobileDetailsSection = sectionBetween(
-  tavernSource,
-  '<details className="mt-6 lg:hidden">',
-  "{/* Desktop: always show secondary panels */}",
-  "tavern mobile secondary details",
-)
-assert.ok(mobileDetailsSection.includes("更多酒馆信息"), "mobile secondary panels should be behind a 更多酒馆信息 summary")
-assert.ok(mobileDetailsSection.includes("<PlaceHomePanel tavern={tavern} />"), "mobile details should contain PlaceHomePanel")
-assert.ok(mobileDetailsSection.includes("<VisitorNotesPanel tavern={tavern} />"), "mobile details should contain VisitorNotesPanel")
-assert.ok(mobileDetailsSection.includes("<NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />"), "mobile details should contain NeighborhoodRumorBubble")
-assert.ok(!mobileDetailsSection.includes("<RoleplayPanel"), "mobile details should not put advanced roleplay management into the first collapsible secondary set")
+assert.ok(workbenchSource.includes('data-chat-workbench="sillytavern-style"'), "workbench should expose the chat-first contract marker")
+assert.ok(workbenchSource.includes('aria-label="NPC 角色列表"'), "workbench mobile first screen should include the NPC roster")
+assert.ok(workbenchSource.includes('aria-label="聊天记录"'), "workbench mobile first screen should include chat history")
+assert.ok(workbenchSource.includes("Shift+Enter 换行"), "workbench should keep an obvious composer hint")
+assert.ok(workbenchSource.includes("更多酒馆功能"), "public secondary panels should be folded behind 更多酒馆功能")
+assert.ok(workbenchSource.includes("data-owner-only-panel"), "owner management should have an explicit owner-only panel marker")
 
-const desktopSecondarySection = tavernSource.slice(tavernSource.indexOf('{/* Desktop: always show secondary panels */}'))
-assert.ok(desktopSecondarySection.includes('<div className="hidden lg:block">'), "desktop secondary panels should be in the lg-only block")
-assert.ok(desktopSecondarySection.includes("<RoleplayPanel"), "desktop can expose roleplay management in the secondary area")
-assert.ok(desktopSecondarySection.includes("<PlaceHomePanel tavern={tavern} />"), "desktop secondary block should include PlaceHomePanel")
-assert.ok(desktopSecondarySection.includes("<VisitorNotesPanel tavern={tavern} />"), "desktop secondary block should include VisitorNotesPanel")
-assert.ok(desktopSecondarySection.includes("<NeighborhoodRumorBubble"), "desktop secondary block should include NeighborhoodRumorBubble")
-
-const creatorSlotIndex = layoutShowcaseSource.indexOf("{creatorSlot}")
-assert.notEqual(creatorSlotIndex, -1, "layout showcase should still accept a creator conversion slot")
-assert.ok(
-  layoutShowcaseSource.slice(Math.max(0, creatorSlotIndex - 80), creatorSlotIndex + 80).includes('className="hidden lg:block"'),
-  "creator conversion slot should stay desktop-only so mobile first screen remains visitor-first",
-)
+assert.ok(tavernSource.includes("publicPanel={"), "route should pass folded public tavern features into the workbench")
+assert.ok(tavernSource.includes("<NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />"), "public folded panel should retain NeighborhoodRumorBubble")
+assert.ok(tavernSource.includes("<CreatorConversionCard tavern={tavern} />"), "public folded panel should retain creator conversion")
+assert.ok(tavernSource.includes("ownerPanel={isOwner"), "owner secondary panels should be gated by ownership")
+assert.ok(tavernSource.includes("<RoleplayPanel"), "owner folded panel should retain roleplay management")
+assert.ok(tavernSource.includes("<PlaceHomePanel tavern={tavern} />"), "owner folded panel should retain PlaceHomePanel")
+assert.ok(tavernSource.includes("<VisitorNotesPanel tavern={tavern} />"), "owner folded panel should retain VisitorNotesPanel")
 
 for (const forbidden of ["@capacitor", "ionic", "react-native", "onsenui"]) {
   assert.ok(!JSON.stringify(packageJson).toLowerCase().includes(forbidden), `should not introduce mobile framework dependency: ${forbidden}`)

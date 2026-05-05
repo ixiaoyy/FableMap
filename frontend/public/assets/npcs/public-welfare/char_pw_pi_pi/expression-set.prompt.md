@@ -10,7 +10,7 @@ source_manifest: artifacts/04-30-public-welfare-npc-batch-upgrade/batch-1-prompt
 character_id: char_pw_pi_pi
 widths: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
 heights: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
-sha256s: neutral=cf5f36f880f2bc7cc15e2126d2b70bbe1336d11aed1ec405bdd7863823e5ca3f; joy=921371c344518ee77ca36d4216d3542d798e23e60e49ade2d1a89345314ebc0a; anger=532f15ec2bba765ac049c0aaa116e007293939bb415edecafa7bbe29b443dfbf; embarrassment=410df5bcccf1de29f6f26273a27cbcc0050d382c280245b57230a70757219a0b; curiosity=234ecb8965080359239eba3ef9de56838ee87ebba43b6804796181c101a8bdbb
+sha256s: neutral=0d6051b2443bda33aa5fbe568405a2b68f153a4cac336475348a2be0fb98ceb3; joy=e52919f5b56bf68fcd6f5c4c31411157175fc3e04d492d1af3aafa7e9eaa8eb9; anger=c4cd5e0f3413831e604a1a1556f9673aa70fb01bf00bfcc7d28007817db9a79e; embarrassment=84877967fa5181db046ce3b36ce000017820fec203b5f61967fc387d2ea3fcca; curiosity=3bb254bdd799d0dbf6d4b48ab66e2052a26d67ce078ccb75a2d7517b2918e857
 updated_at: 2026-05-03
 can_regenerate_higher_quality: true
 ---

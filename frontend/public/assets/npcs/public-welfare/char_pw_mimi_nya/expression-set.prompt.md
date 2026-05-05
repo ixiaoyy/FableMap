@@ -7,9 +7,9 @@ asset_count: 5
 prompt_type: reverse-engineered
 source_type: reverse-engineered-current-asset
 character_id: char_pw_mimi_nya
-widths: neutral=512; joy=512; anger=512; embarrassment=512; curiosity=512
-heights: neutral=512; joy=512; anger=512; embarrassment=512; curiosity=512
-sha256s: neutral=d3dee5e9d87dd06e30abd00769a807cfbeb5759c923af876323aa079fdae6600; joy=caf7b0037ede2ccc64b9502654ac0879d478a51f4ee34353b415272e0c8ecb56; anger=48c5a43b11597caa3438ae2979e0720b8f6daed88c8f93f442f302e8f029967c; embarrassment=cac9de1292a6b64ce5c029edf2df3be8a2acbe680ec5ddd88a06662f564cc1a0; curiosity=2c37a7a9ee614ab4bfb50cfe4cef44adf84de58074b697dedbc8fa7d31ab7dc4
+widths: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
+heights: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
+sha256s: neutral=4c181cab61b9bf9cf4dedf52ac744ccf8ced8e0441f5f671bfd28792d4d654e2; joy=28fc263cdd92834b449ced8695a6177c1c34c3fc972c016b78249bb2945eeb37; anger=be87afdd22c67c5ff92517a6a98cd05272b4a627e6aac95b56f8796b208072da; embarrassment=c51feca650e1e916c5a944d401014b33e42c378ce15807d5cc27aa5237dd2520; curiosity=d506bbad365128ac301da24d539f18fc702d9bcc9af7d3632053b5796da2347e
 updated_at: 2026-05-03
 can_regenerate_higher_quality: true
 ---

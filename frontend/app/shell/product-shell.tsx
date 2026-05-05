@@ -47,9 +47,9 @@ const MOBILE_CRITICAL_FLOW_GUIDES: Record<string, {
     href: "#create-mainline",
   },
   Tavern: {
-    title: "先进入酒馆或查看主人入口",
-    helper: "移动首屏聚焦入店、角色和 owner-visible 操作，不把高级管理挤进第一屏。",
-    primaryLabel: "查看入店主线",
+    title: "先选 NPC，直接开聊",
+    helper: "移动首屏聚焦角色列表和聊天输入；酒馆资料、玩法、店主管理都折叠在下方，不把高级管理挤进第一屏。",
+    primaryLabel: "进入聊天主线",
     href: "#tavern-mainline",
   },
   Owner: {

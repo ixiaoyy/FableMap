@@ -28,6 +28,7 @@ test-results/
 # Generated outputs
 .fablemap-api/
 demo-output/
+/项目参考/
 
 # IDE
 .idea/

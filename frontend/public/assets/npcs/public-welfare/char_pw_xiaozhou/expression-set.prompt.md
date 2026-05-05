@@ -10,7 +10,7 @@ source_manifest: artifacts/04-30-public-welfare-npc-batch-upgrade/batch-2-prompt
 character_id: char_pw_xiaozhou
 widths: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
 heights: neutral=256; joy=256; anger=256; embarrassment=256; curiosity=256
-sha256s: neutral=5d1f60d3de36c4b2b67425c4c1d1d068824a917ec7047001130376d20d8df735; joy=3084c6b57c927f20b83be13d0d772ba34c6c4ef645bb2b252887042bc07c4f43; anger=008d197fda8a72e7e0504515f7f0f067ca569558693c5271dc18da823c92fbc8; embarrassment=ed22814ba62c5ec6592706e0a7271c3e9647273b08f37f8d4b35d1272eb5ffc4; curiosity=00135c484c065a3b392542e6e819a6a1846aee9cfcc1b690351869bf2a46b5ee
+sha256s: neutral=42b30fe731ed7484695ae6f10e17598b36ebccae6b6e1cfa3a59012c2826175f; joy=80d8548d358e66be401c43912a409c724342c49476a9697ef0406d0d02cbec83; anger=6e7adff85c5defb3f5a4aae0389d115be9be787358ef9e6c356e302a015697c2; embarrassment=c641a6bcc477fbe8f80b592165546910bdf3d200df2d40928ee050d40e95244b; curiosity=e753731567e06d3279e131142876cc7caaffadebcc543c5f24ed8048d39534a2
 updated_at: 2026-05-03
 can_regenerate_higher_quality: true
 ---

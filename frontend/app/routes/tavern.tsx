@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, Copy, Send, Share2, ShieldCheck, UserCheck, X
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLoaderData } from "react-router"
 
-import { TavernLayoutShowcase } from "../features/tavern-layout-showcase"
+import { TavernChatWorkbench } from "../features/tavern-chat-workbench"
 import { NeighborhoodRumorBubble } from "../components/NeighborhoodRumorBubble"
 import { TavernActivitySignalsCard } from "../components/TavernActivitySignalsCard"
 import { buildCreatorConversionLink, buildCreatorProfileLink } from "../lib/creator-conversion.js"
@@ -41,32 +41,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 
 type TavernLoaderData = {
   tavernId: string
+  currentUserId: string
   tavern: Tavern | null
   roleplay: RoleplayState | null
   error: string
 }
 
-export async function clientLoader({ params }: ClientLoaderFunctionArgs): Promise<TavernLoaderData> {
+function getCurrentUserIdFromRequest(request: Request) {
+  const url = new URL(request.url)
+  return (
+    url.searchParams.get("user_id")?.trim() ||
+    url.searchParams.get("owner_id")?.trim() ||
+    url.searchParams.get("visitor_id")?.trim() ||
+    DEFAULT_VISITOR_ID
+  )
+}
+
+export async function clientLoader({ params, request }: ClientLoaderFunctionArgs): Promise<TavernLoaderData> {
   const tavernId = params.tavernId ?? ""
+  const currentUserId = getCurrentUserIdFromRequest(request)
   if (!tavernId) {
-    return { tavernId, tavern: null, roleplay: null, error: "缺少酒馆 ID" }
+    return { tavernId, currentUserId, tavern: null, roleplay: null, error: "缺少酒馆 ID" }
   }
   try {
-    let tavern: Tavern
-    try {
-      tavern = await getTavern(tavernId, DEFAULT_VISITOR_ID)
-    } catch {
-      tavern = await getTavern(tavernId, DEFAULT_OWNER_ID)
-    }
+    const tavern = await getTavern(tavernId, currentUserId)
     let roleplay: RoleplayState | null = null
     try {
-      roleplay = await getRoleplayState(tavernId, DEFAULT_VISITOR_ID)
+      roleplay = await getRoleplayState(tavernId, currentUserId)
     } catch {
       roleplay = null
     }
-    return { tavernId, tavern, roleplay, error: "" }
+    return { tavernId, currentUserId, tavern, roleplay, error: "" }
   } catch (error) {
-    return { tavernId, tavern: null, roleplay: null, error: errorMessage(error) }
+    return { tavernId, currentUserId, tavern: null, roleplay: null, error: errorMessage(error) }
   }
 }
 
@@ -668,76 +675,57 @@ function PlaceHomePanel({ tavern }: { tavern: Tavern }) {
 }
 
 export default function TavernRoute() {
-  const { tavernId, tavern, roleplay, error } = useLoaderData<typeof clientLoader>()
+  const { tavernId, currentUserId, tavern, roleplay, error } = useLoaderData<typeof clientLoader>()
   const characters = tavern?.characters || []
-  const [selectedCharacterId, setSelectedCharacterId] = useState("")
   const [roleplayState, setRoleplayState] = useState<RoleplayState | null>(roleplay)
-  const selectedCharacter = characters.find((character) => character.id === selectedCharacterId) || characters[0]
   const effectiveRoleplay = tavern ? roleplayState || fallbackRoleplayState(tavern, characters) : null
-
-  useEffect(() => {
-    if (characters.length && !characters.some((character) => character.id === selectedCharacterId)) {
-      setSelectedCharacterId(characters[0].id)
-    }
-  }, [characters, selectedCharacterId])
+  const isOwner = Boolean(tavern?.owner_id && tavern.owner_id === currentUserId)
 
   return (
     <ProductShell eyebrow="Tavern">
       <div id="tavern-mainline" className="scroll-mt-28">
-        <TavernLayoutShowcase
-          tavernId={tavernId}
-          tavern={tavern}
-          error={error}
-          characters={characters}
-          selectedCharacter={selectedCharacter}
-          selectedCharacterId={selectedCharacter?.id || selectedCharacterId}
-          roleplay={effectiveRoleplay}
-          onSelectCharacter={(character: TavernCharacter) => setSelectedCharacterId(character.id)}
-          shareSlot={tavern ? <TavernShareCard tavern={tavern} /> : null}
-          creatorSlot={tavern ? <CreatorConversionCard tavern={tavern} /> : null}
-        />
-      </div>
-
-      {tavern ? <TavernActivitySignalsCard tavern={tavern} /> : null}
-
-      {/* Secondary panels: hidden on mobile by default, expand via <details> */}
-      {tavern ? (
-        <details className="mt-6 lg:hidden">
-          <summary className="cursor-pointer rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-semibold text-violet-100/70 hover:border-cyan-300/30 hover:text-cyan-100">
-            更多酒馆信息
-          </summary>
-          <div className="mt-4 space-y-4">
-            <PlaceHomePanel tavern={tavern} />
-            <VisitorNotesPanel tavern={tavern} />
-            <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
-          </div>
-        </details>
-      ) : null}
-
-      {/* Desktop: always show secondary panels */}
-      <div className="hidden lg:block">
-        {tavern && effectiveRoleplay ? (
-          <details className="mt-6">
-            <summary className="cursor-pointer rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-semibold text-violet-100/70 hover:border-cyan-300/30 hover:text-cyan-100">
-              角色扮演管理（已批准：{effectiveRoleplay.claims?.filter((claim) => claim.status === "approved").length || 0} · 待处理：{effectiveRoleplay.claims?.filter((claim) => claim.status === "pending").length || 0}）
-            </summary>
-            <div className="mt-4">
-              <RoleplayPanel
-                tavern={tavern}
-                characters={characters}
-                roleplay={effectiveRoleplay}
-                onRoleplayChange={setRoleplayState}
-              />
-            </div>
-          </details>
-        ) : null}
-        {tavern ? <PlaceHomePanel tavern={tavern} /> : null}
-        {tavern ? <VisitorNotesPanel tavern={tavern} /> : null}
         {tavern ? (
-          <div className="mt-6">
-            <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
-          </div>
-        ) : null}
+          <TavernChatWorkbench
+            tavern={tavern}
+            roleplay={effectiveRoleplay}
+            currentUserId={currentUserId}
+            isOwner={isOwner}
+            publicPanel={
+              <div className="space-y-4">
+                <TavernShareCard tavern={tavern} />
+                <TavernActivitySignalsCard tavern={tavern} />
+                <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
+                <CreatorConversionCard tavern={tavern} />
+              </div>
+            }
+            ownerPanel={isOwner && effectiveRoleplay ? (
+              <div className="space-y-4">
+                <RoleplayPanel
+                  tavern={tavern}
+                  characters={characters}
+                  roleplay={effectiveRoleplay}
+                  onRoleplayChange={setRoleplayState}
+                />
+                <PlaceHomePanel tavern={tavern} />
+                <VisitorNotesPanel tavern={tavern} />
+              </div>
+            ) : null}
+          />
+        ) : (
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader>
+              <CardTitle>无法进入酒馆</CardTitle>
+              <CardDescription className="mt-2">
+                {error || `未找到酒馆 ${tavernId}`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-violet-50/70">
+                请确认酒馆链接、访问权限或当前用户身份。店主可从管理页进入并携带 owner_id。
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </ProductShell>
   )
