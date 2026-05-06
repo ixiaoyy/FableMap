@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 from fablemap_api.core.default_taverns import (
     DEFAULT_PUBLIC_WELFARE_OWNER_ID,
     DEFAULT_PUBLIC_WELFARE_TAVERN_IDS,
+    default_public_welfare_taverns,
 )
 from fablemap_api.core.tavern import TavernStore
 from fablemap_api.core.web.config import ApiSettings
@@ -831,6 +832,92 @@ def test_default_public_welfare_seed_does_not_overwrite_corrupt_store():
         assert taverns_file.read_text(encoding="utf-8") == "{not valid json"
 
 
+def test_default_public_welfare_seed_is_readable_when_store_is_corrupt():
+    with TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir) / "taverns"
+        root.mkdir()
+        taverns_file = root / "taverns.json"
+        corrupt_payload = "{not valid json"
+        taverns_file.write_text(corrupt_payload, encoding="utf-8")
+
+        service = _service(tmpdir)
+        payload = service.list_taverns_payload(query="公益")
+        seeded_ids = {tavern["id"] for tavern in payload["taverns"]}
+
+        assert set(DEFAULT_PUBLIC_WELFARE_TAVERN_IDS).issubset(seeded_ids)
+        helpdesk = service.get_tavern_payload("pw_lantern_helpdesk", user_id="visitor_public_welfare")
+        assert helpdesk["name"] == "公益·灯塔问讯台"
+        assert helpdesk["llm_config"]["backend"] == "rules"
+        assert taverns_file.read_text(encoding="utf-8") == corrupt_payload
+
+
+def test_default_public_welfare_seed_fallback_enter_is_readonly_when_store_is_corrupt():
+    with TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir) / "taverns"
+        root.mkdir()
+        taverns_file = root / "taverns.json"
+        corrupt_payload = "{not valid json"
+        taverns_file.write_text(corrupt_payload, encoding="utf-8")
+
+        service = _service(tmpdir)
+        entered = service.enter_tavern_payload(
+            "pw_lantern_helpdesk",
+            user_id="visitor_public_welfare",
+        )
+
+        assert entered["ok"] is True
+        assert entered["status"] == "open"
+        assert len(entered["characters"]) >= 3
+        assert taverns_file.read_text(encoding="utf-8") == corrupt_payload
+
+
+def test_default_public_welfare_seed_read_fallback_repairs_partial_seed_records():
+    with TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir) / "taverns"
+        root.mkdir()
+        taverns_file = root / "taverns.json"
+        data = {
+            tavern["id"]: tavern
+            for tavern in default_public_welfare_taverns()
+        }
+        partial_seed_record = {
+            "_memory_atoms": {
+                "mem_partial": {
+                    "id": "mem_partial",
+                    "tavern_id": "pw_third_shelf_observatory",
+                    "visitor_id": "visitor-demo",
+                    "character_id": "char_pw_9_delta",
+                    "scope": "visitor_character",
+                    "dimension": "fact",
+                    "subject": "社长 9-Delta",
+                    "content": "访客记住了第三货架后面的入口。",
+                    "visibility": "private",
+                    "confidence": 0.7,
+                    "importance": 0.4,
+                    "created_at": "2026-05-05T00:00:00+00:00",
+                    "updated_at": "2026-05-05T00:00:00+00:00",
+                }
+            }
+        }
+        data["pw_third_shelf_observatory"] = partial_seed_record
+        taverns_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        service = _service(tmpdir)
+        payload = service.list_taverns_payload(query="第三货架")
+        tavern = next(
+            item for item in payload["taverns"]
+            if item["id"] == "pw_third_shelf_observatory"
+        )
+
+        assert tavern["name"] == "公益·第三货架观测站"
+        assert tavern["access"] == "public"
+        assert tavern["status"] == "open"
+        assert len(tavern["characters"]) >= 3
+        assert service.get_tavern_payload("pw_third_shelf_observatory", user_id="visitor-demo")["name"] == "公益·第三货架观测站"
+        stored = json.loads(taverns_file.read_text(encoding="utf-8"))
+        assert stored["pw_third_shelf_observatory"] == partial_seed_record
+
+
 def test_default_public_welfare_tavern_chat_uses_local_rules_backend():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
@@ -868,6 +955,101 @@ def test_default_public_welfare_tavern_chat_uses_local_rules_backend():
         assert sessions[0]["message_count"] == 2
 
 
+def test_public_welfare_tavern_hydrates_versioned_kilo_config_when_free_model_is_selected(monkeypatch):
+    captured_configs = []
+
+    class DummyResponse:
+        content = "Kilo 测试模型已经接管这间公益店。"
+        usage = {"total_tokens": 17}
+
+    class DummyClient:
+        def __init__(self, config):
+            captured_configs.append(config)
+
+        def complete(self, messages):
+            return DummyResponse()
+
+    monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda cfg: DummyClient(cfg))
+
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+
+        updated = service.update_tavern_payload(
+            "pw_lantern_helpdesk",
+            {
+                "llm_config": {
+                    "backend": "custom",
+                    "model": "kilo-auto/free",
+                    "api_key": "",
+                    "base_url": "",
+                    "temperature": 0.8,
+                    "max_tokens": 1024,
+                    "top_p": 0.9,
+                }
+            },
+            user_id=DEFAULT_PUBLIC_WELFARE_OWNER_ID,
+        )
+
+        assert updated["status"] == "open"
+        assert updated["llm_config"]["model"] == "kilo-auto/free"
+
+        runtime_config = service.tavern_store.get_llm_config("pw_lantern_helpdesk")
+        assert runtime_config is not None
+        assert runtime_config.backend == "custom"
+        assert runtime_config.model == "kilo-auto/free"
+        assert runtime_config.base_url == "https://api.kilo.ai/api/gateway"
+        assert runtime_config.api_key
+        assert runtime_config.to_dict()["api_key"] == ""
+
+        response = service.tavern_chat_payload(
+            "pw_lantern_helpdesk",
+            character_id="char_pw_xiaozhou",
+            message="你好，我是新手，怎么玩？",
+            visitor_id="visitor_public_welfare_free_model",
+            visitor_name="测试旅人",
+            user_id="visitor_public_welfare_free_model",
+        )
+        assert response["degraded"] is False
+        assert response["tavern_status"] == "open"
+        assert response["response"] == "Kilo 测试模型已经接管这间公益店。"
+        assert captured_configs
+        assert captured_configs[0].model == "kilo-auto/free"
+        assert captured_configs[0].base_url == "https://api.kilo.ai/api/gateway"
+        assert captured_configs[0].api_key
+        assert service.tavern_store.get_token_usage("pw_lantern_helpdesk") == 17
+
+
+def test_normal_tavern_without_config_still_closes_when_free_model_is_unconfigured():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        created = service.create_tavern_payload(
+            {
+                "name": "普通测试店",
+                "description": "验证普通店没有模型配置时不套用公益规则。",
+                "lat": 31.23,
+                "lon": 121.47,
+                "access": "public",
+                "scene_prompt": "一间普通测试店。",
+            },
+            owner_id="owner_normal_llm",
+        )
+
+        updated = service.update_tavern_payload(
+            created["id"],
+            {
+                "llm_config": {
+                    "backend": "custom",
+                    "model": "kilo-auto/free",
+                    "api_key": "",
+                    "base_url": "https://api.kilo.ai/api/gateway",
+                }
+            },
+            user_id="owner_normal_llm",
+        )
+
+        assert updated["status"] == "closed"
+
+
 def test_third_shelf_observatory_chat_uses_alien_convenience_rules_response():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
@@ -894,6 +1076,31 @@ def test_third_shelf_observatory_chat_uses_alien_convenience_rules_response():
         assert response["tavern_status"] == "open"
         assert "随便" in response["response"]
         assert "高危词" in response["response"] or "随机授权" in response["response"]
+        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+
+
+def test_third_shelf_observatory_generic_chat_stays_in_character_voice():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        tavern = service.get_tavern_payload("pw_third_shelf_observatory", user_id="")
+
+        response = service.tavern_chat_payload(
+            tavern_id=tavern["id"],
+            character_id="char_pw_9_delta",
+            message="天气怎么样？",
+            visitor_id="visitor_public_welfare_weather",
+            visitor_name="测试旅人",
+            user_id="visitor_public_welfare_weather",
+        )
+
+        assert response["degraded"] is False
+        assert response["tavern_status"] == "open"
+        assert response["response"].strip()
+        assert "便利店" in response["response"] or "人类" in response["response"]
+        assert "这里的气味和灯光让我想到" not in response["response"]
+        assert "氛围是" not in response["response"]
+        assert "scene_prompt" not in response["response"]
+        assert "我听见了——天气怎么样" not in response["response"]
         assert service.tavern_store.get_token_usage(tavern["id"]) == 0
 
 

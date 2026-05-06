@@ -1,25 +1,33 @@
 # Backend Persistence Guidelines
 
-> FableMap currently uses JSON-file persistence, not a SQL database or ORM.
+> FableMap runtime storage is database-backed by default. JSON stores remain only as an explicit local/dev fallback (`FABLEMAP_STORAGE_BACKEND=json`) and for import/export/cache artifacts.
 
 ---
 
 ## Overview
 
-There is no database migration framework in this repository. Persistent backend state is stored as JSON/JSONL under the configured output root (default described in `backend/src/fablemap_api/core/web/config.py` and architecture docs as `fablemap_data/`).
+There is no database migration framework in this repository. Persistent backend runtime state is stored through SQLAlchemy models by default. If `FABLEMAP_DATABASE_URL`/`FABLEMAP_MYSQL_URL` is unset, the app creates a local SQLite database at `<output_root>/fablemap.sqlite3`; production deployments should provide a real SQLAlchemy URL through `FABLEMAP_DATABASE_URL`.
 
 Important stores:
 
 ```text
-fablemap_data/
-├── taverns.json                  # Tavern public/config payloads; includes gameplay_definitions
-├── taverns_keyvault.json          # Owner LLM API keys / private config
-├── chat_history/                  # Per-tavern/per-visitor/per-character JSONL-like histories
-├── writeback-state.json           # World/player writeback state
-└── _gameplay_sessions             # Logical private bucket inside TavernStore data
+<output_root>/fablemap.sqlite3       # default local database when no DB URL is configured
+FABLEMAP_DATABASE_URL                # preferred production SQLAlchemy URL
+FABLEMAP_MYSQL_URL                   # legacy alias for database URL
+FABLEMAP_STORAGE_BACKEND=json        # explicit fallback only; not the default runtime path
 ```
 
-The exact implementation is in `backend/src/fablemap_api/core/tavern.py` and `backend/src/fablemap_api/core/writeback.py`.
+Important database-backed stores:
+
+- `MySQLTavernStore`: taverns, characters, world info, LLM config, chat history, visitor state, memories, gameplay sessions, state cards and tavern messages.
+- `SQLAlchemyOwnerConfigStore`: owner default LLM config.
+- `SQLAlchemyVisitorNoteStore`: owner-visible visitor notes.
+- `SQLAlchemyNotificationStore`: user notifications.
+- `SQLAlchemyRumorStore`: neighborhood rumors.
+- `SQLAlchemyHomeStore`: Home/member/visit records.
+- `SQLAlchemyWritebackStore`: legacy world/player writeback state.
+
+The shared storage resolver is `backend/src/fablemap_api/infrastructure/storage.py`.
 
 ---
 
@@ -27,7 +35,7 @@ The exact implementation is in `backend/src/fablemap_api/core/tavern.py` and `ba
 
 ### Use explicit load-normalize-save flows
 
-`TavernStore` reads JSON from disk, normalizes through dataclasses/helper functions, then writes JSON back. Existing examples:
+`MySQLTavernStore` and the SQLAlchemy side stores must normalize database rows through the same dataclasses/helper functions used by the explicit JSON fallback. JSON load-normalize-save examples remain useful for backward-compat behavior:
 
 ```python
 def _load_taverns(self) -> dict[str, Any]:
@@ -383,7 +391,8 @@ Contracts:
 - Every default public-welfare tavern / shop must have at least 3 formal `TavernCharacter` entries. One-character demo shops are not complete.
 - Every seeded character must expose complete project-owned direct assets per `frontend/npc-art-guidelines.md`: `avatar`, `sprites.neutral`, and expression aliases for `joy/happy`, `anger/angry`, `embarrassment/shy`, and `curiosity/curious`.
 - Every default shop must provide the core character chat loop: visitor can enter the shop, select any seeded character, send a normal greeting, receive non-empty assistant text, and persist a two-message chat session.
-- Default shops must keep `llm_config.backend="rules"` with `api_key=""`; core chat for these seeds must not call an external LLM and token usage must remain `0`.
+- Default shops must ship with `llm_config.backend="rules"` and `api_key=""`; core chat for fresh seeds must not call an external LLM and token usage must remain `0`.
+- System / public-welfare shop owners may later save a free-model choice such as `kilo-auto/free`; that choice must not force the shop closed. During early testing, this exact opt-in model may be hydrated from the versioned repo config at `backend/config/system_public_welfare_llm.json`; ordinary user taverns must not inherit that test key. If no matching versioned config exists, runtime keeps the local rules fallback until a configured provider/API endpoint exists.
 - Public-welfare shops should include `NPC 分工` world info and role-triage gameplay so the 3+ roles have clear boundaries instead of duplicate personalities.
 
 Required tests:
@@ -502,68 +511,69 @@ llm_config = private_getter(tavern_id) if callable(private_getter) else store.ge
 client = create_client(ClientLLMConfig(api_key=llm_config.api_key, ...))
 ```
 
-## Scenario: Optional MySQL Infrastructure Startup
+## Scenario: Database-backed Runtime Startup
 
 ### 1. Scope / Trigger
 
-Use this contract when maintaining native startup code (`backend/src/fablemap_api/main.py`) or optional SQLAlchemy/MySQL infrastructure modules. JSON file storage remains the default development/test path, so importing or starting the native app with no `FABLEMAP_MYSQL_URL` must not require SQLAlchemy or a MySQL driver.
+Use this contract when maintaining native/web startup code (`backend/src/fablemap_api/main.py`, `backend/src/fablemap_api/core/web/app.py`) or SQLAlchemy storage modules. Database storage is the default runtime path. JSON storage is only an explicit dev/backward-compat fallback via `FABLEMAP_STORAGE_BACKEND=json`.
 
 ### 2. Signatures
 
 ```python
-ApiSettings.mysql_url: str
-create_store(settings: ApiSettings) -> TavernStore
+ApiSettings.storage_backend: str
+ApiSettings.database_url: str
+ApiSettings.mysql_url: str  # legacy alias
+create_store(settings: ApiSettings) -> TavernStore | MySQLTavernStore
+create_tavern_store(settings: ApiSettings) -> TavernStore | MySQLTavernStore
+resolve_database_url(settings: ApiSettings) -> str
 create_database_from_settings(settings: ApiSettings) -> Database | None
-MySQLTavernStore(database: Database)
-create_mysql_tables(database: Database) -> None
 ```
 
-Package-level infrastructure exports are lazy:
+Package-level infrastructure exports stay lazy:
 
 ```python
 from fablemap_api.infrastructure.settings import ApiSettings  # must be SQLAlchemy-free
-from fablemap_api.infrastructure import Database              # may import optional SQLAlchemy modules
+from fablemap_api.infrastructure import Database              # may import SQLAlchemy modules
 ```
 
 ### 3. Contracts
 
-- `fablemap_api.main` and `fablemap_api.infrastructure.settings` must import successfully without SQLAlchemy installed when `FABLEMAP_MYSQL_URL` is unset.
-- `create_store()` must use `TavernStore(output_root / "taverns")` as the default JSON-backed store.
-- SQLAlchemy-backed modules (`database.py`, `models.py`, `mysql_store.py`) are optional infrastructure and should be imported only after a non-empty `mysql_url` is selected or a caller explicitly imports MySQL infrastructure.
-- If SQLAlchemy is unavailable and MySQL infrastructure is imported, the raised `ImportError` should explain that SQLAlchemy/MySQL dependencies are optional and that unsetting `FABLEMAP_MYSQL_URL` uses JSON storage.
-- MySQL infrastructure tests should use `pytest.importorskip("sqlalchemy", ...)` so the default backend test suite can run in JSON-only environments.
-- Logs must not print full database credentials; redact URLs before logging or log only the host/path part after `@`.
+- With `storage_backend="database"` (default), startup must create/use `MySQLTavernStore` backed by `FABLEMAP_DATABASE_URL`, `FABLEMAP_MYSQL_URL`, or `<output_root>/fablemap.sqlite3`.
+- Native `/api/v1` and legacy `py -m fablemap_api api` web app paths must share the same `create_tavern_store` and side-store factories from `infrastructure/storage.py`.
+- Owner config, visitor notes, notifications, rumors, Home records and legacy writeback state must use SQLAlchemy-backed stores whenever the tavern store exposes a database session.
+- `FABLEMAP_STORAGE_BACKEND=json` may still create JSON stores for explicit local/dev fallback and tests that simulate missing SQLAlchemy, but routes must not hard-code JSON paths.
+- Logs must not print full database credentials; use `redact_database_url` or equivalent before logging URLs.
 
 ### 4. Validation & Error Matrix
 
 | Case | Expected |
 |------|----------|
-| No `FABLEMAP_MYSQL_URL`, SQLAlchemy absent | native app imports and `/api/v1/health` returns 200 using JSON store |
-| No `FABLEMAP_MYSQL_URL`, SQLAlchemy present | native app still uses JSON store by default |
-| `FABLEMAP_MYSQL_URL` set, SQLAlchemy present and connection works | create tables and use `MySQLTavernStore` |
-| `FABLEMAP_MYSQL_URL` set, SQLAlchemy missing | log a warning and fall back to JSON store unless a future explicit fail-fast setting is added |
-| Explicit import of `fablemap_api.infrastructure.database` without SQLAlchemy | clear `ImportError` explaining optional dependency requirements |
-| MySQL tests in JSON-only environment | skipped, not failed |
+| No DB URL, SQLAlchemy present | app creates `<output_root>/fablemap.sqlite3` and uses database-backed stores |
+| `FABLEMAP_DATABASE_URL` set | app creates tables and uses that SQLAlchemy URL |
+| `FABLEMAP_MYSQL_URL` set | app treats it as a legacy alias and uses database-backed stores |
+| `FABLEMAP_STORAGE_BACKEND=json`, SQLAlchemy absent | app imports and `/api/v1/health` returns 200 using explicit JSON fallback |
+| SQLAlchemy unavailable with database backend | fail clearly with dependency/setup guidance, not silent data-loss fallback |
 
 ### 5. Good/Base/Bad Cases
 
-- Good: `from fablemap_api.main import create_app` works in a fresh JSON-only install because SQLAlchemy imports are lazy.
-- Base: `backend/tests/test_mysql_infrastructure.py` runs full SQLite-backed MySQL-store behavior when SQLAlchemy is installed.
-- Bad: `backend/src/fablemap_api/infrastructure/__init__.py` eagerly imports `database`, `models`, or `mysql_store`, causing default app startup to fail before JSON fallback can run.
+- Good: `backend/tests/test_database_backed_runtime_stores.py` proves the default SQLite DB and all runtime side stores round-trip through SQLAlchemy.
+- Base: `backend/tests/test_startup_optional_mysql.py` keeps the explicit JSON fallback importable when SQLAlchemy is intentionally blocked.
+- Bad: route code constructing `OwnerConfigStore(...owner_configs.json)`, `VisitorNoteStore(...visitor_notes.json)`, `NotificationStore()`, `RumorStore()`, `HomeStore(...)`, or `WritebackStore(...)` directly in a production startup path.
 
 ### 6. Tests Required
 
 When changing this startup path, assert:
 
-- a subprocess can block `sqlalchemy` imports, import `create_app`, create an app with `mysql_url=""`, and call `/api/v1/health`;
-- MySQL infrastructure tests are skipped with `pytest.importorskip` if SQLAlchemy is absent;
-- normal backend smoke tests still create/list/enter/chat through the JSON store.
+- default settings create a SQLite database and database-backed tavern store;
+- side stores persist after re-instantiation against the same database;
+- explicit JSON fallback still works when SQLAlchemy imports are blocked;
+- native smoke tests still create/list/enter/chat through the configured backend.
 
 Run:
 
 ```powershell
 py -3 -m compileall -q backend/src
-py -3 -m pytest -q backend/tests/test_startup_optional_mysql.py backend/tests/test_api_smoke.py --tb=short
+py -3 -m pytest -q backend/tests/test_database_backed_runtime_stores.py backend/tests/test_startup_optional_mysql.py backend/tests/test_api_smoke.py --tb=short
 py -3 -m pytest -q backend/tests --tb=short
 ```
 
@@ -580,17 +590,96 @@ def create_store(settings):
         ...
 ```
 
-This imports SQLAlchemy-backed modules even when the app will use JSON storage.
+This duplicates backend selection logic, ignores `FABLEMAP_DATABASE_URL`, and will miss side stores such as notifications/writeback.
 
 #### Correct
 
 ```python
 def create_store(settings):
-    if settings.mysql_url:
-        from fablemap_api.infrastructure.database import create_database_from_settings
-        from fablemap_api.infrastructure.mysql_store import MySQLTavernStore
-        ...
-    return TavernStore(settings.output_root / "taverns")
+    return create_tavern_store(settings)
+```
+
+---
+
+## Scenario: MySQL Next-stage Storage Migration
+
+### 1. Scope / Trigger
+
+Use this contract when maintaining `backend/src/fablemap_api/infrastructure/migrate.py` or documenting the transition from legacy JSON/file runtime stores into the next-stage production database. MySQL is the production target; SQLite is only the local default when no database URL is configured.
+
+### 2. Signatures
+
+```python
+run_migration(
+    json_root: str | None,
+    mysql_url: str,
+    drop_existing: bool = False,
+    *,
+    output_root: str | None = None,
+) -> dict[str, int]
+```
+
+```powershell
+py -3 -m fablemap_api.infrastructure.migrate `
+  --output-root .fablemap-api `
+  --database-url "mysql+pymysql://user:pass@host:3306/fablemap"
+```
+
+Environment priority:
+
+```text
+--database-url
+--mysql-url
+FABLEMAP_DATABASE_URL
+FABLEMAP_MYSQL_URL
+```
+
+### 3. Contracts
+
+- The migration script must treat `FABLEMAP_DATABASE_URL` as the canonical SQLAlchemy URL and `FABLEMAP_MYSQL_URL` only as a legacy alias.
+- `--output-root` must locate the old runtime side stores without requiring separate file arguments:
+  - `<output-root>/taverns/taverns.json`
+  - `<output-root>/taverns/taverns_keyvault.json`
+  - `<output-root>/taverns/chat_history/**.jsonl`
+  - `<output-root>/owner_configs.json`
+  - `<output-root>/visitor_notes.json`
+  - `<output-root>/homes/homes.json`
+  - `<output-root>/homes/visits.json`
+  - `<output-root>/writeback/writeback-state.json`
+- Migration must be non-destructive and idempotent by default. Existing DB rows should be skipped or explicitly backfilled/upserted; table dropping is allowed only when `--drop-existing` is passed.
+- The script must migrate private/runtime data into SQLAlchemy tables: taverns, characters, world info, visitor state, chat history, memory atoms, gameplay sessions, state cards, LLM configs/keyvault, owner configs, visitor notes, Home records/visits, and writeback state.
+- The script must not log full database credentials, owner API keys, keyvault payloads, or visitor chat transcripts.
+- Do not migrate cache/export/static data into MySQL: Overpass/cache artifacts, Tavern export packages, generated images, prompt sidecars, frontend static assets, pytest fixtures, and any in-memory-only notification/rumor entries that never had a durable source.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| `--database-url` present | uses that URL and logs only the redacted target |
+| only `FABLEMAP_MYSQL_URL` present | works as a compatibility alias |
+| `--output-root` present, `--json-root` omitted | reads `<output-root>/taverns` and side-store files |
+| tavern already exists | backfills/upserts nested runtime buckets without duplicate rows |
+| side-store JSON missing | skips that slice and reports count `0` |
+| invalid side-store JSON | logs a warning and skips that slice |
+| `--drop-existing` absent | never drops existing tables |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `backend/tests/test_mysql_migration_runtime_side_stores.py` builds a legacy output root and proves owner configs, visitor notes, Home visits, writeback state, chat history and state cards land in DB tables.
+- Base: SQLite URLs may be used in tests to exercise the same SQLAlchemy code path; production docs still point to MySQL.
+- Bad: Adding a second migration script that writes new JSON snapshots or prints `mysql+pymysql://user:password@...` in logs.
+
+### 6. Tests Required
+
+```powershell
+py -3 -m compileall -q backend/src
+py -3 -m pytest -q backend/tests/test_mysql_migration_runtime_side_stores.py --tb=short
+```
+
+For startup/storage resolver changes, also run:
+
+```powershell
+py -3 -m pytest -q backend/tests/test_database_backed_runtime_stores.py backend/tests/test_startup_optional_mysql.py --tb=short
 ```
 
 ---
@@ -623,7 +712,7 @@ X-User-Id: <owner id>
 ### 3. Contracts
 
 - Route handlers must stay thin and delegate to `TavernApplicationService`; they must not read or write `owner_configs.json` directly.
-- JSON persistence is MVP-only and must sit behind `OwnerConfigStore` so a DB-backed store can replace it later.
+- Runtime persistence must use `SQLAlchemyOwnerConfigStore` by default; explicit JSON fallback must stay behind the same store abstraction.
 - The storage key is the authenticated owner ID from `X-User-Id`; do not fall back to `owner-demo` for these endpoints.
 - Read responses must never echo raw `api_key`; use `configured` / `api_key_configured` and safe model/backend/base URL fields only.
 - Draft generation may use the private API key internally through `core.llm_clients.create_client`, but the returned payload is a candidate draft only and must not persist Tavern or Character records.
@@ -643,7 +732,7 @@ X-User-Id: <owner id>
 ### 5. Good/Base/Bad Cases
 
 - Good: `owners.py` extracts `X-User-Id`, calls the application service, and returns a masked config/draft response.
-- Base: JSON store writes normalized config for MVP, with a follow-up to move dynamic multi-user data to DB.
+- Base: SQLAlchemy store writes normalized config; explicit JSON fallback follows the same normalization for local/dev compatibility.
 - Bad: route or React code importing `owner_configs.json`, returning `api_key`, or silently using `owner-demo` when the user header is missing.
 
 ### 6. Tests Required
@@ -740,7 +829,7 @@ DELETE /api/v1/taverns/{tavern_id}/visitor-notes/{note_id}
 ### 5. Good/Base/Bad Cases
 
 - Good: visitor sends one private note to owner, owner reviews/deletes it.
-- Base: JSON-backed `VisitorNoteStore` is MVP storage behind a store abstraction.
+- Base: `SQLAlchemyVisitorNoteStore` is the default; explicit JSON fallback remains behind `VisitorNoteStore` only for local/dev compatibility.
 - Bad: public message board with replies/pins, because it drifts into visitor-to-visitor social behavior.
 
 ### 6. Tests Required

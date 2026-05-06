@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 from fastapi import HTTPException
 
 from fablemap_api.domain.tavern_share_policy import build_tavern_share_payload
+from fablemap_api.core.public_welfare_rules import resolve_public_welfare_rules_response
 
 logger = logging.getLogger(__name__)
 
@@ -389,14 +390,20 @@ def _sanitize_prompt_extra_context(extra_context: Any, current_message: str) -> 
 
 
 class WebService:
-    def __init__(self, settings: ApiSettings):
+    def __init__(
+        self,
+        settings: ApiSettings,
+        *,
+        tavern_store: Any | None = None,
+        writeback_store: Any | None = None,
+    ):
         self.settings = settings.resolved()
         self.settings.output_root.mkdir(parents=True, exist_ok=True)
-        self.writeback = WritebackEngine(WritebackStore(self.settings.output_root / "writeback"))
+        self.writeback = WritebackEngine(writeback_store or WritebackStore(self.settings.output_root / "writeback"))
         self.orchestrator = RuleBasedOrchestrator()
         self.memory_graph = WorldMemoryGraph()
         # Tavern service (new)
-        self.tavern_store = TavernStoreCore(self.settings.output_root / "taverns")
+        self.tavern_store = tavern_store or TavernStoreCore(self.settings.output_root / "taverns")
         self.tavern_service = TavernServiceCore(self.tavern_store)
 
     def health_payload(self) -> dict[str, Any]:
@@ -740,6 +747,9 @@ class WebService:
 
     def create_tavern_payload(self, data: dict[str, Any], owner_id: str = "") -> dict[str, Any]:
         """Create a new tavern"""
+        owner_id = str(owner_id or "").strip()
+        if not owner_id:
+            raise HTTPException(status_code=401, detail="创建酒馆需要明确店主身份")
         return self.tavern_service.create_tavern(data, owner_id)
 
     def update_tavern_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
@@ -2435,199 +2445,12 @@ class WebService:
 
     def _rules_backend_response(self, message: str, character: Any, tavern: Any) -> str:
         """Local, no-network response mode for built-in public welfare taverns."""
-        text = (message or "").strip()
-        lowered = text.lower()
-        char_name = getattr(character, "name", "") or "值守员"
-        first_mes = (getattr(character, "first_mes", "") or "").strip()
-        tavern_name = getattr(tavern, "name", "") or "公益酒馆"
-
-        danger_keywords = ("自伤", "伤害自己", "不想活", "suicide", "kill myself", "撑不住")
-        if any(keyword in lowered or keyword in text for keyword in danger_keywords):
-            return (
-                f"{char_name}把声音放得很稳：先把手边可能伤到你的东西放远一点。"
-                "如果你现在有立即危险，请马上联系身边可信任的人，或拨打当地紧急电话。"
-                "你也可以只回我一个字：你现在是一个人吗？"
-            )
-
-        if any(keyword in lowered for keyword in ("hi", "hello")) or any(keyword in text for keyword in ("你好", "您好", "在吗")):
-            if first_mes:
-                return first_mes
-            return f"欢迎来到{tavern_name}。我是{char_name}，你可以先说说现在最想解决的一件小事。"
-
-        tavern_id = getattr(tavern, "id", "") or ""
-        if tavern_id == "pw_hospital_night_care" and any(
-            keyword in text
-            for keyword in (
-                "医院",
-                "护士",
-                "分诊",
-                "护理",
-                "头晕",
-                "胸痛",
-                "呼吸困难",
-                "急救",
-                "发烧",
-                "不舒服",
-                "用药",
-            )
-        ):
-            if any(keyword in text for keyword in ("胸痛", "呼吸困难", "昏厥", "意识不清", "大量出血", "急救")):
-                return (
-                    f"{char_name}立刻把分诊卡翻到“立即求助”：这些可能是危险信号。"
-                    "我不能诊断，请马上联系当地紧急电话或前往最近急诊，并让身边可信任的人陪同。"
-                )
-            if any(keyword in text for keyword in ("用药", "吃药", "剂量", "药")):
-                return (
-                    f"{char_name}把记录板推近一点：我不能给处方或剂量建议。"
-                    "可以先写下药名、服用时间、过敏史和不适变化，然后带给现实医生或药师确认。"
-                )
-            return (
-                f"{char_name}把分诊便签分成三栏：立即求助、记录信息、安静等待。"
-                "先告诉我开始时间、现在最明显的感受、有没有危险信号；如果你觉得不安全，就优先联系现实急救或线下医院。"
-            )
-
-        if tavern_id == "pw_after_school_hero_supply" and any(
-            keyword in text
-            for keyword in (
-                "英雄",
-                "英雄名",
-                "童年",
-                "长大",
-                "尴尬",
-                "模型",
-                "玩具",
-                "塑料剑",
-                "贴纸",
-                "委托",
-                "小勇气",
-            )
-        ):
-            if any(keyword in text for keyword in ("英雄名", "名字", "卡片", "英雄卡")):
-                return (
-                    f"{char_name}把空白旧英雄卡推到灯下：名字不用厉害，也不用解释给所有人听。"
-                    "你可以写原来的英雄名、改一个新名字，或者先选一枚贴纸当临时标志。"
-                )
-            if any(keyword in text for keyword in ("塑料剑", "披风", "道具", "模型", "修补", "玩具")):
-                return (
-                    f"{char_name}打开维修台的小灯：旧道具不是装备，没有数值，也不需要证明你能赢。"
-                    "我们只看它像哪一种小勇气：开口、拒绝、坚持，还是重新开始？"
-                )
-            if any(keyword in text for keyword in ("委托", "小勇气", "任务", "普通人")):
-                return (
-                    f"{char_name}翻开小委托板：今晚只接很小的英雄委托。"
-                    "你可以选真心话、保护一个小边界，或者给过去的自己回一句话。"
-                )
-            return (
-                f"{char_name}看向旧模型柜：长大以后觉得英雄梦尴尬，不代表它是假的。"
-                "先从一张旧英雄卡开始吧：你想找回名字、修补旧道具，还是接第一件小委托？"
-            )
-
-        if tavern_id == "pw_third_shelf_observatory" and any(
-            keyword in text
-            for keyword in (
-                "外星",
-                "便利店",
-                "随便",
-                "马上到",
-                "第二件半价",
-                "关东煮",
-                "已读不回",
-                "人类",
-                "谜题",
-            )
-        ):
-            if "随便" in text:
-                return (
-                    f"{char_name}郑重翻开记录板：已确认，“随便”不是随机授权，而是一种需要结合语气、关系、"
-                    "饥饿程度和未说出口期待的高危词。请问本次“随便”更接近真随便，还是请你猜中？"
-                )
-            if "马上到" in text:
-                return (
-                    f"{char_name}把时间轴画成一团毛线：我们正在研究“马上到”。它可能表示已经在门口，"
-                    "也可能表示鞋还没有穿。感谢您参与校准这个不稳定时间单位。"
-                )
-            if "第二件半价" in text:
-                return (
-                    f"{char_name}点亮促销警报：第二件半价会让人类购买本不需要的第一件和第二件。"
-                    "我们暂定它是经济幻觉型小型胜利仪式。您是否同意这个分类？"
-                )
-            if "关东煮" in text:
-                return (
-                    f"{char_name}看向保温格：温柔盐水漂浮物在深夜具有异常安抚效果。"
-                    "我们的假设是，人类并不只是饿了，也是在给灵魂加一点热汤。"
-                )
-            if "已读不回" in text:
-                return (
-                    f"{char_name}压低声音：已读不回暂不视为宣战。Pi-Pi 仍将其标注为低烈度通讯事故，"
-                    "但我们愿意接受您的文化解释。"
-                )
-            return (
-                f"{char_name}认真记录：便利店是人类文明的浓缩器官。人类会在这里补充糖分、购买焦虑、"
-                "进行排队仪式，并在凌晨凝视饭团。请继续，我们需要一位临时地球顾问。"
-            )
-
-        if tavern_id == "pw_midnight_commission_board" and any(
-            keyword in text
-            for keyword in (
-                "文游",
-                "委托",
-                "线索",
-                "调查",
-                "异常",
-                "值班",
-                "社区",
-                "纸条",
-                "公告",
-            )
-        ):
-            if any(keyword in text for keyword in ("线索", "调查", "纸条")):
-                return (
-                    f"{char_name}把委托卡翻到线索栏：先分三格，位置、时间、可确认细节。"
-                    "我们不急着下结论，也不做现实跟踪。你想先查哪一格？"
-                )
-            if any(keyword in text for keyword in ("异常", "值班")):
-                return (
-                    f"{char_name}盖下蓝色印章：异常值班先看安全边界。只记录、可后退、能随时结束。"
-                    "现在请选择一个观察点：频率、声音，还是距离？"
-                )
-            if any(keyword in text for keyword in ("社区", "公告", "小委托")):
-                return (
-                    f"{char_name}把公告栏便签理成三叠：失物、求助、提醒。今晚只做一件小事，"
-                    "先改标题、补公开地点，还是放进失物盒？"
-                )
-            return (
-                f"{char_name}点亮午夜委托板：这里的文游不是打怪升级，而是接一张委托、做几次选择、"
-                "最后得到一段文字结算。今晚可选：线索调查、社区小委托、异常值班。"
-            )
-
-        if any(keyword in text for keyword in ("新手", "怎么开始", "怎么玩", "开店", "帮助", "规则", "隐私")):
-            return (
-                f"{char_name}指了指桌上的说明卡：先选地点，再选公开/密码/私人，最后放入一个角色开始测试。"
-                "如果你只是来逛，记住两件事就好：不要透露敏感信息；遇到喜欢的酒馆，可以先从一句简单问候开始。"
-            )
-
-        if any(keyword in text for keyword in ("谢谢", "感谢", "谢了")) or "thank" in lowered:
-            return f"{char_name}笑了笑：不用谢。公益酒馆的规矩就是这样——能帮一点是一点，剩下的我们慢慢来。"
-
-        if any(keyword in text for keyword in ("再见", "走了", "离开")) or any(keyword in lowered for keyword in ("bye", "goodbye")):
-            return f"{char_name}把门口的小灯拨亮了一点：路上慢点。下次经过{tavern_name}，还可以进来坐坐。"
-
-        if any(keyword in text for keyword in ("找不到", "丢了", "失物", "线索", "忘了")):
-            return (
-                f"{char_name}拿出一张空白标签：我们先不急着找答案。写三列就够——最后一次确定的时间、地点、"
-                "还有一个你能记住的细节。"
-            )
-
-        if any(keyword in text for keyword in ("太多", "压力", "焦虑", "累", "烦", "不知道")):
-            return (
-                f"{char_name}认真听完后说：先把事情拆小。今天不用处理全部，只选一个十分钟内能做的动作。"
-                "你愿意从最不费力的那一步说起吗？"
-            )
-
-        snippet = text[:28] + ("…" if len(text) > 28 else "")
-        return (
-            f"{char_name}点点头，把“{snippet or '这件事'}”记在便签上：我听见了。"
-            "我们可以先把它分成三部分：已经发生的、你能控制的、需要别人帮忙的。你想先看哪一部分？"
+        return resolve_public_welfare_rules_response(
+            message=message,
+            tavern_id=getattr(tavern, "id", "") or "",
+            character_name=getattr(character, "name", "") or "值守员",
+            tavern_name=getattr(tavern, "name", "") or "公益酒馆",
+            first_mes=(getattr(character, "first_mes", "") or "").strip(),
         )
 
     def _fallback_response(self, message: str, char_name: str) -> str:
@@ -2655,8 +2478,17 @@ class WebService:
     ) -> dict[str, Any]:
         """Test LLM configuration by sending a simple prompt."""
         from fablemap_api.core.llm_clients import create_client, LLMConfig, LLMError
+        from fablemap_api.core.tavern import LLMConfig as TavernLLMConfig
+        from fablemap_api.core.tavern import _hydrate_system_public_welfare_llm_config
 
         try:
+            tavern = self.tavern_store.get_tavern(tavern_id)
+            if tavern:
+                llm_config_data = _hydrate_system_public_welfare_llm_config(
+                    tavern,
+                    TavernLLMConfig.from_dict(llm_config_data),
+                    tavern_id=tavern_id,
+                ).to_dict_private()
             cfg = LLMConfig(
                 backend=llm_config_data.get("backend", "openai"),
                 model=llm_config_data.get("model", ""),

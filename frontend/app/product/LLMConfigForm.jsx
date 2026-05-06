@@ -99,6 +99,22 @@ export const DEFAULT_BASE_URLS = {
  */
 export const LLM_PRESETS = [
   {
+    id: 'kilo-free-owner-opt-in',
+    title: 'Kilo 免费模型',
+    badge: '系统/公益测试',
+    icon: '🆓',
+    description: '店主自行选择的 kilo-auto/free 低门槛方案；系统店 / 公益店测试期由后端版本化配置补齐连接信息，免费额度、速率和稳定性可能受限，不作为平台强制默认。',
+    bestFor: '系统店 / 公益店试运营 / 低成本验证',
+    config: {
+      backend: 'custom',
+      model: 'kilo-auto/free',
+      base_url: 'https://api.kilo.ai/api/gateway',
+      temperature: 0.8,
+      max_tokens: 4096,
+      top_p: 0.9,
+    },
+  },
+  {
     id: 'deepseek-cn-roleplay',
     title: 'DeepSeek 中文文游',
     badge: '推荐',

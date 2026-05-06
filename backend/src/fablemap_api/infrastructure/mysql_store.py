@@ -26,6 +26,8 @@ from fablemap_api.core.tavern import (
     VoiceConfig,
     VisitorState,
     ChatMessage,
+    _hydrate_system_public_welfare_llm_config,
+    _system_public_welfare_rules_fallback,
 )
 from fablemap_api.core.memory import MemoryAtom
 
@@ -40,6 +42,7 @@ from .models import (
     GameplaySessionModel,
     LLMConfigModel,
     TavernMessageModel,
+    StateCardModel,
 )
 
 
@@ -56,6 +59,18 @@ def _parse_datetime(value: Any) -> datetime | None:
         except ValueError:
             pass
     return None
+
+
+def _gameplay_events_payload(events: Any) -> list[dict[str, Any]]:
+    if not isinstance(events, list):
+        return []
+    payload: list[dict[str, Any]] = []
+    for event in events:
+        if hasattr(event, "to_dict"):
+            payload.append(event.to_dict())
+        elif isinstance(event, dict):
+            payload.append(deepcopy(event))
+    return payload
 
 
 class MySQLTavernStore:
@@ -141,7 +156,7 @@ class MySQLTavernStore:
             sprites=sprites,
             avatar=model.avatar or "",
             appearance=deepcopy(model.appearance) if model.appearance else {},
-            talkativeness=model.talkativeness or 0.5,
+            talkativeness=0.5 if model.talkativeness is None else model.talkativeness,
         )
 
     def _to_world_info(self, model: WorldInfoModel) -> WorldInfoEntry:
@@ -425,7 +440,8 @@ class MySQLTavernStore:
             model.operating_hours = tavern.operating_hours
 
             # 删除旧角色，重新插入
-            session.query(CharacterModel).filter(CharacterModel.tavern_id == tavern.id).delete()
+            session.query(CharacterModel).filter(CharacterModel.tavern_id == tavern.id).delete(synchronize_session=False)
+            session.flush()
             for char in tavern.characters:
                 char_model = CharacterModel(
                     id=char.id,
@@ -448,7 +464,8 @@ class MySQLTavernStore:
                 session.add(char_model)
 
             # 删除旧世界知识，重新插入
-            session.query(WorldInfoModel).filter(WorldInfoModel.tavern_id == tavern.id).delete()
+            session.query(WorldInfoModel).filter(WorldInfoModel.tavern_id == tavern.id).delete(synchronize_session=False)
+            session.flush()
             for wi in tavern.world_info:
                 wi_model = WorldInfoModel(
                     id=wi.id,
@@ -466,6 +483,77 @@ class MySQLTavernStore:
                 session.add(wi_model)
 
             return tavern
+
+    def list_state_cards(self, tavern_id: str) -> list[Any]:
+        """列出酒馆连续性状态卡。"""
+        from fablemap_api.core.state_cards import StateCard
+
+        with self.db.session_scope() as session:
+            models = (
+                session.query(StateCardModel)
+                .filter(StateCardModel.tavern_id == tavern_id)
+                .order_by(StateCardModel.updated_at.desc(), StateCardModel.id.asc())
+                .all()
+            )
+            return [StateCard.from_dict(model.payload or {}) for model in models]
+
+    def get_state_card(self, tavern_id: str, card_id: str) -> Any | None:
+        """获取单张连续性状态卡。"""
+        from fablemap_api.core.state_cards import StateCard
+
+        with self.db.session_scope() as session:
+            model = (
+                session.query(StateCardModel)
+                .filter(StateCardModel.tavern_id == tavern_id, StateCardModel.id == card_id)
+                .first()
+            )
+            return StateCard.from_dict(model.payload or {}) if model else None
+
+    def save_state_card(self, tavern_id: str, card: Any) -> Any:
+        """保存连续性状态卡。"""
+        card.tavern_id = tavern_id
+        payload = card.to_dict()
+        created_at = _parse_datetime(payload.get("created_at")) or datetime.utcnow()
+        updated_at = _parse_datetime(payload.get("updated_at")) or created_at
+        with self.db.session_scope() as session:
+            model = (
+                session.query(StateCardModel)
+                .filter(StateCardModel.tavern_id == tavern_id, StateCardModel.id == card.id)
+                .first()
+            )
+            if model:
+                model.status = card.status
+                model.category = card.category
+                model.canon_scope = card.canon_scope
+                model.visitor_id = card.visitor_id
+                model.character_id = card.character_id
+                model.payload = payload
+                model.created_at = _parse_datetime(payload.get("created_at")) or model.created_at or created_at
+                model.updated_at = updated_at
+            else:
+                session.add(StateCardModel(
+                    id=card.id,
+                    tavern_id=tavern_id,
+                    status=card.status,
+                    category=card.category,
+                    canon_scope=card.canon_scope,
+                    visitor_id=card.visitor_id,
+                    character_id=card.character_id,
+                    payload=payload,
+                    created_at=created_at,
+                    updated_at=updated_at,
+                ))
+        return card
+
+    def delete_state_card(self, tavern_id: str, card_id: str) -> bool:
+        """删除连续性状态卡。"""
+        with self.db.session_scope() as session:
+            return (
+                session.query(StateCardModel)
+                .filter(StateCardModel.tavern_id == tavern_id, StateCardModel.id == card_id)
+                .delete(synchronize_session=False)
+                > 0
+            )
 
     def delete_tavern(self, tavern_id: str) -> None:
         """删除酒馆"""
@@ -516,10 +604,23 @@ class MySQLTavernStore:
         with self.db.session_scope() as session:
             model = session.query(LLMConfigModel).filter(LLMConfigModel.tavern_id == tavern_id).first()
             if model:
-                return self._to_llm_config(model)
+                config = self._to_llm_config(model)
+                tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
+                config = _hydrate_system_public_welfare_llm_config(
+                    tavern_model,
+                    config,
+                    tavern_id=tavern_id,
+                    include_api_key=False,
+                )
+                if config.is_configured():
+                    return config
+                return _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id, token_used=config.token_used) or config
 
             # 回退：从 tavern 表读取（公益酒馆配置）
             tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
+            fallback = _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id)
+            if fallback:
+                return fallback
             if tavern_model and tavern_model.voice_config:
                 # voice_config 里没有 llm_config，回退到默认
                 pass
@@ -532,7 +633,21 @@ class MySQLTavernStore:
         with self.db.session_scope() as session:
             model = session.query(LLMConfigModel).filter(LLMConfigModel.tavern_id == tavern_id).first()
             if model:
-                return self._to_llm_config(model, include_api_key=True)
+                config = self._to_llm_config(model, include_api_key=True)
+                tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
+                config = _hydrate_system_public_welfare_llm_config(
+                    tavern_model,
+                    config,
+                    tavern_id=tavern_id,
+                    include_api_key=True,
+                )
+                if config.is_configured():
+                    return config
+                return _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id, token_used=config.token_used) or config
+            tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
+            fallback = _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id)
+            if fallback:
+                return fallback
             return None
 
     def save_voice_config(self, tavern_id: str, config: VoiceConfig) -> None:
@@ -758,7 +873,7 @@ class MySQLTavernStore:
                 model.state = session.state
                 model.current_node_id = session.current_node_id
                 model.turn_count = session.turn_count
-                model.events = session.events
+                model.events = _gameplay_events_payload(session.events)
                 model.completion = session.completion
                 model.updated_at = now
             else:
@@ -771,7 +886,7 @@ class MySQLTavernStore:
                     state=session.state,
                     current_node_id=session.current_node_id,
                     turn_count=session.turn_count,
-                    events=session.events,
+                    events=_gameplay_events_payload(session.events),
                     completion=session.completion,
                     created_at=_parse_datetime(session.created_at) or now,
                     updated_at=now,
@@ -798,7 +913,7 @@ class MySQLTavernStore:
             if character_id:
                 query = query.filter(ChatMessageModel.character_id == character_id)
 
-            models = query.order_by(ChatMessageModel.timestamp.desc()).limit(limit).all()
+            models = query.order_by(ChatMessageModel.timestamp.desc(), ChatMessageModel.role.asc()).limit(limit).all()
             messages = [self._to_chat_message(m) for m in models]
             messages.reverse()
             return messages

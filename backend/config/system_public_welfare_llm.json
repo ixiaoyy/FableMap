@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "scope": "system_public_welfare",
+  "description": "Versioned early-test LLM config for system/public-welfare taverns only. Do not expose api_key to visitors or logs.",
+  "llm_config": {
+    "backend": "custom",
+    "model": "kilo-auto/free",
+    "api_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbnYiOiJwcm9kdWN0aW9uIiwia2lsb1VzZXJJZCI6IjkxN2RjM2I3LWVjNDEtNGYzYy1iNGU1LWMzMDU4YmQwYjVjYSIsImFwaVRva2VuUGVwcGVyIjpudWxsLCJ2ZXJzaW9uIjozLCJpYXQiOjE3NzgwMzg0ODcsImV4cCI6MTkzNTcxODQ4N30.zruaVE8JSQF4xhAmnFDL4N1eHY-B3nrcUnv9xqAlchI",
+    "base_url": "https://api.kilo.ai/api/gateway",
+    "temperature": 0.8,
+    "max_tokens": 1024,
+    "top_p": 0.9
+  }
+}

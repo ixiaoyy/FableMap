@@ -19,7 +19,9 @@ from typing import Any
 
 from fastapi import HTTPException
 from fablemap_api.core.default_taverns import (
+    DEFAULT_PUBLIC_WELFARE_MODEL,
     DEFAULT_PUBLIC_WELFARE_OWNER_ID,
+    DEFAULT_PUBLIC_WELFARE_TAVERN_IDS,
     default_public_welfare_taverns,
 )
 from fablemap_api.core.memory import MemoryAtom
@@ -60,6 +62,8 @@ PLACE_RELATIONSHIP_TYPES = {
 }
 PLACE_RELATIONSHIP_STATUSES = {"pending", "approved", "rejected", "revoked"}
 GENDER_VALUES = {"unspecified", "female", "male", "nonbinary", "other"}
+SYSTEM_TAVERN_OWNER_PREFIX = "system_"
+SYSTEM_PUBLIC_WELFARE_LLM_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "system_public_welfare_llm.json"
 
 
 # ─────────────────────────────────────────
@@ -368,6 +372,99 @@ class LLMConfig:
         if self.api_key:
             return True
         return self.backend in local_no_key_backends and bool(self.base_url)
+
+
+def _is_system_or_public_welfare_tavern_data(value: Any, *, tavern_id: str = "") -> bool:
+    """Return true for platform/system taverns allowed to use no-key rules fallback."""
+    if isinstance(value, dict):
+        owner_id = str(value.get("owner_id") or "").strip()
+        candidate_id = str(value.get("id") or tavern_id or "").strip()
+    else:
+        owner_id = str(getattr(value, "owner_id", "") or "").strip()
+        candidate_id = str(getattr(value, "id", "") or tavern_id or "").strip()
+    return (
+        owner_id == DEFAULT_PUBLIC_WELFARE_OWNER_ID
+        or owner_id.startswith(SYSTEM_TAVERN_OWNER_PREFIX)
+        or candidate_id in DEFAULT_PUBLIC_WELFARE_TAVERN_IDS
+    )
+
+
+def _public_welfare_rules_fallback_llm_config(*, token_used: int = 0) -> LLMConfig:
+    """Local no-key fallback for system/public-welfare taverns."""
+    return LLMConfig(
+        backend="rules",
+        model=DEFAULT_PUBLIC_WELFARE_MODEL,
+        api_key="",
+        base_url="",
+        temperature=0.0,
+        max_tokens=512,
+        top_p=1.0,
+        token_used=token_used,
+    )
+
+
+def _versioned_system_public_welfare_llm_config(
+    *,
+    include_api_key: bool = True,
+    token_used: int = 0,
+) -> LLMConfig | None:
+    """Load the repo-versioned early-test LLM config for system/public-welfare taverns."""
+    try:
+        payload = json.loads(SYSTEM_PUBLIC_WELFARE_LLM_CONFIG_PATH.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("enabled") is False:
+        return None
+    llm_payload = payload.get("llm_config")
+    if not isinstance(llm_payload, dict):
+        return None
+    config = LLMConfig.from_dict(llm_payload)
+    if not include_api_key:
+        config.api_key = ""
+    config.token_used = token_used
+    return config if config.is_configured() else None
+
+
+def _should_hydrate_system_public_welfare_llm_choice(candidate: LLMConfig, versioned: LLMConfig) -> bool:
+    """Only hydrate the explicit versioned test model choice, not arbitrary owner configs."""
+    candidate_model = str(candidate.model or "").strip().lower()
+    versioned_model = str(versioned.model or "").strip().lower()
+    return bool(candidate_model and versioned_model and candidate_model == versioned_model)
+
+
+def _hydrate_system_public_welfare_llm_config(
+    value: Any,
+    candidate: LLMConfig,
+    *,
+    tavern_id: str = "",
+    include_api_key: bool = True,
+) -> LLMConfig:
+    """Fill the repo-versioned Kilo test credentials for system/public-welfare opt-in choices."""
+    if not _is_system_or_public_welfare_tavern_data(value, tavern_id=tavern_id):
+        return candidate
+    versioned = _versioned_system_public_welfare_llm_config(
+        include_api_key=include_api_key,
+        token_used=candidate.token_used,
+    )
+    if not versioned or not _should_hydrate_system_public_welfare_llm_choice(candidate, versioned):
+        return candidate
+    hydrated = deepcopy(versioned)
+    hydrated.temperature = candidate.temperature
+    hydrated.max_tokens = candidate.max_tokens
+    hydrated.top_p = candidate.top_p
+    hydrated.token_used = candidate.token_used
+    return hydrated
+
+
+def _system_public_welfare_rules_fallback(
+    value: Any,
+    *,
+    tavern_id: str = "",
+    token_used: int = 0,
+) -> LLMConfig | None:
+    if not _is_system_or_public_welfare_tavern_data(value, tavern_id=tavern_id):
+        return None
+    return _public_welfare_rules_fallback_llm_config(token_used=token_used)
 
 
 @dataclass
@@ -721,6 +818,59 @@ class TavernStore:
             self._save_taverns(data)
 
     @staticmethod
+    def _default_public_welfare_seed_data() -> dict[str, Any]:
+        """Build a read-only fallback map for built-in public-welfare taverns."""
+        if not _default_public_welfare_seeding_enabled():
+            return {}
+        seed_data: dict[str, Any] = {}
+        for tavern in default_public_welfare_taverns():
+            tavern_id = str(tavern.get("id") or "").strip()
+            if tavern_id:
+                seed_data[tavern_id] = deepcopy(tavern)
+        return seed_data
+
+    @staticmethod
+    def _public_welfare_seed_record_needs_read_fallback(tavern_id: str, existing: dict[str, Any]) -> bool:
+        if str(existing.get("id") or "").strip() != tavern_id:
+            return True
+        for key in ("name", "description", "owner_id", "access", "status"):
+            if not str(existing.get(key) or "").strip():
+                return True
+        for key in ("lat", "lon"):
+            try:
+                float(existing.get(key))
+            except (TypeError, ValueError):
+                return True
+        for key in ("characters", "world_info", "gameplay_definitions"):
+            if not isinstance(existing.get(key), list):
+                return True
+        if not isinstance(existing.get("llm_config"), dict):
+            return True
+        return False
+
+    def _apply_public_welfare_seed_read_fallbacks(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Overlay canonical built-in seed data for missing/partial seed records on read only."""
+        seed_data = self._default_public_welfare_seed_data()
+        if not seed_data:
+            return data
+
+        result = deepcopy(data)
+        for tavern_id, default in seed_data.items():
+            existing = result.get(tavern_id)
+            if not isinstance(existing, dict):
+                result[tavern_id] = deepcopy(default)
+                continue
+            if not self._public_welfare_seed_record_needs_read_fallback(tavern_id, existing):
+                continue
+
+            repaired = deepcopy(default)
+            for key, value in existing.items():
+                if key.startswith("_") or key == "visit_count":
+                    repaired[key] = deepcopy(value)
+            result[tavern_id] = repaired
+        return result
+
+    @staticmethod
     def _merge_public_welfare_seed_defaults(existing: Any, default: dict[str, Any]) -> bool:
         """Append missing built-in child records without overwriting store edits."""
         if not isinstance(existing, dict):
@@ -797,17 +947,27 @@ class TavernStore:
 
         return changed
 
-    def _load_taverns(self) -> dict[str, Any]:
+    def _load_taverns(self, *, include_seed_fallback: bool = False) -> dict[str, Any]:
         try:
-            return json.loads(self.taverns_file.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+            loaded = json.loads(self.taverns_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            if include_seed_fallback:
+                return self._default_public_welfare_seed_data()
             return {}
+        if not isinstance(loaded, dict):
+            return {}
+        if include_seed_fallback:
+            return self._apply_public_welfare_seed_read_fallbacks(loaded)
+        return loaded
 
     def _save_taverns(self, data: dict[str, Any]) -> None:
         self.taverns_file.write_text(
             json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
             encoding="utf-8",
         )
+
+    def _is_seed_fallback_tavern(self, tavern_id: str) -> bool:
+        return tavern_id in self._default_public_welfare_seed_data()
 
     def _load_keyvault(self) -> dict[str, Any]:
         try:
@@ -825,7 +985,7 @@ class TavernStore:
 
     def list_taverns(self, include_private: bool = False, owner_id: str = "") -> list[Tavern]:
         """列出所有酒馆"""
-        data = self._load_taverns()
+        data = self._load_taverns(include_seed_fallback=True)
         result = []
         for d in data.values():
             tavern = Tavern.from_dict(d)
@@ -841,7 +1001,7 @@ class TavernStore:
 
     def list_all_taverns(self) -> list[Tavern]:
         """Internal full scan including private Home records for relationship resolution."""
-        data = self._load_taverns()
+        data = self._load_taverns(include_seed_fallback=True)
         result: list[Tavern] = []
         for value in data.values():
             if not isinstance(value, dict):
@@ -853,7 +1013,7 @@ class TavernStore:
         return result
 
     def get_tavern(self, tavern_id: str) -> Tavern | None:
-        data = self._load_taverns()
+        data = self._load_taverns(include_seed_fallback=True)
         d = data.get(tavern_id)
         if not d:
             return None
@@ -874,6 +1034,8 @@ class TavernStore:
     def update_tavern(self, tavern: Tavern) -> Tavern:
         data = self._load_taverns()
         if tavern.id not in data:
+            if self._is_seed_fallback_tavern(tavern.id):
+                return tavern
             raise HTTPException(status_code=404, detail="酒馆不存在")
         existing = data.get(tavern.id, {})
         updated = tavern.to_dict()
@@ -919,16 +1081,32 @@ class TavernStore:
         kv = self._load_keyvault()
         d = kv.get(tavern_id)
         if d:
-            return LLMConfig.from_dict(d)
+            config = LLMConfig.from_dict(d)
+            tavern_data = self._load_taverns(include_seed_fallback=True).get(tavern_id, {})
+            config = _hydrate_system_public_welfare_llm_config(tavern_data, config, tavern_id=tavern_id)
+            if config.is_configured():
+                return config
+            return _system_public_welfare_rules_fallback(
+                tavern_data,
+                tavern_id=tavern_id,
+                token_used=config.token_used,
+            ) or config
 
         # Built-in/public demo taverns can use a non-secret local backend that is
         # stored in taverns.json only. Never resurrect unconfigured remote keys.
-        tavern_data = self._load_taverns().get(tavern_id, {})
+        tavern_data = self._load_taverns(include_seed_fallback=True).get(tavern_id, {})
         fallback = tavern_data.get("llm_config", {}) if isinstance(tavern_data, dict) else {}
         if not isinstance(fallback, dict) or not fallback:
             return None
         config = LLMConfig.from_dict(fallback)
-        return config if config.is_configured() else None
+        config = _hydrate_system_public_welfare_llm_config(tavern_data, config, tavern_id=tavern_id)
+        if config.is_configured():
+            return config
+        return _system_public_welfare_rules_fallback(
+            tavern_data,
+            tavern_id=tavern_id,
+            token_used=config.token_used,
+        )
 
     # ── Voice Config ───────────────────────
 
@@ -980,6 +1158,8 @@ class TavernStore:
 
     def update_visitor_state(self, tavern_id: str, state: VisitorState) -> None:
         data = self._load_taverns()
+        if tavern_id not in data and self._is_seed_fallback_tavern(tavern_id):
+            return
         tavern_data = data.setdefault(tavern_id, {})
         visitors = tavern_data.setdefault("_visitors", {})
         visitors[state.visitor_id] = state.to_dict()
@@ -1445,6 +1625,9 @@ class TavernService:
 
     def create_tavern(self, data: dict[str, Any], owner_id: str = "") -> dict[str, Any]:
         """创建酒馆"""
+        owner_id = str(owner_id or "").strip()
+        if not owner_id:
+            raise HTTPException(status_code=401, detail="创建酒馆需要明确店主身份")
         tavern_id = data.get("id") or f"tavern_{uuid.uuid4().hex[:12]}"
         now = _utc_now_iso()
         place_type = _require_valid_place_type(data["place_type"]) if "place_type" in data else "tavern"
@@ -1497,10 +1680,23 @@ class TavernService:
             llm_config = LLMConfig.from_dict(llm_data)
         else:
             llm_config = None
+        if llm_config:
+            llm_config = _hydrate_system_public_welfare_llm_config(tavern, llm_config, tavern_id=tavern_id)
         if llm_config and llm_config.is_configured():
             self.store.save_llm_config(tavern_id, llm_config)
             # 更新 status
             tavern.llm_config = llm_config
+            tavern.status = "open"
+            tavern = self.store.update_tavern(tavern)
+        elif llm_config and _is_system_or_public_welfare_tavern_data(tavern):
+            self.store.save_llm_config(tavern_id, llm_config)
+            tavern.llm_config = llm_config
+            tavern.status = "open"
+            tavern = self.store.update_tavern(tavern)
+        elif _is_system_or_public_welfare_tavern_data(tavern):
+            # System/public-welfare shops remain normally open without a
+            # configured external provider; runtime uses the local rules
+            # fallback until the owner explicitly saves a working model.
             tavern.status = "open"
             tavern = self.store.update_tavern(tavern)
 
@@ -1601,7 +1797,12 @@ class TavernService:
                 and stored_llm_config.backend == llm_config.backend
             ):
                 llm_config.api_key = stored_llm_config.api_key
+            llm_config = _hydrate_system_public_welfare_llm_config(tavern, llm_config, tavern_id=tavern_id)
             if llm_config.is_configured():
+                self.store.save_llm_config(tavern_id, llm_config)
+                tavern.llm_config = llm_config
+                tavern.status = "open"
+            elif _is_system_or_public_welfare_tavern_data(tavern):
                 self.store.save_llm_config(tavern_id, llm_config)
                 tavern.llm_config = llm_config
                 tavern.status = "open"

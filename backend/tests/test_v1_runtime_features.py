@@ -3,6 +3,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from fablemap_api.core.default_taverns import DEFAULT_PUBLIC_WELFARE_OWNER_ID
 from fablemap_api.infrastructure.settings import ApiSettings
 from fablemap_api.main import create_app
 
@@ -137,6 +138,128 @@ def test_v1_after_school_hero_supply_chat_uses_hero_dream_rules_response(tmp_pat
     assert "空白旧英雄卡推到灯下" in payload["response"]
     assert "英雄名" in payload["response"]
     assert "贴纸" in payload["response"]
+
+
+def test_v1_third_shelf_generic_rules_chat_does_not_echo_scene_prompt(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    response = client.post(
+        "/api/v1/taverns/pw_third_shelf_observatory/chat",
+        headers={"X-User-Id": "visitor-v1-weather"},
+        json={
+            "character_id": "char_pw_9_delta",
+            "message": "天气怎么样？",
+            "visitor_id": "visitor-v1-weather",
+            "visitor_name": "测试旅人",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["degraded"] is False
+    assert payload["tavern_status"] == "open"
+    assert payload["response"].strip()
+    assert "便利店" in payload["response"] or "人类" in payload["response"]
+    assert "这里的气味和灯光让我想到" not in payload["response"]
+    assert "氛围是" not in payload["response"]
+    assert "我听见了——天气怎么样" not in payload["response"]
+    assert client.app.state.taverns.store.get_token_usage("pw_third_shelf_observatory") == 0
+
+
+def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selected(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_configs: list[Any] = []
+
+    class DummyResponse:
+        content = "V1 Kilo 测试模型回复。"
+        model = "kilo-auto/free"
+        usage = {"total_tokens": 23}
+
+    class DummyClient:
+        def __init__(self, config: Any) -> None:
+            captured_configs.append(config)
+
+        def complete(self, messages: list[dict[str, Any]]) -> DummyResponse:
+            return DummyResponse()
+
+    monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: DummyClient(cfg))
+
+    client = _client(tmp_path)
+
+    saved = client.put(
+        "/api/v1/taverns/pw_lantern_helpdesk",
+        headers={"X-User-Id": DEFAULT_PUBLIC_WELFARE_OWNER_ID},
+        json={
+            "llm_config": {
+                "backend": "custom",
+                "model": "kilo-auto/free",
+                "api_key": "",
+                "base_url": "",
+                "temperature": 0.8,
+                "max_tokens": 1024,
+                "top_p": 0.9,
+            }
+        },
+    )
+
+    assert saved.status_code == 200
+    assert saved.json()["status"] == "open"
+    assert saved.json()["llm_config"]["model"] == "kilo-auto/free"
+
+    reloaded = client.get(
+        "/api/v1/taverns/pw_lantern_helpdesk",
+        headers={"X-User-Id": DEFAULT_PUBLIC_WELFARE_OWNER_ID},
+    )
+    assert reloaded.status_code == 200
+    assert reloaded.json()["llm_config"]["model"] == "kilo-auto/free"
+
+    visitor_view = client.get(
+        "/api/v1/taverns/pw_lantern_helpdesk",
+        headers={"X-User-Id": "visitor-v1-public-welfare-free"},
+    )
+    assert visitor_view.status_code == 200
+    assert visitor_view.json()["llm_config"]["api_key"] == ""
+
+    probe = client.post(
+        "/api/v1/taverns/pw_lantern_helpdesk/test-llm",
+        headers={"X-User-Id": DEFAULT_PUBLIC_WELFARE_OWNER_ID},
+        json={
+            "backend": "custom",
+            "model": "kilo-auto/free",
+            "api_key": "",
+            "base_url": "",
+        },
+    )
+    assert probe.status_code == 200
+    assert probe.json()["ok"] is True
+    assert captured_configs
+    assert captured_configs[-1].api_key
+    captured_configs.clear()
+
+    response = client.post(
+        "/api/v1/taverns/pw_lantern_helpdesk/chat",
+        headers={"X-User-Id": "visitor-v1-public-welfare-free"},
+        json={
+            "character_id": "char_pw_xiaozhou",
+            "message": "你好，我是新手，怎么玩？",
+            "visitor_id": "visitor-v1-public-welfare-free",
+            "visitor_name": "测试旅人",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["degraded"] is False
+    assert payload["tavern_status"] == "open"
+    assert payload["response"] == "V1 Kilo 测试模型回复。"
+    assert captured_configs
+    assert captured_configs[0].backend == "custom"
+    assert captured_configs[0].model == "kilo-auto/free"
+    assert captured_configs[0].base_url == "https://api.kilo.ai/api/gateway"
+    assert captured_configs[0].api_key
+    assert client.app.state.taverns.store.get_token_usage("pw_lantern_helpdesk") > 0
 
 
 def test_v1_group_chat_config_send_history_and_permissions(tmp_path: Path) -> None:
@@ -330,6 +453,7 @@ def test_v1_group_chat_rules_backend_creates_memory_and_respects_silent_characte
         memory["scope"] == "visitor_tavern" and "蓝莓派" in memory["content"]
         for memory in memories.json()["memories"]
     )
+    assert client.app.state.taverns.store.get_token_usage(tavern_id) == 0
 
 
 def test_v1_group_chat_rejects_cross_visitor_impersonation(tmp_path: Path) -> None:

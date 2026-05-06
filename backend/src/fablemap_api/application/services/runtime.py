@@ -34,6 +34,7 @@ from fablemap_api.core.presets import (
 )
 from fablemap_api.core.prompt_blocks import default_prompt_blocks, normalize_prompt_blocks
 from fablemap_api.core.prompt_builder import PromptBuildConfig, PromptBuilder
+from fablemap_api.core.public_welfare_rules import resolve_public_welfare_rules_response
 from fablemap_api.core.skill_packs import (
     LOCAL_RUMOR_SKILL_PACK_ID,
     build_local_rumor_prompt_block,
@@ -45,10 +46,12 @@ from fablemap_api.core.voice_greeting import build_voice_greeting_preview
 from fablemap_api.core.visual_souvenir import build_visual_souvenir_preview
 from fablemap_api.core.tavern import (
     ChatMessage,
+    LLMConfig as TavernLLMConfig,
     Tavern,
     VisitorState,
     VoiceConfig,
     WorldInfoEntry,
+    _hydrate_system_public_welfare_llm_config,
     _normalize_gender,
 )
 
@@ -91,6 +94,13 @@ from ...domain.world_info_policy import (
 
 
 logger = logging.getLogger(__name__)
+
+
+RULES_BACKENDS = {"rules", "rule_based", "public_welfare"}
+
+
+def _is_rules_backend(backend: str) -> bool:
+    return str(backend or "").strip().lower() in RULES_BACKENDS
 
 
 def _utc_now_iso() -> str:
@@ -222,7 +232,8 @@ class RuntimeApplicationMixin:
         )
         self.store.add_chat_message(user_message)
         self.store.add_chat_message(assistant_message)
-        self.store.add_token_usage(tavern_id, max(1, (len(clean_message) + len(response_text)) // 4))
+        if not _is_rules_backend(llm_config.backend):
+            self.store.add_token_usage(tavern_id, max(1, (len(clean_message) + len(response_text)) // 4))
 
         # Calculate and update visitor affinity based on chat interaction
         affinity_result = self._update_affinity_from_chat(
@@ -288,7 +299,7 @@ class RuntimeApplicationMixin:
         payload = data or {}
         backend = str(payload.get("backend") or "openai").strip() or "openai"
         model = str(payload.get("model") or "").strip()
-        if backend.lower() in {"rules", "rule_based", "public_welfare"}:
+        if _is_rules_backend(backend):
             return {
                 "ok": True,
                 "message": "规则后端可用",
@@ -328,6 +339,13 @@ class RuntimeApplicationMixin:
         if not payload:
             llm_config = self._get_runtime_llm_config(tavern_id)
             payload = llm_config.to_dict_private() if llm_config and hasattr(llm_config, "to_dict_private") else {}
+        else:
+            hydrated = _hydrate_system_public_welfare_llm_config(
+                tavern,
+                TavernLLMConfig.from_dict(payload),
+                tavern_id=tavern_id,
+            )
+            payload = hydrated.to_dict_private()
         return self.test_llm_config(payload)
 
     def get_group_chat_config(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
@@ -449,6 +467,7 @@ class RuntimeApplicationMixin:
         prompt_visitor_state = self.store.get_visitor_state(tavern_id, visitor_id)
         responses: list[dict[str, Any]] = []
         total_token_count = 0
+        rules_backend = _is_rules_backend(llm_config.backend)
         turn_degraded = False
 
         for speaker in manager.select_next_speakers():
@@ -494,7 +513,7 @@ class RuntimeApplicationMixin:
 
             output_rule_result = apply_output_rules(response_text, tavern.output_rules)
             response_text = output_rule_result.get("text", response_text)
-            token_count = max(1, (len(clean_message) + len(response_text)) // 4)
+            token_count = 0 if rules_backend else max(1, (len(clean_message) + len(response_text)) // 4)
             total_token_count += token_count
             assistant_message_id = f"msg_{uuid.uuid4().hex[:12]}"
             response_timestamp = _utc_now_iso()
@@ -882,8 +901,7 @@ class RuntimeApplicationMixin:
         extra_context: list[dict[str, Any]],
         visitor_state: VisitorState | None = None,
     ) -> str:
-        backend = str(llm_config.backend or "").lower()
-        if backend in {"rules", "rule_based", "public_welfare"}:
+        if _is_rules_backend(llm_config.backend):
             return self._rules_response(character_name, message, tavern)
         client = create_client(
             ClientLLMConfig(
@@ -939,34 +957,12 @@ class RuntimeApplicationMixin:
         rumor_response = self._local_rumor_rules_response(message, tavern)
         if rumor_response:
             return f"{character_name}把杯垫推近一些：“{rumor_response}”"
-
-        if tavern.id == "pw_after_school_hero_supply":
-            text = message or ""
-            if any(keyword in text for keyword in ("英雄名", "名字", "英雄卡")):
-                return (
-                    f"{character_name}把空白旧英雄卡推到灯下：“名字不用厉害，也不用解释给所有人听。"
-                    "你可以写原来的英雄名、改一个新名字，或者先选一枚贴纸当临时标志。”"
-                )
-            if any(keyword in text for keyword in ("塑料剑", "披风", "道具", "模型", "修补", "玩具")):
-                return (
-                    f"{character_name}打开维修台的小灯：“旧道具不是装备，没有数值，也不需要证明你能赢。"
-                    "我们只看它像哪一种小勇气：开口、拒绝、坚持，还是重新开始？”"
-                )
-            if any(keyword in text for keyword in ("委托", "小勇气", "任务", "普通人")):
-                return (
-                    f"{character_name}翻开小委托板：“今晚只接很小的英雄委托。"
-                    "你可以选真心话、保护一个小边界，或者给过去的自己回一句话。”"
-                )
-            if any(keyword in text for keyword in ("英雄", "童年", "长大", "尴尬")):
-                return (
-                    f"{character_name}看向旧模型柜：“长大以后觉得英雄梦尴尬，不代表它是假的。"
-                    "先从一张旧英雄卡开始吧。”"
-                )
-
-        topic = clean_text(message, max_length=80)
-        scene = clean_text(tavern.scene_prompt or tavern.description, max_length=80)
-        suffix = f"这里的气味和灯光让我想到：{scene}" if scene else "我会把这句话记在今晚的吧台边。"
-        return f"{character_name}望向你，轻声回应：“我听见了——{topic}。”{suffix}"
+        return resolve_public_welfare_rules_response(
+            message=message,
+            tavern_id=tavern.id,
+            character_name=character_name,
+            tavern_name=tavern.name or "公益酒馆",
+        )
 
     def _local_rumor_rules_response(self, message: str, tavern: Tavern) -> str:
         settings = normalize_skill_pack_settings(tavern.skill_packs)
