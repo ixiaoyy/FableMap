@@ -37,4 +37,13 @@ assert.ok(!generateDraftBody.includes("addCharacter("), "draft handler must not 
 
 assert.ok(packageJson.includes("create-wizard-route-test.mjs"), "frontend test script should include the create wizard route guard")
 
+assert.ok(route.includes('TAVERN_INTENT_TEMPLATES'), 'create route should import the tavern intent catalog')
+assert.ok(route.includes('activeIntent'), 'create route should derive active intent preview copy')
+assert.ok(route.includes('data-tavern-intent-selector'), 'create route should render a dedicated intent selector')
+assert.ok(route.includes('data-tavern-intent-card'), 'create route should render selectable intent cards')
+assert.ok(route.includes('经营意图'), 'create route should label intent as owner-confirmed business/visitor need, not physical place_type')
+assert.ok(route.includes('不改 place_type / Schema'), 'create route should state that intent templates do not change place_type or schema')
+assert.ok(!route.includes('name="intent_type"'), 'create route must not submit a new schema field for intent type')
+assert.ok(!route.includes('place_type: activeIntent'), 'create route must not overwrite physical place_type with intent')
+
 console.log("create-wizard-route-test: ok")

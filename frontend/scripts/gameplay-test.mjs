@@ -44,12 +44,18 @@ assert.ok(captured[3].url.includes('/gameplay-sessions/gps_one/advance'))
 assert.ok(captured[4].url.includes('state=active'))
 assert.ok(captured[5].url.includes('/abandon'))
 
-assert.equal(OWNER_GAMEPLAY_TEMPLATES.length, 4)
+assert.equal(OWNER_GAMEPLAY_TEMPLATES.length, 10)
 assert.deepEqual(OWNER_GAMEPLAY_TEMPLATES.map((template) => template.id), [
   'three-step-clue-ledger',
   'returning-note',
   'kindness-checklist',
   'quiet-object-reading',
+  'workflow-clinic-checkup',
+  'industry-material-triage',
+  'needs-counter-brief',
+  'archive-study-lookup',
+  'creation-workshop-outline',
+  'companion-beacon-return-note',
 ])
 
 for (const template of OWNER_GAMEPLAY_TEMPLATES) {
@@ -60,6 +66,11 @@ for (const template of OWNER_GAMEPLAY_TEMPLATES) {
   assert.ok(Array.isArray(template.nodes))
   assert.ok(template.nodes.length >= 3)
   assert.ok(!/战斗|等级|装备|排行|交易奖励/.test(`${template.title}${template.summary}`))
+}
+
+for (const template of OWNER_GAMEPLAY_TEMPLATES.slice(4)) {
+  assert.ok(['流程', '行业', '需求', '资料', '创作', '陪伴'].includes(template.category))
+  assert.ok(template.summary.includes('不') || template.goal.includes('不'), `${template.id} should include an explicit boundary`)
 }
 
 const ownerTemplateDraft = createOwnerGameplayFromTemplate(OWNER_GAMEPLAY_TEMPLATES[0], 7)
@@ -74,7 +85,7 @@ assert.ok(ownerTemplateDraft.nodes.some((node) => node.id === 'complete'))
 const clueTemplates = filterOwnerGameplayTemplates({ category: '线索' }).map((template) => template.id)
 assert.deepEqual(clueTemplates, ['three-step-clue-ledger'])
 const kindnessSearch = filterOwnerGameplayTemplates({ query: '医院' }).map((template) => template.id)
-assert.deepEqual(kindnessSearch, ['kindness-checklist'])
+assert.deepEqual(kindnessSearch, ['kindness-checklist', 'companion-beacon-return-note'])
 
 assert.equal(SHORT_DRAMA_GAMEPLAY_TEMPLATES.length, 4)
 assert.deepEqual(SHORT_DRAMA_GAMEPLAY_TEMPLATES.map((template) => template.id), [

@@ -21,6 +21,7 @@ import { buildDiscoveryLiveliness, getDiscoveryLivelinessSearchText } from "../l
 import { resolveHomepageTavernCover, resolveUniqueHomepageTavernCovers } from "../lib/homepage-taverns"
 import { DISCOVERABLE_PLACE_TYPES, derivePlaceTypeDisplay, placeTypeMatchesTavern } from "../lib/place-types.js"
 import { buildShortDramaTeaser, getShortDramaTeaserSearchText } from "../lib/short-drama-teasers.js"
+import { buildTavernIntentTags, getTavernIntentTagsSearchText } from "../lib/tavern-intent-tags.js"
 import { errorMessage, listTaverns, type Tavern, type TavernCharacter, type TavernListResponse } from "../lib/taverns"
 import { buildMapAnchorCardCopy, formatTavernAnchorLocation } from "../product/mapAnchorCopy.js"
 import { ProductShell } from "../shell/product-shell"
@@ -212,6 +213,7 @@ function tavernSearchText(tavern: TavernListResponse["taverns"][number]) {
     tavern.scene_prompt,
     getDiscoveryLivelinessSearchText(tavern),
     getShortDramaTeaserSearchText(tavern),
+    getTavernIntentTagsSearchText(buildTavernIntentTags(tavern)),
     ...(tavern.characters?.flatMap((character) => [character.name, ...(character.tags ?? [])]) ?? []),
   ]
     .filter(Boolean)
@@ -752,6 +754,7 @@ function ResultCard({
   const entry = entryStatusDisplay(tavernWithTimeStatus)
   const isClosed = tavernWithTimeStatus.is_open === false
   const shortDramaTeaser = buildShortDramaTeaser(tavern)
+  const intentTags = buildTavernIntentTags(tavern)
 
   return (
     <article className="group overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950/78 transition hover:-translate-y-0.5 hover:border-cyan-300/45">
@@ -793,6 +796,15 @@ function ResultCard({
         </div>
         <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} muted={isClosed} />
         <DiscoveryLivelinessStrip tavern={tavernWithTimeStatus} muted={isClosed} />
+        {intentTags.length ? (
+          <div className="flex flex-wrap gap-2" aria-label="经营意图">
+            {intentTags.map((tag) => (
+              <span key={tag.id} className="rounded-full border border-fuchsia-300/22 bg-fuchsia-300/10 px-2.5 py-1 text-[0.7rem] font-bold text-fuchsia-50" title={tag.helper}>
+                {tag.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {shortDramaTeaser ? (
           <ShortDramaTeaserCard teaser={shortDramaTeaser} muted={isClosed} />
         ) : null}

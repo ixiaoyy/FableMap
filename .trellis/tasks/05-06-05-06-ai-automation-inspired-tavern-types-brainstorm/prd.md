@@ -154,3 +154,124 @@
 
 然后每个顶层类再挂 2–3 个行业示例，而不是一开始创建几十个枚举类型。
 
+## Phase 2 Research Pass (2026-05-06)
+
+### Relevant Specs / Authority
+
+* `AGENTS.md`: 本轮必须保持真实坐标、主人主权、SillyTavern 兼容、Token 自担，不做平台代创、平台结算、访客社交网络或传统游戏化系统。
+* `docs/PRODUCT_BRIEF.md` / `docs/FABLEMAP_TAVERN_PLATFORM.md`: 多种类酒馆必须仍是“真实地图上的赛博酒馆 UGC 平台”，不是通用 AI SaaS、CRM、行业工具站。
+* `docs/WORLD_SCHEMA.md`: MVP 可复用 `Tavern.characters`、`world_info`、`gameplay_definitions`、`skill_packs`、`scene_prompt`、`layout_style`、`place_type`；不应在 brainstorm 中直接新增持久字段。
+* `docs/WHAT_NOT_TO_BUILD.md`: 所有类型都要避开平台绕过店主确认发布内容、平台级 Token 充值/结算、无锚点空间、访客社交墙、战斗/等级/装备/排行。
+* `.trellis/spec/frontend/map-anchor-copy.md`: 创建/发现页面即使展示“经营意图”，仍要露出地址或坐标门牌，不能让类型标签遮蔽真实锚点。
+* `.trellis/spec/frontend/discovery-liveliness-signals.md`: 发现页标签若后续实现，应优先用既有安全 payload 字段和静态 owner-confirmed 模板信息，不引入未授权活动/社交信号。
+* `.trellis/spec/frontend/mobile-single-mainline.md`: 移动端主线仍是进店聊天与 NPC 互动；多种类酒馆不能把第一屏改成复杂 SaaS 工作台。
+
+### Code Patterns Found
+
+* `frontend/app/product/tavernTemplates.js`: 现有 `TAVERN_TEMPLATES` 通过 owner-confirmed package 承载 tavern、characters、world_info、prompt preset；适合作为“经营意图模板层”的最小落点。
+* `frontend/app/product/ownerGameplayTemplates.js`: 现有玩法模板明确写入 forbidden guardrails，可复用为“流程诊断 / 回访信笺 / 陪伴清单 / 资料整理”等结构化轻玩法。
+* `frontend/app/routes/create.tsx`: 创建向导已有地点类型卡片和右侧 live preview；如果进入实现，最小 UI 是在地点类型之后加“这间酒馆主要帮助谁/完成什么”的模板选择，不改变 `place_type` 提交。
+* `frontend/app/routes/discover.tsx`: 发现页可后续显示模板/意图 tag，但应保持真实坐标、地址、NPC、到访等既有信息为主，不做行业市场或排行榜。
+* `.trellis/tasks/05-06-special-tavern-type-thin-layer/prd.md`: 若以后从模板升级为正式特殊类型，应单独定义 thin-layer，不在本 brainstorm 中提前扩 Schema。
+
+### Likely Follow-up Modification Scope (not in this brainstorm)
+
+* `frontend/app/product/tavernTemplates.js`: 增加 6 个“经营意图”模板或给现有模板补 `needType` / tags（若不改 Schema，可只在模板常量内存在）。
+* `frontend/app/product/ownerGameplayTemplates.js`: 增加与 6 类酒馆对应的轻量 GameplayDefinition 草稿模板。
+* `frontend/app/routes/create.tsx`: 增加“帮助意图”选择/预览；提交仍由店主确认，不自动发布内容。
+* `frontend/app/routes/discover.tsx`: 可选展示 owner-confirmed 意图标签；不新增社交、排行、商业转化面板。
+* 若选择 Approach B 才需要：`docs/WORLD_SCHEMA.md`、backend Tavern schema/API、frontend typed service 与测试同步更新。
+
+### Context Configuration
+
+* 已运行 `python ./.trellis/scripts/task.py init-context ".trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm" docs`。
+* 已补充 `implement.jsonl` / `check.jsonl` / `debug.jsonl`，并将默认缺失的 `.claude/commands/trellis/*` context 替换为本仓库存在的 `.agents/skills/finish-work/SKILL.md` 与 `.agents/skills/check/SKILL.md`。
+* 已运行 `python ./.trellis/scripts/task.py validate ".trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm"`，context 校验通过。
+* 已运行 `python ./.trellis/scripts/task.py start ".trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm"`，当前 Trellis task 已激活。
+
+## Converged MVP Proposal v1
+
+### Recommended MVP shape
+
+采用 **经营意图模板层**：真实 `place_type` 仍表示现实地点；“流程诊所 / 档案书房 / 陪伴灯塔”等作为 owner-confirmed 的创建模板、玩法模板、NPC 配置建议和发现标签存在。这样可以先验证“不同人得到不同帮助”，而不把类型层做成 schema enum、行业 SaaS 或插件市场。
+
+### First 6 top-level tavern intents
+
+| 顶层类型 | 目标用户 / 场景 | 核心 NPC | 访客动作 | 店主配置重点 | 可验证帮助 / 体验指标 | MVP 承载 |
+|---|---|---|---|---|---|---|
+| 流程诊所 | 被重复流程困住的店主、团队成员、自由职业者 | 流程诊断师、自动化技师 | 描述当前流程、卡点、材料流转 | 流程提问脚本、禁区、输出格式 | 访客得到“现状流程 + 卡点 + 下一步清单” | GameplayDefinition 草稿 + NPC 模板 |
+| 行业工位 | 有垂直任务的人：招聘、教培、房产、跨境等 | 行业助理、资料整理员 | 提供 JD、房源、课程、材料片段 | 行业 WorldInfo、风险提示、人工转接话术 | 访客得到材料目录、风险清单或跟进草稿 | Tavern template + WorldInfo |
+| 需求吧台 | 不知道如何表达需求的访客、本地服务咨询者 | 迎宾顾问、需求采集员 | 填写/对话说明目标、时间、预算、限制 | 需求表单、店主可见摘要、隐私边界 | 访客得到清晰需求摘要，店主得到可处理记录 | 轻玩法 + 私密/店主可见记录边界 |
+| 档案书房 | 团队成员、社群成员、资料查找者 | 档案管理员、SOP 教练 | 提问“某资料在哪里/怎么做” | owner-confirmed knowledge、引用规则、不可见资料边界 | 访客得到引用式回答、资料位置、待复核项 | WorldInfo 先行；未来 RAG |
+| 创作/交付工坊 | 创作者、咨询/设计/研究交付者 | 剧本统筹、方案架构师、审稿人 | 提交 brief、素材、草稿目标 | 输出模板、审稿清单、发布前确认 | 访客得到草稿大纲/检查清单，不自动发布 | Tavern template + Gameplay template |
+| 陪伴灯塔 | 夜归人、社区居民、公益/医院陪伴场景 | 值班志愿者、护士、夜间接线员 | 说出压力、写回访便签、拆一件小事 | 现实求助边界、低风险语气、回访规则 | 访客得到善意清单、边界提醒、回访提示 | 复用陪伴/回访玩法模板 |
+
+### MVP in scope
+
+* 在产品方案层定义上述 6 类“经营意图”，每类都有 NPC 职能、访客输入、输出物、店主配置重点和禁区。
+* 后续若进入实现，优先作为创建向导模板 / tavern template / owner gameplay template / 发现标签，而不是持久 `place_type` enum。
+* 每类都必须保留真实坐标展示、店主确认发布、owner API key / token 边界和高风险专业免责声明。
+
+### MVP out of scope
+
+* 不接 CRM、企微、飞书、表格、RAG、支付、预约、营销群发等外部系统。
+* 不把访客记录变成公开墙、社交 feed、排行榜或线索买卖。
+* 不做医疗、法律、投资、招聘录拒等最终专业判断。
+* 不让平台自动生成并发布 NPC、世界书、剧情、图片或玩法。
+
+## Decision (ADR-lite Draft)
+
+**Context**: 用户希望从 AI 自动化 / 垂直 Agent / 知识库案例中抽取“按人群和流程提供具体帮助”的产品启发，但已确认赚钱不是目的；FableMap 的主线仍是真实地图、主人主权、AI NPC、记忆和回访。
+
+**Decision**: 推荐先采用 **Approach A：经营意图模板层**。`place_type` 继续表达真实地点；“流程诊所、行业工位、需求吧台、档案书房、创作/交付工坊、陪伴灯塔”作为 owner-confirmed 模板与玩法包进入产品，而不是立刻新增 schema/type 层。
+
+**Consequences**: MVP 最快、风险最低、符合现有 `TAVERN_TEMPLATES` / `ownerGameplayTemplates` 模式；短期发现页筛选和统计能力较弱。若某类模板被反复使用，再通过单独任务升级为“特殊酒馆类型薄层”，届时同步 schema/API/docs/tests。
+
+## Open Decision Before Implementation
+
+当前 brainstorm 已收敛到推荐方案，但进入实现前仍需用户确认：第一步是否按 **经营意图模板层** 做，还是改为正式“特殊酒馆类型薄层”。
+## User Decision (2026-05-06)
+
+用户已选择 **A：经营意图模板层**。
+
+后续开发方向锁定为：不新增 `place_type` / backend schema / API 字段，先用 frontend owner-confirmed 模板、玩法模板和发现标签验证 6 类酒馆经营意图。
+
+## Implementation Plan
+
+* Plan saved: `.trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm/implementation-plan.md`。
+* Plan scope: frontend-only Approach A, with source tests, build verification, and Playwright desktop/mobile self-acceptance.
+## Implementation Evidence (2026-05-06)
+
+Implemented **Approach A: 经营意图模板层** as a frontend-only slice. No backend/API/schema or `place_type` values were changed.
+
+### Files changed
+
+* `frontend/app/product/tavernIntentTemplates.js`: added 6 owner-confirmed tavern intent templates and lookup/search helpers.
+* `frontend/app/routes/create.tsx`: added the create-wizard “经营意图” selector and live preview copy while preserving hidden `place_type` submission.
+* `frontend/app/product/ownerGameplayTemplates.js`: added 6 draft GameplayDefinition templates aligned to the approved intents.
+* `frontend/app/lib/tavern-intent-tags.js`: added public-safe discovery intent tag derivation from existing tavern payload fields only.
+* `frontend/app/routes/discover.tsx`: added intent search text and safe card chips.
+* `frontend/scripts/tavern-intent-templates-test.mjs`: added intent catalog contract test.
+* `frontend/scripts/tavern-intent-tags-test.mjs`: added discovery intent tag contract test.
+* `frontend/scripts/create-wizard-route-test.mjs`: added create route contract assertions.
+* `frontend/scripts/gameplay-test.mjs`: updated owner gameplay template expectations.
+* `frontend/package.json`: wired the new tests into `npm --prefix .\frontend test`.
+
+### Verification
+
+* `node .\frontend\scripts\tavern-intent-templates-test.mjs` — passed (`tavern-intent-templates-test: ok`).
+* `node .\frontend\scripts\create-wizard-route-test.mjs` — passed (`create-wizard-route-test: ok`).
+* `node .\frontend\scripts\gameplay-test.mjs` — passed (`gameplay-test: ok`).
+* `node .\frontend\scripts\tavern-intent-tags-test.mjs` — passed (`tavern-intent-tags-test: ok`).
+* `npm --prefix .\frontend test` — passed.
+* `npm --prefix .\frontend run typecheck` — passed.
+* `npm --prefix .\frontend run build` — passed.
+* Playwright self-acceptance — passed via `.trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm/artifacts/playwright-check.mjs` against `http://127.0.0.1:5173/create`.
+  * Desktop screenshot: `.trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm/artifacts/create-intent-desktop.png`.
+  * Mobile screenshot: `.trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm/artifacts/create-intent-mobile.png`.
+  * Report: `.trellis/tasks/05-06-05-06-ai-automation-inspired-tavern-types-brainstorm/artifacts/playwright-report.json` with `ok: true`.
+
+### Notes / risk
+
+* The Playwright run loaded `/create` without the FastAPI backend running; Vite logged expected proxy errors for `/api/v1/owners/me/default-llm`, but the create page degraded correctly and the intent selector checks passed.
+* No commits were created during inline execution; user can run `$finish-work` / commit after review.

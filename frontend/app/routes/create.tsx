@@ -30,6 +30,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog"
 import LLMConfigForm from "../product/LLMConfigForm.jsx"
+import { TAVERN_INTENT_TEMPLATES, deriveTavernIntent } from "../product/tavernIntentTemplates.js"
 
 const CREATE_WIZARD_STEPS = [
   { id: "anchor", number: "01", icon: MapPinned, title: "真实坐标", text: "先钉住地图锚点、地点类型和入口规则。" },
@@ -49,6 +50,12 @@ export default function CreateRoute() {
   const [placeType, setPlaceType] = useState(() => normalizePlaceTypeId(searchParams.get("place_type") || "tavern"))
   const activePlaceType = derivePlaceTypeDisplay(placeType)
   const activePlaceTypeName = activePlaceType.shortLabel || activePlaceType.label
+  const [intentId, setIntentId] = useState("companion-beacon")
+  const activeIntent = deriveTavernIntent(intentId)
+  const activeIntentChecklist = [
+    activeIntent.primaryNpcRole,
+    ...(activeIntent.verifiableOutputs || []).slice(0, 2),
+  ]
   const activePlaceTypeAccessHint = activePlaceType.reserved
     ? `${activePlaceType.label} 默认私密，不进入公开发现筛选。`
     : `${activePlaceType.label} 可按入口规则公开、私密或密码访问。`
@@ -395,6 +402,44 @@ export default function CreateRoute() {
               </p>
               </section>
 
+              <section data-tavern-intent-selector className="space-y-3 rounded-[1.75rem] border border-fuchsia-300/14 bg-fuchsia-300/[0.035] p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-white">经营意图</p>
+                    <p className="mt-1 text-xs leading-5 text-violet-100/50">
+                      这里选择“这间酒馆主要帮访客完成什么”；它不改 place_type / Schema，也不会绕过店主确认发布内容。
+                    </p>
+                  </div>
+                  <span className="inline-flex w-fit rounded-full border border-fuchsia-300/24 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-bold text-fuchsia-50">
+                    {activeIntent.badge}
+                  </span>
+                </div>
+                <div className="grid gap-2 lg:grid-cols-2">
+                  {TAVERN_INTENT_TEMPLATES.map((intent) => {
+                    const active = intentId === intent.id
+                    return (
+                      <button
+                        key={intent.id}
+                        type="button"
+                        data-tavern-intent-card={intent.id}
+                        onClick={() => setIntentId(intent.id)}
+                        aria-pressed={active}
+                        className={`min-h-28 touch-manipulation rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+                          active
+                            ? "border-fuchsia-300/34 bg-fuchsia-300/12 text-fuchsia-50 shadow-[0_0_28px_rgba(217,70,239,0.13)]"
+                            : "border-white/10 bg-slate-950/45 text-violet-100/64 hover:border-white/20 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <span className="text-xs font-black uppercase tracking-[0.18em] text-fuchsia-100/70">{intent.badge}</span>
+                        <span className="mt-2 block text-sm font-black text-white">{intent.title}</span>
+                        <span className="mt-1 block text-xs leading-5 text-violet-100/58">{intent.summary}</span>
+                        <span className="mt-2 block text-[0.7rem] leading-5 text-cyan-100/68">核心 NPC：{intent.primaryNpcRole}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
               <div className="grid gap-3 sm:grid-cols-3">
                 <label className="space-y-1.5 text-sm">
                   <span className="text-violet-100/65">纬度</span>
@@ -502,6 +547,7 @@ export default function CreateRoute() {
               <div>
                 <h2 className="font-black text-white">AI 辅助草稿 · {activePlaceTypeName}</h2>
                 <p className="text-xs text-violet-100/60">按当前地点类型生成可丢弃草稿</p>
+                <p className="mt-1 text-xs text-fuchsia-100/72">经营意图：{activeIntent.title} · {activeIntent.summary}</p>
               </div>
             </div>
             <section aria-label="AI 草稿生命周期" className="mb-4 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
@@ -672,10 +718,19 @@ export default function CreateRoute() {
               <div>
                 <h2 className="font-black text-white">首个 {activePlaceTypeName} NPC</h2>
                 <p className="mt-1 text-sm text-violet-100/58">
-                  先写一个能接待{activePlaceTypeName}访客的角色，后续再导入完整角色卡。
+                  先写一个能接待{activePlaceTypeName}访客的角色；当前建议角色是「{activeIntent.primaryNpcRole}」。
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-fuchsia-300/16 bg-fuchsia-300/[0.045] p-5 backdrop-blur-xl">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-fuchsia-100/70">经营意图预览</p>
+            <h2 className="mt-2 text-lg font-black text-white">{activeIntent.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-violet-100/62">{activeIntent.summary}</p>
+            <ul className="mt-3 grid gap-2 text-xs leading-5 text-violet-100/64">
+              {activeIntentChecklist.map((item) => <li key={item}>• {item}</li>)}
+            </ul>
           </div>
 
           <div className="rounded-[2rem] border border-white/12 bg-white/[0.04] p-5 backdrop-blur-xl">
