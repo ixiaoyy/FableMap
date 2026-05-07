@@ -5,7 +5,7 @@ import CharacterManagementModal from '../../../../frontend/app/product/Character
 
 const initialTavern = {
   id: 'owner_dialogue_harness_tavern',
-  name: '对话预览酒馆',
+  name: '对话预览空间',
   owner_id: 'owner-demo',
   characters: [
     {

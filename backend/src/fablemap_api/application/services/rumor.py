@@ -75,19 +75,19 @@ class RumorApplicationMixin:
         user_id: str = "",
     ) -> dict[str, Any]:
         """生成一条传闻"""
-        # 验证源酒馆存在且用户可访问
+        # 验证源空间存在且用户可访问
         source_tavern = self.store.get_tavern(source_tavern_id)
         if not source_tavern:
-            raise HTTPException(status_code=404, detail="源酒馆不存在")
+            raise HTTPException(status_code=404, detail="源空间不存在")
 
-        # 不能推荐自己的酒馆
+        # 不能推荐自己的空间
         if source_tavern_id == target_tavern_id:
-            raise HTTPException(status_code=400, detail="不能推荐自己的酒馆")
+            raise HTTPException(status_code=400, detail="不能推荐自己的空间")
 
-        # 验证目标酒馆存在
+        # 验证目标空间存在
         target_tavern = self.store.get_tavern(target_tavern_id)
         if not target_tavern:
-            raise HTTPException(status_code=404, detail="目标酒馆不存在")
+            raise HTTPException(status_code=404, detail="目标空间不存在")
 
         # 生成传闻文本
         # 尝试调用 LLM 生成，如果没有配置则使用模板
@@ -185,13 +185,13 @@ class RumorApplicationMixin:
         if not rumor:
             raise HTTPException(status_code=404, detail="传闻不存在")
 
-        # 检查权限：只有源酒馆主人可以删除
+        # 检查权限：只有源空间主人可以删除
         source_tavern = self.store.get_tavern(rumor.source_tavern_id)
         if not source_tavern:
-            raise HTTPException(status_code=404, detail="源酒馆不存在")
+            raise HTTPException(status_code=404, detail="源空间不存在")
 
         if source_tavern.owner_id and source_tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此传闻来源酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此传闻来源空间的主人")
 
         store.delete(rumor_id)
         return {"ok": True, "rumor_id": rumor_id}
@@ -202,13 +202,13 @@ class RumorApplicationMixin:
         visitor_id: str = "",
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """获取酒馆可展示的传闻"""
+        """获取空间可展示的传闻"""
         store = self._get_rumor_store()
 
-        # 获取该酒馆产生的传闻
+        # 获取该空间产生的传闻
         rumors = store.list_by_source(tavern_id, limit)
 
-        # 如果不足，随机补充一些其他酒馆的传闻
+        # 如果不足，随机补充一些其他空间的传闻
         if len(rumors) < limit:
             other_rumors = store.list_recent(limit - len(rumors), exclude_tavern_id=tavern_id)
             rumors.extend(other_rumors)

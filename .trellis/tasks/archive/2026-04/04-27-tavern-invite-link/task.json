@@ -1,7 +1,7 @@
 {
   "id": "tavern-invite-link",
   "name": "tavern-invite-link",
-  "title": "酒馆邀请链接",
+  "title": "空间邀请链接",
   "description": "B-phase tavern invite link MVP: frontend-only share payload and copy card using public Tavern data.",
   "status": "completed",
   "dev_type": "frontend",

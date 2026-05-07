@@ -5,10 +5,10 @@
 - `frontend/app/features/tavern-chat-workbench/index.tsx`
   - Removed visitor-facing right sidebar content that looked like project/authoring metadata: current NPC profile card, first-message block, expression thumbnails, raw tavern info card, and non-owner admin explanation.
   - Added `data-chat-sidecar="conversation-context"` with a `聊天辅助` section focused on current speaker, current scene, and quick opening lines.
-  - Kept `对话记忆` and `更多酒馆功能` folded below the chat helper.
+  - Kept `对话记忆` and `更多空间功能` folded below the chat helper.
 - `frontend/scripts/tavern-chat-workbench-test.mjs`
   - Added positive checks for the conversation sidecar.
-  - Added negative checks to prevent `当前 NPC 资料` / `表情缩略` / `酒馆信息` / project-like sidebar copy from returning.
+  - Added negative checks to prevent `当前 NPC 资料` / `表情缩略` / `空间信息` / project-like sidebar copy from returning.
 - `.trellis/tasks/05-05-05-05-chat-sidecar-context/artifacts/playwright-check.mjs`
   - Added desktop/mobile visual assertions that the conversation sidecar exists and old project-like copy is absent.
 

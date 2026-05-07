@@ -16,7 +16,7 @@
 
 ## Non-goals
 - 不自动发布 NPC；仍必须店主确认保存。
-- 不让平台替店主生成最终酒馆内容；AI 只作为店主工具。
+- 不让平台替店主生成最终空间内容；AI 只作为店主工具。
 - 不引入平台级 Token 计费。
 
 ## Acceptance Criteria
@@ -39,7 +39,7 @@
 
 - 后端 `generate_character_draft` 现在优先读取店主默认 LLM 配置；配置有效时通过 owner LLM 生成未发布 NPC 草稿，并返回 `source=owner_llm` / `source_label=店主默认 LLM 草稿`。
 - 无默认 LLM 或 LLM 调用失败时返回 `source=local_template_fallback`，`source_reason` 区分 `missing_owner_llm` / `owner_llm_failed`，并用本地模板占位文案明确说明“不是真实 AI 生成”。
-- 本地 fallback 角色名从店主输入风格标签或酒馆名派生，不再固定 `猫铃看板娘` / `夜航招待员`。草稿仍只返回给店主编辑器，未调用 `addCharacter` 前不会进入公开/访客 Tavern payload。
+- 本地 fallback 角色名从店主输入风格标签或空间名派生，不再固定 `猫铃看板娘` / `夜航招待员`。草稿仍只返回给店主编辑器，未调用 `addCharacter` 前不会进入公开/访客 Tavern payload。
 - 前端 `aiCharacterDrafts` 增加来源说明 helper，角色管理面板在生成后展示 owner LLM / 本地模板的不同文案。
 - 验证：
   - `node frontend/scripts/ai-character-drafts-test.mjs`

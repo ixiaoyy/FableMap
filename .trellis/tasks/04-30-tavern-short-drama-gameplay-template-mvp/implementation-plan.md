@@ -52,7 +52,7 @@ createShortDramaGameplayFromTemplate(template).completion.memory_atom.enabled ==
 Inspect `frontend/app/product/GameplayManager.jsx` and confirm:
 
 ```javascript
-setStatus('短剧模板已生成本地草稿；请检查内容、按本酒馆调整，并保存/发布后访客才可见。')
+setStatus('短剧模板已生成本地草稿；请检查内容、按本空间调整，并保存/发布后访客才可见。')
 ```
 
 The owner action must create a local draft, not auto-publish.

@@ -2,20 +2,20 @@
 
 ## Goal
 
-在 `/create` 开店页提供 owner-confirmed AI 草稿能力：店主基于真实坐标、地址、地点类型和偏好，调用自己的默认 LLM 生成一份未发布、可编辑、可丢弃的开店草稿。草稿只填充创建表单，店主确认点击“创建酒馆”后才复用现有 `createTavern` / `addCharacter` 持久化。
+在 `/create` 开店页提供 owner-confirmed AI 草稿能力：店主基于真实坐标、地址、地点类型和偏好，调用自己的默认 LLM 生成一份未发布、可编辑、可丢弃的开店草稿。草稿只填充创建表单，店主确认点击“创建空间”后才复用现有 `createTavern` / `addCharacter` 持久化。
 
 ## Product Constraints
 
-- 保持 FableMap 主线：真实坐标 → 创建酒馆 → 配置 AI NPC → 对话互动。
-- 遵守主人主权：AI 只生成候选草稿，不自动创建、发布、覆盖或导出酒馆内容。
-- 所有酒馆仍必须挂接真实 `lat/lon`；AI 不创建坐标。
+- 保持 FableMap 主线：真实坐标 → 创建空间 → 配置 AI NPC → 对话互动。
+- 遵守主人主权：AI 只生成候选草稿，不自动创建、发布、覆盖或导出空间内容。
+- 所有空间仍必须挂接真实 `lat/lon`；AI 不创建坐标。
 - 店主默认 LLM 配置属于敏感数据；API Key 不回传前端、不写日志、不进入公开 payload 或导出包。
 - 不新增 Tavern / TavernCharacter 持久 Schema；确认后仍映射到现有字段。
 - 不做平台级 token 充值、计费、抽成或市场。
 
 ## User Story
 
-作为 Tavernkeeper，我希望在开店时先填真实坐标、地址、地点类型和少量偏好，然后让系统调用我的默认 LLM 生成一份酒馆草稿。生成后我可以编辑或丢弃；只有我点击“创建酒馆”后，内容才真正保存并上线。
+作为 Tavernkeeper，我希望在开店时先填真实坐标、地址、地点类型和少量偏好，然后让系统调用我的默认 LLM 生成一份空间草稿。生成后我可以编辑或丢弃；只有我点击“创建空间”后，内容才真正保存并上线。
 
 ## Requirements
 
@@ -118,7 +118,7 @@ interface TavernDraftResponse {
 - 输入偏好：风格标签、禁止方向、语气。
 - 点击“生成 AI 草稿”后调用 `POST /api/v1/owners/me/tavern-drafts/generate`。
 - 返回草稿后填充现有创建表单字段：
-  - 酒馆名称
+  - 空间名称
   - 简介
   - 场景提示
   - 首个 NPC 名称
@@ -131,11 +131,11 @@ interface TavernDraftResponse {
 
 后端 prompt 必须要求 LLM 输出 JSON，并包含以下边界：
 
-- 生成原创酒馆和原创 NPC。
+- 生成原创空间和原创 NPC。
 - 不生成现实名人、影视/游戏/IP 角色。
 - 不生成露骨色情、未成年性化、非自愿、仇恨骚扰、现实危险行动。
 - 不写真实私人地址、身份证、手机号、API Key 等敏感信息。
-- 不生成战斗、等级、装备、排行榜等非酒馆主线内容。
+- 不生成战斗、等级、装备、排行榜等非空间主线内容。
 - 不声称内容已发布。
 
 后端需要校验/清洗：
@@ -174,7 +174,7 @@ interface TavernDraftResponse {
 
 - 不自动创建 Tavern。
 - 不自动发布 NPC。
-- 不覆盖已有酒馆或角色。
+- 不覆盖已有空间或角色。
 - 不生成 world_info、gameplay、头像、地图画面或长期记忆。
 - 不新增草稿历史、多版本审核状态或持久 draft schema。
 - 不实现 MySQL owner config 表；MVP 先 JSON store，保留后续扩展点。
@@ -192,7 +192,7 @@ interface TavernDraftResponse {
 → 后端解析、校验、裁剪
 → 前端填充表单
 → 店主编辑/丢弃/重新生成
-→ 店主点击“创建酒馆”
+→ 店主点击“创建空间”
 → 现有 createTavern + addCharacter 持久化
 ```
 
@@ -210,10 +210,10 @@ interface TavernDraftResponse {
 - [x] 读取默认 LLM 配置时不回显 API Key，只返回 `api_key_configured` / `configured` 等安全摘要。
 - [x] `/api/v1/owners/me/tavern-drafts/generate` 使用当前 `X-User-Id` 的默认 LLM 配置。
 - [x] 没有默认 LLM 配置时，草稿接口返回明确错误，不写入 Tavern / Character。
-- [x] LLM 成功返回后，草稿包含酒馆名称、简介、场景提示和首个 NPC 最小字段。
+- [x] LLM 成功返回后，草稿包含空间名称、简介、场景提示和首个 NPC 最小字段。
 - [x] 草稿生成不会创建 Tavern，不会新增 Character，不进入公开 Tavern payload。
 - [x] `/create` 页可以生成草稿并填充现有表单，店主仍可编辑。
-- [x] 只有点击“创建酒馆”后才调用现有 `createTavern` / `addCharacter`。
+- [x] 只有点击“创建空间”后才调用现有 `createTavern` / `addCharacter`。
 - [x] 非当前 owner 不能读取或使用他人的默认 LLM 配置。
 - [x] 后端测试覆盖配置保存、密钥隐藏、无配置失败、草稿不持久化、成功响应结构。
 - [x] 前端脚本测试覆盖草稿请求规范化和填表映射。

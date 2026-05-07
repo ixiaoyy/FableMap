@@ -1,5 +1,5 @@
 """
-酒馆时间系统核心模块
+空间时间系统核心模块
 
 提供时区推断、营业时间计算和时间上下文构建功能。
 """
@@ -187,7 +187,7 @@ def _is_open_at(
 
     Args:
         operating_hours: 营业时间配置
-        local_now: 酒馆本地时间
+        local_now: 空间本地时间
 
     Returns:
         (is_open, open_at, close_at)
@@ -238,7 +238,7 @@ def build_time_context(
     operating_hours: dict[str, Any],
 ) -> TimeContext:
     """
-    构建酒馆时间上下文
+    构建空间时间上下文
 
     Args:
         lat: 纬度
@@ -317,7 +317,7 @@ def build_closed_tavern_prompt() -> str:
         打烊提示文本
     """
     return """
-这是一间打烊的酒馆。
+这是一间打烊的空间。
 你是一位尽职的店员，虽然无法提供完整服务，
 但仍会以友善的态度与访客交流，委婉说明现在不营业。
 保持角色设定，但语气温和有礼。

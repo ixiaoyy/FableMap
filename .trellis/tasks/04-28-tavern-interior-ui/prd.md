@@ -1,8 +1,8 @@
-# Tavern Interior UI - 酒馆内部场景展示
+# Tavern Interior UI - 空间内部场景展示
 
 ## 目的
 
-实现完整的酒馆内部界面，展示场景氛围、NPC 形象、对话功能，让访客有沉浸式体验。
+实现完整的空间内部界面，展示场景氛围、NPC 形象、对话功能，让访客有沉浸式体验。
 
 ## 当前状态
 
@@ -14,8 +14,8 @@
 
 ### 1. 场景背景渲染
 
-根据酒馆的 `layout_style` 和 `scene_prompt` 渲染不同风格：
-- `lobby` - 传统酒馆大厅
+根据空间的 `layout_style` 和 `scene_prompt` 渲染不同风格：
+- `lobby` - 传统空间大厅
 - `quest-play` - 任务游戏风格
 - 自定义场景
 
@@ -66,7 +66,7 @@ function TavernInterior({ tavern, layoutStyle }) {
 3. [ ] 实现 NPC 站立展示
 4. [ ] 添加布局样式支持
 5. [ ] 整合到 `TavernChatRoom`
-6. [ ] 测试不同酒馆场景
+6. [ ] 测试不同空间场景
 
 ## 验收标准
 

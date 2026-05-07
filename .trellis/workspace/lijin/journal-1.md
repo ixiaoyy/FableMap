@@ -104,15 +104,15 @@ Verification:
 - None - task complete
 
 
-## Session 3: 酒馆发现增强 — 分类浏览与搜索
+## Session 3: 空间发现增强 — 分类浏览与搜索
 
 **Date**: 2026-04-27
-**Task**: 酒馆发现增强 — 分类浏览与搜索
+**Task**: 空间发现增强 — 分类浏览与搜索
 **Branch**: `main`
 
 ### Summary
 
-为 /discover 页面增加了分类标签浏览、酒馆名称模糊搜索、公益/开放切换开关。清空筛选按钮基于 hasFilters 状态自动显示。修复了 Input 组件缺失问题（改为原生 input）。typecheck 和 build 均通过。
+为 /discover 页面增加了分类标签浏览、空间名称模糊搜索、公益/开放切换开关。清空筛选按钮基于 hasFilters 状态自动显示。修复了 Input 组件缺失问题（改为原生 input）。typecheck 和 build 均通过。
 
 ### Main Changes
 
@@ -735,7 +735,7 @@ Reviewed 04-30-hospital-nurse-npc-asset task. Added hospital Place type with 3 N
 - `05-05-brainstorm-sillytavern-vs-fablemap` — SillyTavern vs FableMap 架构对比。
 - `05-05-character-gacha-gameplay-brainstorm` — 角色抽卡/玩法方向。
 - `05-06-local-codex-llm-chat-evaluation` — 本地 Codex 作为 LLM/chat backend 可行性评估。
-- `05-06-tavern-soft-currency-gifts-design` — 酒馆纪念币 / 礼物 / 好感度 / 限额抽卡券设计。
+- `05-06-tavern-soft-currency-gifts-design` — 空间纪念币 / 礼物 / 好感度 / 限额抽卡券设计。
 - `05-06-visitor-profile-affinity-access-brainstorm` — 游客身份画像、初始好感、可见性与长期记忆边界。
 
 ## 6. 建议的下一步认领策略
@@ -787,12 +787,12 @@ Reviewed 04-30-hospital-nurse-npc-asset task. Added hospital Place type with 3 N
 
 ### Summary
 
-将公益 / 无 Key 规则回复产品化为显式 `response_mode`：访客聊天 payload 和前端聊天页会区分“规则模式 / 无 Key 轻量接待”“外部 LLM 模式”“AI 后端未配置/未开放”和“规则兜底回应”，同时保留内置公益酒馆 no-key 可聊天能力。
+将公益 / 无 Key 规则回复产品化为显式 `response_mode`：访客聊天 payload 和前端聊天页会区分“规则模式 / 无 Key 轻量接待”“外部 LLM 模式”“AI 后端未配置/未开放”和“规则兜底回应”，同时保留内置公益空间 no-key 可聊天能力。
 
 ### Main Changes
 
 - Backend v1 runtime and product-core chat service return `response_mode` metadata without exposing prompt/system/config internals.
-- 用户自建酒馆无可用 LLM 时返回 `llm_not_configured` 降级原因与店主配置引导，不再只显示泛化歇业原因。
+- 用户自建空间无可用 LLM 时返回 `llm_not_configured` 降级原因与店主配置引导，不再只显示泛化歇业原因。
 - `public_welfare_rules.py` 文档改为 built-in local rules fixture，不再描述为 demo behavior。
 - Native tavern workbench and legacy `TavernChatRoom` 增加规则/LLM模式 badge。
 - Added regressions for public-welfare rules mode, no-key user tavern degradation, and frontend mode badge contract.
@@ -896,7 +896,7 @@ Reviewed 04-30-hospital-nurse-npc-asset task. Added hospital Place type with 3 N
 
 ### Summary
 
-完成统一酒馆/角色关系图谱的后端 schema/storage 切片：新增关系边与访客私有投影的 domain helpers、SQLAlchemy 表与 store，并同步世界模型、架构和 backend persistence spec。
+完成统一空间/角色关系图谱的后端 schema/storage 切片：新增关系边与访客私有投影的 domain helpers、SQLAlchemy 表与 store，并同步世界模型、架构和 backend persistence spec。
 
 ### Main Changes
 
@@ -930,7 +930,7 @@ Reviewed 04-30-hospital-nurse-npc-asset task. Added hospital Place type with 3 N
 
 ### Summary
 
-实现关系图谱一跳传播引擎：confirmed edges 可将访客对一个酒馆/角色的关系变化确定性传播到直接相邻节点，并保留 source-side perspective、specificity、双轴 affinity/hostility 与角色到父 Tavern 弱回流边界。
+实现关系图谱一跳传播引擎：confirmed edges 可将访客对一个空间/角色的关系变化确定性传播到直接相邻节点，并保留 source-side perspective、specificity、双轴 affinity/hostility 与角色到父 Tavern 弱回流边界。
 
 ### Main Changes
 

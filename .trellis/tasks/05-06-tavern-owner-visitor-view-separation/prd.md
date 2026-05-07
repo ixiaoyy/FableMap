@@ -2,15 +2,15 @@
 
 ## Goal
 
-把酒馆详情页从“同一个聊天页面里折叠店主管理”改成明确的双视角：访客进入 `/tavern/:id` 时只看到 NPC 对话主线和少量折叠的公开酒馆功能；店主从 `/tavern/:id/manage` 进入时只看到管理/经营/治理面板，不默认加载聊天工作台。解决当前右侧长串管理内容导致页面过高、左右失衡、普通用户看不懂的问题。
+把空间详情页从“同一个聊天页面里折叠店主管理”改成明确的双视角：访客进入 `/tavern/:id` 时只看到 NPC 对话主线和少量折叠的公开空间功能；店主从 `/tavern/:id/manage` 进入时只看到管理/经营/治理面板，不默认加载聊天工作台。解决当前右侧长串管理内容导致页面过高、左右失衡、普通用户看不懂的问题。
 
 ## What I already know
 
 - 用户明确反馈：店主管理时不需要聊天；右侧长串信息对普通用户无用；当前页面不是视觉微调问题，而是店主/访客视角没有分开。
 - `frontend/app/routes/tavern.tsx` 当前在同一个 route 中判断 `isOwner` 并把 `ownerPanel` 传入 `TavernChatWorkbench`。
 - `frontend/app/features/tavern-chat-workbench/index.tsx` 当前仍有 `ownerPanel` / `data-owner-management-entry="folded"`，说明管理功能还在聊天页面里。
-- `frontend/app/routes/owner.tsx` 的酒馆跳转目前指向 `/tavern/:id?owner_id=...`，会把店主带回聊天页。
-- 权威产品文档要求：探索者主线是进入酒馆与 NPC 聊天；店主维护主线是管理角色、访问、LLM、访客反馈和经营状态。
+- `frontend/app/routes/owner.tsx` 的空间跳转目前指向 `/tavern/:id?owner_id=...`，会把店主带回聊天页。
+- 权威产品文档要求：探索者主线是进入空间与 NPC 聊天；店主维护主线是管理角色、访问、LLM、访客反馈和经营状态。
 
 ## Requirements
 
@@ -21,7 +21,7 @@
    - 只渲染管理/经营/治理面板，不渲染 `TavernChatWorkbench`、聊天记录或聊天输入框。
    - 使用 `owner_id` / `user_id` 查询参数作为当前店主身份；只有 `currentUserId === tavern.owner_id` 时显示管理台。
    - 非 owner 进入时显示“需要店主身份”的可读错误和返回访客视角入口。
-3. Owner dashboard 的酒馆管理入口改为 `/tavern/:id/manage?owner_id=...`。
+3. Owner dashboard 的空间管理入口改为 `/tavern/:id/manage?owner_id=...`。
 4. 复用现有 Roleplay / Home / Visitor Notes 管理能力，避免复制两套面板逻辑。
 5. 同步 Trellis 前端规范中关于 mobile tavern mainline 的描述：owner-only 管理不再通过 chat workbench 的 `ownerPanel` 折叠，而是进入独立 manage route。
 6. 不改后端 API、Schema、持久化字段或访问控制语义；前端只调整路由/组件/测试/规范。
@@ -32,7 +32,7 @@
 - [ ] `frontend/app/routes/tavern.tsx` 不再定义/传入 `ownerPanel`，不再包含 Roleplay/Home/VisitorNotes 管理面板。
 - [ ] `frontend/app/features/tavern-chat-workbench/index.tsx` 不再接收或渲染 `ownerPanel`，源码中不再出现 `data-owner-management-entry` 或 `店主管理`。
 - [ ] 新的 manage route 不渲染 `TavernChatWorkbench`，并包含 `data-tavern-owner-management="dedicated-route"` 机器可检查标记。
-- [ ] `/owner` 中每个酒馆入口指向 `/tavern/:id/manage?owner_id=...`，并提供访客预览入口。
+- [ ] `/owner` 中每个空间入口指向 `/tavern/:id/manage?owner_id=...`，并提供访客预览入口。
 - [ ] 静态脚本测试覆盖“访客路由无管理、管理路由无聊天、owner dashboard 跳转到 manage”。
 - [ ] 前端 build 通过。
 - [ ] Playwright 自验收保存桌面 + 移动截图，证明访客页没有管理入口，店主管理页没有聊天输入。
@@ -50,7 +50,7 @@
 
 - `/tavern/:id`：单一访客体验页，聊天主线优先，不夹带店主工具。
 - `/tavern/:id/manage`：店主管理页，复用现有 owner panels，但不加载聊天工作台。
-- `/owner`：经营看板，点击“进入酒馆处理反馈/查看酒馆”进入 manage route；必要时提供“访客预览”链接。
+- `/owner`：经营看板，点击“进入空间处理反馈/查看空间”进入 manage route；必要时提供“访客预览”链接。
 
 ### Why not just collapse right rail further?
 

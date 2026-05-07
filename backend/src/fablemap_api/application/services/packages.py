@@ -130,19 +130,19 @@ class PackageApplicationMixin:
         if not isinstance(package, dict):
             raise HTTPException(status_code=400, detail="package is required")
         if package.get("type") != TAVERN_PACKAGE_TYPE:
-            raise HTTPException(status_code=400, detail="不支持的酒馆包类型")
+            raise HTTPException(status_code=400, detail="不支持的空间包类型")
 
         tavern_payload = package.get("tavern") if isinstance(package.get("tavern"), dict) else {}
         if not tavern_payload:
-            raise HTTPException(status_code=400, detail="酒馆包缺少 tavern 数据")
+            raise HTTPException(status_code=400, detail="空间包缺少 tavern 数据")
 
         try:
             lat = float(payload.get("lat", tavern_payload.get("lat")))
             lon = float(payload.get("lon", tavern_payload.get("lon")))
         except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=400, detail="导入酒馆包时需要有效坐标") from exc
+            raise HTTPException(status_code=400, detail="导入空间包时需要有效坐标") from exc
 
-        source_name = str(tavern_payload.get("name") or "导入酒馆").strip() or "导入酒馆"
+        source_name = str(tavern_payload.get("name") or "导入空间").strip() or "导入空间"
         tavern_id = str(payload.get("tavern_id") or f"tavern_{uuid.uuid4().hex[:12]}").strip()
         raw_access = str(payload.get("access") or tavern_payload.get("access") or "private").strip()
         access = raw_access if raw_access in {"public", "private", "password"} else "private"

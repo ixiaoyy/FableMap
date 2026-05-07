@@ -2,11 +2,11 @@
 
 ## 背景
 
-旧版备份接口标注为聊天备份，但实际只写出酒馆对象，不包含聊天 JSONL；恢复接口也直接读取传入路径，缺少备份目录限制。`/api/bulkedit` 则只在内存列表里改消息，没有写回 JSONL 文件，并且同样缺少 `visitor_id` 维度。
+旧版备份接口标注为聊天备份，但实际只写出空间对象，不包含聊天 JSONL；恢复接口也直接读取传入路径，缺少备份目录限制。`/api/bulkedit` 则只在内存列表里改消息，没有写回 JSONL 文件，并且同样缺少 `visitor_id` 维度。
 
 ## 改动
 
-- `WebService.create_tavern_backup()` 备份酒馆元数据和全部聊天会话。
+- `WebService.create_tavern_backup()` 备份空间元数据和全部聊天会话。
 - `WebService.restore_tavern_backup()` 只允许恢复 backups 目录内的文件，并可恢复聊天会话。
 - `/api/backups`、`/api/backups/create`、`/api/backups/restore` 改为调用服务层备份方法。
 - `TavernStore.replace_chat_history()` 支持覆盖或清空指定访客/角色会话的 JSONL 文件。

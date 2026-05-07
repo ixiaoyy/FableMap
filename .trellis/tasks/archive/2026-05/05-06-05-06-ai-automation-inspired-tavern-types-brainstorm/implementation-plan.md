@@ -322,7 +322,7 @@ After the existing place-type `<section className="space-y-3 rounded-[1.75rem]..
                   <div>
                     <p className="text-sm font-black text-white">经营意图</p>
                     <p className="mt-1 text-xs leading-5 text-violet-100/50">
-                      这里选择“这间酒馆主要帮访客完成什么”；它不改 place_type / Schema，也不会绕过店主确认发布内容。
+                      这里选择“这间空间主要帮访客完成什么”；它不改 place_type / Schema，也不会绕过店主确认发布内容。
                     </p>
                   </div>
                   <span className="inline-flex w-fit rounded-full border border-fuchsia-300/24 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-bold text-fuchsia-50">

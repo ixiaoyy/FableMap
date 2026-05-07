@@ -39,10 +39,10 @@ assert(TAVERN_ACTIVITY_GUARDRAILS.includes('反馈只给店主治理'))
 assert(TAVERN_ACTIVITY_FORBIDDEN_COPY.includes('排行榜'))
 
 const componentSource = readFileSync(new URL('../app/components/TavernActivitySignalsCard.tsx', import.meta.url), 'utf8')
-assert(componentSource.includes('酒馆活性信号'))
+assert(componentSource.includes('空间活性信号'))
 assert(componentSource.includes('Activity without social graph'))
 assert(componentSource.includes('不展示访客身份、聊天记录或公开社交关系'))
-assert(componentSource.includes('aria-label="酒馆活性边界"'))
+assert(componentSource.includes('aria-label="空间活性边界"'))
 assert(componentSource.includes('grid gap-3 sm:grid-cols-2 xl:grid-cols-5'))
 
 const tavernRouteSource = readFileSync(new URL('../app/routes/tavern.tsx', import.meta.url), 'utf8')

@@ -8,11 +8,11 @@
 
 | 类型 | 触发条件 | 接收人 |
 |------|----------|--------|
-| new_visitor | 有人进入酒馆 | 酒馆主人 |
+| new_visitor | 有人进入空间 | 空间主人 |
 | new_message | AI 生成新消息 | 访客 |
 | quest_completed | 任务达成 | 访客 |
 | home_visit_request | 有人想拜访 Home | Home 主人 |
-| new_guest_message | 新留言 | 酒馆主人 |
+| new_guest_message | 新留言 | 空间主人 |
 | guest_reply | 主人回复留言 | 访客 |
 
 ## 技术方案

@@ -8,7 +8,7 @@ const route = readFileSync(resolve(__dirname, "../app/routes/create.tsx"), "utf8
 const packageJson = readFileSync(resolve(__dirname, "../package.json"), "utf8")
 
 assert.ok(route.includes("CREATE_WIZARD_STEPS"), "create route should define route-level wizard step metadata")
-assert.ok(route.includes('aria-label="创建酒馆分步向导"'), "create route should render an accessible wizard stepper")
+assert.ok(route.includes('aria-label="创建空间分步向导"'), "create route should render an accessible wizard stepper")
 assert.ok(route.includes("data-create-wizard-step"), "create route should map form sections to explicit wizard steps")
 assert.ok(route.includes("min-h-11 touch-manipulation"), "wizard controls should keep mobile-safe touch targets")
 assert.ok(route.includes("店主确认后开门"), "wizard should end with owner-confirmed publish/open-door language")
@@ -23,8 +23,8 @@ assert.ok(route.includes("activePlaceType.description"), "right rail should rend
 assert.ok(route.includes("activePlaceType.shortLabel"), "right rail NPC/checklist copy should use the selected place type short label")
 assert.ok(route.includes("activePlaceType.cardClass"), "right rail should reuse the selected place type visual class")
 assert.ok(route.includes("activePlaceType.reserved"), "right rail should explain reserved/private place types")
-assert.ok(!route.includes("用 AI 生成酒馆创意"), "AI draft helper should not stay hardcoded to tavern-only copy")
-assert.ok(!route.includes('alt="赛博酒馆街景"'), "right preview image alt should not stay hardcoded to tavern-only copy")
+assert.ok(!route.includes("用 AI 生成空间创意"), "AI draft helper should not stay hardcoded to tavern-only copy")
+assert.ok(!route.includes('alt="空间街景"'), "right preview image alt should not stay hardcoded to tavern-only copy")
 
 const generateDraftStart = route.indexOf("async function handleGenerateDraft")
 const submitStart = route.indexOf("async function handleSubmit")

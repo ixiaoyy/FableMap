@@ -12,7 +12,7 @@ _SKILL_PACK_DEFINITIONS: tuple[dict[str, Any], ...] = (
     {
         "id": LOCAL_RUMOR_SKILL_PACK_ID,
         "label": "环境传闻",
-        "description": "允许 NPC 在合适时机提及已有邻里传闻，帮助访客发现附近酒馆。",
+        "description": "允许 NPC 在合适时机提及已有邻里传闻，帮助访客发现附近空间。",
         "category": "discovery",
         "default_enabled": False,
         "capabilities": [
@@ -22,7 +22,7 @@ _SKILL_PACK_DEFINITIONS: tuple[dict[str, Any], ...] = (
         ],
         "prompt_notes": [
             "传闻只是环境建议，不是正史。",
-            "没有给定传闻时不要编造目标酒馆或事实。",
+            "没有给定传闻时不要编造目标空间或事实。",
         "不要写入记忆、状态卡或角色设定。",
         ],
         "config_schema": {
@@ -113,10 +113,10 @@ def build_local_rumor_prompt_block(rumors: list[dict[str, Any]] | None, *, limit
 
     safe_limit = max(1, min(_safe_int(limit, 3), 5))
     lines = [
-        "【酒馆技能包：邻里传闻 / local-rumor】",
-        "你可以在访客询问附近、推荐、传闻、别的酒馆时，简短提及下面已有传闻。",
-        "这些传闻只是环境建议，不是正史；不要写入记忆、状态卡、角色设定或酒馆事实。",
-        "没有给定传闻时，不要编造目标酒馆、现实地点或事实。",
+        "【空间技能包：邻里传闻 / local-rumor】",
+        "你可以在访客询问附近、推荐、传闻、别的空间时，简短提及下面已有传闻。",
+        "这些传闻只是环境建议，不是正史；不要写入记忆、状态卡、角色设定或空间事实。",
+        "没有给定传闻时，不要编造目标空间、现实地点或事实。",
     ]
     normalized = _normalize_rumors(rumors or [], safe_limit)
     if not normalized:
@@ -125,7 +125,7 @@ def build_local_rumor_prompt_block(rumors: list[dict[str, Any]] | None, *, limit
 
     lines.append("可用传闻：")
     for index, rumor in enumerate(normalized, start=1):
-        target_name = rumor.get("target_tavern_name") or rumor.get("target_tavern_id") or "附近酒馆"
+        target_name = rumor.get("target_tavern_name") or rumor.get("target_tavern_id") or "附近空间"
         rumor_text = rumor.get("rumor_text") or "有旅人提起过那里。"
         lines.append(f"{index}. {target_name}：{rumor_text}")
     return "\n".join(lines)

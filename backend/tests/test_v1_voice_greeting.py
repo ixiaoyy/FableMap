@@ -37,7 +37,7 @@ def _create_tavern_with_character(client: TestClient, *, access: str = "public")
         json={
             "id": "char_keeper",
             "name": "Keeper",
-            "first_mes": "欢迎来到语音酒馆。",
+            "first_mes": "欢迎来到语音空间。",
             "alternate_greetings": ["备用问候一", "备用问候二"],
         },
     )
@@ -59,8 +59,8 @@ def test_voice_greeting_preview_returns_first_message_without_tts_side_effect(tm
     assert payload["preview_only"] is True
     assert payload["audio_generated"] is False
     assert payload["tts_ready"] is False
-    assert payload["greeting"]["text"] == "欢迎来到语音酒馆。"
-    assert payload["tts_request"] == {"text": "欢迎来到语音酒馆。", "character_id": character_id}
+    assert payload["greeting"]["text"] == "欢迎来到语音空间。"
+    assert payload["tts_request"] == {"text": "欢迎来到语音空间。", "character_id": character_id}
     assert "api_key" not in disabled.text.lower()
 
     saved = client.put(

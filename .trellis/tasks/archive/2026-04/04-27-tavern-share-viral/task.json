@@ -1,8 +1,8 @@
 {
   "id": "tavern-share-viral",
   "name": "tavern-share-viral",
-  "title": "酒馆分享与病毒传播",
-  "description": "实现酒馆分享功能：分享卡片、公开页面、SEO 优化，让酒馆可以通过社交链接传播。",
+  "title": "空间分享与病毒传播",
+  "description": "实现空间分享功能：分享卡片、公开页面、SEO 优化，让空间可以通过社交链接传播。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": "tavern-share-viral",

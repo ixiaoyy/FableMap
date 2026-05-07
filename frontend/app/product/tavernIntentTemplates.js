@@ -80,14 +80,14 @@ export const TAVERN_INTENT_TEMPLATES = [
     id: 'companion-beacon',
     title: '陪伴灯塔',
     badge: '低风险陪伴',
-    summary: '面向夜归、社区、公益和医院陪伴场景，提供善意清单与现实求助边界。',
+    summary: '面向夜归、援助/社区和医院陪伴场景，提供善意清单与现实求助边界。',
     primaryNpcRole: '值班陪伴员',
     tone: '温柔、克制、低风险、明确现实求助边界。',
     visitorInputs: ['现在的压力', '想留给下次自己的话', '今天能做的一件小事'],
     ownerConfigFocus: ['现实求助边界', '回访规则', '不追问隐私'],
     verifiableOutputs: ['善意清单', '回访便签', '现实求助提醒'],
     guardrails: ['不替代医疗心理服务', '不追问敏感隐私', '紧急情况指向现实支持'],
-    keywords: ['陪伴', '公益', '夜归', '医院', '回访'],
+    keywords: ['陪伴', '援助/社区', '夜归', '医院', '回访'],
   },
 ]
 

@@ -102,11 +102,11 @@ Rules:
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
 | Missing user identity | `401 {"error": "导出剧集需要明确用户身份"}` |
 | Missing `visitor_id` | `400 {"error": "导出剧集需要 visitor_id"}` |
 | Visitor exports another visitor | `403 {"error": "不能导出其他访客的剧集"}` |
-| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此空间是私人的"}` |
 | Unsupported format | `400 {"error": "剧集导出格式必须是 markdown 或 json"}` |
 | Valid visitor export | `200`, `persisted=false`, markdown contains visible chat |
 | Confirmed state cards exist | included by default |

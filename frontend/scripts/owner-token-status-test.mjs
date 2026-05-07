@@ -23,7 +23,7 @@ const sampleTaverns = [
   },
   {
     id: 'tavern_none',
-    name: '未配置酒馆',
+    name: '未配置空间',
     status: 'closed',
     llm_config: {
       backend: '',

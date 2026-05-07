@@ -7,7 +7,7 @@
 ## Source Planning
 
 * Parent task: `.trellis/tasks/04-29-ai-creation-sites-research/`
-* Source note: 04-29-ai-creation-sites-research 酒馆空间感
+* Source note: 04-29-ai-creation-sites-research 空间空间感
 * Status: backlog task created to prevent this planning item from being lost; not yet implemented.
 
 ## Requirements

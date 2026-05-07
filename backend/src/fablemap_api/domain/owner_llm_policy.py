@@ -105,7 +105,7 @@ def sanitize_tavern_draft(data: dict[str, Any]) -> dict[str, Any]:
         },
     }
     if not draft["name"] or not draft["description"] or not draft["scene_prompt"]:
-        raise ValueError("AI 草稿缺少酒馆名称、简介或场景提示")
+        raise ValueError("AI 草稿缺少空间名称、简介或场景提示")
     if not draft["character"]["name"] or not draft["character"]["first_mes"]:
         raise ValueError("AI 草稿缺少 NPC 名称或首次问候")
     return draft

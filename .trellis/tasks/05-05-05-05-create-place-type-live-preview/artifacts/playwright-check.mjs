@@ -46,7 +46,7 @@ async function checkViewport(name, viewport) {
   await installRoutes(page)
   await page.goto(baseUrl, { waitUntil: "networkidle" })
 
-  await expectPreview(page, ["酒馆 空间预览", "夜色、霓虹", "首个 酒馆 NPC"])
+  await expectPreview(page, ["小屋 空间预览", "夜色、霓虹", "首个 小屋 NPC"])
   await page.getByRole("button", { name: /餐馆/ }).click()
   await expectPreview(page, ["餐馆 空间预览", "正餐、仪式感", "首个 餐馆 NPC", "餐馆开店检查"])
   await page.getByRole("button", { name: /医院/ }).click()

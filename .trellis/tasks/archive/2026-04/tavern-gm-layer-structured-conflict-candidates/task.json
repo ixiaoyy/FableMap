@@ -2,7 +2,7 @@
   "id": "tavern-gm-layer-structured-conflict-candidates",
   "name": "tavern-gm-layer-structured-conflict-candidates",
   "title": "Tavern GM Layer Structured Conflict Candidates",
-  "description": "实现一个预览-only GM Layer，把当前酒馆回合文本转成 task/resource/conflict/event 状态卡候选；不自动写入正史、不调用 LLM、不修改店主内容。",
+  "description": "实现一个预览-only GM Layer，把当前空间回合文本转成 task/resource/conflict/event 状态卡候选；不自动写入正史、不调用 LLM、不修改店主内容。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": null,

@@ -189,7 +189,7 @@ class OwnerConfigApplicationMixin:
         if not character:
             character = tavern.characters[0] if tavern.characters else None
         if not character:
-            raise HTTPException(status_code=400, detail="请先为酒馆添加角色")
+            raise HTTPException(status_code=400, detail="请先为空间添加角色")
 
         visitor_name = clean_text(payload.get("visitor_name"), max_length=32) or "旅人"
         message = str(payload.get("message") or "我想了解这里。")
@@ -239,7 +239,7 @@ class OwnerConfigApplicationMixin:
         if not character:
             character = tavern.characters[0] if tavern.characters else None
         if not character:
-            raise HTTPException(status_code=400, detail="请先为酒馆添加角色")
+            raise HTTPException(status_code=400, detail="请先为空间添加角色")
 
         message = clean_text(payload.get("message"), max_length=1600) or "如果我是第一次进店的访客，你会怎么打招呼？"
         visitor_id = clean_text(payload.get("visitor_id"), max_length=64) or "owner-preview-dry-run"
@@ -607,11 +607,11 @@ class OwnerConfigApplicationMixin:
     def _build_tavern_draft_messages(self, data: dict[str, Any]) -> list[dict[str, str]]:
         style_tags = "、".join(data.get("style_tags") or []) or "温暖、可进入、适合聊天"
         forbidden = "、".join(data.get("forbidden") or []) or "现实名人、既有 IP、露骨色情、危险行动、API Key、私人敏感信息"
-        tone = data.get("tone") or "赛博酒馆、现实映射、店主可编辑"
+        tone = data.get("tone") or "空间、现实映射、店主可编辑"
         system = (
             "你是 FableMap 的开店草稿助手。只返回 JSON，不要 Markdown，不要解释。"
             "生成内容必须是未发布、可编辑、可丢弃的候选草稿。"
-            "不要声称已经创建或发布酒馆。不要生成现实名人、影视/游戏/IP 角色。"
+            "不要声称已经创建或发布空间。不要生成现实名人、影视/游戏/IP 角色。"
             "不要生成露骨色情、未成年性化、非自愿、仇恨骚扰、现实危险行动。"
             "不要写真实私人地址、身份证、手机号、API Key 等敏感信息。"
             "不要生成战斗、等级、装备、排行榜。"

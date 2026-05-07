@@ -2,7 +2,7 @@
   "id": "cultivation-text-image-card-slots",
   "name": "cultivation-text-image-card-slots",
   "title": "Cultivation Text Image Card Slots",
-  "description": "定义修行酒馆文字加图片版本的卡槽：闭关纪要卡、心境卡、NPC 留言卡、线索卡，以及正式图片落盘/prompt sidecar 验收要求。",
+  "description": "定义修行空间文字加图片版本的卡槽：闭关纪要卡、心境卡、NPC 留言卡、线索卡，以及正式图片落盘/prompt sidecar 验收要求。",
   "status": "planning",
   "dev_type": null,
   "scope": null,

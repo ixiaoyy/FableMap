@@ -18,14 +18,14 @@ export const NOTIFICATION_TYPE_META = {
     label: '新访客',
     audience: 'owner',
     tone: 'cyan',
-    helper: '店主侧事件：有人进入你的酒馆。',
+    helper: '店主侧事件：有人进入你的空间。',
   },
   new_message: {
     icon: '💬',
     label: '新对话',
     audience: 'owner',
     tone: 'violet',
-    helper: '店主侧事件：酒馆内出现新的 AI 对话。',
+    helper: '店主侧事件：空间内出现新的 AI 对话。',
   },
   new_guest_message: {
     icon: '📝',
@@ -46,7 +46,7 @@ export const NOTIFICATION_TYPE_META = {
     label: '探索完成',
     audience: 'visitor',
     tone: 'emerald',
-    helper: '访客侧事件：你在酒馆内完成了一段探索。',
+    helper: '访客侧事件：你在空间内完成了一段探索。',
   },
   home_visit_request: {
     icon: '🏠',

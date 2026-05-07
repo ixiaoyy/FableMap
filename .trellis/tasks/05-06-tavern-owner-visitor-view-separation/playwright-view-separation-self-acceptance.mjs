@@ -18,7 +18,7 @@ const demoTavern = {
   id: demoTavernId,
   owner_id: ownerId,
   name: '第三货架后面的观测吧台',
-  description: '便利店第三排货架后的赛博酒馆，外星社团正在研究人类的马上到、随便和第二件半价。',
+  description: '便利店第三排货架后的空间，外星社团正在研究人类的马上到、随便和第二件半价。',
   address: '上海市 · 便利店第三货架',
   lat: 31.2304,
   lon: 121.4737,

@@ -48,7 +48,7 @@ export function summarizePreviewCharacter(character = {}) {
 export function buildOwnerDialoguePreview({ tavern = {}, character = {}, visitorMessage = '' } = {}) {
   const summary = summarizePreviewCharacter(character)
   const message = redactSensitivePreviewText(visitorMessage).trim() || DEFAULT_OWNER_PREVIEW_MESSAGE
-  const tavernName = toText(tavern.name).trim() || '当前酒馆'
+  const tavernName = toText(tavern.name).trim() || '当前空间'
   const firstGreeting = clampText(firstSegment(character.first_mes, `欢迎来到${tavernName}`), 72)
   const tone = clampText(firstSegment(character.personality, '保持简短、克制、贴合店主已写设定'), 72)
   const setting = clampText(firstSegment(character.scenario, `${tavernName}的日常场景`), 72)

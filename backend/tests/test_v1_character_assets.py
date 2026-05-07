@@ -49,7 +49,7 @@ def _create_tavern_with_character(client: TestClient) -> tuple[str, str]:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "表情测试酒馆",
+            "name": "表情测试空间",
             "description": "用于测试角色表情与角色卡迁移。",
             "lat": 31.2304,
             "lon": 121.4737,
@@ -134,13 +134,13 @@ def test_v1_character_card_parse_and_export_contract(tmp_path: Path) -> None:
         "spec": "chara_card_v3",
         "spec_version": "3.0",
         "name": "夜航角色",
-        "description": "坐标锚定酒馆里的 NPC。",
+        "description": "坐标锚定空间里的 NPC。",
         "personality": "温和、短句回复",
-        "scenario": "黄浦江边的赛博酒馆。",
+        "scenario": "黄浦江边的空间。",
         "first_mes": "欢迎回来。",
         "tags": ["tavern", "npc"],
         "sprite": {"neutral": "/sprites/night/neutral.png"},
-        "character_book": {"entries": [{"keys": ["夜航"], "content": "夜航是酒馆暗号。"}]},
+        "character_book": {"entries": [{"keys": ["夜航"], "content": "夜航是空间暗号。"}]},
     }
 
     parsed = client.post("/api/v1/characters/parse", headers={"X-User-Id": OWNER_ID}, json={"json": card})

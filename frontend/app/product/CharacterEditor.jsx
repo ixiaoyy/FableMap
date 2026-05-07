@@ -368,7 +368,7 @@ export default function CharacterEditor({
           <small>
             {activeTemplateCategory === '推荐'
               ? '已根据角色名称、标签、描述和场景推荐；也可搜索或切换分类。'
-              : '先选口吻、边界和开场，再按你的酒馆继续改。'}
+              : '先选口吻、边界和开场，再按你的空间继续改。'}
           </small>
         </summary>
 
@@ -379,7 +379,7 @@ export default function CharacterEditor({
             value={templateQuery}
             onChange={(event) => setTemplateQuery(event.target.value)}
             disabled={disabled}
-            placeholder="搜树洞、档案、社区、赛博、线索..."
+            placeholder="搜树洞、档案、社区、、线索..."
           />
         </label>
 

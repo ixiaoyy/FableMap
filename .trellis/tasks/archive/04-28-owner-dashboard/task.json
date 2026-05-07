@@ -1,8 +1,8 @@
 {
   "id": "04-28-owner-dashboard",
   "name": "04-28-owner-dashboard",
-  "title": "Owner Dashboard - 酒馆主人数据面板",
-  "description": "为酒馆主人提供数据统计面板，包括访客数量、Token用量、NPC互动排行等。",
+  "title": "Owner Dashboard - 空间主人数据面板",
+  "description": "为空间主人提供数据统计面板，包括访客数量、Token用量、NPC互动排行等。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": "owner-dashboard",

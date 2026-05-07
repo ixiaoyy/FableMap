@@ -51,19 +51,19 @@ def _with_source_tag(tags: list[str], source: str) -> list[str]:
 
 def _draft_tags(style_tags: list[str], *, source: str) -> list[str]:
     tags: list[str] = []
-    for tag in style_tags or ["酒馆 NPC"]:
+    for tag in style_tags or ["空间 NPC"]:
         if tag not in tags:
             tags.append(tag)
     return _with_source_tag(tags, source)
 
 
 def _fallback_role_name(tavern_name: str, style_tags: list[str]) -> str:
-    generic_tags = {"AI 草稿", "本地模板草稿", "酒馆 NPC", "NPC", "招待员", "温暖"}
+    generic_tags = {"AI 草稿", "本地模板草稿", "空间 NPC", "NPC", "招待员", "温暖"}
     primary_style = next((tag for tag in style_tags if tag and tag not in generic_tags), "")
     if primary_style:
         return f"{primary_style[:16]}草稿招待员"
     base_name = (
-        tavern_name.replace("酒馆", "")
+        tavern_name.replace("空间", "")
         .replace("小店", "")
         .replace("空间", "")
         .strip(" \t\r\n《》“”\"'")
@@ -125,10 +125,10 @@ class CharacterApplicationMixin:
         payload = data or {}
         style_tags = _draft_list(payload.get("style_tags"), max_items=8, max_length=32)
         forbidden = _draft_list(payload.get("forbidden"), max_items=8, max_length=80)
-        tone = clean_text(payload.get("tone"), max_length=80) or "温暖、短句、有酒馆陪伴感"
-        tavern_name = clean_text(tavern.name, max_length=80) or "这间酒馆"
-        tavern_description = clean_text(tavern.description, max_length=180) or "一间挂接真实坐标的赛博酒馆"
-        style_text = "、".join(style_tags) if style_tags else "酒馆 NPC"
+        tone = clean_text(payload.get("tone"), max_length=80) or "温暖、短句、有空间陪伴感"
+        tavern_name = clean_text(tavern.name, max_length=80) or "这间空间"
+        tavern_description = clean_text(tavern.description, max_length=180) or "一间挂接真实坐标的空间"
+        style_text = "、".join(style_tags) if style_tags else "空间 NPC"
         forbidden_text = "；".join(forbidden) if forbidden else "不要露骨、不要真实私人地址、不要现实名人或受版权保护角色"
 
         if self.owner_config_store:
@@ -171,24 +171,24 @@ class CharacterApplicationMixin:
             "<START>\n"
             "{{user}}: 这里是什么地方？\n"
             f"{{{{char}}}}: 这里是{tavern_name}，这是店主审核前的本地模板草稿。"
-            "如果你提到越界内容，我会把话题带回酒馆氛围和安全互动。"
+            "如果你提到越界内容，我会把话题带回空间氛围和安全互动。"
         )
 
         draft = {
             "name": _fallback_role_name(tavern_name, style_tags),
             "description": (
-                f"{tavern_name}的未发布本地模板 NPC 草稿。灵感来自酒馆简介：{tavern_description}。"
+                f"{tavern_name}的未发布本地模板 NPC 草稿。灵感来自空间简介：{tavern_description}。"
                 f"当前风格标签：{style_text}。"
             ),
             "personality": f"说话风格偏{tone}；围绕店主输入的标签提供占位方向，等待店主改写确认。",
             "scenario": (
                 f"角色暂时站在{tavern_name}的入口或吧台旁，等待店主审核。"
-                f"酒馆背景：{tavern_description}"
+                f"空间背景：{tavern_description}"
             ),
             "system_prompt": (
                 "你是 FableMap 店主确认前的未发布本地模板草稿 NPC。保持原创，不模仿现实名人、受版权保护角色或特定 IP；"
                 "不得声称自己已自动发布，也不得覆盖已有角色。店主确认保存后才可成为 TavernCharacter。"
-                f"遵守禁忌方向：{forbidden_text}。保持角色扮演口吻，遇到越界请求时简短拒绝并回到酒馆互动。"
+                f"遵守禁忌方向：{forbidden_text}。保持角色扮演口吻，遇到越界请求时简短拒绝并回到空间互动。"
             ),
             "first_mes": f"欢迎来到{tavern_name}。我只是店主审核前的本地模板草稿，等店主确认后才会正式接待你。",
             "mes_example": mes_example,
@@ -226,10 +226,10 @@ class CharacterApplicationMixin:
             "不要生成战斗、等级、装备、排行榜。"
         )
         user = (
-            "请基于店主的酒馆上下文生成一份 NPC 草稿 JSON。\n"
-            f"酒馆名称：{tavern_name}\n"
-            f"酒馆简介：{tavern_description}\n"
-            f"酒馆场景提示：{tavern_scene_prompt or '未填写'}\n"
+            "请基于店主的空间上下文生成一份 NPC 草稿 JSON。\n"
+            f"空间名称：{tavern_name}\n"
+            f"空间简介：{tavern_description}\n"
+            f"空间场景提示：{tavern_scene_prompt or '未填写'}\n"
             f"风格标签：{style_text}\n"
             f"禁忌方向：{forbidden_text}\n"
             f"语气：{tone}\n"

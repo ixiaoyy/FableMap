@@ -228,7 +228,7 @@ export default function OutputRulesEditor({ tavern, ownerId, onClose, onRulesCha
         <header className="modal-header output-rules-header">
           <div>
             <p className="mini-label">输出修正 / 风格护栏</p>
-            <h3>{tavern?.name || '酒馆'} 的输出护栏</h3>
+            <h3>{tavern?.name || '空间'} 的输出护栏</h3>
             <p className="note muted">在 AI 回复保存前做确定性清理，用来减少出戏前缀、总结腔和格式噪音。</p>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>

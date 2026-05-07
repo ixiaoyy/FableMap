@@ -19,7 +19,7 @@ def _create_tavern(client: TestClient, access: str = "public") -> str:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "世界书酒馆",
+            "name": "世界书空间",
             "description": "用于测试 WorldInfo 全局迁移。",
             "lat": 31.2304,
             "lon": 121.4737,
@@ -77,7 +77,7 @@ def test_v1_worldinfo_global_crud_test_and_permissions(tmp_path: Path) -> None:
     assert payload["count"] == 1
     assert payload["world_info"][0]["id"] == "rain-entry"
     assert payload["world_info"][0]["tavern_id"] == tavern_id
-    assert payload["world_info"][0]["tavern_name"] == "世界书酒馆"
+    assert payload["world_info"][0]["tavern_name"] == "世界书空间"
 
     matched = client.post(
         "/api/v1/worldinfo/test",

@@ -18,7 +18,7 @@ const TAG_LABELS_ZH = {
   chalk_dawn: '粉笔黎明',
   whispering_grove: '低语林苑',
   healing_sanctum: '疗愈圣所',
-  supply_outpost: '补给站',
+  supply_outpost: '便利店',
   judgement_tower: '裁定塔',
   ember_parlor: '余烬馆',
   lore_academy: '学识堂',

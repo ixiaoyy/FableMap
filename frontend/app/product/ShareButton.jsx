@@ -4,7 +4,7 @@ import { getTavernShare } from '../lib/taverns'
 /**
  * 分享按钮组件
  *
- * 提供酒馆分享功能：
+ * 提供空间分享功能：
  * - 复制链接
  * - 分享到社交平台（微博、微信等）
  * - 显示分享预览信息
@@ -64,8 +64,8 @@ export default function ShareButton({ tavernId, tavernName = '', className = '',
 
     try {
       await navigator.share({
-        title: shareData?.share_title || tavernName || '赛博酒馆',
-        text: shareData?.share_text || '发现了一个有趣的赛博酒馆',
+        title: shareData?.share_title || tavernName || '空间',
+        text: shareData?.share_text || '发现了一个有趣的空间',
         url: shareData?.share_url || `${window.location.origin}/tavern/${tavernId}`,
       })
     } catch (err) {
@@ -77,7 +77,7 @@ export default function ShareButton({ tavernId, tavernName = '', className = '',
 
   const handleWeiboShare = () => {
     const url = shareData?.share_url || `${window.location.origin}/tavern/${tavernId}`
-    const title = encodeURIComponent(shareData?.share_text || `${tavernName} - 赛博酒馆`)
+    const title = encodeURIComponent(shareData?.share_text || `${tavernName} - 空间`)
     const wbUrl = `https://service.weibo.com/share/share.php?url=${encodeURIComponent(url)}&title=${title}`
     window.open(wbUrl, '_blank', 'width=600,height=400')
   }
@@ -92,7 +92,7 @@ export default function ShareButton({ tavernId, tavernName = '', className = '',
         type="button"
         className={`${buttonClass} ${className}`}
         onClick={() => setShowModal(true)}
-        title="分享酒馆"
+        title="分享空间"
       >
         {variant === 'icon' ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -120,7 +120,7 @@ export default function ShareButton({ tavernId, tavernName = '', className = '',
         <div className="share-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="share-modal" onClick={(e) => e.stopPropagation()}>
             <div className="share-modal-header">
-              <h3>分享酒馆</h3>
+              <h3>分享空间</h3>
               <button type="button" className="share-modal-close" onClick={() => setShowModal(false)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" />

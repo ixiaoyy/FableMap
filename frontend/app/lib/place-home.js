@@ -49,7 +49,7 @@ export function normalizeCreatePlacePayload(value = {}) {
   const placeType = normalizePlaceTypeId(value.place_type)
   const payload = {
     ...value,
-    name: text(value.name) || "未命名酒馆",
+    name: text(value.name) || "未命名空间",
     description: text(value.description),
     lat: numberOrZero(value.lat),
     lon: numberOrZero(value.lon),

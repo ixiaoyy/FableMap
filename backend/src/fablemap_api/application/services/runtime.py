@@ -188,15 +188,15 @@ class RuntimeApplicationMixin:
                     character.name,
                     "closed",
                     "AI 后端还没配置",
-                    "这间酒馆还没有可用的模型配置。",
+                    "这间空间还没有可用的模型配置。",
                     reason="llm_not_configured",
                 )
             return self._degraded_chat(
                 character_id,
                 character.name,
                 tavern.status,
-                "酒馆正在歇业",
-                "店主暂时关闭了这间酒馆。",
+                "空间正在歇业",
+                "店主暂时关闭了这间空间。",
                 reason="tavern_closed",
             )
 
@@ -206,7 +206,7 @@ class RuntimeApplicationMixin:
                 character.name,
                 "closed",
                 "AI 后端还没配置",
-                "这间酒馆还没有可用的模型配置。",
+                "这间空间还没有可用的模型配置。",
                 reason="llm_not_configured",
             )
 
@@ -437,12 +437,12 @@ class RuntimeApplicationMixin:
         if not tavern.group_chat_enabled:
             raise HTTPException(status_code=400, detail="群聊未启用")
         if not tavern.characters:
-            raise HTTPException(status_code=400, detail="酒馆没有角色")
+            raise HTTPException(status_code=400, detail="空间没有角色")
         clean_message = clean_text(message, max_length=1600)
         if not clean_message:
             raise HTTPException(status_code=400, detail="消息不能为空")
         if tavern.status != "open":
-            return {"messages": [], "error": "酒馆正在歇业", "degraded": True}
+            return {"messages": [], "error": "空间正在歇业", "degraded": True}
 
         llm_config = self._get_runtime_llm_config(tavern_id)
         if not llm_config or not llm_config.is_configured():
@@ -941,7 +941,7 @@ class RuntimeApplicationMixin:
                 top_p=llm_config.top_p,
             )
         )
-        system_content = f"你是 FableMap 赛博酒馆「{tavern.name}」里的 NPC {character_name}。{character_prompt}"
+        system_content = f"你是 FableMap 空间「{tavern.name}」里的 NPC {character_name}。{character_prompt}"
         skill_pack_prompt = self._skill_pack_prompt_block(tavern)
         if skill_pack_prompt:
             system_content = f"{system_content}\n\n{skill_pack_prompt}"
@@ -988,7 +988,7 @@ class RuntimeApplicationMixin:
             message=message,
             tavern_id=tavern.id,
             character_name=character_name,
-            tavern_name=tavern.name or "公益酒馆",
+            tavern_name=tavern.name or "小馆",
         )
 
     def _local_rumor_rules_response(self, message: str, tavern: Tavern) -> str:
@@ -996,7 +996,7 @@ class RuntimeApplicationMixin:
         if not is_skill_pack_enabled(settings, LOCAL_RUMOR_SKILL_PACK_ID):
             return ""
         text = str(message or "")
-        if not any(keyword in text for keyword in ("传闻", "附近", "推荐", "别的酒馆", "其他酒馆", "哪里")):
+        if not any(keyword in text for keyword in ("传闻", "附近", "推荐", "别的空间", "其他空间", "哪里")):
             return ""
         config = next((item.get("config", {}) for item in settings if item.get("id") == LOCAL_RUMOR_SKILL_PACK_ID), {})
         limit = self._safe_int(config.get("limit"), 3) if isinstance(config, dict) else 3
@@ -1007,7 +1007,7 @@ class RuntimeApplicationMixin:
         if not rumors:
             return "环境传闻技能包已经开启，但今晚还没有可分享的邻里传闻；我不会临时编造一个。"
         rumor = rumors[0]
-        target_name = str(rumor.get("target_tavern_name") or rumor.get("target_tavern_id") or "附近酒馆").strip()
+        target_name = str(rumor.get("target_tavern_name") or rumor.get("target_tavern_id") or "附近空间").strip()
         rumor_text = clean_text(rumor.get("rumor_text"), max_length=180) or "有旅人提起过那里。"
         return f"这只是传闻、不是正史：{target_name}——{rumor_text}"
 
@@ -1016,7 +1016,7 @@ class RuntimeApplicationMixin:
             return {
                 "kind": "llm_not_configured",
                 "label": "AI 后端未配置",
-                "message": "这间酒馆还没有可用模型配置；店主需要在 AI 配置页补全连接并测试通过后，NPC 才会以外部 LLM 接待。",
+                "message": "这间空间还没有可用模型配置；店主需要在 AI 配置页补全连接并测试通过后，NPC 才会以外部 LLM 接待。",
                 "requires_owner_llm": True,
             }
         if reason in {"llm_error", "llm_unexpected_error"}:
@@ -1030,7 +1030,7 @@ class RuntimeApplicationMixin:
             return {
                 "kind": "built_in_rules",
                 "label": "规则模式 / 无 Key 轻量接待",
-                "message": "这间内置公益酒馆使用本地规则模板接待，不消耗店主 Token；它不是外部 LLM NPC。",
+                "message": "这间小馆使用本地规则模板接待，不消耗店主 Token；它不是外部 LLM NPC。",
                 "requires_owner_llm": False,
             }
         if reason:

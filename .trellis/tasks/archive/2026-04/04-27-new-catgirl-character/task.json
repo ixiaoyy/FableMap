@@ -2,7 +2,7 @@
   "id": "new-catgirl-character",
   "name": "new-catgirl-character",
   "title": "brainstorm: 新猫娘角色",
-  "description": "新增安全版原创猫娘默认体验酒馆/角色的头脑风暴：用户选择 C，需收窄平台默认内容边界并确认真实坐标与玩法范围。",
+  "description": "新增安全版原创猫娘默认体验空间/角色的头脑风暴：用户选择 C，需收窄平台默认内容边界并确认真实坐标与玩法范围。",
   "status": "completed",
   "dev_type": "backend",
   "scope": "default-tavern-character",

@@ -65,7 +65,7 @@ def _repair_chat_history_file(path: Path, taverns: dict[str, Any], characters: d
                 message=previous_user_message,
                 tavern_id=tavern_id,
                 character_name=str(character.get("name") or row.get("character_name") or character_id or "值守员"),
-                tavern_name=str(tavern.get("name") or "公益酒馆"),
+                tavern_name=str(tavern.get("name") or "公益空间"),
                 first_mes=str(character.get("first_mes") or ""),
             )
             row["token_count"] = 0

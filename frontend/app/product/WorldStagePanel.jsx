@@ -157,7 +157,7 @@ export default function WorldStagePanel({
           <h2>进入地点舞台</h2>
         </div>
         <div className="storyboard-heading-copy">
-          <p className="note muted">这里先作为地点选择与酒馆发现入口；高级地图图层和调试内容默认折叠。</p>
+          <p className="note muted">这里先作为地点选择与空间发现入口；高级地图图层和调试内容默认折叠。</p>
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export default function WorldStagePanel({
           <div className="storyboard-lane">
             <div className="storyboard-lane-header">
               <span className="storyboard-category-label">探索引导</span>
-              <span className="storyboard-lane-meta">按“入口 / 地点 / 酒馆 / 留下痕迹”的顺序进入</span>
+              <span className="storyboard-lane-meta">按“入口 / 地点 / 空间 / 留下痕迹”的顺序进入</span>
             </div>
             {result?.world_id ? (
               <WorldDensityIndicator

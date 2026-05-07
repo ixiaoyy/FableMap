@@ -14,7 +14,7 @@
 
 - Modify: `frontend/app/routes/create.tsx`
   - Add `CREATE_WIZARD_STEPS` metadata and active-step state.
-  - Render a mobile-safe wizard header with `aria-label="创建酒馆分步向导"`.
+  - Render a mobile-safe wizard header with `aria-label="创建空间分步向导"`.
   - Group existing fields into designed step cards; do not alter submitted field names.
   - Keep AI draft copy as draft-only, owner-confirmed, no automatic persistence.
 - Create: `frontend/scripts/create-wizard-route-test.mjs`

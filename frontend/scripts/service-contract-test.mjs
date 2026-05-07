@@ -88,7 +88,7 @@ async function testNewcomerFallbackWhenPrimaryClosed() {
       }
     },
     async listTaverns(filters) {
-      assert(filters.query === '公益', 'newcomer fallback should search public welfare taverns')
+      assert(filters.query === '社区', 'newcomer fallback should search community taverns')
       assert(filters.access === 'public', 'newcomer fallback should only search public taverns')
       assert(filters.status === 'open', 'newcomer fallback should only search open taverns')
       return {

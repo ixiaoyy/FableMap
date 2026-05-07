@@ -39,8 +39,8 @@ def _create_tavern(client: TestClient) -> tuple[str, str]:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "包裹酒馆",
-            "description": "用于测试酒馆包迁移",
+            "name": "包裹空间",
+            "description": "用于测试空间包迁移",
             "lat": 31.2304,
             "lon": 121.4737,
             "access": "public",
@@ -83,7 +83,7 @@ def test_v1_tavern_package_export_import_redacts_sensitive_config(tmp_path: Path
     imported = client.post(
         "/api/v1/tavern-packages/import",
         headers={"X-User-Id": "owner-imported"},
-        json={"package": package, "lat": 30.0, "lon": 120.0, "name": "导入后的酒馆"},
+        json={"package": package, "lat": 30.0, "lon": 120.0, "name": "导入后的空间"},
     )
     assert imported.status_code == 200
     payload = imported.json()
@@ -91,7 +91,7 @@ def test_v1_tavern_package_export_import_redacts_sensitive_config(tmp_path: Path
     assert payload["characters"] == 1
     assert payload["world_info"] == 1
     assert payload["tavern"]["owner_id"] == "owner-imported"
-    assert payload["tavern"]["name"] == "导入后的酒馆"
+    assert payload["tavern"]["name"] == "导入后的空间"
     assert payload["tavern"]["llm_config"]["api_key"] == ""
 
 

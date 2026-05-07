@@ -1,8 +1,8 @@
 {
   "id": "tv-drama-tavern",
   "name": "tv-drama-tavern",
-  "title": "热门电视剧人物酒馆",
-  "description": "探索将热门电视剧人物（如甄嬛传）放入酒馆，让用户与剧中角色互动的玩法。",
+  "title": "热门电视剧人物空间",
+  "description": "探索将热门电视剧人物（如甄嬛传）放入空间，让用户与剧中角色互动的玩法。",
   "status": "completed",
   "dev_type": "product",
   "scope": null,
@@ -52,7 +52,7 @@
     "frontend/scripts/personality-templates-test.mjs",
     "docs/WHAT_NOT_TO_BUILD.md"
   ],
-  "notes": "2026-04-24 头脑风暴：用户提出将甄嬛传等热门电视剧人物放入酒馆吸引用户。核心洞察：IP 流量、角色互动感、低创作门槛、二次创作空间。关键约束：版权问题，禁止直接使用版权角色名称/设定。推荐方案：方向 A（通用宫廷 NPC 风格模板）+ 长期方向 B（版权授权合作）。2026-04-25：用户要求使用 Trellis 认领任务开发，按方向 A 推进；已补齐任务 context，并通过 context validate、frontend test、build、typecheck。",
+  "notes": "2026-04-24 头脑风暴：用户提出将甄嬛传等热门电视剧人物放入空间吸引用户。核心洞察：IP 流量、角色互动感、低创作门槛、二次创作空间。关键约束：版权问题，禁止直接使用版权角色名称/设定。推荐方案：方向 A（通用宫廷 NPC 风格模板）+ 长期方向 B（版权授权合作）。2026-04-25：用户要求使用 Trellis 认领任务开发，按方向 A 推进；已补齐任务 context，并通过 context validate、frontend test、build、typecheck。",
   "meta": {
     "idea_source": "lijin",
     "idea_date": "2026-04-24",

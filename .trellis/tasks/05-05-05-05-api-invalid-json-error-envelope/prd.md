@@ -14,7 +14,7 @@
 
 - 不改变 API 错误信封字段名。
 - 不暴露异常栈、API Key、LLM prompt 或其它敏感信息给前端。
-- 不改动酒馆/NPC Schema。
+- 不改动空间/NPC Schema。
 
 ## 验收
 

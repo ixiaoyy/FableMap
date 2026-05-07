@@ -19,7 +19,7 @@ def _create_tavern(client: TestClient) -> str:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "预设导入测试酒馆",
+            "name": "预设导入测试空间",
             "description": "用于测试导入预览不会落库",
             "lat": 31.2304,
             "lon": 121.4737,
@@ -61,8 +61,8 @@ def _create_tavern(client: TestClient) -> str:
             "name": "铃兰",
             "description": "吧台后的 NPC",
             "personality": "温和、谨慎",
-            "scenario": "雨夜酒馆",
-            "system_prompt": "保持赛博酒馆 NPC 口吻。",
+            "scenario": "雨夜空间",
+            "system_prompt": "保持空间 NPC 口吻。",
             "first_mes": "欢迎回来。",
         },
     )

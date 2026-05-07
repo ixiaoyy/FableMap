@@ -2,7 +2,7 @@
   "id": "hardcoded-runtime-config-centralization",
   "name": "hardcoded-runtime-config-centralization",
   "title": "Centralize hardcoded runtime config",
-  "description": "集中治理运行时代码中散落的公益酒馆规则、NPC 资产映射、入口默认值和展示 fallback；不改变 Schema 和产品语义。",
+  "description": "集中治理运行时代码中散落的公益空间规则、NPC 资产映射、入口默认值和展示 fallback；不改变 Schema 和产品语义。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": {

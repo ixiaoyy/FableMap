@@ -41,7 +41,7 @@ assert.ok(warningReport.items.some((item) => item.category === 'real_person_visu
 const safeNegativeReport = analyzeCharacterPromptRisk({
   name: '安全边界角色',
   system_prompt: '不要索取手机号、不要真实私人地址、不要真人照片；尊重访客选择，保持短句回应。',
-  first_mes: '欢迎来到这间小酒馆，想聊什么都可以慢慢来。',
+  first_mes: '欢迎来到这间小空间，想聊什么都可以慢慢来。',
 })
 
 assert.equal(safeNegativeReport.canSave, true)

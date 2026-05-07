@@ -112,7 +112,7 @@ def _apply_fields(model: Any, fields: dict[str, Any]) -> None:
 
 
 def load_json_taverns(json_root: Path) -> dict[str, dict[str, Any]]:
-    """从 JSON 文件加载酒馆数据"""
+    """从 JSON 文件加载空间数据"""
     taverns_file = json_root / "taverns.json"
     if not taverns_file.exists():
         logger.error(f"JSON 文件不存在: {taverns_file}")
@@ -145,7 +145,7 @@ def load_keyvault(json_root: Path) -> dict[str, dict[str, Any]]:
 
 
 def migrate_taverns(db: Database, taverns_data: dict[str, dict[str, Any]]) -> int:
-    """迁移/回填酒馆主数据与私有 runtime 桶。"""
+    """迁移/回填空间主数据与私有 runtime 桶。"""
     migrated = 0
     for raw_tavern_id, tavern_dict in taverns_data.items():
         if not isinstance(tavern_dict, dict):
@@ -156,7 +156,7 @@ def migrate_taverns(db: Database, taverns_data: dict[str, dict[str, Any]]) -> in
 
         with db.session_scope() as session:
             tavern_fields = {
-                "name": tavern_dict.get("name", "未命名酒馆"),
+                "name": tavern_dict.get("name", "未命名空间"),
                 "description": tavern_dict.get("description", ""),
                 "lat": tavern_dict.get("lat", 0.0),
                 "lon": tavern_dict.get("lon", 0.0),
@@ -193,11 +193,11 @@ def migrate_taverns(db: Database, taverns_data: dict[str, dict[str, Any]]) -> in
             existing = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if existing:
                 _apply_fields(existing, tavern_fields)
-                logger.debug("回填已存在酒馆: %s", tavern_id)
+                logger.debug("回填已存在空间: %s", tavern_id)
             else:
                 session.add(TavernModel(id=tavern_id, **tavern_fields))
                 migrated += 1
-                logger.info("迁移酒馆: %s (%s)", tavern_id, tavern_dict.get("name", "未命名"))
+                logger.info("迁移空间: %s (%s)", tavern_id, tavern_dict.get("name", "未命名"))
 
             inline_llm = tavern_dict.get("llm_config")
             if isinstance(inline_llm, dict) and str(inline_llm.get("backend") or "").lower() in {"rules", "rule_based", "public_welfare"}:
@@ -370,10 +370,10 @@ def migrate_llm_configs(db: Database, keyvault: dict[str, dict[str, Any]]) -> in
         if not isinstance(config_dict, dict):
             continue
         with db.session_scope() as session:
-            # 检查酒馆是否存在
+            # 检查空间是否存在
             tavern = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if not tavern:
-                logger.debug(f"跳过未知酒馆的 LLM 配置: {tavern_id}")
+                logger.debug(f"跳过未知空间的 LLM 配置: {tavern_id}")
                 continue
 
             existing = session.query(LLMConfigModel).filter(LLMConfigModel.tavern_id == tavern_id).first()
@@ -421,10 +421,10 @@ def migrate_chat_history(db: Database, json_root: Path) -> int:
         tavern_id = tavern_dir.name
 
         with db.session_scope() as session:
-            # 检查酒馆是否存在
+            # 检查空间是否存在
             tavern = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if not tavern:
-                logger.debug(f"跳过未知酒馆的聊天记录: {tavern_id}")
+                logger.debug(f"跳过未知空间的聊天记录: {tavern_id}")
                 continue
 
             for jsonl_file in tavern_dir.glob("*.jsonl"):
@@ -598,7 +598,7 @@ def migrate_writeback_state(db: Database, output_root: Path, *, key: str = "defa
 
 
 def seed_default_taverns(db: Database) -> int:
-    """播种默认公益酒馆"""
+    """播种默认内置小馆"""
     migrated = 0
     for tavern_dict in default_public_welfare_taverns():
         tavern_id = tavern_dict.get("id", "")
@@ -609,7 +609,7 @@ def seed_default_taverns(db: Database) -> int:
 
             tavern_model = TavernModel(
                 id=tavern_id,
-                name=tavern_dict.get("name", "未命名酒馆"),
+                name=tavern_dict.get("name", "未命名空间"),
                 description=tavern_dict.get("description", ""),
                 lat=tavern_dict.get("lat", 0.0),
                 lon=tavern_dict.get("lon", 0.0),
@@ -699,7 +699,7 @@ def seed_default_taverns(db: Database) -> int:
                 session.add(wi_model)
 
             migrated += 1
-            logger.info(f"播种公益酒馆: {tavern_id} ({tavern_dict.get('name')})")
+            logger.info(f"播种默认内置小馆: {tavern_id} ({tavern_dict.get('name')})")
 
     return migrated
 
@@ -728,7 +728,7 @@ def run_migration(
     json_path = _tavern_store_root(output_path, Path(json_root) if json_root else None)
     output_path = _resolve_output_root(json_path, output_path if output_root else None)
     if not json_path.exists():
-        logger.warning("Tavern JSON 目录不存在，将只迁移 side stores/播种默认酒馆: %s", json_path)
+        logger.warning("Tavern JSON 目录不存在，将只迁移 side stores/播种默认空间: %s", json_path)
 
     # 创建数据库连接
     logger.info("目标数据库: %s", redact_database_url(mysql_url))
@@ -742,11 +742,11 @@ def run_migration(
     logger.info("创建表结构...")
     create_mysql_tables(db)
 
-    # 迁移酒馆数据
-    logger.info("迁移酒馆数据...")
+    # 迁移空间数据
+    logger.info("迁移空间数据...")
     taverns_data = load_json_taverns(json_path) if json_path.exists() else {}
     migrated_taverns = migrate_taverns(db, taverns_data)
-    logger.info(f"迁移了 {migrated_taverns} 个酒馆")
+    logger.info(f"迁移了 {migrated_taverns} 个空间")
 
     # 迁移密钥库
     logger.info("迁移 LLM 配置...")
@@ -766,10 +766,10 @@ def run_migration(
     migrated_homes, migrated_home_visits = migrate_homes(db, output_path)
     migrated_writeback = migrate_writeback_state(db, output_path)
 
-    # 播种默认酒馆
-    logger.info("播种默认公益酒馆...")
+    # 播种默认空间
+    logger.info("播种默认内置小馆...")
     seeded = seed_default_taverns(db)
-    logger.info(f"播种了 {seeded} 个默认酒馆")
+    logger.info(f"播种了 {seeded} 个默认空间")
 
     summary = {
         "taverns": migrated_taverns,

@@ -4,7 +4,7 @@
 探索清单/Quest 路由当前明确写着 MVP，仅用前端估算，不持久化。它可以作为引导页，但如果作为“任务/清单”出现在产品里，用户会期待进度可保存，当前实现容易被认为是 demo。
 
 ## Evidence
-- `frontend/app/routes/quests.tsx:75`：`本 MVP 只根据现有酒馆列表做前端引导与进度估算；不新增持久化清单 Schema...`
+- `frontend/app/routes/quests.tsx:75`：`本 MVP 只根据现有空间列表做前端引导与进度估算；不新增持久化清单 Schema...`
 - `docs/WHAT_NOT_TO_BUILD.md` 明确禁止传统游戏化战斗/等级/排行榜方向，因此不能用竞技化任务系统解决。
 
 ## Goal

@@ -24,7 +24,7 @@ This is a **triage recommendation**, not a deletion patch. No code or task direc
 
 | Task | Status | Recommendation | Reason |
 |---|---|---|---|
-| `04-30-create-tavern-step-wizard-mvp` | review | 保留，纳入主链路验收 | 直接覆盖创建酒馆 + NPC + LLM 配置入口。 |
+| `04-30-create-tavern-step-wizard-mvp` | review | 保留，纳入主链路验收 | 直接覆盖创建空间 + NPC + LLM 配置入口。 |
 | `04-28-tavern-interior-ui` | completed | 保留 | 支撑访客进入后的主要空间体验。 |
 | `04-29-tavern-guestbook` | completed | 保留但不扩展成社交 | 店主可见访客反馈，符合“回访反馈”边界。 |
 | `04-29-ai-assisted-tavern-drafts` | completed | 保留 | Owner-confirmed draft，辅助创建，不绕过主人确认。 |
@@ -84,7 +84,7 @@ This is a **triage recommendation**, not a deletion patch. No code or task direc
 
 | Task | Status | Recommendation | Reason |
 |---|---|---|---|
-| `04-28-quest-system` | review | 冻结并重框为探索清单 | “任务系统”容易滑向传统 RPG；必须收敛为酒馆委托/探索清单。 |
+| `04-28-quest-system` | review | 冻结并重框为探索清单 | “任务系统”容易滑向传统 RPG；必须收敛为空间委托/探索清单。 |
 | `04-30-quest-exploration-checklist-reframe` | planning | 只保留为重框定文档 | 不继续做新 quest 功能。 |
 | `04-30-tavern-short-drama-gameplay-template-mvp` | review | 冻结，不继续扩短剧 | 已有实现可留待验收，但不继续叠模板。 |
 | `04-30-gameplay-template-library-for-owners` | planning | 冻结 | 在主链路未稳前，模板库会继续扩大功能面。 |
@@ -99,7 +99,7 @@ This is a **triage recommendation**, not a deletion patch. No code or task direc
 | `04-30-multi-npc-tavern-room-full-ux` | planning | 冻结 | group-chat 已足够；完整多人房间 UX 会扩范围。 |
 | `04-29-tavern-skill-packs-mvp` | review | 冻结扩展，只保留已实现边界 | Skill pack 容易成为能力市场；当前只允许已验证本地传闻等小能力。 |
 | `04-29-neighborhood-rumor-system` | completed | 冻结扩展 | 活性信号有价值，但不能转成社交/推荐网络。 |
-| `04-28-place-type-expansion` | completed | 冻结扩展 | 已扩展地点类型；不要继续稀释“酒馆”主线。 |
+| `04-28-place-type-expansion` | completed | 冻结扩展 | 已扩展地点类型；不要继续稀释“空间”主线。 |
 | `04-28-home-system | completed | 冻结扩展，等待治理审计 | Home 容易演化成无锚点个人主页，必须复盘真实坐标边界。 |
 | `04-30-revisit-care-proactive-notification-design` | planning | 冻结 | 主动通知需要 opt-in/quiet hours/频控，当前不应在主链路验收前展开。 |
 

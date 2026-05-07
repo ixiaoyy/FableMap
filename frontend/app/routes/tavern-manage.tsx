@@ -41,7 +41,7 @@ export async function clientLoader({ params, request }: ClientLoaderFunctionArgs
   const tavernId = params.tavernId ?? ""
   const currentUserId = getOwnerIdFromRequest(request)
   if (!tavernId) {
-    return { tavernId, currentUserId, tavern: null, roleplay: null, isOwner: false, error: "缺少酒馆 ID" }
+    return { tavernId, currentUserId, tavern: null, roleplay: null, isOwner: false, error: "缺少空间 ID" }
   }
 
   try {
@@ -125,7 +125,7 @@ export default function TavernManageRoute() {
               </div>
               <CardTitle>需要店主身份</CardTitle>
               <CardDescription className="mt-2">
-                {error || "这个入口只用于本酒馆店主管理。普通访客请进入访客视角和 NPC 对话。"}
+                {error || "这个入口只用于本空间店主管理。普通访客请进入访客视角和 NPC 对话。"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">

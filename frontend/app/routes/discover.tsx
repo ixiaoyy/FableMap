@@ -69,8 +69,8 @@ type EntryStatusDisplay = {
 const CATEGORIES: Category[] = [
   { label: "异星街角", tags: ["外星人", "便利店"], color: "text-green-300 border-green-300/30 bg-green-300/10" },
   { label: "委托故事", tags: ["文游", "委托板"], color: "text-amber-300 border-amber-300/30 bg-amber-300/10" },
-  { label: "公益空间", tags: ["公益"], color: "text-cyan-300 border-cyan-300/30 bg-cyan-300/10" },
-  { label: "社区陪伴", tags: ["陪伴", "树洞"], color: "text-rose-300 border-rose-300/30 bg-rose-300/10" },
+  { label: "社区据点", tags: ["社区"], color: "text-cyan-300 border-cyan-300/30 bg-cyan-300/10" },
+  { label: "陪伴树洞", tags: ["陪伴", "树洞"], color: "text-rose-300 border-rose-300/30 bg-rose-300/10" },
 ]
 
 const previewCards = [
@@ -178,8 +178,8 @@ function buildEntrySignals(tavern: TavernWithTimeStatus | Tavern, placeType: Ret
     },
     {
       label: "氛围",
-      value: placeType.shortLabel || placeType.label || "酒馆",
-      helper: compactDisplayText(placeType.tone, placeType.description || "真实坐标上的酒馆入口"),
+      value: placeType.shortLabel || placeType.label || "空间",
+      helper: compactDisplayText(placeType.tone, placeType.description || "真实坐标上的空间入口"),
       className: placeType.cardClass || "border-cyan-300/24 bg-cyan-300/10 text-cyan-50",
     },
     {
@@ -791,7 +791,7 @@ function ResultCard({
             {tavern.description || "这个区域还没有公开简介，但坐标已经亮起。"}
           </p>
           <p className="mt-2 line-clamp-1 text-xs font-bold text-cyan-100/68">
-            氛围线索：{compactDisplayText(placeType.tone, tavern.scene_prompt || "真实坐标上的赛博入口", 42)}
+            氛围线索：{compactDisplayText(placeType.tone, tavern.scene_prompt || "真实坐标上的入口", 42)}
           </p>
         </div>
         <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} muted={isClosed} />

@@ -19,8 +19,8 @@ assert.ok(discoverSource.includes("附近坐标") && discoverSource.includes("�
 assert.ok(discoverSource.includes("activeViewMode"), "discover route should derive the active view mode")
 assert.ok(discoverSource.includes("discoverRadarSurfaceImage"), "discover radar view should use a project-local high-quality radar surface asset")
 assert.ok(discoverSource.includes("discover-cover-neon-alley.png"), "discover cards should use project-local high-quality cover assets")
-assert.ok(!discoverSource.includes("发现附近的赛博酒馆"), "discover hero should not remain Tavern-only")
-assert.ok(!discoverSource.includes("搜索酒馆名称…"), "discover search placeholder should not remain Tavern-only")
+assert.ok(!discoverSource.includes("发现附近的空间"), "discover hero should not remain Tavern-only")
+assert.ok(!discoverSource.includes("搜索空间名称…"), "discover search placeholder should not remain Tavern-only")
 assert.ok(!shellSource.includes("Cyber taverns on real places"), "product shell subtitle should not remain Tavern-only")
 assert.ok(shellSource.includes("Cyber life on real coordinates"), "product shell should align with the broader coordinate-space positioning")
 

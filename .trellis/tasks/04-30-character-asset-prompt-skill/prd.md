@@ -39,7 +39,7 @@
 ## Acceptance Criteria
 
 - [x] Skill 描述能触发角色卡 Prompt、NPC 视觉素材 Prompt、表情组 Prompt、图片风格反推 Prompt 等场景。
-- [x] Prompt 模板遵守 FableMap 约束：真实地点/酒馆锚点、主人主权、AI 草稿需确认、SillyTavern 兼容字段、不要新增 Schema。
+- [x] Prompt 模板遵守 FableMap 约束：真实地点/空间锚点、主人主权、AI 草稿需确认、SillyTavern 兼容字段、不要新增 Schema。
 - [x] 视觉 Prompt 模板要求 tavern cues，并避开具体 IP/Logo/水印/在世艺术家模仿。
 - [x] Trellis frontend NPC art spec 记录该 meta-generation contract。
 - [x] 运行可行的文档/skill 验证；若官方验证工具因本地依赖缺失失败，需要如实记录。
@@ -72,7 +72,7 @@ User feedback: prior recording was too shallow; future sessions should preserve 
 
 Additional recipes preserved in `.agents/skills/generate-character-prompt/references/style-recipes.md`:
 
-- 米白-红色电路图 / 奶油留白赛博平面
+- 米白-红色电路图 / 奶油留白平面
 - Y2K + 波普艺术 / 电光蓝橘像素街景
 - 赛璐璐平涂 + 思维爆发 / 内省碎片拼贴
 - 波普艺术 + 拼贴 + 70/80 年代街头海报

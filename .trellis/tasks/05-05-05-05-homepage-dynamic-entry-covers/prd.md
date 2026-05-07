@@ -8,7 +8,7 @@ User observed that the native homepage feels hardcoded:
 - The section titled `从地图进入未被看见的世界` shows fixed entries rather than real tavern data.
 - Tavern/card entrance images can repeat, weakening the sense that map entries lead to distinct worlds.
 
-Visual companion choice: user selected **A. 真实酒馆驱动（推荐）**.
+Visual companion choice: user selected **A. 真实空间驱动（推荐）**.
 
 ## Goals
 

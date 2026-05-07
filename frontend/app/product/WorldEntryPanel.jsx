@@ -23,15 +23,15 @@ export default function WorldEntryPanel({
     ? '正在读取附近地点...'
     : submitting
       ? '正在刷新附近内容...'
-      : '查看附近地点与酒馆'
+      : '查看附近地点与空间'
 
   const primaryActionHint = autoEntering
-    ? '系统正在根据当前位置准备附近地点和酒馆入口，请稍候。'
+    ? '系统正在根据当前位置准备附近地点和空间入口，请稍候。'
     : submitting
       ? '正在刷新当前位置附近的地图内容，完成后会直接更新下方区域。'
       : result
-        ? '附近内容已经准备好；往下可以直接选择地点或进入酒馆。'
-        : '点击主按钮后，会按当前入口和范围显示附近地点与酒馆。'
+        ? '附近内容已经准备好；往下可以直接选择地点或进入空间。'
+        : '点击主按钮后，会按当前入口和范围显示附近地点与空间。'
 
   const actionStatusChip = autoEntering || submitting
     ? '刷新中'

@@ -122,15 +122,15 @@ def test_tavern_draft_generate_uses_llm_and_does_not_persist(tmp_path, monkeypat
 
     content = json.dumps(
         {
-            "name": "外滩雨灯酒馆",
-            "description": "一间望向江风和霓虹的夜间小酒馆。",
+            "name": "外滩雨灯空间",
+            "description": "一间望向江风和霓虹的夜间小空间。",
             "scene_prompt": "雨后的外滩，玻璃窗上映着轮渡灯影。",
             "character": {
                 "name": "灯叔",
                 "description": "守着旧吧台的夜班招待。",
                 "personality": "温和、细心、带一点上海式幽默。",
                 "scenario": "他会向初来者介绍这间店的规矩和窗外的风景。",
-                "system_prompt": "你是灯叔，只回应酒馆内的现实映射和店主确认内容。",
+                "system_prompt": "你是灯叔，只回应空间内的现实映射和店主确认内容。",
                 "first_mes": "伞先靠门边，今晚江风有点急。",
                 "mes_example": "旅人：这里为什么叫雨灯？\n灯叔：因为雨一来，灯就替人记路。",
                 "tags": ["外滩", "雨夜", "招待"],
@@ -155,7 +155,7 @@ def test_tavern_draft_generate_uses_llm_and_does_not_persist(tmp_path, monkeypat
 
     assert response.status_code == 200
     body = response.json()
-    assert body["draft"]["name"] == "外滩雨灯酒馆"
+    assert body["draft"]["name"] == "外滩雨灯空间"
     assert body["draft"]["character"]["name"] == "灯叔"
     assert "api_key" not in json.dumps(body, ensure_ascii=False)
     assert draft_client.messages[0]["role"] == "system"

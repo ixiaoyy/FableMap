@@ -4,15 +4,15 @@
 
 把本轮检索发现的“散落写死数据”纳入 Trellis 任务并完成低风险集中化：
 
-1. 后端规则 fallback 中按公益酒馆 ID 分散的运行时特判，集中到单一配置模块。
-2. 前端 NPC fallback 肖像、公益 NPC 资产路径兼容、氛围图/首页 fallback、新人入口默认酒馆等配置集中到可复用模块。
+1. 后端规则 fallback 中按公益空间 ID 分散的运行时特判，集中到单一配置模块。
+2. 前端 NPC fallback 肖像、公益 NPC 资产路径兼容、氛围图/首页 fallback、新人入口默认空间等配置集中到可复用模块。
 3. 默认 owner/visitor demo 身份保留现有 API 兼容，但增加明确命名和回归检查，避免 visitor 路径错误落到 owner-demo。
 4. 保持现有 Tavern / TavernCharacter / WorldInfoEntry / VisitorState Schema 不变，保持公益默认内容不改文案语义。
 
 ## 可修改范围
 
 - `backend/src/fablemap_api/core/` 中运行时规则配置和服务调用点。
-- `backend/src/fablemap_api/application/services/` 中按酒馆 ID 的轻量规则调用点。
+- `backend/src/fablemap_api/application/services/` 中按空间 ID 的轻量规则调用点。
 - `frontend/app/lib/`、`frontend/app/features/tavern-npc-stage/`、`frontend/app/features/tavern-chat-workbench/`、`frontend/app/product/services/` 中配置/解析工具。
 - `frontend/scripts/` 和 `tests/` 中针对集中化边界的回归测试。
 - 本任务目录内 Trellis 记录。
@@ -20,7 +20,7 @@
 ## 不改范围
 
 - 不新增或修改 `docs/WORLD_SCHEMA.md` 中的数据字段/枚举含义。
-- 不改变默认公益酒馆的 tavern_id / character_id / 文案语义 / 坐标 / 访问规则。
+- 不改变默认公益空间的 tavern_id / character_id / 文案语义 / 坐标 / 访问规则。
 - 不移动、删除、重命名既有 `docs/` 文档。
 - 不引入新依赖。
 - 不改图片资源文件本身。

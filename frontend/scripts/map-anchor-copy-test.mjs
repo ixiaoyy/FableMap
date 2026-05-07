@@ -55,13 +55,13 @@ assert.match(passwordCard.accessLine, /口令/)
 assert.match(passwordCard.anchorLine, /坐标门牌/)
 
 const markerCopy = buildMapAnchorMarkerCopy({
-  name: '夜班补给站',
+  name: '夜班便利店',
   access: 'private',
   status: 'open',
 })
 assert.equal(markerCopy.badgeLabel, '👤 私人灯牌')
 assert.equal(markerCopy.statusText, '灯牌亮着')
-assert.match(markerCopy.title, /夜班补给站 · 灯牌亮着/)
+assert.match(markerCopy.title, /夜班便利店 · 灯牌亮着/)
 
 assert.equal(
   buildMapAnchorSummaryCopy({ matching: 0, total: 0 }),
@@ -79,7 +79,7 @@ assert(!laneSource.includes('个 marker'), 'Discovery lane should not expose raw
 
 const mapSource = readFileSync(path.join(repoRoot, 'app/product/WorldMap.jsx'), 'utf8')
 assert.match(mapSource, /buildMapAnchorSummaryCopy/)
-assert(!mapSource.includes('酒馆标记'), 'Map chrome should use lantern/anchor copy instead of raw marker copy')
+assert(!mapSource.includes('空间标记'), 'Map chrome should use lantern/anchor copy instead of raw marker copy')
 
 const adapterSource = readFileSync(path.join(repoRoot, 'app/product/mapAdapter/AMapAdapter.js'), 'utf8')
 assert.match(adapterSource, /buildMapAnchorMarkerCopy/)

@@ -1,8 +1,8 @@
 {
   "id": "alien-convenience-tavern",
   "name": "alien-convenience-tavern",
-  "title": "外星便利店公益酒馆",
-  "description": "新增《第三货架后面》默认公益酒馆，包含外星便利店设定、4 个 NPC、WorldInfo、轻玩法和 rules 后端主题回复。",
+  "title": "外星便利店公益空间",
+  "description": "新增《第三货架后面》默认公益空间，包含外星便利店设定、4 个 NPC、WorldInfo、轻玩法和 rules 后端主题回复。",
   "status": "completed",
   "dev_type": "backend",
   "scope": "default-taverns",

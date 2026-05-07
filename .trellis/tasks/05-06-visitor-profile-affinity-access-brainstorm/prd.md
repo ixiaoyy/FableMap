@@ -1,15 +1,15 @@
-# brainstorm: 游客身份画像驱动初始好感与酒馆可见性
+# brainstorm: 游客身份画像驱动初始好感与空间可见性
 
 ## Goal
 
-设计一套“游客身份画像 → 初始好感 → 长期记忆 → 酒馆/NPC 可见性”的 MVP：游客进入酒馆前可选择/确认性别、年龄段、城市等基础身份；NPC 和酒馆对新游客的初始好感不再固定，而是由店主配置的首印象规则计算；注册/登录用户可保留长期记忆，普通游客只拥有临时会话，不写入长期记忆；酒馆和 NPC 可以按性别、年龄段等规则隐藏或限制，普通游客 / 未完善身份游客默认不满足隐藏条件。
+设计一套“游客身份画像 → 初始好感 → 长期记忆 → 空间/NPC 可见性”的 MVP：游客进入空间前可选择/确认性别、年龄段、城市等基础身份；NPC 和空间对新游客的初始好感不再固定，而是由店主配置的首印象规则计算；注册/登录用户可保留长期记忆，普通游客只拥有临时会话，不写入长期记忆；空间和 NPC 可以按性别、年龄段等规则隐藏或限制，普通游客 / 未完善身份游客默认不满足隐藏条件。
 
 ## What I already know
 
-* 用户希望 NPC 和酒馆对游客的初始好感不是固定值，而与游客一开始选择的性别、年龄、城市有关。
+* 用户希望 NPC 和空间对游客的初始好感不是固定值，而与游客一开始选择的性别、年龄、城市有关。
 * 用户明确指出这涉及游客身份建立、注册和登录。
 * 用户希望注册/登录用户可以保留长期记忆，普通游客无长期记忆。
-* 用户希望酒馆可增设性别、年龄限制：对不同性别、年龄可以隐藏。
+* 用户希望空间可增设性别、年龄限制：对不同性别、年龄可以隐藏。
 * 用户明确要求：普通游客默认不满足隐藏条件。
 * 当前后端的身份机制仍是 MVP 级 `X-User-Id` / query `user_id`，没有完整账号、密码、OAuth 或 session auth。
 * 当前 `VisitorState` 已记录 `visitor_id`、`tavern_id`、`gender`、visit count、first/last visit、relationship strength/stage。
@@ -20,13 +20,13 @@
 
 ## Constraints from authoritative docs
 
-* 主人主权：酒馆内容、角色、氛围、访问规则由店主决定。
+* 主人主权：空间内容、角色、氛围、访问规则由店主决定。
 * 平台不得从姓名、头像、对话或 AI 草稿中自动推断/覆盖游客或 NPC 性别。
 * VisitorState.gender 当前只绑定 tavern_id + visitor_id，不得扩展为全局公开社交筛选。
-* 不做无边界访客社交：身份画像不能变成好友、匹配、动态墙或跨酒馆社交图谱。
+* 不做无边界访客社交：身份画像不能变成好友、匹配、动态墙或跨空间社交图谱。
 * 记忆必须结构化落库、可回放、可测试；长期记忆必须绑定明确访客状态。
 * 未成年人/学校相关信息不得采集或展示真实未成年人身份；年龄应使用粗粒度年龄段，不采集身份证、生日或真实未成年人资料。
-* 平台不绕过店主确认自动发布内容；画像规则只能选择/隐藏店主已确认的酒馆内容、NPC、玩法或话题。
+* 平台不绕过店主确认自动发布内容；画像规则只能选择/隐藏店主已确认的空间内容、NPC、玩法或话题。
 
 ## Recommended Framing
 
@@ -34,9 +34,9 @@
 
 1. **身份层**：游客可以是 `guest`、`registered`、`owner`。只有 `registered/owner` 有稳定 user_id 和长期记忆资格；`guest` 是临时身份。
 2. **画像层**：游客自声明 profile，包括 `gender`、`age_band`、`city`。MVP 只存粗粒度、可改、可清除的自声明资料；不做自动推断或真实身份验证。
-3. **规则层**：店主配置 `first_impression_rules` 和 `visibility_rules`，用于计算初始好感、隐藏酒馆/NPC/玩法入口。
+3. **规则层**：店主配置 `first_impression_rules` 和 `visibility_rules`，用于计算初始好感、隐藏空间/NPC/玩法入口。
 
-关键产品口径：这是“酒馆内的第一印象和访问礼仪”，不是平台级用户画像广告系统、匹配系统或实名审核系统。
+关键产品口径：这是“空间内的第一印象和访问礼仪”，不是平台级用户画像广告系统、匹配系统或实名审核系统。
 
 ## Requirements
 
@@ -60,7 +60,7 @@ type VisitorIdentityKind = 'guest' | 'registered' | 'owner';
   * 可保存长期 VisitorState、ChatMessage、MemoryAtom、抽卡/礼物/金币等后续长期进度。
   * 可保存自声明 profile。
 * `owner`：店主身份。
-  * 可看到/管理自己酒馆的全部配置和隐藏内容。
+  * 可看到/管理自己空间的全部配置和隐藏内容。
   * 可用“以某类游客预览”的方式测试规则。
 
 ### 2. 游客画像字段
@@ -85,7 +85,7 @@ interface VisitorProfile {
 * 城市为自声明文本或标准化 city code；MVP 不自动从 IP/GPS 推断。
 * 性别沿用现有 Gender 枚举，不自动推断。
 * 普通游客的临时 profile 只用于当次入场/聊天，不进入长期 VisitorProfile。
-* 对进入某个酒馆时使用的 profile，建议在 `VisitorState` 或私有进度桶中保存 `profile_snapshot`，用于解释“为什么初始好感是这个值”，避免游客之后改资料导致旧记录不可追踪。
+* 对进入某个空间时使用的 profile，建议在 `VisitorState` 或私有进度桶中保存 `profile_snapshot`，用于解释“为什么初始好感是这个值”，避免游客之后改资料导致旧记录不可追踪。
 
 ### 3. 初始好感规则
 
@@ -123,12 +123,12 @@ interface FirstImpressionConfig {
 
 ### 4. 角色级初始好感
 
-现有 `VisitorState.relationship` 是酒馆级。前序抽卡/礼物设计已经引入角色好感概念，因此这里建议：
+现有 `VisitorState.relationship` 是空间级。前序抽卡/礼物设计已经引入角色好感概念，因此这里建议：
 
-* 酒馆级首印象：写入/初始化 `VisitorState.relationship_strength`。
+* 空间级首印象：写入/初始化 `VisitorState.relationship_strength`。
 * 角色级首印象：写入未来统一私有进度桶，如 `_visitor_progress.character_affinity[character_id]`。
-* 如果当前版本还没有角色级进度落库，MVP 先只做酒馆级初始好感，角色级规则作为下一切片。
-* NPC 的开场白可读取酒馆级和角色级好感，但不能因为游客画像生成歧视性、骚扰性或不适宜内容。
+* 如果当前版本还没有角色级进度落库，MVP 先只做空间级初始好感，角色级规则作为下一切片。
+* NPC 的开场白可读取空间级和角色级好感，但不能因为游客画像生成歧视性、骚扰性或不适宜内容。
 
 ### 5. 登录与长期记忆
 
@@ -142,7 +142,7 @@ interface FirstImpressionConfig {
 * 用户注册/登录后，可选择“把本次临时会话升级为长期记忆”，但必须明确确认；默认不自动合并匿名会话。
 * 删除账号/清空 profile 时，应能删除或解绑相关长期记忆。
 
-### 6. 酒馆 / NPC / 玩法可见性规则
+### 6. 空间 / NPC / 玩法可见性规则
 
 推荐新增统一 `visibility_rules`，覆盖 tavern、character、gameplay、gacha hidden content：
 
@@ -171,17 +171,17 @@ interface VisibilityRuleSet {
 
 * 普通游客 `guest` 默认不满足隐藏内容条件。
 * 未登录或 profile 不完整时，`gender/age/city` 规则默认不命中，除非店主明确配置 `unspecified` 可见。
-* Owner 总是能看到自己酒馆的全部内容，并能预览不同画像下的可见结果。
-* 列表/地图发现时：不满足 tavern 级隐藏规则的酒馆不显示。
-* 直达链接时：返回通用提示，例如“这间酒馆需要登录或完善入场身份后查看”，避免泄露过多隐藏规则。
+* Owner 总是能看到自己空间的全部内容，并能预览不同画像下的可见结果。
+* 列表/地图发现时：不满足 tavern 级隐藏规则的空间不显示。
+* 直达链接时：返回通用提示，例如“这间空间需要登录或完善入场身份后查看”，避免泄露过多隐藏规则。
 * NPC/玩法隐藏时：不出现在角色列表、玩法入口、抽卡可见池中。
 * 不应把规则用于全局推荐、陌生人匹配或公开展示“这里不欢迎某类人”的排行榜式信息。
 
 ### 7. 入场流程
 
-推荐访客进入酒馆前的流程：
+推荐访客进入空间前的流程：
 
-1. 访客点击酒馆。
+1. 访客点击空间。
 2. 后端返回公开预览：名称、简介、是否需要 profile/登录，不泄露隐藏内容。
 3. 若规则要求身份，前端显示“选择入场身份”：登录/注册、继续普通游客、填写自声明资料。
 4. 后端调用 `POST /taverns/{id}/enter`，携带 profile snapshot 或 profile id。
@@ -202,7 +202,7 @@ interface VisibilityRuleSet {
 * `GET /api/v1/me`
 * `PUT /api/v1/me/profile`
 
-酒馆入场/规则：
+空间入场/规则：
 
 * `POST /api/v1/taverns/{tavern_id}/enter`
   * 增加 `identity_kind`、`visitor_profile` 或 `profile_snapshot`。
@@ -237,7 +237,7 @@ interface VisibilityRuleSet {
 
 ## Recommended MVP Slice
 
-第一阶段只做 **“入场身份画像 + 酒馆级初始好感 + 隐藏可见性评估 + guest 不写长期记忆”**：
+第一阶段只做 **“入场身份画像 + 空间级初始好感 + 隐藏可见性评估 + guest 不写长期记忆”**：
 
 * 不做完整 OAuth/密码账号系统，继续用 `X-User-Id` 代表已登录占位身份。
 * 增加 `identity_kind` 与 `profile_snapshot`。
@@ -251,11 +251,11 @@ interface VisibilityRuleSet {
 
 ## Acceptance Criteria
 
-* [ ] 新游客首次进入酒馆时，初始好感由 default + profile 命中规则计算，而不是固定 0。
+* [ ] 新游客首次进入空间时，初始好感由 default + profile 命中规则计算，而不是固定 0。
 * [ ] 初始好感只计算一次，后续改资料不会重复刷首印象。
 * [ ] 游客可自声明 gender、age_band、city；平台不自动推断这些字段。
 * [ ] 普通游客/未登录游客默认不满足隐藏内容条件。
-* [ ] 不满足 tavern 级隐藏规则的酒馆不出现在地图/列表；直达链接只显示通用提示。
+* [ ] 不满足 tavern 级隐藏规则的空间不出现在地图/列表；直达链接只显示通用提示。
 * [ ] 不满足 NPC/玩法规则的内容不出现在访客可见列表、抽卡池或入口。
 * [ ] 登录/稳定用户可保留长期 VisitorState/ChatMessage/MemoryAtom。
 * [ ] guest 聊天不创建长期 MemoryAtom / state card / 抽卡长期进度。
@@ -291,7 +291,7 @@ interface VisibilityRuleSet {
 
 ### Consequences
 
-* 可以快速验证“不同游客进入同一酒馆第一印象不同”的体验。
+* 可以快速验证“不同游客进入同一空间第一印象不同”的体验。
 * 能把普通游客和长期记忆用户的边界说清楚，避免匿名 ID 污染长期记忆。
 * 需要后续实现统一可见性过滤，否则只过滤入口、不过滤角色/玩法/抽卡池会产生越权可见。
 * 未来做正式 auth 时，需要迁移 `X-User-Id` 占位身份到真实 user/account/session 模型。
@@ -304,10 +304,10 @@ interface VisibilityRuleSet {
 
 ### Docs inspected
 
-* `README.md`: 主链路包含浏览酒馆、进入酒馆、对话互动、写回记忆、回访反馈。
+* `README.md`: 主链路包含浏览空间、进入空间、对话互动、写回记忆、回访反馈。
 * `docs/PRODUCT_BRIEF.md`: 主人主权、访问规则、写回与记忆是 MVP 能力。
 * `docs/WORLD_SCHEMA.md`: `VisitorState` 当前包含 `gender`，且限定为当前 tavern_id + visitor_id 作用域。
-* `docs/WHAT_NOT_TO_BUILD.md`: 不做无边界访客社交；记忆必须结构化落库；不自动发布 NPC/酒馆内容。
+* `docs/WHAT_NOT_TO_BUILD.md`: 不做无边界访客社交；记忆必须结构化落库；不自动发布 NPC/空间内容。
 * `docs/AI参与开发协议.md`: 新功能优先 Trellis 留痕，最小闭环。
 
 ### Code inspected

@@ -6,7 +6,7 @@
 ## Requirements
 - 新增统一 `Gender` 枚举：`unspecified | female | male | nonbinary | other`。
 - NPC 性别保存到 `TavernCharacter.gender`，随角色创建、更新、读取、导入/导出 payload 传递。
-- 游客性别保存到 tavern-scoped `VisitorState.gender`，通过进入酒馆和聊天请求写入/更新。
+- 游客性别保存到 tavern-scoped `VisitorState.gender`，通过进入空间和聊天请求写入/更新。
 - 缺失、空值、旧数据读取时默认 `unspecified`；常见中英文别名归一化为受控枚举。
 - 前端新增共享 gender helper、类型字段、游客聊天 UI 选择和 NPC 编辑器选择。
 - MySQL 可选持久层和 JSON 持久层均需 round-trip。
@@ -20,7 +20,7 @@
 
 ## Acceptance Criteria
 - [ ] 后端 API 创建/更新 NPC 时可保存 `gender`，旧数据默认 `unspecified`。
-- [ ] 进入酒馆与发送聊天可写入 `visitor_gender`，返回 `visitor_state.gender`。
+- [ ] 进入空间与发送聊天可写入 `visitor_gender`，返回 `visitor_state.gender`。
 - [ ] JSON 和 MySQL 持久化均能 round-trip NPC/Visitor 性别。
 - [ ] 前端 `npm test` 覆盖 gender helper/角色 payload 归一化。
 - [ ] `docs/WORLD_SCHEMA.md` 定义 Gender、TavernCharacter.gender、VisitorState.gender。

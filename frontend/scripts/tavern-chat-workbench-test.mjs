@@ -73,7 +73,7 @@ for (const snippet of [
   'data-chat-composer="fast-entry"',
   'data-visitor-identity-settings',
   "发言身份",
-  "更多酒馆功能",
+  "更多空间功能",
 ]) {
   assert.ok(workbenchSource.includes(snippet), `workbench should include ${snippet}`)
 }
@@ -111,9 +111,9 @@ for (const snippet of [
   "表情缩略",
   "First message",
   "Current NPC",
-  'title="酒馆信息"',
+  'title="空间信息"',
   "真实地图锚点与公开说明",
-  "管理入口仅酒馆所有人可见",
+  "管理入口仅空间所有人可见",
 ]) {
   assert.ok(!workbenchSource.includes(snippet), `visitor chat sidecar should not include project-like sidebar copy: ${snippet}`)
 }
@@ -150,8 +150,8 @@ assert.ok(
 )
 assert.ok(
   workbenchSource.includes("responseModeLabel") &&
-    workbenchSource.includes("规则模式 / 无 Key 轻量接待") &&
-    workbenchSource.includes("外部 LLM 模式"),
+    workbenchSource.includes("公共空间") &&
+    workbenchSource.includes("AI 对话"),
   "native tavern workbench should show rules/AI response mode labels",
 )
 assert.ok(
@@ -160,8 +160,8 @@ assert.ok(
 )
 assert.ok(
   productChatRoomSource.includes("getTavernResponseMode") &&
-    productChatRoomSource.includes("规则模式 / 无 Key 轻量接待") &&
-    productChatRoomSource.includes("外部 LLM 模式"),
+    productChatRoomSource.includes("公共空间") &&
+    productChatRoomSource.includes("AI 对话"),
   "legacy product chat room should also show a rules/AI response mode badge",
 )
 

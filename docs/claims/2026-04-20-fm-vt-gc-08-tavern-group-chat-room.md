@@ -22,7 +22,7 @@ Codex
 
 ## 任务目标
 
-在 GC-07 已封装酒馆级群聊 API 后，把现有 `TavernChatRoom.jsx` 的群聊模式从临时 `/api/group/*` 选择器 + 多次单聊生成，收口到酒馆级持久群聊接口：
+在 GC-07 已封装空间级群聊 API 后，把现有 `TavernChatRoom.jsx` 的群聊模式从临时 `/api/group/*` 选择器 + 多次单聊生成，收口到空间级持久群聊接口：
 
 1. 群聊模式进入时加载 `/group-chat/history`。
 2. 访客发送消息时调用 `sendGroupChat()`，一次返回多个角色回复。

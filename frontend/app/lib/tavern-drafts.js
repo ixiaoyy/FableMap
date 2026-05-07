@@ -35,7 +35,7 @@ export function draftResponseToCreateForm(response) {
   const draft = response?.draft
   const character = draft?.character
   if (!draft || !character) {
-    throw new Error('AI 酒馆草稿返回为空')
+    throw new Error('AI 空间草稿返回为空')
   }
   return {
     name: text(draft.name),

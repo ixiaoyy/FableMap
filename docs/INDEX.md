@@ -6,28 +6,28 @@
 
 1. [README.md](../README.md) - 项目总览、当前原型状态、文档导航
 2. [docs/PRODUCT_BRIEF.md](PRODUCT_BRIEF.md) - 当前产品定义与目标体验
-3. [docs/FABLEMAP_TAVERN_PLATFORM.md](FABLEMAP_TAVERN_PLATFORM.md) - 赛博酒馆平台完整设计文档（主线）
+3. [docs/FABLEMAP_TAVERN_PLATFORM.md](FABLEMAP_TAVERN_PLATFORM.md) - 空间平台完整设计文档（主线）
 4. [docs/ARCHITECTURE.md](ARCHITECTURE.md) - 系统分层、模块边界、API 端点
 5. [docs/CURRENT_TASKS.md](CURRENT_TASKS.md) - 当前实施阶段与优先级
-6. [docs/AI_SHARED_TASKLIST.md](AI_SHARED_TASKLIST.md) - 轻量酒馆体验壳、记忆系统与后续共享待办
+6. [docs/AI_SHARED_TASKLIST.md](AI_SHARED_TASKLIST.md) - 轻量空间体验壳、记忆系统与后续共享待办
 7. [docs/WHAT_NOT_TO_BUILD.md](WHAT_NOT_TO_BUILD.md) - 明确不做清单
 
 ---
 
 ## P0 - 当前主线文档（必读）
 
-这些文档共同定义当前 FableMap 赛博酒馆平台的产品方向、系统主链路与执行口径。
+这些文档共同定义当前 FableMap 空间平台的产品方向、系统主链路与执行口径。
 
 | 文档 | 用途 | 状态 |
 |------|------|------|
 | [README.md](../README.md) | 项目总览、当前入口、文档导航 | ✅ 当前有效 |
 | [docs/PRODUCT_BRIEF.md](PRODUCT_BRIEF.md) | 产品定义、用户价值、目标体验 | ✅ 当前有效 |
-| [docs/FABLEMAP_TAVERN_PLATFORM.md](FABLEMAP_TAVERN_PLATFORM.md) | 赛博酒馆平台完整设计文档 | ✅ **主线** |
+| [docs/FABLEMAP_TAVERN_PLATFORM.md](FABLEMAP_TAVERN_PLATFORM.md) | 空间平台完整设计文档 | ✅ **主线** |
 | [docs/ARCHITECTURE.md](ARCHITECTURE.md) | 系统分层、模块边界、API 端点 | ✅ 当前有效 |
 | [docs/CURRENT_TASKS.md](CURRENT_TASKS.md) | 当前实施阶段与优先级 | ✅ 当前有效 |
 | [docs/AI_SHARED_TASKLIST.md](AI_SHARED_TASKLIST.md) | VisionTale 参考后的共享任务清单：开店向导、预设、记忆、世界书、UGC 包 | ✅ 待实现 / 可认领 |
 | [docs/WHAT_NOT_TO_BUILD.md](WHAT_NOT_TO_BUILD.md) | 明确不做清单、约束边界 | ✅ 当前有效 |
-| [docs/WORLD_SCHEMA.md](WORLD_SCHEMA.md) | 世界数据结构（含酒馆 / 玩法数据模型） | ✅ 当前有效 |
+| [docs/WORLD_SCHEMA.md](WORLD_SCHEMA.md) | 世界数据结构（含空间 / 玩法数据模型） | ✅ 当前有效 |
 
 ---
 
@@ -73,4 +73,4 @@
 
 ## 一句话说明
 
-当前 FableMap 的文档主线为**赛博酒馆平台**：每个人都可以在真实地图上开一间自己的赛博酒馆，配置 AI NPC，接待访客。
+当前 FableMap 的文档主线为**空间平台**：每个人都可以在真实地图上开一间自己的空间，配置 AI NPC，接待访客。

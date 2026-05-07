@@ -13,11 +13,11 @@ const publishedShortDrama = {
   id: 'gp_truth',
   title: '判断谁在说谎',
   status: 'published',
-  summary: '用酒馆线索做轻推理，不做人身指控。',
+  summary: '用空间线索做轻推理，不做人身指控。',
   entry_label: '开始轻推理',
   owner_brief: {
-    goal: '通过 3 个安全线索判断哪句话前后矛盾，只给出酒馆内结论。',
-    forbidden: ['不绕过店主确认自动发布剧情、NPC 或酒馆内容'],
+    goal: '通过 3 个安全线索判断哪句话前后矛盾，只给出空间内结论。',
+    forbidden: ['不绕过店主确认自动发布剧情、NPC 或空间内容'],
   },
   nodes: [
     {

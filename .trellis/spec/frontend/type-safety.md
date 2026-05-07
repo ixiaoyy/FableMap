@@ -25,7 +25,7 @@ Example service JSDoc:
 
 ```javascript
 /**
- * 获取酒馆详情
+ * 获取空间详情
  * @param {string} tavernId
  * @param {string} userId
  * @returns {Promise<object>}
@@ -252,7 +252,7 @@ POST /api/v1/owners/me/tavern-drafts/generate
 - The AI draft panel may fill `name`, `description`, `scene_prompt`, `character_name`, `character_description`, and `first_mes`; it must not call `createTavern` or `addCharacter`.
 - The create-page submit path must require `character_name` before calling `createTavern`; every UI-created shop needs at least one formal NPC so the core character chat loop is available immediately after creation.
 - `LLMConfigForm` is controlled: pass both `value` and `onChange`; do not keep owner API keys in `localStorage`.
-- UI copy must tell the owner that the draft is editable and only becomes real after clicking `创建酒馆`.
+- UI copy must tell the owner that the draft is editable and only becomes real after clicking `创建空间`.
 
 ### 4. Validation & Error Matrix
 
@@ -262,8 +262,8 @@ POST /api/v1/owners/me/tavern-drafts/generate
 | Owner edits style/forbidden/tone | Request sends normalized arrays/text |
 | Draft response missing `character` | Helper throws user-readable draft-empty error |
 | Draft generation succeeds | Existing create form fields are filled; no create request is sent |
-| Owner clicks `创建酒馆` without NPC name | UI blocks submission with a user-readable error and sends no create request |
-| Owner clicks `创建酒馆` with NPC name | Existing create flow calls `createTavern` / `addCharacter` with owner-confirmed form data |
+| Owner clicks `创建空间` without NPC name | UI blocks submission with a user-readable error and sends no create request |
+| Owner clicks `创建空间` with NPC name | Existing create flow calls `createTavern` / `addCharacter` with owner-confirmed form data |
 | Typecheck on LLM form props | `LLMConfigForm` receives `value` and `onChange` |
 
 ### 5. Good/Base/Bad Cases

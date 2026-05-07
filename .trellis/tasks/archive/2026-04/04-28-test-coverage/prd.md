@@ -8,7 +8,7 @@
 
 ### 后端测试
 - pytest 测试基本覆盖 API 端点
-- 公益酒馆测试完整
+- 公益空间测试完整
 - 缺少：LLM clients, char card parser 等新模块测试
 
 ### 前端测试

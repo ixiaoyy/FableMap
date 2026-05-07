@@ -43,7 +43,7 @@ export function buildHeroMetrics({
           id: 'manage',
           label: '店主后台',
           value: '吧台账本',
-          detail: '酒馆、角色和访客都收在这里。',
+          detail: '空间、角色和访客都收在这里。',
         },
         {
           id: 'memory',
@@ -60,7 +60,7 @@ export function buildHeroMetrics({
     cards: [
       {
         id: 'taverns',
-        label: '附近酒馆',
+        label: '附近空间',
         value: totalTaverns > 0 ? `${matchingTaverns} / ${totalTaverns} 间` : '等待发现',
         detail: openTaverns > 0
           ? `${openTaverns} 盏灯亮着，挑一间进去。`
@@ -91,7 +91,7 @@ export function buildStageStatusViewModel({ autoEntering, submitting, result, ac
     return {
       classNameSuffix: ' is-pending',
       label: '正在读取附近地点',
-      title: '系统正在根据当前位置准备附近地点与酒馆入口，完成后会自动带你到地图区域。',
+      title: '系统正在根据当前位置准备附近地点与空间入口，完成后会自动带你到地图区域。',
     }
   }
 
@@ -99,7 +99,7 @@ export function buildStageStatusViewModel({ autoEntering, submitting, result, ac
     return {
       classNameSuffix: ' is-pending',
       label: '正在刷新附近内容',
-      title: '正在准备地点、酒馆和地图标记，请稍候，成功后页面会自动滚动到这里。',
+      title: '正在准备地点、空间和地图标记，请稍候，成功后页面会自动滚动到这里。',
     }
   }
 
@@ -107,7 +107,7 @@ export function buildStageStatusViewModel({ autoEntering, submitting, result, ac
     return {
       classNameSuffix: ' is-ready',
       label: '当前地点已锁定',
-      title: '你已经选中了一个地点，可以继续查看附近酒馆、地点线索和后续动作。',
+      title: '你已经选中了一个地点，可以继续查看附近空间、地点线索和后续动作。',
     }
   }
 
@@ -115,13 +115,13 @@ export function buildStageStatusViewModel({ autoEntering, submitting, result, ac
     return {
       classNameSuffix: ' is-ready',
       label: '地图已准备',
-      title: '附近内容已经生成，可以从地图或酒馆列表中选择下一步。',
+      title: '附近内容已经生成，可以从地图或空间列表中选择下一步。',
     }
   }
 
   return {
     classNameSuffix: '',
     label: '等待查看附近地点',
-    title: '点击上方主按钮后，附近地点和酒馆入口会出现在这里。',
+    title: '点击上方主按钮后，附近地点和空间入口会出现在这里。',
   }
 }

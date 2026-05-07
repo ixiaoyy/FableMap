@@ -140,9 +140,9 @@ Display:
 
 | Type | Trigger | Recipient | Content |
 |------|---------|-----------|---------|
-| new_visitor | visitor enters tavern | tavern owner | "{visitor} 进入了你的酒馆" |
+| new_visitor | visitor enters tavern | tavern owner | "{visitor} 进入了你的空间" |
 | new_message | visitor sends message | tavern owner | "有人在和 NPC 对话" |
-| new_guest_message | visitor posts message | tavern owner | "有人给你的酒馆留言" |
+| new_guest_message | visitor posts message | tavern owner | "有人给你的空间留言" |
 | guest_reply | owner receives reply | tavern owner | "有人回复了你的留言" |
 
 ## Verification

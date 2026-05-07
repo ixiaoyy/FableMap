@@ -1,6 +1,6 @@
 const DEFAULT_PROMPTS = [
   '你好，我第一次来，这里怎么玩？',
-  '请用三句话介绍这间酒馆。',
+  '请用三句话介绍这间空间。',
   '给我一个不用想太多的开始方式。',
   '如果我只想体验 3 分钟，应该先做什么？',
 ]
@@ -22,12 +22,12 @@ const CLUE_PROMPTS = [
 const HELP_PROMPTS = [
   '我需要一点帮助，请一步一步告诉我。',
   '我不会用，先带我完成一次。',
-  '我想开一间自己的酒馆，最少要做什么？',
-  '请解释公开、密码、私人酒馆有什么区别。',
+  '我想开一间自己的空间，最少要做什么？',
+  '请解释公开、密码、私人空间有什么区别。',
 ]
 
 const GUILD_PROMPTS = [
-  '查看酒馆探索清单。',
+  '查看空间探索清单。',
   '我想领取一个适合新访客的小委托。',
   '查看我的完成记录、文字纪念章和回访提示。',
   '我想提交一个友善委托草稿，等店主确认。',
@@ -61,14 +61,14 @@ export const GUILD_REPUTATION_TIERS = [
     title: '街区见证',
     min: 9,
     badge: '街角纪念章',
-    treatment: '清单记录会附带更多酒馆背景提示，但不形成访客排名或数值成长。',
+    treatment: '清单记录会附带更多空间背景提示，但不形成访客排名或数值成长。',
   },
   {
     id: 'friendly-regular',
     title: '友善常客',
     min: 14,
     badge: '常客明信片',
-    treatment: '可提交友善委托草稿，等待店主或主持 NPC 确认后再进入酒馆内容。',
+    treatment: '可提交友善委托草稿，等待店主或主持 NPC 确认后再进入空间内容。',
   },
 ]
 
@@ -76,7 +76,7 @@ export const DEFAULT_GUILD_QUESTS = [
   {
     id: 'errand-postcard',
     title: '探索卡：吧台明信片',
-    summary: '确认一张明信片与酒馆真实坐标、NPC 开场白有什么关系。',
+    summary: '确认一张明信片与空间真实坐标、NPC 开场白有什么关系。',
     objective: '询问明信片上的公开线索，说出你认为的下一步或想问的 NPC。',
     difficulty: '初访',
     reward: 1,
@@ -97,8 +97,8 @@ export const DEFAULT_GUILD_QUESTS = [
   },
   {
     id: 'welcome-guide',
-    title: '酒馆委托：欢迎新访客',
-    summary: '用一句温和公开的话欢迎后来者，学习这间酒馆的友好待客方式。',
+    title: '空间委托：欢迎新访客',
+    summary: '用一句温和公开的话欢迎后来者，学习这间空间的友好待客方式。',
     objective: '写一句不涉及隐私、让人安心的欢迎语。',
     difficulty: '轻松',
     reward: 2,
@@ -114,7 +114,7 @@ export const DEFAULT_GUILD_QUESTS = [
     difficulty: '标准',
     reward: 3,
     recordLabel: '选择记录',
-    returnHint: '下次回访可以直接查看上次选择后的酒馆反馈。',
+    returnHint: '下次回访可以直接查看上次选择后的空间反馈。',
     familyFriendly: true,
   },
 ]
@@ -281,15 +281,15 @@ export function buildGuildActionPrompt(action, quest = null, tier = GUILD_REPUTA
   const treatment = tier?.treatment || GUILD_REPUTATION_TIERS[0].treatment
 
   if (action === 'accept') {
-    return `我领取探索清单项目《${questTitle}》。请以酒馆引导员身份登记这一项，并用老少皆宜的格式告诉我【目标】【完成条件】【可选行动】【回访提示】。项目目标：${questObjective}`
+    return `我领取探索清单项目《${questTitle}》。请以空间引导员身份登记这一项，并用老少皆宜的格式告诉我【目标】【完成条件】【可选行动】【回访提示】。项目目标：${questObjective}`
   }
 
   if (action === 'complete') {
-    return `我记录完成探索清单项目《${questTitle}》。请检查完成情况；如果认可，请写下一条完成记录、发一枚文字纪念章，并给出下次回访提示。当前记录：${tierTitle}；当前提示：${treatment}。然后给我一个可以继续体验酒馆的下一步。`
+    return `我记录完成探索清单项目《${questTitle}》。请检查完成情况；如果认可，请写下一条完成记录、发一枚文字纪念章，并给出下次回访提示。当前记录：${tierTitle}；当前提示：${treatment}。然后给我一个可以继续体验空间的下一步。`
   }
 
   if (action === 'post') {
-    return `我想提交一个友善酒馆委托草稿。请以酒馆引导员身份，帮我整理成老少皆宜、安全无压力、需要店主确认后才可发布的探索清单草稿，并给出【委托标题】【目标】【完成条件】【适合对象】【可选行动】【回访提示】。当前记录：${tierTitle}；当前提示：${treatment}。`
+    return `我想提交一个友善空间委托草稿。请以空间引导员身份，帮我整理成老少皆宜、安全无压力、需要店主确认后才可发布的探索清单草稿，并给出【委托标题】【目标】【完成条件】【适合对象】【可选行动】【回访提示】。当前记录：${tierTitle}；当前提示：${treatment}。`
   }
 
   return `查看我的探索清单完成记录、文字纪念章和可回访提示。当前记录：${tierTitle}；当前提示：${treatment}。请用【完成记录】【可领取清单】【回访提示】【可选行动】四块回复。`
@@ -297,12 +297,12 @@ export function buildGuildActionPrompt(action, quest = null, tier = GUILD_REPUTA
 
 export function inferTavernPlayMode(tavern = {}, character = null) {
   const text = collectTavernText(tavern, character)
-  const isHelp = hasAny(text, ['新手', '帮助', '公益', '向导', '服务站', '怎么用', '开店'])
+  const isHelp = hasAny(text, ['新手', '帮助', '社区', '向导', '服务站', '怎么用', '开店'])
   const isGuild = hasAny(text, [
     '公会',
     '探索清单',
     '探索卡',
-    '酒馆委托',
+    '空间委托',
     '完成记录',
     '文字纪念章',
     '回访提示',
@@ -322,7 +322,7 @@ export function inferTavernPlayMode(tavern = {}, character = null) {
       id: 'guild',
       label: '探索清单',
       icon: '🗺️',
-      summary: '这间酒馆支持探索清单：领取酒馆委托、记录完成、获得文字纪念章和回访提示。',
+      summary: '这间空间支持探索清单：领取空间委托、记录完成、获得文字纪念章和回访提示。',
       prompts: GUILD_PROMPTS,
     }
   }
@@ -333,8 +333,8 @@ export function inferTavernPlayMode(tavern = {}, character = null) {
       label: isMystery ? '线索调查' : '文字游戏',
       icon: isMystery ? '🔎' : '🎲',
       summary: isMystery
-        ? '这间酒馆适合按线索推进：调查、整理疑点、做选择。'
-        : '这间酒馆支持轻文字体验：目标、选择、线索或小委托。',
+        ? '这间空间适合按线索推进：调查、整理疑点、做选择。'
+        : '这间空间支持轻文字体验：目标、选择、线索或小委托。',
       prompts: isMystery
         ? [...CLUE_PROMPTS, ...TEXT_GAME_PROMPTS.slice(0, 2)]
         : TEXT_GAME_PROMPTS,
@@ -346,7 +346,7 @@ export function inferTavernPlayMode(tavern = {}, character = null) {
       id: 'helpdesk',
       label: '新手友好',
       icon: '🧭',
-      summary: '这间酒馆适合第一次体验：可以直接问“怎么玩”。',
+      summary: '这间空间适合第一次体验：可以直接问“怎么玩”。',
       prompts: HELP_PROMPTS,
     }
   }

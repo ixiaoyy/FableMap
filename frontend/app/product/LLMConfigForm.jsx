@@ -95,16 +95,17 @@ export const DEFAULT_BASE_URLS = {
 }
 
 /**
+
  * 小白友好的配置配方。点击后填充模型参数，但保留用户已输入的 API Key。
  */
 export const LLM_PRESETS = [
   {
     id: 'kilo-free-owner-opt-in',
     title: 'Kilo 免费模型',
-    badge: '系统/公益测试',
-    icon: '🆓',
-    description: '店主自行选择的 kilo-auto/free 低门槛方案；系统店 / 公益店测试期由后端版本化配置补齐连接信息，免费额度、速率和稳定性可能受限，不作为平台强制默认。',
-    bestFor: '系统店 / 公益店试运营 / 低成本验证',
+    badge: '系统/公共测试',
+    icon: '🏢',
+    description: '店主自行选择的 kilo-auto/free 低门槛方案；系统店 / 体验店测试期由后端版本化配置补齐连接信息，免费额度、速率和稳定性可能受限，不作为平台强制默认。',
+    bestFor: '系统店 / 体验店试运营 / 低成本验证',
     config: {
       backend: 'custom',
       model: 'kilo-auto/free',
@@ -151,7 +152,7 @@ export const LLM_PRESETS = [
     title: '长上下文剧情',
     badge: '长剧情',
     icon: '🧠',
-    description: '适合世界书较多、剧情推进慢、需要更长上下文的酒馆。',
+    description: '适合世界书较多、剧情推进慢、需要更长上下文的空间。',
     bestFor: '长剧情 / 世界书多 / 慢节奏',
     config: {
       backend: 'openrouter',
@@ -204,7 +205,7 @@ export const LLM_PRESETS = [
  *   onChange   — (config) => void
  *   compact    — 是否使用紧凑布局
  *   tavernId   — 可选，用于测试连接（基于 /api/taverns/{id}/test-llm）
- *   testDirect — 可选，直接测试配置的函数 (config) => Promise<{ok, message}>（用于创建酒馆时）
+ *   testDirect — 可选，直接测试配置的函数 (config) => Promise<{ok, message}>（用于创建空间时）
  */
 export default function LLMConfigForm({ value = {}, onChange, compact = false, tavernId = null, testDirect = null }) {
   const config = {
@@ -253,7 +254,7 @@ export default function LLMConfigForm({ value = {}, onChange, compact = false, t
       } else if (tavernId) {
         result = await testTavernLlm(tavernId, config)
       } else {
-        setTestResult({ ok: false, message: '无法测试连接：缺少酒馆 ID' })
+        setTestResult({ ok: false, message: '无法测试连接：缺少空间 ID' })
         setTesting(false)
         return
       }

@@ -2,19 +2,19 @@
 
 ## Goal
 
-围绕 FableMap 盈利前置目标，先不急于收费，优先验证用户留存与传播闭环。当前路线按 C → A → B → D 推进：先让店主看到经营反馈，再让探索者有回访理由，再支持酒馆传播，最后促进探索者转店主。
+围绕 FableMap 盈利前置目标，先不急于收费，优先验证用户留存与传播闭环。当前路线按 C → A → B → D 推进：先让店主看到经营反馈，再让探索者有回访理由，再支持空间传播，最后促进探索者转店主。
 
 ## What I already know
 
 * 用户明确选择先走 D：先不收费，优先做留存和传播闭环。
 * 用户随后确认采用推荐顺序：C → A → B → D。
-* FableMap 当前主链路是：坐标输入/定位 → 真实底图 → 浏览酒馆 → 进入酒馆 → 配置 AI NPC → 对话互动 → 写回记忆 → 回访反馈。
-* 产品核心约束：真实地图锚点、主人主权、平台不自动生成酒馆内容、Token 由店主自行承担、保持 SillyTavern 兼容。
+* FableMap 当前主链路是：坐标输入/定位 → 真实底图 → 浏览空间 → 进入空间 → 配置 AI NPC → 对话互动 → 写回记忆 → 回访反馈。
+* 产品核心约束：真实地图锚点、主人主权、平台不自动生成空间内容、Token 由店主自行承担、保持 SillyTavern 兼容。
 
 ## Assumptions (temporary)
 
 * 本轮先做一个可落地的产品/技术 PRD，不直接实现代码。
-* 第一阶段 MVP 应优先围绕 C「店主经营反馈」设计，因为它最能让店主感知酒馆被访问，从而支撑后续 A/B/D。
+* 第一阶段 MVP 应优先围绕 C「店主经营反馈」设计，因为它最能让店主感知空间被访问，从而支撑后续 A/B/D。
 * 不引入平台级付费、充值、抽成或无边界社交。
 
 ## Open Questions
@@ -23,9 +23,9 @@
 
 ## Requirements (evolving)
 
-* 路线顺序：C 店主经营反馈 → A 探索者回访 → B 酒馆传播 → D 探索者转店主。
-* 所有设计必须服务真实酒馆/NPC/记忆/回访闭环。
-* 不做平台生成酒馆内容，不做 Token 计费系统，不做跨酒馆访客社交网络。
+* 路线顺序：C 店主经营反馈 → A 探索者回访 → B 空间传播 → D 探索者转店主。
+* 所有设计必须服务真实空间/NPC/记忆/回访闭环。
+* 不做平台生成空间内容，不做 Token 计费系统，不做跨空间访客社交网络。
 
 ## Acceptance Criteria (evolving)
 
@@ -45,7 +45,7 @@
 ## Out of Scope (explicit)
 
 * 平台级 Token 充值、结算、抽成。
-* 平台替店主自动生成酒馆/NPC/故事内容。
+* 平台替店主自动生成空间/NPC/故事内容。
 * 访客好友、动态墙、私信、全局在线状态等无边界社交。
 * 传统地图导航、POI 评分、路线规划。
 
@@ -65,7 +65,7 @@
 
 ### Constraints from docs/specs
 
-* Strengthen the main loop: 地图浏览 → 酒馆发现 → 入场 → 对话 → 写回 → 回访。
+* Strengthen the main loop: 地图浏览 → 空间发现 → 入场 → 对话 → 写回 → 回访。
 * Owner-visible feedback must not expose visitor private memory beyond existing permission boundaries.
 * Sharing/virality must not become visitor-to-visitor social networking.
 * Any generated summaries/insights must be derived from existing owner-visible runtime data and must not write platform-created tavern/NPC content back into owner-authored content.
@@ -76,9 +76,9 @@ The first C-phase should probably not be “add another raw visitor list”. The
 
 ## Decision (ADR-lite)
 
-**Context**: 现有系统已经具备访客状态、会话、记忆、搜索和导出等底层能力。继续新增原始列表的收益有限；真正需要的是让店主一眼感知“我的酒馆有人来、有人回、有人聊”。
+**Context**: 现有系统已经具备访客状态、会话、记忆、搜索和导出等底层能力。继续新增原始列表的收益有限；真正需要的是让店主一眼感知“我的空间有人来、有人回、有人聊”。
 
-**Decision**: 第一阶段选择 **C-1 经营摘要卡**。先在店主入口提供确定性经营摘要：酒馆总数/营业数、访客数、回访者、消息量、最近会话、重点回访者、酒馆表现和下一步建议。摘要只读取现有 owner 可见数据，不引入新持久化 schema，不调用 LLM，不生成/写回酒馆内容。
+**Decision**: 第一阶段选择 **C-1 经营摘要卡**。先在店主入口提供确定性经营摘要：空间总数/营业数、访客数、回访者、消息量、最近会话、重点回访者、空间表现和下一步建议。摘要只读取现有 owner 可见数据，不引入新持久化 schema，不调用 LLM，不生成/写回空间内容。
 
 **Consequences**:
 
@@ -114,10 +114,10 @@ The first C-phase should probably not be “add another raw visitor list”. The
 ## Final MVP Requirements
 
 * 店主能通过 `/owner` 看到经营摘要。
-* 摘要至少包含：酒馆数、营业酒馆数、访客数、回访者、会话数、消息数。
+* 摘要至少包含：空间数、营业空间数、访客数、回访者、会话数、消息数。
 * 摘要展示最近会话和重点回访者，用于感知“有人来过/回来了”。
-* 摘要展示酒馆表现排行，帮助店主知道哪间酒馆更活跃。
-* 摘要给出确定性下一步建议，但不替店主生成酒馆/NPC/故事内容。
+* 摘要展示空间表现排行，帮助店主知道哪间空间更活跃。
+* 摘要给出确定性下一步建议，但不替店主生成空间/NPC/故事内容。
 * 不新增后端 schema，不新增依赖，不实现收费/社交/平台内容生成。
 
 

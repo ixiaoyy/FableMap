@@ -47,6 +47,8 @@ assert.throws(
   "owner operations should fail fast when no explicit owner identity is provided",
 )
 assert.equal(runtimeConfig.requireExplicitOwnerIdentity(" owner-live "), "owner-live")
+assert.equal(runtimeConfig.hasExplicitOwnerIdentity(""), false, "blank owner identity should not be treated as owner-scoped")
+assert.equal(runtimeConfig.hasExplicitOwnerIdentity(" owner-live "), true, "trimmed non-empty owner identity should be owner-scoped")
 
 const tavernsSource = source("lib/taverns.ts")
 assert.ok(
@@ -61,6 +63,26 @@ assert.ok(
   tavernsSource.includes("getOrCreateVisitorIdentity"),
   "DEFAULT_VISITOR_ID should come from the anonymous visitor helper",
 )
+assert.ok(
+  tavernsSource.includes("/api/v1/chat/sessions"),
+  "global chat session helper should call the mounted /api/v1/chat/sessions endpoint",
+)
+assert.ok(
+  !tavernsSource.includes("/api/v1/sessions"),
+  "global chat session helper should not call the retired /api/v1/sessions path",
+)
+
+const createRouteSource = source("routes/create.tsx")
+assert.ok(
+  createRouteSource.includes("hasExplicitOwnerIdentity"),
+  "create route should guard owner default LLM checks until owner_id is explicit",
+)
+
+const ownerRouteSource = source("routes/owner.tsx")
+assert.ok(
+  ownerRouteSource.includes("hasExplicitOwnerIdentity(ownerId)"),
+  "owner route should skip owner-only default LLM checks without explicit owner_id",
+)
 
 const chatSource = source("features/tavern-chat/index.tsx")
 assert.ok(
@@ -69,3 +91,4 @@ assert.ok(
 )
 
 console.log("identity-boundary-test: ok")
+

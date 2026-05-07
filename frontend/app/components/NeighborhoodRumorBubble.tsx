@@ -1,7 +1,7 @@
 /*
 Neighborhood Rumor Bubble Component — 邻里传闻气泡组件
 
-显示 NPC 分享的关于其他酒馆的传闻。
+显示 NPC 分享的关于其他空间的传闻。
 */
 
 import { Compass, MapPin } from "lucide-react"
@@ -54,7 +54,7 @@ function RumorCard({
     if (onNavigate) {
       onNavigate(rumor.target_tavern_id)
     } else {
-      // 默认行为：导航到目标酒馆
+      // 默认行为：导航到目标空间
       window.location.href = `/tavern/${encodeURIComponent(rumor.target_tavern_id)}`
     }
   }

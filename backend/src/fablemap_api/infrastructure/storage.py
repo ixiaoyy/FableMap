@@ -55,10 +55,20 @@ def _seed_database_default_public_welfare_taverns(store: Any) -> int:
     from fablemap_api.core.default_taverns import default_public_welfare_taverns
 
     seeded = 0
+    refreshed = 0
     for payload in default_public_welfare_taverns():
         tavern_id = str(payload.get("id") or "").strip()
-        if not tavern_id or store.get_tavern(tavern_id):
+        if not tavern_id:
             continue
+
+        existing = store.get_tavern(tavern_id)
+        if existing:
+            existing_payload = existing.to_dict()
+            if TavernStore._merge_public_welfare_seed_defaults(existing_payload, payload):
+                store.update_tavern(Tavern.from_dict(existing_payload))
+                refreshed += 1
+            continue
+
         tavern = Tavern.from_dict(payload)
         store.create_tavern(tavern)
         if tavern.llm_config and tavern.llm_config.is_configured():
@@ -66,8 +76,12 @@ def _seed_database_default_public_welfare_taverns(store: Any) -> int:
             tavern.status = "open"
             store.update_tavern(tavern)
         seeded += 1
-    if seeded:
-        logger.info("Seeded %s default public welfare taverns into database storage", seeded)
+    if seeded or refreshed:
+        logger.info(
+            "Seeded %s and refreshed %s default public welfare taverns into database storage",
+            seeded,
+            refreshed,
+        )
     return seeded
 
 

@@ -38,7 +38,7 @@ const sampleNotifications = [
     user_id: 'owner-demo',
     notification_type: 'new_visitor',
     title: '新访客进入',
-    content: '有人进入你的酒馆',
+    content: '有人进入你的空间',
     created_at: '2026-04-30T06:00:00Z',
     read: true,
     tavern_id: 'tavern_a',

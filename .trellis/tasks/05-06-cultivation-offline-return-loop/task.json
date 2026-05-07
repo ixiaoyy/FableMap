@@ -2,7 +2,7 @@
   "id": "cultivation-offline-return-loop",
   "name": "cultivation-offline-return-loop",
   "title": "Cultivation Offline Return Loop",
-  "description": "设计修行酒馆在线/离线挂机循环：每日回访、阶段事件、访客私有进度、节流上限和可回放结算。",
+  "description": "设计修行空间在线/离线挂机循环：每日回访、阶段事件、访客私有进度、节流上限和可回放结算。",
   "status": "planning",
   "dev_type": null,
   "scope": null,

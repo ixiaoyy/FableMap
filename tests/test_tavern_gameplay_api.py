@@ -16,12 +16,12 @@ def _create_tavern(service: WebService, owner_id: str = "owner_gameplay") -> dic
     return service.create_tavern_payload(
         {
             "id": "tavern_gameplay",
-            "name": "玩法测试酒馆",
+            "name": "玩法测试空间",
             "description": "用于测试玩法系统。",
             "lat": 35.0,
             "lon": 139.0,
             "access": "public",
-            "scene_prompt": "一个安全的玩法测试酒馆。",
+            "scene_prompt": "一个安全的玩法测试空间。",
             "characters": [
                 {
                     "id": "char_host",

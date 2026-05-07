@@ -36,7 +36,7 @@ def preview_gm_layer_candidates(
     safe_tavern_id = _text(tavern_id, max_length=120)
     safe_visitor_id = _text(visitor_id, max_length=120)
     if not safe_tavern_id:
-        raise GmLayerPreviewError("GM Layer 预览需要酒馆 ID")
+        raise GmLayerPreviewError("GM Layer 预览需要空间 ID")
     if not safe_visitor_id:
         raise GmLayerPreviewError("GM Layer 预览需要 visitor_id")
 

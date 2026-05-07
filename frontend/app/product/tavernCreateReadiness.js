@@ -11,14 +11,14 @@ export function getWizardReadiness(form = {}, hasLlmConfig = false) {
     {
       id: 'coordinate',
       label: '地图坐标有效',
-      hint: '酒馆能被挂到真实地图上',
+      hint: '空间能被挂到真实地图上',
       done: Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lon) && lon >= -180 && lon <= 180,
       step: 1,
       required: true,
     },
     {
       id: 'name',
-      label: '酒馆有清楚名称',
+      label: '空间有清楚名称',
       hint: '访客在地图上能一眼认出入口',
       done: Boolean(text(form.name)),
       step: 2,

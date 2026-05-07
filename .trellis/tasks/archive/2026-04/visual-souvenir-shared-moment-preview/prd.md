@@ -29,7 +29,7 @@
 
 - API 需要明确用户身份和 `visitor_id`。
 - 非店主只能为自己的 `visitor_id` 生成预览。
-- 私密酒馆遵守可见性边界。
+- 私密空间遵守可见性边界。
 - `character_id` 必须存在。
 - 预览只使用可观察文本，不包含 hidden prompt / API key / private memory。
 - 输出必须包含：
@@ -47,7 +47,7 @@
 
 - [x] Core helper 能生成不含 visitor_id/hidden prompt 的纪念图 prompt 预览。
 - [x] API `POST /api/v1/taverns/{id}/visual-souvenir/preview` 返回 no-image 预览。
-- [x] API 权限覆盖缺少身份、非店主导出其他访客、角色不存在、私密酒馆不可见。
+- [x] API 权限覆盖缺少身份、非店主导出其他访客、角色不存在、私密空间不可见。
 - [x] 前端 native/product 服务均有 `previewVisualSouvenir` helper，路径和请求体正确。
 - [x] README、ARCHITECTURE、Trellis spec 和 changes 文档说明 no-image/no-persistence/privacy boundary。
 - [x] 验证命令记录在本文件和 `task.json` 中。

@@ -64,7 +64,7 @@ export function TavernPreviewModal({ tavern, onClose }: TavernPreviewModalProps)
               <Eye className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-black uppercase tracking-widest text-cyan-100/70">酒馆预览</p>
+              <p className="text-xs font-black uppercase tracking-widest text-cyan-100/70">空间预览</p>
               <h2 className="font-black text-white">{tavern.name}</h2>
             </div>
           </div>
@@ -82,7 +82,7 @@ export function TavernPreviewModal({ tavern, onClose }: TavernPreviewModalProps)
           {/* Description */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
             <p className="text-sm leading-6 text-violet-50/74">
-              {tavern.description || "店主还没有写下酒馆简介。"}
+              {tavern.description || "店主还没有写下空间简介。"}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-violet-100/45">
               <span className="inline-flex items-center gap-1">
@@ -147,7 +147,7 @@ export function TavernPreviewModal({ tavern, onClose }: TavernPreviewModalProps)
               </div>
             ) : (
               <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-violet-100/60">
-                这间酒馆还没有 NPC。店主添加角色卡后会显示在这里。
+                这间空间还没有 NPC。店主添加角色卡后会显示在这里。
               </p>
             )}
           </div>
@@ -183,7 +183,7 @@ export function TavernPreviewModal({ tavern, onClose }: TavernPreviewModalProps)
             <Button asChild>
               <Link to={`/tavern/${encodeURIComponent(tavern.id)}`} onClick={onClose}>
                 <DoorOpen className="h-4 w-4" />
-                进入酒馆
+                进入空间
               </Link>
             </Button>
           </div>
@@ -234,7 +234,7 @@ export function TavernPreviewCard({ tavern, onPreview, className }: TavernPrevie
         type="button"
         onClick={() => onPreview(tavern)}
         className="ml-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 p-1.5 text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-300/20"
-        title="预览酒馆"
+        title="预览空间"
       >
         <Eye className="h-3.5 w-3.5" />
       </button>

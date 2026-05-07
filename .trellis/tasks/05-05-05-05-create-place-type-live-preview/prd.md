@@ -8,6 +8,6 @@ On `/create`, the left Step 01 place-type cards update the local `placeType` sta
 
 - Right-side preview has a machine-checkable live preview marker.
 - The preview visibly uses `activePlaceType` label, tone, description, icon/style, and reserved/private hint.
-- The AI draft helper copy is based on the current place type, not hardcoded "酒馆创意".
+- The AI draft helper copy is based on the current place type, not hardcoded "空间创意".
 - The first NPC and checklist cards mention the selected place type.
 - Desktop and mobile Playwright checks verify clicking a different place type updates right-side text without horizontal overflow.

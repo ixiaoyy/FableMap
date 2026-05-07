@@ -1,8 +1,8 @@
 /**
  * OwnerStateCardPanel — 店主侧状态卡管理面板
  *
- * 展示酒馆所有状态卡（按状态/类型分组），
- * 支持查看、确认/拒绝/替换，以及创建酒馆级正史卡。
+ * 展示空间所有状态卡（按状态/类型分组），
+ * 支持查看、确认/拒绝/替换，以及创建空间级正史卡。
  *
  * 权限：
  * - 店主可查看/管理所有 scope=tavern 和 scope=visitor 的卡
@@ -230,7 +230,7 @@ export default function OwnerStateCardPanel({ tavern, ownerId, onClose }) {
         <div className="modal__header">
           <div>
             <p className="mini-label">Canon Ledger</p>
-            <h2>{tavern?.name || '酒馆'} — 状态卡管理</h2>
+            <h2>{tavern?.name || '空间'} — 状态卡管理</h2>
             <p className="note muted">
               共 {stats.total} 张卡 · {stats.pending} 待确认 · {stats.confirmed} 已确认
             </p>
@@ -286,7 +286,7 @@ export default function OwnerStateCardPanel({ tavern, ownerId, onClose }) {
         {/* Create form */}
         {showCreate && (
           <div className="owner-state-card-panel__create">
-            <h4>创建酒馆正史卡</h4>
+            <h4>创建空间正史卡</h4>
             <label>
               类型
               <select

@@ -15,10 +15,10 @@ export default function TavernGameplayLauncher({ gameplays = [], activeSessions 
   if (publishedGameplays.length === 0 && resumableSessions.length === 0) return null
 
   return (
-    <section className="tavern-gameplay-launcher" aria-label="酒馆玩法入口">
+    <section className="tavern-gameplay-launcher" aria-label="空间玩法入口">
       <div className="tavern-gameplay-launcher__header">
         <div>
-          <span className="mini-label">酒馆玩法</span>
+          <span className="mini-label">空间玩法</span>
           <strong>可玩的内容</strong>
         </div>
         {busy ? <small>处理中...</small> : null}
@@ -42,9 +42,9 @@ export default function TavernGameplayLauncher({ gameplays = [], activeSessions 
             return (
               <article key={gameplay.id} className={`gameplay-launch-card ${shortDrama ? 'is-drama' : ''}`}>
                 <div>
-                  <span className="gameplay-launch-card__tag">{shortDrama ? '竖屏短剧感' : '酒馆玩法'}</span>
+                  <span className="gameplay-launch-card__tag">{shortDrama ? '竖屏短剧感' : '空间玩法'}</span>
                   <strong>{gameplay.title}</strong>
-                  <p>{gameplay.summary || '进入一局由酒馆主持的轻量玩法。'}</p>
+                  <p>{gameplay.summary || '进入一局由空间主持的轻量玩法。'}</p>
                   {shortDrama && goal ? <small className="gameplay-launch-card__goal">目标：{goal}</small> : null}
                 </div>
                 <button type="button" className={shortDrama ? 'primary' : 'secondary'} onClick={() => onStart?.(gameplay)} disabled={busy}>

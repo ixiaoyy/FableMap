@@ -403,7 +403,7 @@ def default_runtime_presets() -> list[dict[str, Any]]:
         _runtime_preset(
             preset_id="low-cost-fast",
             name="低成本快速",
-            description="更短回复预算，关闭作者备注，适合公开酒馆的轻量接待。",
+            description="更短回复预算，关闭作者备注，适合公开空间的轻量接待。",
             model_hint="DeepSeek / 本地小模型",
             llm_config={
                 "backend": "deepseek",
@@ -426,7 +426,7 @@ def default_runtime_presets() -> list[dict[str, Any]]:
         _runtime_preset(
             preset_id="long-context-lore",
             name="长上下文世界书",
-            description="提高回复预算并保留完整世界书段落，适合设定较多、剧情推进较慢的酒馆。",
+            description="提高回复预算并保留完整世界书段落，适合设定较多、剧情推进较慢的空间。",
             model_hint="Claude / Gemini / OpenRouter 长上下文",
             llm_config={
                 "backend": "openai-compatible",

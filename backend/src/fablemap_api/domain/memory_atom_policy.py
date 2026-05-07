@@ -173,7 +173,7 @@ def validate_memory_atom_create(atom: MemoryAtom, tavern: Any, user_id: str) -> 
     if atom.scope.startswith("visitor_") and atom.visitor_id and atom.visitor_id != user_id and not owner:
         return "不能为其他访客创建记忆"
     if atom.visibility != "private" and not owner and atom.scope not in {"visitor_character", "visitor_tavern"}:
-        return "只有店主能创建整间酒馆或地点记忆"
+        return "只有店主能创建整间空间或地点记忆"
     return ""
 
 

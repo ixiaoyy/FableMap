@@ -2,7 +2,7 @@ export const OWNER_GAMEPLAY_TEMPLATE_FORBIDDEN = [
   '不使用战斗、等级、装备、排行榜或可交易奖励',
   '不索取身份证件、住址、手机号、银行卡等敏感信息',
   '不替代医疗、法律、投资等专业结论',
-  '不绕过店主确认自动发布剧情、NPC 或酒馆内容',
+  '不绕过店主确认自动发布剧情、NPC 或空间内容',
 ]
 
 export const OWNER_GAMEPLAY_TEMPLATE_CATEGORIES = ['全部', '线索', '回访', '陪伴', '观察', '流程', '行业', '需求', '资料', '创作']
@@ -14,7 +14,7 @@ export const OWNER_GAMEPLAY_TEMPLATES = [
     badge: '线索',
     title: '三步线索登记',
     duration: '3-5 分钟',
-    bestFor: '书店、侦探角、档案馆、奇谈酒馆',
+    bestFor: '书店、侦探角、档案馆、奇谈空间',
     entryLabel: '登记线索',
     summary: '让访客把一个模糊问题拆成线索、矛盾和下一步，不给唯一答案。',
     goal: '引导访客用三步记录当前线索：看见了什么、哪里矛盾、下一步准备验证什么。',
@@ -57,7 +57,7 @@ export const OWNER_GAMEPLAY_TEMPLATES = [
     badge: '回访',
     title: '回访小信笺',
     duration: '2-4 分钟',
-    bestFor: '树洞、咖啡馆、深夜电台、公益站',
+    bestFor: '树洞、咖啡馆、深夜电台、社区站',
     entryLabel: '写回访信笺',
     summary: '帮访客留下给下次自己的短笺，不写入公开墙。',
     goal: '让访客写下一句给未来自己的回访提醒，强调这是私密/店主可见的轻量记录。',
@@ -92,7 +92,7 @@ export const OWNER_GAMEPLAY_TEMPLATES = [
     badge: '陪伴',
     title: '街区善意清单',
     duration: '3-6 分钟',
-    bestFor: '社区店、公益酒馆、便利店、医院陪伴站',
+    bestFor: '社区店、便民设施、便利店、医院陪伴站',
     entryLabel: '整理小清单',
     summary: '把一个现实压力拆成今天能做的一件小事和一个求助边界。',
     goal: '陪访客整理一个低风险、今天可做的小动作，并提醒专业/紧急事项要找现实支持。',
@@ -351,7 +351,7 @@ export const OWNER_GAMEPLAY_TEMPLATES = [
     badge: '陪伴',
     title: '灯塔回访便签',
     duration: '3-5 分钟',
-    bestFor: '公益站、医院陪伴、社区小店、夜归树洞',
+    bestFor: '社区服务站、医院陪伴、社区小店、夜归树洞',
     entryLabel: '写一张回访便签',
     summary: '整理善意清单和回访便签，不替代医疗心理服务。',
     goal: '帮助访客写下一件今天能做的小事、一条边界和下次回访提醒。',
@@ -419,7 +419,7 @@ export function createOwnerGameplayFromTemplate(template, index = 1) {
     ],
     completion: {
       complete_node_ids: ['complete'],
-      reward_text: template.rewardText || '你完成了这段轻量酒馆体验。',
+      reward_text: template.rewardText || '你完成了这段轻量空间体验。',
       memory_atom: { enabled: false },
     },
   }

@@ -2,7 +2,7 @@ const ASSISTANT_FORBIDDEN = [
   '不索取真实身份信息、手机号、住址或证件',
   '不要求访客执行真实危险行动',
   '不使用广告复活、内购、排行、战斗、等级或装备系统',
-  '不绕过店主确认自动发布剧情、NPC 或酒馆内容',
+  '不绕过店主确认自动发布剧情、NPC 或空间内容',
   '不引用外部影视、名人或版权素材作为剧情前提',
   '不在草稿阶段调用外部模型或产生 Token 成本承诺',
 ]
@@ -42,7 +42,7 @@ function characterMaterials(tavern = {}) {
 
 function tavernMaterials(tavern = {}) {
   return unique([
-    cleanText(tavern.name) ? `酒馆名：${cleanText(tavern.name)}` : '',
+    cleanText(tavern.name) ? `空间名：${cleanText(tavern.name)}` : '',
     cleanText(tavern.description) ? `公开简介：${shortText(tavern.description, 52)}` : '',
     cleanText(tavern.scene_prompt) ? `场景素材：${shortText(tavern.scene_prompt, 60)}` : '',
     ...characterMaterials(tavern),
@@ -54,12 +54,12 @@ function fallback(text, nextNodeId) {
 }
 
 export function createShortDramaDraftFromTavern(tavern = {}, options = {}, index = 1) {
-  const tavernName = cleanText(tavern.name, '这间酒馆')
+  const tavernName = cleanText(tavern.name, '这间空间')
   const tavernSlug = safeId(tavern.id || tavernName)
   const conflictHook = cleanText(options.conflictHook, '有客人误会了店主确认的规则，需要有人把场面稳住')
   const tone = cleanText(options.tone, '短剧主持感、节奏清楚、克制、不羞辱任何人')
   const materials = tavernMaterials(tavern)
-  const sceneSeed = materials.find((item) => item.startsWith('场景素材：')) || materials[0] || '酒馆里的一个可确认物件'
+  const sceneSeed = materials.find((item) => item.startsWith('场景素材：')) || materials[0] || '空间里的一个可确认物件'
 
   return {
     id: `gp_ai_short_${tavernSlug}_${Date.now().toString(36)}_${index}`,
@@ -78,13 +78,13 @@ export function createShortDramaDraftFromTavern(tavern = {}, options = {}, index
       {
         id: 'opening',
         kind: 'scene',
-        narration: `【未发布草稿】${tavernName}里出现了一个短剧冲突：${conflictHook}。先用酒馆内可确认的信息稳住场面。`,
+        narration: `【未发布草稿】${tavernName}里出现了一个短剧冲突：${conflictHook}。先用空间内可确认的信息稳住场面。`,
         choices: [
           { id: 'ask-npc', label: '请 NPC 复述店主确认的规则', next_node_id: 'second-beat' },
-          { id: 'use-prop', label: '拿出一个酒馆内物件做解释', next_node_id: 'second-beat' },
+          { id: 'use-prop', label: '拿出一个空间内物件做解释', next_node_id: 'second-beat' },
           { id: 'overpromise', label: '替店主立刻承诺解决一切', next_node_id: 'boundary' },
         ],
-        fallback_events: fallback('主持人把冲突收束到店主已确认的规则和酒馆内素材。', 'second-beat'),
+        fallback_events: fallback('主持人把冲突收束到店主已确认的规则和空间内素材。', 'second-beat'),
       },
       {
         id: 'boundary',
@@ -101,7 +101,7 @@ export function createShortDramaDraftFromTavern(tavern = {}, options = {}, index
         kind: 'scene',
         narration: `第二幕：${sceneSeed}成为关键线索。你需要让冲突更有戏剧性，但不能引用外部影视、名人或版权素材。`,
         choices: [
-          { id: 'local-clue', label: '只使用酒馆内线索推进', next_node_id: 'third-beat' },
+          { id: 'local-clue', label: '只使用空间内线索推进', next_node_id: 'third-beat' },
           { id: 'ask-consent', label: '请 NPC 确认哪些内容能公开说', next_node_id: 'third-beat' },
           { id: 'borrow-famous', label: '套用知名影视桥段', next_node_id: 'boundary' },
         ],
@@ -128,7 +128,7 @@ export function createShortDramaDraftFromTavern(tavern = {}, options = {}, index
     ],
     completion: {
       complete_node_ids: ['complete'],
-      reward_text: '你把这段酒馆冲突处理成了可确认的小剧场结尾。',
+      reward_text: '你把这段空间冲突处理成了可确认的小剧场结尾。',
       memory_atom: { enabled: false },
     },
   }

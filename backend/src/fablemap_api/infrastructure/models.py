@@ -28,7 +28,7 @@ from .database import Base
 
 
 class TavernModel(Base):
-    """酒馆模型"""
+    """空间模型"""
 
     __tablename__ = "taverns"
 
@@ -323,7 +323,7 @@ class NpcPublicBondQueueModel(Base):
 
 
 class TavernMessageModel(Base):
-    """酒馆留言模型"""
+    """空间留言模型"""
 
     __tablename__ = "tavern_messages"
 

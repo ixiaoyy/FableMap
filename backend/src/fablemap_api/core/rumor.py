@@ -1,7 +1,7 @@
 """
 FableMap Neighborhood Rumor System — 邻里传闻系统
 
-NPC 会分享关于其他酒馆的传闻，为访客推荐其他酒馆，增加探索动力。
+NPC 会分享关于其他空间的传闻，为访客推荐其他空间，增加探索动力。
 """
 
 from __future__ import annotations
@@ -21,19 +21,19 @@ class NeighborhoodRumor:
     """
     邻里传闻
 
-    当访客在某个酒馆聊天时，NPC 可能会分享关于其他酒馆的传闻，
+    当访客在某个空间聊天时，NPC 可能会分享关于其他空间的传闻，
     帮助访客发现新的地点。
 
     触发机制：
-    1. 关键词触发 - 访客聊到特定话题，NPC 联想到相关酒馆
+    1. 关键词触发 - 访客聊到特定话题，NPC 联想到相关空间
     2. 随机触发 - 对话 N 轮后随机分享一条传闻
-    3. 访问触发 - 访客首次进入某酒馆时，NPC 提及其他访客去过的酒馆
+    3. 访问触发 - 访客首次进入某空间时，NPC 提及其他访客去过的空间
     """
 
     id: str
-    source_tavern_id: str  # 消息来源酒馆
-    target_tavern_id: str  # 推荐目标酒馆
-    target_tavern_name: str  # 推荐目标酒馆名称（冗余存储便于展示）
+    source_tavern_id: str  # 消息来源空间
+    target_tavern_id: str  # 推荐目标空间
+    target_tavern_name: str  # 推荐目标空间名称（冗余存储便于展示）
     character_id: str  # 发言 NPC
     character_name: str  # NPC 名称
     rumor_text: str  # 传闻内容（AI 生成）
@@ -43,7 +43,7 @@ class NeighborhoodRumor:
     created_at: str = field(default_factory=_utc_now_iso)
     expires_at: str | None = None  # 可选过期时间
     view_count: int = 0  # 浏览次数
-    click_count: int = 0  # 点击次数（点击跳转到目标酒馆）
+    click_count: int = 0  # 点击次数（点击跳转到目标空间）
     is_active: bool = True  # 是否激活
 
     @classmethod
@@ -132,9 +132,9 @@ class RumorStore:
 
     def __init__(self):
         self._rumors: dict[str, NeighborhoodRumor] = {}
-        # 按来源酒馆索引
+        # 按来源空间索引
         self._by_source: dict[str, list[str]] = {}
-        # 按目标酒馆索引
+        # 按目标空间索引
         self._by_target: dict[str, list[str]] = {}
 
     def add(self, rumor: NeighborhoodRumor) -> NeighborhoodRumor:

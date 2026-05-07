@@ -39,7 +39,7 @@ export const PROMPT_STYLE_DIAL_GROUPS = [
         id: 'balanced',
         label: '平衡',
         detail: '对话与场景各占一半。',
-        line: '表达重心：对话与可观察场景保持平衡，优先服务当前酒馆互动。',
+        line: '表达重心：对话与可观察场景保持平衡，优先服务当前空间互动。',
       },
       {
         id: 'atmospheric',
@@ -106,9 +106,9 @@ export const PROMPT_STYLE_DIAL_GROUPS = [
     options: [
       {
         id: 'cyber_tavern',
-        label: '赛博酒馆',
+        label: '空间',
         detail: '霓虹、吧台、真实坐标。',
-        line: '风味：赛博酒馆感，围绕真实坐标、吧台、灯光、门牌和店主确认设定表达。',
+        line: '风味：空间感，围绕真实坐标、吧台、灯光、门牌和店主确认设定表达。',
       },
       {
         id: 'light_novel',
@@ -168,8 +168,8 @@ export function compilePromptStyleDialLines(value = {}) {
   return [
     ...selectedLines,
     '访客主权：不要替访客说话、行动、同意、拒绝、定义身份或描述内心。',
-    '主人主权：只使用店主确认的角色卡、酒馆设定和公开上下文；不自动发布或覆盖内容。',
-    '安全边界：遇到越界、隐私、真实危险或不确定请求时，用角色口吻转回安全酒馆互动。',
+    '主人主权：只使用店主确认的角色卡、空间设定和公开上下文；不自动发布或覆盖内容。',
+    '安全边界：遇到越界、隐私、真实危险或不确定请求时，用角色口吻转回安全空间互动。',
   ]
 }
 
@@ -211,7 +211,7 @@ export function buildPromptLayerPreview(draft = {}, value = {}) {
       id: 'platform_boundary',
       label: 'Platform Boundary',
       helper: '平台固定边界，不展示 API Key、隐藏安全指令或访客私密记忆。',
-      body: '主人确认内容优先；AI 只能按已保存角色卡、酒馆设定、世界书和本轮访客输入进行对话。',
+      body: '主人确认内容优先；AI 只能按已保存角色卡、空间设定、世界书和本轮访客输入进行对话。',
     },
     {
       id: 'character_card',

@@ -82,12 +82,12 @@ export default function CreatorRoute() {
               </div>
               <div>
                 <h1 className="text-2xl font-black text-white">创作者 #{ownerId.slice(0, 8)}</h1>
-                <p className="mt-1 text-sm text-violet-100/55">在 FableMap 创作酒馆</p>
+                <p className="mt-1 text-sm text-violet-100/55">在 FableMap 创作空间</p>
               </div>
             </div>
 
             <p className="text-sm leading-7 text-violet-100/66">
-              这位创作者在 FableMap 平台开设了 {stats.tavernCount} 间赛博酒馆，
+              这位创作者在 FableMap 平台开设了 {stats.tavernCount} 间空间，
               创作了 {stats.characterCount} 位 NPC，
               累计接待了 {stats.visitorCount} 位访客。
             </p>
@@ -96,7 +96,7 @@ export default function CreatorRoute() {
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
                 <p className="text-2xl font-black text-white">{stats.tavernCount}</p>
-                <p className="mt-1 text-xs text-violet-100/55">酒馆</p>
+                <p className="mt-1 text-xs text-violet-100/55">空间</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
                 <p className="text-2xl font-black text-white">{stats.characterCount}</p>
@@ -116,7 +116,7 @@ export default function CreatorRoute() {
               <Button asChild>
                 <Link to="/discover">
                   <Globe className="h-4 w-4" />
-                  浏览全部酒馆
+                  浏览全部空间
                 </Link>
               </Button>
             </div>
@@ -125,8 +125,8 @@ export default function CreatorRoute() {
           {/* Info cards */}
           <div className="grid gap-4 sm:grid-cols-1">
             {[
-              { image: tavernNightImage, title: "探索赛博酒馆", text: "从真实坐标进入店主创作的赛博酒馆，和 NPC 对话。" },
-              { image: tavernNeonImage, title: "成为创作者", text: "在地图上开设自己的酒馆，创作独特的角色和故事。" },
+              { image: tavernNightImage, title: "探索空间", text: "从真实坐标进入店主创作的空间，和 NPC 对话。" },
+              { image: tavernNeonImage, title: "成为创作者", text: "在地图上开设自己的空间，创作独特的角色和故事。" },
             ].map((card) => (
               <article key={card.title} className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.035]">
                 <img src={card.image} alt="" className="h-36 w-full object-cover" loading="lazy" decoding="async" />
@@ -147,9 +147,9 @@ export default function CreatorRoute() {
             <div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-[#050615]/76 p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-100/70">Creator's taverns</p>
-                <h2 className="mt-2 text-3xl font-black text-white">创作者的酒馆</h2>
+                <h2 className="mt-2 text-3xl font-black text-white">创作者的空间</h2>
                 <p className="mt-1 text-sm text-violet-100/56">
-                  {result.count} 间酒馆 · 点击预览 · 进入对话
+                  {result.count} 间空间 · 点击预览 · 进入对话
                 </p>
               </div>
               <span className="grid h-14 w-14 place-items-center rounded-full border border-cyan-300/28 bg-cyan-300/10 text-cyan-100">
@@ -181,7 +181,7 @@ export default function CreatorRoute() {
                           </span>
                         </div>
                         <p className="mt-2 line-clamp-2 text-sm leading-6 text-violet-100/65">
-                          {tavern.description || "店主还没有写下酒馆简介。"}
+                          {tavern.description || "店主还没有写下空间简介。"}
                         </p>
 
                         {/* Character previews */}
@@ -242,9 +242,9 @@ export default function CreatorRoute() {
                 <div className="grid min-h-80 place-items-center rounded-[1.75rem] border border-white/10 bg-white/[0.04] text-center">
                   <div className="max-w-sm space-y-3 px-6">
                     <Store className="mx-auto h-10 w-10 text-violet-100/60" />
-                    <p className="font-bold text-white">这位创作者还没有酒馆</p>
+                    <p className="font-bold text-white">这位创作者还没有空间</p>
                     <p className="text-sm leading-6 text-violet-100/60">
-                      可能是新创作者，或者酒馆正在准备中。
+                      可能是新创作者，或者空间正在准备中。
                     </p>
                   </div>
                 </div>

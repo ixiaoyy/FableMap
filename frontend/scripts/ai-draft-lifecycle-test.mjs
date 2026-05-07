@@ -22,9 +22,9 @@ assert.deepEqual(
 )
 
 const tavernLifecycle = buildAiDraftLifecycle('tavern')
-assert.ok(tavernLifecycle.title.includes('酒馆草稿'), 'tavern draft lifecycle should identify tavern drafts')
+assert.ok(tavernLifecycle.title.includes('空间草稿'), 'tavern draft lifecycle should identify tavern drafts')
 assert.ok(tavernLifecycle.summary.includes('可编辑表单'), 'tavern draft copy should say drafts fill editable forms')
-assert.ok(tavernLifecycle.summary.includes('创建酒馆'), 'tavern draft copy should gate persistence behind create tavern')
+assert.ok(tavernLifecycle.summary.includes('创建空间'), 'tavern draft copy should gate persistence behind create tavern')
 assert.ok(tavernLifecycle.guardrails.some((item) => item.includes('公开 Tavern payload')), 'tavern draft guardrail should mention public payload boundary')
 
 const characterLifecycle = buildAiDraftLifecycle('character')

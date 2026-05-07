@@ -28,7 +28,7 @@
 
 - API 需要用户身份；请求必须显式提供 `visitor_id`。
 - 访客只能导出自己的 `visitor_id`，店主可导出任意指定访客。
-- 私密酒馆继续遵守可见性边界。
+- 私密空间继续遵守可见性边界。
 - 导出只包含 observable chat roles（`user` / `assistant` / 允许的可见 role），过滤 `system` / hidden prompt。
 - 返回 JSON 中包含：
   - `ok`
@@ -47,7 +47,7 @@
 
 - [x] Core helper 能把消息与 State Cards 组装成 Markdown，且过滤 system/hidden prompt。
 - [x] API `POST /api/v1/taverns/{id}/episodes/export` 能导出指定访客+角色会话。
-- [x] API 权限覆盖缺少身份、缺少 visitor_id、非店主导出其他访客、私密酒馆不可见。
+- [x] API 权限覆盖缺少身份、缺少 visitor_id、非店主导出其他访客、私密空间不可见。
 - [x] 默认只包含 confirmed State Cards。
 - [x] 前端 native/product 服务均有 `exportEpisode` helper，路径和请求体正确。
 - [x] README、ARCHITECTURE、Trellis spec 和 changes 文档说明 no-LLM / no-persistence / privacy boundary。

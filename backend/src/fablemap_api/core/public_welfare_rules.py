@@ -35,13 +35,13 @@ PUBLIC_WELFARE_COMMON_RESPONSES: tuple[PublicWelfareRuleResponse, ...] = (
         action="{character_name}指了指桌上的说明卡",
         message=(
             "先选地点，再选公开/密码/私人，最后放入一个角色开始测试。"
-            "如果你只是来逛，记住两件事就好：不要透露敏感信息；遇到喜欢的酒馆，可以先从一句简单问候开始。"
+            "如果你只是来逛，记住两件事就好：不要透露敏感信息；遇到喜欢的空间，可以先从一句简单问候开始。"
         ),
     ),
     PublicWelfareRuleResponse(
         keywords=("谢谢", "感谢", "谢了", "thank"),
         action="{character_name}笑了笑",
-        message="不用谢。公益酒馆的规矩就是这样——能帮一点是一点，剩下的我们慢慢来。",
+        message="不用谢。小馆的规矩就是这样——能帮一点是一点，剩下的我们慢慢来。",
     ),
     PublicWelfareRuleResponse(
         keywords=("再见", "走了", "离开", "bye", "goodbye"),
@@ -177,7 +177,7 @@ def _format_rule_response(
     rule: PublicWelfareRuleResponse,
     *,
     character_name: str,
-    tavern_name: str = "公益酒馆",
+    tavern_name: str = "小馆",
     quote_message: bool = False,
 ) -> str:
     action = rule.action.format(character_name=character_name, tavern_name=tavern_name)
@@ -192,7 +192,7 @@ def resolve_public_welfare_tavern_rule_response(
     tavern_id: str,
     message: str,
     character_name: str,
-    tavern_name: str = "公益酒馆",
+    tavern_name: str = "小馆",
     quote_message: bool = False,
 ) -> str:
     """Return a configured tavern-specific public-welfare rules response, if any."""

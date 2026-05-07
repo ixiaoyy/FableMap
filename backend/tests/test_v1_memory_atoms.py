@@ -15,7 +15,7 @@ def _create_tavern(client: TestClient) -> str:
         "/api/v1/taverns",
         headers={"X-User-Id": "owner-1"},
         json={
-            "name": "记忆酒馆",
+            "name": "记忆空间",
             "description": "用于测试结构化记忆迁移",
             "lat": 31.2304,
             "lon": 121.4737,

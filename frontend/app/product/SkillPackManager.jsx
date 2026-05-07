@@ -87,7 +87,7 @@ export default function SkillPackManager({ tavern, ownerId = '', onClose, onUpda
         <div className="modal-header">
           <div>
             <p className="mini-label">Tavern Skill Packs</p>
-            <h2>技能包 · {tavern?.name || '未命名酒馆'}</h2>
+            <h2>技能包 · {tavern?.name || '未命名空间'}</h2>
             <p className="note muted">技能包只打开明确能力；不会写入正史、不会改角色卡、不会绕过店主设置。</p>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>

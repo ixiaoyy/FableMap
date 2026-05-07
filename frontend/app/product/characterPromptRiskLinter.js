@@ -109,7 +109,7 @@ const RISK_RULES = [
     category: 'pii',
     label: '索取 / 保存隐私',
     message: '检测到索取、记录、公开私人身份信息或精确私址的指令。',
-    suggestion: '改为“不要索取隐私；如需地点感，只描述公开街区或酒馆氛围”。',
+    suggestion: '改为“不要索取隐私；如需地点感，只描述公开街区或空间氛围”。',
     ignoreWhenNegated: true,
     patterns: [
       /(索取|收集|记录|保存|记住|公开|展示|暴露|要求|填写|提供).{0,16}(手机号|电话号码|身份证|护照|银行卡|真实住址|私人地址|门牌|API\s*key|api[_-]?key)/iu,

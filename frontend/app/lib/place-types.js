@@ -7,19 +7,19 @@ const PLACE_TYPE_KEYWORDS = {
   bookstore: ["书店", "书屋", "旧书", "书架", "阅读"],
   restaurant: ["餐馆", "餐厅", "饭店", "牛排", "食堂", "主厨", "侍者"],
   hospital: ["医院", "诊所", "护士", "护士站", "分诊", "护理", "夜间护理", "急诊"],
-  tavern: ["酒馆", "酒吧", "酒保", "吧台", "tavern", "bar"],
+  tavern: ["空间", "酒吧", "酒保", "吧台", "tavern", "bar"],
 }
 
 export const PLACE_TYPES = [
   {
     id: "tavern",
-    label: "酒馆",
-    shortLabel: "酒馆",
+    label: "空间",
+    shortLabel: "空间",
     icon: "🍻",
     discoverable: true,
     tone: "夜色、霓虹、吧台与旧友重逢",
     cardClass: "border-cyan-300/26 bg-cyan-300/10 text-cyan-50",
-    description: "默认兼容类型，延续当前赛博酒馆主线。",
+    description: "默认兼容类型，延续当前空间主线。",
   },
   {
     id: "cafe",

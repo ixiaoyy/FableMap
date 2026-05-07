@@ -75,11 +75,11 @@ export function createBackgroundNpcDraft({ name, description = '', tags = [] }) 
   const cleanDescription = toText(description).trim()
   return {
     name: cleanName,
-    description: cleanDescription || `${cleanName} 是店主批量添加的背景 NPC，用来补足酒馆里的日常人声和氛围。`,
+    description: cleanDescription || `${cleanName} 是店主批量添加的背景 NPC，用来补足空间里的日常人声和氛围。`,
     personality: '低干扰、短句回应、只在被点名或适合补充氛围时说话，不抢主角 NPC 的戏份。',
-    scenario: '你是这个真实坐标酒馆里的背景成员，负责让空间更有生活气息；所有内容仍以店主后续确认的设定为准。',
+    scenario: '你是这个真实坐标空间里的背景成员，负责让空间更有生活气息；所有内容仍以店主后续确认的设定为准。',
     gender: 'unspecified',
-    system_prompt: '你是店主确认加入酒馆的背景 NPC。保持简短、克制、可被忽略；不要擅自扩写酒馆正史、替店主发布新设定，或引导访客进入无边界社交/战斗/付费流程。',
+    system_prompt: '你是店主确认加入空间的背景 NPC。保持简短、克制、可被忽略；不要擅自扩写空间正史、替店主发布新设定，或引导访客进入无边界社交/战斗/付费流程。',
     first_mes: `我是${cleanName}，先在旁边照看气氛。需要我搭句话时，叫我就好。`,
     mes_example: '',
     alternate_greetings: [],

@@ -2,7 +2,7 @@
 
 ## Goal
 
-保留“有活性但不做社交网络”的产品方向：用传闻、owner-visible feedback 和聚合活动摘要表达酒馆活性，而不是公开访客社交。
+保留“有活性但不做社交网络”的产品方向：用传闻、owner-visible feedback 和聚合活动摘要表达空间活性，而不是公开访客社交。
 
 ## Source Planning
 
@@ -13,7 +13,7 @@
 ## Requirements
 
 * 不做访客好友、私信、公开访客墙、全局社交图谱。
-* 可探索 owner-visible feedback、单酒馆治理内的活动摘要。
+* 可探索 owner-visible feedback、单空间治理内的活动摘要。
 * 所有访客隐私和店主治理边界必须可见。
 * 复用现有 Tavern 字段、rumor/feedback 表面，不新增社交协议。
 

@@ -10,7 +10,7 @@
 
 - 所有实际素材图生成必须遵守 Prompt-first：先用项目 skill 生成并记录最终 Prompt / Prompt manifest，再用该 Prompt 调用生图工具；不允许直接从未记录的临时描述调图。
 - Prompt 必须保存在任务记录、prompt artifact、实现说明、最终报告或项目 recipe 中；只存在于 tool call 里的 Prompt 不算项目记忆。
-- 图片质量与差异化是验收要求，不是锦上添花。素材图不能因为“安全、合规、有关酒馆”就算合格；若画面仍是千篇一律的暖木吧台、青色终端光、居中头像/门面、普通 anime concept art，应视为质量不足。
+- 图片质量与差异化是验收要求，不是锦上添花。素材图不能因为“安全、合规、有关空间”就算合格；若画面仍是千篇一律的暖木吧台、青色终端光、居中头像/门面、普通 anime concept art，应视为质量不足。
 - 非同一系列的多张素材必须刻意区分视觉 thesis、构图装置、材质系统、色彩策略、光影哲学或媒介语境；批量素材生成前应有 diversity matrix 或等价说明。
 - 任何用于代码、默认 seed、文档验收或前端展示的 AI 生成图片，必须复制/转换到本仓库内的规范路径后才算完成。
 - `.codex/generated_images`、系统临时目录、浏览器下载目录和聊天预览只算生成来源，不算项目资源目录。
@@ -128,7 +128,7 @@ NPC 表情组的组级 sidecar 必须保留同一组 identity locks，并用 `ex
 | 尺寸 | 256×256 px |
 | 格式 | PNG |
 | 风格 | 原创 anime / game-style tavern NPC portrait，半身或腰部以上；非真人、非照片、非写实真人感 |
-| 背景 | 酒馆内景，不是透明背景，不是纯色占位 |
+| 背景 | 空间内景，不是透明背景，不是纯色占位 |
 
 #### 非真人形象约束
 
@@ -147,8 +147,8 @@ NPC 表情组的组级 sidecar 必须保留同一组 identity locks，并用 `ex
 | guardian（守卫） | `guardian-a.png` / `guardian-b.png` | 身披重甲的魁梧守卫，手持长剑或长戟，姿态威严 | 站立正视 | 持剑侧身 |
 | healer（疗愈者） | `healer-a.png` / `healer-b.png` | 身着白袍的疗愈师，戴着兜帽，手持发光的草药或法杖，周身有柔和光晕 | 低眉垂目 | 张开双臂 |
 | scholar（学者） | `scholar-a.png` / `scholar-b.png` | 戴着圆框眼镜的资深学者/书记员，披着深色斗篷，手持古籍或羽毛笔 | 沉思凝视 | 执笔书写 |
-| wanderer（流浪者） | `wanderer-a.png` / `wanderer-b.png` | 神秘的流浪者，披着旧斗篷，背着行囊或旅包，像刚走进酒馆歇脚的长途旅人 | 阴影角落 | 半侧蒙面 |
-| spirit（精灵） | `spirit-a.png` / `spirit-b.png` | 人形酒馆灵体 / 精灵招待员，半透明发光，仍明确处于酒馆内部 | 举杯微笑 | 聚集能量 |
+| wanderer（流浪者） | `wanderer-a.png` / `wanderer-b.png` | 神秘的流浪者，披着旧斗篷，背着行囊或旅包，像刚走进空间歇脚的长途旅人 | 阴影角落 | 半侧蒙面 |
+| spirit（精灵） | `spirit-a.png` / `spirit-b.png` | 人形空间灵体 / 精灵招待员，半透明发光，仍明确处于空间内部 | 举杯微笑 | 聚集能量 |
 
 #### 存放位置
 
@@ -369,7 +369,7 @@ frontend/public/faction-emblems/
 
 ### 风格 DNA 抽取/选择模板（生成前置）
 
-生成任何可交付图片前，先从参考图、用户风格说明或 `.agents/skills/generate-character-prompt/references/style-recipes.md` 中确定一段可复用 Style DNA。不要只写“赛博朋克 / 二次元 / 复古”这类短标签。
+生成任何可交付图片前，先从参考图、用户风格说明或 `.agents/skills/generate-character-prompt/references/style-recipes.md` 中确定一段可复用 Style DNA。不要只写“朋克 / 二次元 / 复古”这类短标签。
 
 ```
 [在此处替换为您想要生成的主体内容 / Replace with your subject here]，以可被店主确认的原创 FableMap 素材身份呈现；整体采用 [具体艺术流派/混合风格及品位分支]，主色为 [主色]，辅以 [辅色] 与 [点缀色]，形成 [冷暖/互补/类似色/限色印刷] 的色彩科学策略。光影为 [方向与光质]，明暗对比 [强/弱/平面化]，阴影 [硬边/柔边/装饰性]。画面借鉴 [媒介纹理技法，如 Risograph 半调、胶片颗粒、水彩晕染、赛璐璐平涂、复印机碳粉]，但不强制生成完整海报/杂志/出版物载体；线稿 [粗细/硬边/流动感]，材质触感 [纸张、油墨、金属、玻璃、织物等]。情绪是 [精准情绪：是……而非……]，带有 [时代/文化圈层] 的品位语境；信息密度 [高/中/低]，在 [细节区类型] 保持高精度，在 [概括区类型] 使用平涂、留白或抽象纹理。保留 [符号化视觉语言类型] 作为风格签名。original, no readable text unless explicitly required, no logo, no watermark, no existing IP, no living-artist imitation.

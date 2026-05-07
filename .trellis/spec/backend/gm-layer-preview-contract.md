@@ -102,9 +102,9 @@ Rules:
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
 | Missing `X-User-Id` / user identity | `401 {"error": "GM Layer 预览需要明确用户身份"}` |
-| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此空间是私人的"}` |
 | Visitor previews another `visitor_id` | `403 {"error": "不能为其他访客预览 GM Layer 候选"}` |
 | Owner previews any visitor | `200`, response `visitor_id` matches requested visitor |
 | Empty user/assistant turn text | `400`, user-facing message mentions 回合文本 |

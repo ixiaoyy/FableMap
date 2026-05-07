@@ -6,7 +6,7 @@ import GameplayManager from '../../../../frontend/app/product/GameplayManager.js
 
 const initialTavern = {
   id: 'gameplay_template_harness_tavern',
-  name: '模板验收酒馆',
+  name: '模板验收空间',
   owner_id: 'owner-demo',
   gameplay_definitions: [],
 }

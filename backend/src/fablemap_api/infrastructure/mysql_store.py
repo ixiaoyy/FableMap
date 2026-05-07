@@ -268,7 +268,7 @@ class MySQLTavernStore:
     # ── Tavern CRUD ──────────────────────────────
 
     def list_taverns(self, include_private: bool = False, owner_id: str = "") -> list[Tavern]:
-        """列出所有酒馆"""
+        """列出所有空间"""
         with self.db.session_scope() as session:
             query = session.query(TavernModel)
             if not include_private:
@@ -296,7 +296,7 @@ class MySQLTavernStore:
             return [self._to_tavern(m) for m in models]
 
     def get_tavern(self, tavern_id: str) -> Tavern | None:
-        """获取酒馆"""
+        """获取空间"""
         with self.db.session_scope() as session:
             model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if not model:
@@ -309,13 +309,13 @@ class MySQLTavernStore:
             return tavern
 
     def create_tavern(self, tavern: Tavern) -> Tavern:
-        """创建酒馆"""
+        """创建空间"""
         with self.db.session_scope() as session:
             # 检查是否已存在
             existing = session.query(TavernModel).filter(TavernModel.id == tavern.id).first()
             if existing:
                 from fastapi import HTTPException
-                raise HTTPException(status_code=409, detail="酒馆 ID 已存在")
+                raise HTTPException(status_code=409, detail="空间 ID 已存在")
 
             model = TavernModel(
                 id=tavern.id,
@@ -398,12 +398,12 @@ class MySQLTavernStore:
             return tavern
 
     def update_tavern(self, tavern: Tavern) -> Tavern:
-        """更新酒馆"""
+        """更新空间"""
         with self.db.session_scope() as session:
             model = session.query(TavernModel).filter(TavernModel.id == tavern.id).first()
             if not model:
                 from fastapi import HTTPException
-                raise HTTPException(status_code=404, detail="酒馆不存在")
+                raise HTTPException(status_code=404, detail="空间不存在")
 
             # 更新主表字段
             model.name = tavern.name
@@ -485,7 +485,7 @@ class MySQLTavernStore:
             return tavern
 
     def list_state_cards(self, tavern_id: str) -> list[Any]:
-        """列出酒馆连续性状态卡。"""
+        """列出空间连续性状态卡。"""
         from fablemap_api.core.state_cards import StateCard
 
         with self.db.session_scope() as session:
@@ -556,12 +556,12 @@ class MySQLTavernStore:
             )
 
     def delete_tavern(self, tavern_id: str) -> None:
-        """删除酒馆"""
+        """删除空间"""
         with self.db.session_scope() as session:
             model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             if not model:
                 from fastapi import HTTPException
-                raise HTTPException(status_code=404, detail="酒馆不存在")
+                raise HTTPException(status_code=404, detail="空间不存在")
 
             session.delete(model)
 
@@ -616,7 +616,7 @@ class MySQLTavernStore:
                     return config
                 return _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id, token_used=config.token_used) or config
 
-            # 回退：从 tavern 表读取（公益酒馆配置）
+            # 回退：从 tavern 表读取（内置规则配置）
             tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
             fallback = _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id)
             if fallback:

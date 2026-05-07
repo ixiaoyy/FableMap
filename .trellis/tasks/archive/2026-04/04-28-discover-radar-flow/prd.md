@@ -2,7 +2,7 @@
 
 ## Goal
 
-把 `/discover` 从普通酒馆列表升级为更有吸引力的探索页：默认有城市雷达/发光坐标的沉浸感，同时在搜索和筛选时提供更高效的卡片结果视图。
+把 `/discover` 从普通空间列表升级为更有吸引力的探索页：默认有城市雷达/发光坐标的沉浸感，同时在搜索和筛选时提供更高效的卡片结果视图。
 
 ## Requirements
 
@@ -15,7 +15,7 @@
 
 * `设计参考/discover-A-city-radar-flow.png` — A: 城市雷达 / 发光坐标流。
 * `设计参考/discover-B-map-card-waterfall.png` — B: 地图卡片瀑布流。
-* `设计参考/discover-C-fullscreen-cyber-map.png` — C: 全屏伪地图 / 赛博城市地表。
+* `设计参考/discover-C-fullscreen-cyber-map.png` — C: 全屏伪地图 / 城市地表。
 
 ## Decision
 

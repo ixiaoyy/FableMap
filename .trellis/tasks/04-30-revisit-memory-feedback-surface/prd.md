@@ -32,8 +32,8 @@
 ## Verification Commands
 
 ### Visual check (after entering tavern with a visitor)
-1. Open tavern page, click “进入酒馆” in TavernChat component
-2. After entering, verify `VisitorStateSummary` component appears below “进入酒馆” button
+1. Open tavern page, click “进入空间” in TavernChat component
+2. After entering, verify `VisitorStateSummary` component appears below “进入空间” button
 3. Verify it shows: relationship stage label (陌生人/初识/熟悉/朋友/知己), visit count chip, relationship strength %, and last visit time
 4. In tavern route desktop view, verify owner can see “重点回访者” panel with relationship metrics
 5. Verify RevisitCuePanel in TavernChat shows appropriate cue based on visitor state

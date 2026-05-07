@@ -21,9 +21,9 @@ def test_notification_rest_list_and_mark_read(tmp_path):
         user_id="owner_notify",
         notification_type="new_visitor",
         title="新访客进入",
-        content="visitor_a 进入了你的酒馆",
+        content="visitor_a 进入了你的空间",
         tavern_id="tavern_a",
-        tavern_name="测试酒馆",
+        tavern_name="测试空间",
     ))
 
     listed = client.get("/api/v1/notifications", headers={"X-User-Id": "owner_notify"})
@@ -53,7 +53,7 @@ def test_notification_store_persists_unread_state_across_app_recreate(tmp_path):
         title="新回访反馈",
         content="旅人留下了 owner-visible 反馈",
         tavern_id="tavern_persist",
-        tavern_name="持久化酒馆",
+        tavern_name="持久化空间",
     ))
 
     reloaded = TestClient(create_app(ApiSettings(output_root=tmp_path / "api", fixture_file=None, frontend_root=None)))
@@ -101,10 +101,10 @@ def test_notification_websocket_receives_live_notification(tmp_path):
             title="新反馈",
             content="旅人给店主留下了回访反馈",
             tavern_id="tavern_live",
-            tavern_name="实时酒馆",
+            tavern_name="实时空间",
         ))
 
         pushed = websocket.receive_json()
         assert pushed["type"] == "notification"
         assert pushed["data"]["notification_type"] == "new_guest_message"
-        assert pushed["data"]["tavern_name"] == "实时酒馆"
+        assert pushed["data"]["tavern_name"] == "实时空间"

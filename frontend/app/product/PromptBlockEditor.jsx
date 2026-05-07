@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getPromptBlocks, previewPromptBlocks, savePromptBlocks } from '../lib/taverns'
 
 const PROMPT_BLOCK_TYPES = [
-  { id: 'scene', label: '酒馆场景' },
+  { id: 'scene', label: '空间场景' },
   { id: 'character', label: '角色' },
   { id: 'world_info', label: '世界书' },
   { id: 'visitor_state', label: '访客关系' },
@@ -237,7 +237,7 @@ export default function PromptBlockEditor({ tavern, ownerId, onClose, onBlocksCh
         <header className="modal-header prompt-block-header">
           <div>
             <p className="mini-label">Prompt Block 段落引擎</p>
-            <h3>{tavern?.name || '酒馆'} 的段落结构</h3>
+            <h3>{tavern?.name || '空间'} 的段落结构</h3>
             <p className="note muted">用开关、顺序和模板控制 AI 在回复前读到哪些上下文段落。</p>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>
@@ -333,7 +333,7 @@ export default function PromptBlockEditor({ tavern, ownerId, onClose, onBlocksCh
                   <strong>常用变量</strong>
                   <span>{'{{char}} 角色名'}</span>
                   <span>{'{{user}} 访客称呼'}</span>
-                  <span>{'{{tavern_name}} 酒馆名'}</span>
+                  <span>{'{{tavern_name}} 空间名'}</span>
                   <span>{'{{input}} 当前输入'}</span>
                   <span>{'{{visitor_facts}} 访客关系事实'}</span>
                 </div>

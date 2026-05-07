@@ -503,7 +503,7 @@ Use this helper in `send_chat()` in place of the direct `next(...)` lookup.
 
 - [ ] **Step 3: Filter group chat speakers**
 
-In `send_group_chat()`, compute `group_characters = visible_gacha_characters(...)` and use that list for adding `GroupMember` speakers and for speaker lookup. If empty, raise `400` with `酒馆没有可参与群聊的角色`.
+In `send_group_chat()`, compute `group_characters = visible_gacha_characters(...)` and use that list for adding `GroupMember` speakers and for speaker lookup. If empty, raise `400` with `空间没有可参与群聊的角色`.
 
 - [ ] **Step 4: Compile**
 
@@ -542,7 +542,7 @@ Seed tavern JSON:
 ```python
 {
     "id": "tavern_gacha",
-    "name": "抽卡测试酒馆",
+    "name": "抽卡测试空间",
     "lat": 31.23,
     "lon": 121.47,
     "access": "public",
@@ -759,7 +759,7 @@ unlock_mode: draft.visibility === 'hidden' ? 'gacha' : 'none'
 
 Add a select labeled `访客可见性` with options:
 
-- `普通角色：访客进入酒馆即可看到`
+- `普通角色：访客进入空间即可看到`
 - `隐藏角色：通过今日邂逅抽中后解锁`
 
 When hidden is selected, show copy that this character needs card-pool weight before visitors can draw it.

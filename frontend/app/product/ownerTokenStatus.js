@@ -37,7 +37,7 @@ export function createOwnerTokenRow(tavern = {}) {
   const configured = hasConfiguredLlm(llmConfig)
   return {
     tavernId: safeText(tavern.id, 'unknown'),
-    name: safeText(tavern.name, '未命名酒馆'),
+    name: safeText(tavern.name, '未命名空间'),
     status: tavern.status === 'open' ? 'open' : 'closed',
     statusLabel: tavern.status === 'open' ? '营业中' : '歇业中',
     tokens,

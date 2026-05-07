@@ -16,7 +16,7 @@ Codex
 后端逻辑 + API
 
 ## 任务目标
-实现完整的酒馆备份恢复功能和聊天历史 Bulk Edit 落盘
+实现完整的空间备份恢复功能和聊天历史 Bulk Edit 落盘
 
 ## 可修改范围
 - `fablemap/web/service.py`

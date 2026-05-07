@@ -2,7 +2,7 @@
 
 ## Goal
 
-把 `/create` 从表单堆叠升级成店主可理解的分步开店向导：选真实坐标/地点类型 → 填酒馆设定 → 配置 NPC/导入/AI 草稿入口 → 检查访问与 LLM 状态。MVP 只做前端体验与已有能力聚合，不新增后端 Schema。
+把 `/create` 从表单堆叠升级成店主可理解的分步开店向导：选真实坐标/地点类型 → 填空间设定 → 配置 NPC/导入/AI 草稿入口 → 检查访问与 LLM 状态。MVP 只做前端体验与已有能力聚合，不新增后端 Schema。
 
 ## Source Brainstorm
 
@@ -36,7 +36,7 @@
 ## Out of Scope
 
 * 不新增 Tavern/Character/WorldInfo Schema 字段。
-* 不实现 AI 自动发布酒馆/NPC。
+* 不实现 AI 自动发布空间/NPC。
 * 不接入新的地图、UI、状态管理或表单依赖。
 * 不做平台级 Token 计费、充值、抽成。
 * 不做无真实坐标的自由空间或泛社交主页。
@@ -55,7 +55,7 @@
 
 ### Changes
 
-* Added route-level `CREATE_WIZARD_STEPS` metadata and accessible stepper (`aria-label="创建酒馆分步向导"`).
+* Added route-level `CREATE_WIZARD_STEPS` metadata and accessible stepper (`aria-label="创建空间分步向导"`).
 * Grouped the existing create form into four designed sections: real coordinate anchor, owner-authored tavern content, first NPC, owner-confirmed opening.
 * Preserved existing form field names and service calls; no backend API or Schema changes.
 * Made AI draft boundary explicit: draft text only fills editable form fields and does not persist/create taverns or characters.

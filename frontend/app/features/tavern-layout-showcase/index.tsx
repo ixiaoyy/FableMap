@@ -283,13 +283,13 @@ function LayoutHeader({
   const primaryAvatar = characterAvatar(primaryCharacter)
   const doorwayScene = tavern
     ? previewText(toText(tavern.scene_prompt, tavern.description || "店主还没有写下场景提示。"), 118)
-    : "从发现页选择一个真实坐标上的酒馆入口。"
+    : "从发现页选择一个真实坐标上的空间入口。"
   const worldPreview = tavern ? worldInfoPreviews(tavern)[0] : null
   const doorwayLocation = tavern?.address || stats.location
 
   return (
     <section className="relative min-w-0 overflow-hidden rounded-[2.4rem] border border-white/12 bg-slate-950/78 shadow-2xl shadow-black/35">
-      <img src={backgroundImage} alt="酒馆布局背景" className="absolute inset-0 h-full w-full object-cover opacity-58" loading="eager" decoding="async" />
+      <img src={backgroundImage} alt="空间布局背景" className="absolute inset-0 h-full w-full object-cover opacity-58" loading="eager" decoding="async" />
       <div className="absolute inset-0 bg-gradient-to-br from-[#040511]/98 via-[#060713]/74 to-[#050615]/48" />
       <div className={cn("absolute inset-0 bg-gradient-to-br", accent.glow)} />
       <div className="relative p-5 sm:p-7 lg:p-8">
@@ -305,10 +305,10 @@ function LayoutHeader({
             </div>
             <div>
               <h1 className="max-w-4xl text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-                {tavern?.name || "酒馆入口"}
+                {tavern?.name || "空间入口"}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-violet-50/74">
-                {tavern?.description || `目标酒馆 ID：${tavernId || "未指定"}`}
+                {tavern?.description || `目标空间 ID：${tavernId || "未指定"}`}
               </p>
             </div>
             {error ? <p className="max-w-3xl rounded-2xl border border-red-300/30 bg-red-300/10 p-3 text-sm text-red-100">加载失败：{error}</p> : null}
@@ -391,7 +391,7 @@ function LayoutHeader({
           </div>
         </div>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="tablist" aria-label="酒馆布局样式">
+        <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="tablist" aria-label="空间布局样式">
           {TAVERN_LAYOUTS.map((layout: TavernLayout) => {
             const Icon = iconFor(layout.icon, layoutIconMap)
             const itemAccent = accentFor(layout)
@@ -502,7 +502,7 @@ function NpcRosterPanel({ tavern, characters, selectedCharacterId, roleplay, onS
           )
         }) : (
           <p className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-violet-100/64">
-            这间酒馆还没有 NPC。店主添加角色卡后会显示在这里。
+            这间空间还没有 NPC。店主添加角色卡后会显示在这里。
           </p>
         )}
         <Button type="button" variant="secondary" className="w-full" disabled>
@@ -578,7 +578,7 @@ function LobbyLayout(props: LayoutProps) {
     <div className="space-y-6">
       <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.22fr)_minmax(320px,0.78fr)]">
         <Card className="relative min-h-[34rem] min-w-0 overflow-hidden p-0">
-          <img src={tavernNightImage} alt="酒馆大厅" className="absolute inset-0 h-full w-full object-cover opacity-72" loading="lazy" decoding="async" />
+          <img src={tavernNightImage} alt="空间大厅" className="absolute inset-0 h-full w-full object-cover opacity-72" loading="lazy" decoding="async" />
           <div className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-950/36 to-slate-950/88" />
           <div className="relative grid min-h-[34rem] content-between gap-6 p-5 sm:p-6">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -732,7 +732,7 @@ function QuestPlayLayout(props: LayoutProps) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2"><Eye className="h-5 w-5 text-cyan-200" /> 关键线索</CardTitle>
-                <CardDescription>来自世界书和酒馆上下文的线索卡片。</CardDescription>
+                <CardDescription>来自世界书和空间上下文的线索卡片。</CardDescription>
               </div>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-violet-100/60">已收集 {worldCards.length}/8</span>
             </div>
@@ -775,7 +775,7 @@ function HybridRoomLayout(props: LayoutProps) {
   const { tavern, characters, selectedCharacterId, roleplay, stats, onSelectCharacter, onLayoutChange } = props
   const layout = layoutById("hybrid-room")
   const events = [
-    { title: "风铃响了一次", text: "门口的风铃被风吹动，清脆的声音在酒馆中回荡。", tag: "环境事件", icon: BellRing },
+    { title: "风铃响了一次", text: "门口的风铃被风吹动，清脆的声音在空间中回荡。", tag: "环境事件", icon: BellRing },
     { title: "旧客留下便签", text: "一张便签被夹在留言墙上，字迹有些熟悉。", tag: "玩家互动", icon: PenLine },
     { title: "NPC 正在等待回应", text: `${characters[0]?.name || "某位 NPC"} 似乎有话想对你说。`, tag: "NPC 动态", icon: MessageCircle },
   ]
@@ -903,8 +903,8 @@ export function TavernLayoutShowcase(props: TavernLayoutShowcaseProps) {
         />
         <Card className="min-w-0 overflow-hidden">
           <CardHeader>
-            <CardTitle>无法进入酒馆</CardTitle>
-            <CardDescription>请从发现页选择一个已存在的酒馆入口。</CardDescription>
+            <CardTitle>无法进入空间</CardTitle>
+            <CardDescription>请从发现页选择一个已存在的空间入口。</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>

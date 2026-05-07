@@ -57,23 +57,55 @@ def _rejected_npc_asset_manifest() -> dict:
     return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
+
+
+def _collect_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _collect_strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _collect_strings(item)
+
+
+def test_default_public_welfare_taverns_hide_internal_welfare_label_from_user_copy():
+    for tavern in default_public_welfare_taverns():
+        visible_text = "\n".join(_collect_strings(tavern))
+        assert "公益" not in visible_text, f"{tavern['id']} should not expose internal welfare label"
+        assert "官方" not in visible_text, f"{tavern['id']} should not expose official-style label"
+
+
+def test_default_public_welfare_rules_mode_copy_uses_neutral_label():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        llm_config = service.tavern_store.get_llm_config("pw_lantern_helpdesk")
+        response_mode = service._chat_response_mode(llm_config)
+        visible_text = "\n".join(_collect_strings(response_mode))
+
+        assert response_mode["kind"] == "built_in_rules"
+        assert "公益" not in visible_text
+        assert "官方" not in visible_text
+
+
 def test_default_public_welfare_taverns_are_seeded_and_discoverable():
     expected_names = {
-        "pw_lantern_helpdesk": "公益·灯塔问讯台",
-        "pw_midnight_treehole": "公益·夜航树洞电台",
-        "pw_community_repair": "公益·街角修补工坊",
-        "pw_lost_found_archive": "公益·城市拾光档案亭",
-        "pw_third_shelf_observatory": "公益·第三货架观测站",
-        "pw_midnight_commission_board": "公益·午夜委托局",
-        "pw_after_school_hero_supply": "公益·放学后英雄补给社",
-        "pw_jingan_catbell_refuge": "公益·静安猫铃小屋",
-        "pw_hospital_night_care": "公益·夜间护理站",
+        "pw_lantern_helpdesk": "小灯塔问路铺",
+        "pw_midnight_treehole": "月亮不睡电台",
+        "pw_community_repair": "补丁熊修补铺",
+        "pw_lost_found_archive": "拾光小邮局",
+        "pw_third_shelf_observatory": "第三货架秘密社",
+        "pw_midnight_commission_board": "午夜小委托板",
+        "pw_after_school_hero_supply": "放学后勇气铺",
+        "pw_jingan_catbell_refuge": "静安猫铃小馆",
+        "pw_hospital_night_care": "夜灯护理小站",
     }
 
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
 
-        payload = service.list_taverns_payload(query="公益")
+        payload = service.list_taverns_payload(query="")
         seeded = {
             tavern["id"]: tavern
             for tavern in payload["taverns"]
@@ -92,6 +124,34 @@ def test_default_public_welfare_taverns_are_seeded_and_discoverable():
             assert len(tavern["characters"]) >= 3
             assert tavern["world_info"]
 
+
+
+
+def test_default_public_welfare_seed_refreshes_existing_user_facing_copy():
+    with TemporaryDirectory() as tmpdir:
+        service = _service(tmpdir)
+        taverns_file = Path(tmpdir) / "taverns" / "taverns.json"
+        data = json.loads(taverns_file.read_text(encoding="utf-8"))
+        helpdesk = data["pw_lantern_helpdesk"]
+        helpdesk["name"] = "公益·灯塔问讯台"
+        helpdesk["description"] = "FableMap 公益酒馆：旧文案"
+        helpdesk["address"] = "FableMap 公益锚点 · Shibuya Crossing"
+        helpdesk["scene_prompt"] = "这是一个面向新手的公益服务站。"
+        helpdesk["memory_policy"]["note"] = "公益酒馆使用轻量结构化记忆预算。"
+        helpdesk["bookmarks"][0]["content"] = "公益默认酒馆 · 新手引导 · 不需要 API Key"
+        helpdesk["characters"][0]["system_prompt"] = "你扮演公益服务站志愿向导小舟。"
+        helpdesk["characters"][0]["tags"] = ["公益", "新手"]
+        helpdesk["visit_count"] = 42
+        taverns_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        service = _service(tmpdir)
+        refreshed = service.get_tavern_payload("pw_lantern_helpdesk", user_id="visitor_public_welfare")
+        visible_text = "\n".join(_collect_strings(refreshed))
+
+        assert refreshed["name"] == "小灯塔问路铺"
+        assert "公益" not in visible_text
+        assert "官方" not in visible_text
+        assert refreshed["visit_count"] == 42
 
 def test_default_public_welfare_every_seeded_character_can_chat():
     with TemporaryDirectory() as tmpdir:
@@ -359,7 +419,7 @@ def test_third_shelf_observatory_contains_complete_alien_convenience_tavern():
         tavern = service.get_tavern_payload("pw_third_shelf_observatory", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_third_shelf_observatory" for item in payload["taverns"])
-        assert tavern["name"] == "公益·第三货架观测站"
+        assert tavern["name"] == "第三货架秘密社"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["llm_config"]["backend"] == "rules"
@@ -426,7 +486,7 @@ def test_midnight_commission_board_contains_text_adventure_tavern():
         tavern = service.get_tavern_payload("pw_midnight_commission_board", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_midnight_commission_board" for item in payload["taverns"])
-        assert tavern["name"] == "公益·午夜委托局"
+        assert tavern["name"] == "午夜小委托板"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["llm_config"]["backend"] == "rules"
@@ -455,7 +515,7 @@ def test_after_school_hero_supply_contains_emotional_hero_tavern():
         tavern = service.get_tavern_payload("pw_after_school_hero_supply", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_after_school_hero_supply" for item in payload["taverns"])
-        assert tavern["name"] == "公益·放学后英雄补给社"
+        assert tavern["name"] == "放学后勇气铺"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["layout_style"] == "quest-play"
@@ -520,7 +580,7 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         tavern = service.get_tavern_payload("pw_jingan_catbell_refuge", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_jingan_catbell_refuge" for item in payload["taverns"])
-        assert tavern["name"] == "公益·静安猫铃小屋"
+        assert tavern["name"] == "静安猫铃小馆"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["llm_config"]["backend"] == "rules"
@@ -550,7 +610,7 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
             _assert_project_png_asset(sprite_url)
         for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
             assert mimi[field]
-        assert {"公益", "猫娘", "傲娇", "上海", "静安寺", "复国"}.issubset(set(mimi["tags"]))
+        assert {"猫娘", "傲娇", "上海", "静安寺", "复国"}.issubset(set(mimi["tags"]))
 
         yinpiao = characters_by_id["char_pw_yinpiao"]
         assert yinpiao["name"] == "银票"
@@ -569,7 +629,7 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
             _assert_project_png_asset(sprite_url)
         for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
             assert yinpiao[field]
-        assert {"公益", "猫尾", "账房", "上海", "静安寺", "复国"}.issubset(set(yinpiao["tags"]))
+        assert {"猫尾", "账房", "上海", "静安寺", "复国"}.issubset(set(yinpiao["tags"]))
 
         combined_prompt = " ".join(
             [
@@ -605,7 +665,7 @@ def test_hospital_night_care_contains_nurse_npc_and_medical_boundaries():
         tavern = service.get_tavern_payload("pw_hospital_night_care", user_id="visitor_public_welfare")
 
         assert any(item["id"] == "pw_hospital_night_care" for item in payload["taverns"])
-        assert tavern["name"] == "公益·夜间护理站"
+        assert tavern["name"] == "夜灯护理小站"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["layout_style"] == "npc-chat"
@@ -636,14 +696,14 @@ def test_hospital_night_care_contains_nurse_npc_and_medical_boundaries():
         for sprite_url in {mika["avatar"], *mika["sprites"].values()}:
             _assert_project_png_asset(sprite_url)
             assert _project_png_dimensions(sprite_url) == (512, 512)
-        assert {"公益", "医院", "护士", "夜间护理", "分诊", "安全边界"}.issubset(set(mika["tags"]))
+        assert {"医院", "护士", "夜间护理", "分诊", "安全边界"}.issubset(set(mika["tags"]))
 
         qingyou = characters_by_id["char_pw_qingyou_records"]
         assert qingyou["name"] == "青柚"
-        assert {"公益", "医院", "档案员", "候诊卡", "分诊", "隐私边界"}.issubset(set(qingyou["tags"]))
+        assert {"医院", "档案员", "候诊卡", "分诊", "隐私边界"}.issubset(set(qingyou["tags"]))
         nanxing = characters_by_id["char_pw_nanxing_liaison"]
         assert nanxing["name"] == "南星"
-        assert {"公益", "医院", "急救联络", "现实求助", "安全边界", "分诊"}.issubset(set(nanxing["tags"]))
+        assert {"医院", "急救联络", "现实求助", "安全边界", "分诊"}.issubset(set(nanxing["tags"]))
         for character in (qingyou, nanxing):
             assert character["avatar"] == _public_welfare_npc_asset(character["id"], "neutral")
             assert character["sprites"]["neutral"] == _public_welfare_npc_asset(character["id"], "neutral")
@@ -744,7 +804,7 @@ def test_community_repair_includes_heguang_communication_npc():
         assert heguang["tavern_id"] == "pw_community_repair"
         for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
             assert heguang[field]
-        assert {"公益", "关键对话", "调停"}.issubset(set(heguang["tags"]))
+        assert {"关键对话", "调停"}.issubset(set(heguang["tags"]))
 
         combined_prompt = " ".join(
             [
@@ -815,7 +875,7 @@ def test_default_public_welfare_seed_can_be_disabled(monkeypatch):
     monkeypatch.setenv("FABLEMAP_SEED_DEFAULT_TAVERNS", "0")
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
-        payload = service.list_taverns_payload(query="公益")
+        payload = service.list_taverns_payload(query="")
         assert payload["taverns"] == []
         assert payload["count"] == 0
 
@@ -841,12 +901,12 @@ def test_default_public_welfare_seed_is_readable_when_store_is_corrupt():
         taverns_file.write_text(corrupt_payload, encoding="utf-8")
 
         service = _service(tmpdir)
-        payload = service.list_taverns_payload(query="公益")
+        payload = service.list_taverns_payload(query="")
         seeded_ids = {tavern["id"] for tavern in payload["taverns"]}
 
         assert set(DEFAULT_PUBLIC_WELFARE_TAVERN_IDS).issubset(seeded_ids)
         helpdesk = service.get_tavern_payload("pw_lantern_helpdesk", user_id="visitor_public_welfare")
-        assert helpdesk["name"] == "公益·灯塔问讯台"
+        assert helpdesk["name"] == "小灯塔问路铺"
         assert helpdesk["llm_config"]["backend"] == "rules"
         assert taverns_file.read_text(encoding="utf-8") == corrupt_payload
 
@@ -909,11 +969,11 @@ def test_default_public_welfare_seed_read_fallback_repairs_partial_seed_records(
             if item["id"] == "pw_third_shelf_observatory"
         )
 
-        assert tavern["name"] == "公益·第三货架观测站"
+        assert tavern["name"] == "第三货架秘密社"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert len(tavern["characters"]) >= 3
-        assert service.get_tavern_payload("pw_third_shelf_observatory", user_id="visitor-demo")["name"] == "公益·第三货架观测站"
+        assert service.get_tavern_payload("pw_third_shelf_observatory", user_id="visitor-demo")["name"] == "第三货架秘密社"
         stored = json.loads(taverns_file.read_text(encoding="utf-8"))
         assert stored["pw_third_shelf_observatory"] == partial_seed_record
 
@@ -959,7 +1019,7 @@ def test_public_welfare_tavern_hydrates_versioned_kilo_config_when_free_model_is
     captured_configs = []
 
     class DummyResponse:
-        content = "Kilo 测试模型已经接管这间公益店。"
+        content = "Kilo 测试模型已经接管这间小馆。"
         usage = {"total_tokens": 17}
 
     class DummyClient:
@@ -1011,7 +1071,7 @@ def test_public_welfare_tavern_hydrates_versioned_kilo_config_when_free_model_is
         )
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert response["response"] == "Kilo 测试模型已经接管这间公益店。"
+        assert response["response"] == "Kilo 测试模型已经接管这间小馆。"
         assert captured_configs
         assert captured_configs[0].model == "kilo-auto/free"
         assert captured_configs[0].base_url == "https://api.kilo.ai/api/gateway"
@@ -1158,3 +1218,5 @@ def test_after_school_hero_supply_chat_uses_hero_dream_rules_response():
         assert "英雄名" in response["response"]
         assert "旧英雄卡" in response["response"] or "贴纸" in response["response"]
         assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+
+

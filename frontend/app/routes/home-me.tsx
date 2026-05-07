@@ -148,10 +148,10 @@ export default function HomeMePage() {
               ) : (
                 <>
                   <p>
-                    若你是访客，请从主人分享的具体空间链接进入，或在发现页浏览公开酒馆。Home 的成员与关系不会被做成访客社交墙。
+                    若你是访客，请从主人分享的具体空间链接进入，或在发现页浏览公开空间。Home 的成员与关系不会被做成访客社交墙。
                   </p>
                   <Button asChild variant="secondary" className="min-h-12 w-full justify-start">
-                    <Link to="/discover">去发现公开酒馆</Link>
+                    <Link to="/discover">去发现公开空间</Link>
                   </Button>
                 </>
               )}

@@ -23,7 +23,7 @@
     "actual ProductShell mobile dock labels/order",
     "desktop create entry remains visible while mobile owner/create wording is not first-line",
     "actual TavernRoute activity signals render before collapsed mobile details",
-    "mobile secondary tavern panels are hidden until 更多酒馆信息 is opened",
+    "mobile secondary tavern panels are hidden until 更多空间信息 is opened",
     "creator conversion card is desktop-only",
     "desktop secondary panels remain visible",
     "no horizontal overflow on desktop/mobile"

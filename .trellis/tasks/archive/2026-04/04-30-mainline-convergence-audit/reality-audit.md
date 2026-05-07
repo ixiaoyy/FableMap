@@ -15,7 +15,7 @@
 
 ## 速答
 
-结论：**FableMap 不是纯静态网页，也不是只有本地 HTML 的 demo**。仓库已有 FastAPI v1 后端、Tavern/Chat/Gameplay 等 API、JSON 文件持久化、MySQL schema/实现雏形、React Router 前端 API client、Docker Compose、后端和前端测试。本轮还用全新数据目录跑通了“健康检查 → 默认酒馆 seed → 创建酒馆 → 添加 NPC → 访客进入 → 发送聊天 → 历史读取 → 跨访客权限拒绝”的后端主链路烟测。
+结论：**FableMap 不是纯静态网页，也不是只有本地 HTML 的 demo**。仓库已有 FastAPI v1 后端、Tavern/Chat/Gameplay 等 API、JSON 文件持久化、MySQL schema/实现雏形、React Router 前端 API client、Docker Compose、后端和前端测试。本轮还用全新数据目录跑通了“健康检查 → 默认空间 seed → 创建空间 → 添加 NPC → 访客进入 → 发送聊天 → 历史读取 → 跨访客权限拒绝”的后端主链路烟测。
 
 但它也**还不是生产级产品**。更准确定位是：**本地优先、功能较多、已有工程骨架的产品原型**。最大风险不是“没有工程”，而是功能/任务膨胀快于真实用户链路、部署运维、权限认证和数据迁移验证，容易继续滑向“什么都有但没有一条链路被打磨稳”的 AI 开发幻觉。
 
@@ -33,10 +33,10 @@ flowchart LR
 
 ## 关键证据
 
-1. `README.md:47-60` 声称仓库已有最小闭环：后端、地图/酒馆、聊天、写回、玩法、默认公益酒馆；这不是单页静态展示的描述。
+1. `README.md:47-60` 声称仓库已有最小闭环：后端、地图/空间、聊天、写回、玩法、默认公益空间；这不是单页静态展示的描述。
 2. `backend/src/fablemap_api/main.py:46-74` 创建真实 FastAPI app，注入 `TavernApplicationService`，挂载 `/api/v1` router，并选择 JSON/MySQL 存储。
 3. `backend/src/fablemap_api/api/v1/router.py:11-37` 注册 health、taverns、characters、chat、gameplay、state_cards、owners、rumors、homes 等 API 模块。
-4. `backend/src/fablemap_api/core/tavern.py:673-900` 实现 JSON `TavernStore`，包含 `taverns.json`、`taverns_keyvault.json`、默认公益酒馆 seed、CRUD、删除时清理聊天记录。
+4. `backend/src/fablemap_api/core/tavern.py:673-900` 实现 JSON `TavernStore`，包含 `taverns.json`、`taverns_keyvault.json`、默认公益空间 seed、CRUD、删除时清理聊天记录。
 5. `backend/sql/migrations/001_initial_schema.sql:18-201` 定义 MySQL 表：`taverns`、`characters`、`world_info`、`visitors`、`chat_messages`、`memory_atoms`、`gameplay_sessions`、`llm_configs`。
 6. `frontend/app/lib/taverns.ts:715-760`、`944-1020`、`1585-1645` 前端通过 `/api/v1/taverns`、`/chat`、`/gameplays`、`/gameplay-sessions` 调后端，不是完全写死数据。
 7. `docker-compose.yml:1-44` 提供 backend + frontend 两服务，backend 有 healthcheck，frontend 依赖 backend healthy。
@@ -45,7 +45,7 @@ flowchart LR
    - `& 'C:\Users\phpxi\miniconda3\python.exe' -m pytest -q --tb=short tests/test_tavern_gameplay_api.py tests/test_tavern_chat_history_permissions.py`：`4 passed`。
    - `npm --prefix .\frontend test`：全部前端脚本测试通过。
    - `npm --prefix .\frontend run build`：React Router/Vite 构建通过。
-   - `artifacts/runlogs/reality-audit-20260430-smoke` 数据目录烟测：创建酒馆、加 NPC、进入、聊天、按角色读取 2 条历史、跨访客读取返回 403。
+   - `artifacts/runlogs/reality-audit-20260430-smoke` 数据目录烟测：创建空间、加 NPC、进入、聊天、按角色读取 2 条历史、跨访客读取返回 403。
 
 ## 细节展开
 
@@ -56,7 +56,7 @@ flowchart LR
 - 聊天链路会写入 `chat_history/<tavern>/<visitor>_<character>.jsonl`。
 - LLM 配置有 keyvault 分离，`rules` 后端可无外部 API Key 运行本地闭环。
 - GameplayDefinition / GameplaySession 有后端模型、API 与测试。
-- 默认公益酒馆 seed 让全新数据目录也能启动后有可发现内容。
+- 默认公益空间 seed 让全新数据目录也能启动后有可发现内容。
 
 ### 仍然原型化 / 幻觉风险高的部分
 
@@ -77,7 +77,7 @@ flowchart LR
 
 ## 后续建议
 
-暂停新功能，做一轮“主链路收敛”：只验收 **创建酒馆 → 配置 NPC/LLM → 访客进入 → 聊天 → 写回/状态 → 回访**，把其余功能按“已闭环 / 半闭环 / 纯展示 / 应冻结”分组。
+暂停新功能，做一轮“主链路收敛”：只验收 **创建空间 → 配置 NPC/LLM → 访客进入 → 聊天 → 写回/状态 → 回访**，把其余功能按“已闭环 / 半闭环 / 纯展示 / 应冻结”分组。
 
 ## 相关文档
 

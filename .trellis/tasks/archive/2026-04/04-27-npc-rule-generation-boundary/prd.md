@@ -6,9 +6,9 @@
 
 ## What I already know
 
-* 用户在“新猫娘默认酒馆”头脑风暴中提出：平台可以按照规则自动生成 NPC。
-* 当前权威文档 `docs/WHAT_NOT_TO_BUILD.md` 明确写着不做平台自动生成 NPC / 酒馆描述 / 对话内容 / 故事。
-* `README.md`、`docs/PRODUCT_BRIEF.md`、`docs/FABLEMAP_TAVERN_PLATFORM.md` 当前强调主人主权：酒馆内容、角色、氛围、访问规则由店主决定。
+* 用户在“新猫娘默认空间”头脑风暴中提出：平台可以按照规则自动生成 NPC。
+* 当前权威文档 `docs/WHAT_NOT_TO_BUILD.md` 明确写着不做平台自动生成 NPC / 空间描述 / 对话内容 / 故事。
+* `README.md`、`docs/PRODUCT_BRIEF.md`、`docs/FABLEMAP_TAVERN_PLATFORM.md` 当前强调主人主权：空间内容、角色、氛围、访问规则由店主决定。
 * `docs/WORLD_SCHEMA.md` 已有 `TavernCharacter` 和 SillyTavern 字段映射，若只是生成草稿并由店主确认，未必需要新增 schema。
 * 用户选择本轮“先写设计文档，不实现”。
 
@@ -22,7 +22,7 @@
 ## Requirements (evolving)
 
 * 设计文档必须区分“生成草稿 / 模板补全 / 自动上线内容”。
-* 必须保留主人主权：店主确认前不发布、不写入公开酒馆、不替店主承担创作责任。
+* 必须保留主人主权：店主确认前不发布、不写入公开空间、不替店主承担创作责任。
 * 必须保持 TavernCharacter / WorldInfo / SillyTavern 兼容，除非后续单独批准 schema 变更。
 * 必须明确安全边界：版权/IP、色情/未成年/非自愿、真实个人隐私、敏感地点、仇恨骚扰、危险行为。
 * 必须说明对 `docs/WHAT_NOT_TO_BUILD.md` 等权威文档的建议改法，但本任务是否直接改 docs 需用户确认。
@@ -43,7 +43,7 @@
 
 ## Out of Scope
 
-* 不实现自动生成 API、前端入口或默认酒馆。
+* 不实现自动生成 API、前端入口或默认空间。
 * 不改 TavernCharacter schema。
 * 不直接上线任何平台生成 NPC。
 * 不把用户前面给出的猫娘越界提示词当作生成规则。
@@ -52,7 +52,7 @@
 
 **Approach A: 规则化草稿生成 + 店主确认（Recommended）**
 
-* 平台根据店主输入的酒馆主题、地点、语气、禁忌、标签生成 NPC 草稿。
+* 平台根据店主输入的空间主题、地点、语气、禁忌、标签生成 NPC 草稿。
 * 草稿进入编辑器，店主必须确认后才保存/发布。
 * 优点：兼顾低门槛和主人主权；能替代“平台自动创作”的硬禁令。
 * 风险：需要严格标注“AI 草稿”，并防止一键生成变成平台内容工厂。
@@ -65,14 +65,14 @@
 
 **Approach C: 平台自动生成并默认上线**
 
-* 平台替空酒馆自动生成 NPC 并发布。
+* 平台替空空间自动生成 NPC 并发布。
 * 优点：最快填充内容。
 * 风险：直接破坏主人主权和当前文档边界；不推荐。
 
 ## User Decision Update 2026-04-27 - Generated NPC Status
 
 * 用户选择产品状态名：`AI 草稿`。
-* 设计含义：平台生成结果默认只是未发布草稿，必须由店主审核、编辑并确认后，才能保存为 TavernCharacter 或发布到酒馆。
+* 设计含义：平台生成结果默认只是未发布草稿，必须由店主审核、编辑并确认后，才能保存为 TavernCharacter 或发布到空间。
 * 文档口径：后续避免把该能力直接称为“自动生成 NPC 并上线”；统一称为“AI 草稿生成 / 规则化 NPC 草稿”。
 
 ## Draft State Requirement
@@ -86,7 +86,7 @@
 
 * 用户选择 MVP 输入范围：轻量输入。
 * 店主触发“生成 AI 草稿”前，平台最少需要：
-  * 酒馆名称 / 简介（优先复用已有 Tavern 字段）；
+  * 空间名称 / 简介（优先复用已有 Tavern 字段）；
   * 角色风格标签（如猫系、傲娇、线索人、酒保、守望者）；
   * 禁忌词 / 禁止方向（如不要色情、不要现实名人、不要恐怖、不要暴力等）。
 * 设计取舍：优先降低店主创作门槛；复杂世界观、说话风格和开场目标可以作为高级选项，不进入 MVP 必填项。
@@ -94,7 +94,7 @@
 ## Final Design Decision
 
 * 推荐方案已定：AI 草稿 + 店主确认。
-* MVP 输入：酒馆名称/简介 + 风格标签 + 禁忌方向。
+* MVP 输入：空间名称/简介 + 风格标签 + 禁忌方向。
 * MVP 输出：只生成 NPC 角色卡字段，不自动生成 WorldInfo/玩法/头像。
 * 设计文档：docs/superpowers/specs/2026-04-27-ai-npc-drafts-design.md。
 
@@ -104,7 +104,7 @@
 设计已按推荐方案完成：
 
 * 产品状态名：`AI 草稿`。
-* MVP 输入：酒馆名称/简介 + 角色风格标签 + 禁忌词/禁止方向。
+* MVP 输入：空间名称/简介 + 角色风格标签 + 禁忌词/禁止方向。
 * MVP 输出：只生成 NPC 角色卡字段（name、description、personality、scenario、system_prompt、first_mes、mes_example、tags）。
 * 关键边界：店主确认前不保存为 TavernCharacter、不进入公开 payload、不覆盖已有 NPC、不自动上线。
 * 设计文档：`docs/superpowers/specs/2026-04-27-ai-npc-drafts-design.md`。

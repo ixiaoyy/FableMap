@@ -2,7 +2,7 @@
   "id": "special-tavern-type-thin-layer",
   "name": "special-tavern-type-thin-layer",
   "title": "Special Tavern Type Thin Layer",
-  "description": "为 FableMap 设计薄特殊酒馆类型层：选择 place_type 扩展或 owner-confirmed metadata，定义创建页、发现页、酒馆页展示和测试/文档同步边界。",
+  "description": "为 FableMap 设计薄特殊空间类型层：选择 place_type 扩展或 owner-confirmed metadata，定义创建页、发现页、空间页展示和测试/文档同步边界。",
   "status": "planning",
   "dev_type": null,
   "scope": null,

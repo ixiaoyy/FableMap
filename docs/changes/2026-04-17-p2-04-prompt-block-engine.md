@@ -11,7 +11,7 @@
   - 有配置时按段落 `enabled/order/type` 组装系统上下文。
   - `world_info` 段落保留动态命中注入，可通过关闭段落禁用世界书注入。
 - `WorldInfoInjector` 兼容 `Tavern.world_info.to_dict()` 输出的 `tavern_id/order` 等扩展字段，避免 Prompt 预览和聊天构建因多余字段中断。
-- `Tavern` 增加 `prompt_blocks` 持久化字段，并纳入酒馆更新、导入和导出。
+- `Tavern` 增加 `prompt_blocks` 持久化字段，并纳入空间更新、导入和导出。
 - 新增店主 API：
   - `GET /api/taverns/{id}/prompt-blocks`
   - `PUT /api/taverns/{id}/prompt-blocks`
@@ -19,7 +19,7 @@
 - 新增 `frontend/src/PromptBlockEditor.jsx`：
   - 支持段落开关、排序、类型、模板、预算、复制、删除自定义段、恢复默认。
   - 支持无 LLM 预览最终 `messages` 顺序。
-  - 在酒馆卡片和高级工具台新增“段落”入口。
+  - 在空间卡片和高级工具台新增“段落”入口。
 - `frontend/src/styles.css` 新增 Prompt Block 编辑器桌面 / 移动端样式。
 - 新增 `tests/test_tavern_prompt_blocks.py`，覆盖段落构建、世界书关闭、预算裁剪、归一化和 API 权限。
 

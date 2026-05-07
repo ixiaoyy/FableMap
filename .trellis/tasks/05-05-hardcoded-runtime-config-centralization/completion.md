@@ -2,10 +2,10 @@
 
 ## 实现摘要
 
-- 后端新增 `public_welfare_rules.py`，把公益酒馆 no-network/rules backend 的关键字、动作和回复文案从 service 方法迁到集中配置。
-- `web/service.py` 和 `application/services/runtime.py` 改为调用集中规则解析函数，不再按 `pw_*` 酒馆 ID 写内联特判分支。
+- 后端新增 `public_welfare_rules.py`，把公益空间 no-network/rules backend 的关键字、动作和回复文案从 service 方法迁到集中配置。
+- `web/service.py` 和 `application/services/runtime.py` 改为调用集中规则解析函数，不再按 `pw_*` 空间 ID 写内联特判分支。
 - `default_taverns.py` 增加 `public_welfare_npc_asset_url()` 和 NPC ID 清单，默认公益 NPC neutral 资产 URL 由统一 helper 生成。
-- 前端新增 `tavern-runtime-config.js`，集中 demo 身份、新人入口、公益 NPC 表情预览/旧路径兼容、酒馆氛围图 fallback 配置。
+- 前端新增 `tavern-runtime-config.js`，集中 demo 身份、新人入口、公益 NPC 表情预览/旧路径兼容、空间氛围图 fallback 配置。
 - 前端新增 `portraitCatalogConfig.ts`，集中 NPC fallback portrait imports、公益角色 portrait override、首页/创建/入场面板预览头像。
 - 更新前端路由/服务/组件调用集中配置，减少散落 literal。
 - 新增后端与前端集中化回归测试，并纳入 `npm test`。
@@ -13,7 +13,7 @@
 ## 保留边界
 
 - 未修改 Tavern/TavernCharacter/WorldInfoEntry/VisitorState Schema。
-- 未改变公益默认酒馆/角色 ID、默认文案语义、坐标或访问规则。
+- 未改变公益默认空间/角色 ID、默认文案语义、坐标或访问规则。
 - 未移动或删除 docs 文档。
 - 未新增依赖。
 - 未修改图片资源文件本身。

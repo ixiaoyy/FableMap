@@ -43,8 +43,8 @@ Response `200` fields:
   "characters": [{ "id": "string", "name": "string <= 80 chars", "avatar": "string|null" }],
   "character_count": 1,
   "share_url": "https://host/tavern/{encoded_tavern_id}",
-  "share_title": "邀请你进入「酒馆名」",
-  "share_text": "邀请你进入「酒馆名」：公开短简介"
+  "share_title": "邀请你进入「空间名」",
+  "share_text": "邀请你进入「空间名」：公开短简介"
 }
 ```
 
@@ -59,10 +59,10 @@ Never include:
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
 | `access=public` | Anonymous and visitor users receive `200` |
 | `access=password` | Share payload is visible without password, but password/hash is never present |
-| `access=private`, non-owner or anonymous | `403 {"error": "此酒馆是私人的"}` |
+| `access=private`, non-owner or anonymous | `403 {"error": "此空间是私人的"}` |
 | `access=private`, owner `X-User-Id` | `200` public-safe payload |
 | Missing description | `description=""`, `short_description=""`, share text uses default public summary |
 

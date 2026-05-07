@@ -83,7 +83,7 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     if (!next) return
     setGameplays((prev) => [next, ...prev])
     setSelectedId(next.id)
-    setStatus('短剧模板已生成本地草稿；请检查内容、按本酒馆调整，并保存/发布后访客才可见。')
+    setStatus('短剧模板已生成本地草稿；请检查内容、按本空间调整，并保存/发布后访客才可见。')
   }
 
   function addAssistantShortDramaDraft() {
@@ -102,7 +102,7 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     if (!next) return
     setGameplays((prev) => [next, ...prev])
     setSelectedId(next.id)
-    setStatus('玩法模板已生成本地草稿；店主检查并点击“保存玩法”后才会写入酒馆，发布状态为 draft。')
+    setStatus('玩法模板已生成本地草稿；店主检查并点击“保存玩法”后才会写入空间，发布状态为 draft。')
   }
 
   function updateGameplay(nextGameplay) {
@@ -143,8 +143,8 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
       <div className="modal-content panel gameplay-manager" onClick={(event) => event.stopPropagation()}>
         <header className="modal-header gameplay-manager__header">
           <div>
-            <p className="mini-label">酒馆玩法</p>
-            <h3>{tavern?.name || '当前酒馆'} · 玩法管理</h3>
+            <p className="mini-label">空间玩法</p>
+            <h3>{tavern?.name || '当前空间'} · 玩法管理</h3>
             <p className="note muted">只填目标、氛围和结算即可；有 AI 时由 AI Director 决定下一步，无 AI 时走随机事件。</p>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>
@@ -222,8 +222,8 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
             <section className="short-drama-assistant-panel" aria-label="AI 短剧草稿助手">
               <div className="short-drama-assistant-panel__header">
                 <span className="mini-label">AI 短剧草稿助手</span>
-                <strong>基于当前酒馆设定生成未发布草稿</strong>
-                <small>短剧草稿是本地未发布建议；不会覆盖已有玩法，保存前不写入酒馆，发布前访客不可见。</small>
+                <strong>基于当前空间设定生成未发布草稿</strong>
+                <small>短剧草稿是本地未发布建议；不会覆盖已有玩法，保存前不写入空间，发布前访客不可见。</small>
               </div>
               <label className="short-drama-assistant-field">
                 <span>冲突钩子</span>

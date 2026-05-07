@@ -137,7 +137,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
     setDraft(normalizedDraft)
     setSelectedId(normalizedDraft.id)
     setDirty(true)
-    if (!options.silent) setStatus('预设已暂存，保存后会出现在这间酒馆的自定义预设里。')
+    if (!options.silent) setStatus('预设已暂存，保存后会出现在这间空间的自定义预设里。')
     return next
   }
 
@@ -185,7 +185,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
     setDraft(captured)
     setPresets((prev) => prev.map((preset) => (preset.id === captured.id ? captured : preset)))
     setDirty(true)
-    setStatus('已把当前酒馆的 AI 参数、段落、护栏和记忆策略写入此预设。')
+    setStatus('已把当前空间的 AI 参数、段落、护栏和记忆策略写入此预设。')
   }
 
   function handleDeletePreset() {
@@ -237,7 +237,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
         ownerId,
       )
       setSelectedId(payload.active_preset_id || presetToApply.id)
-      setStatus('运行预设已应用：AI 参数、段落、护栏和记忆策略已同步到酒馆。')
+      setStatus('运行预设已应用：AI 参数、段落、护栏和记忆策略已同步到空间。')
       if (payload.tavern && onPresetApplied) onPresetApplied(payload.tavern)
     } catch (err) {
       setError(`应用失败：${err.message}`)
@@ -252,7 +252,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
         <header className="modal-header preset-manager-header">
           <div>
             <p className="mini-label">运行预设</p>
-            <h3>{tavern?.name || '酒馆'} 的 AI 运行方案</h3>
+            <h3>{tavern?.name || '空间'} 的 AI 运行方案</h3>
             <p className="note muted">把模型参数、Prompt 段落、记忆策略和输出护栏打包成可复用方案。</p>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>
@@ -361,7 +361,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
                 <section className="preset-manager-section">
                   <div>
                     <strong>组合内容</strong>
-                    <small>应用后会同步到酒馆当前配置。</small>
+                    <small>应用后会同步到空间当前配置。</small>
                   </div>
                   <div className="preset-manager-bundles">
                     <span>{draft.prompt_blocks?.length || 0} 个 Prompt 段落</span>
@@ -384,7 +384,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
                   </div>
                   {canEditDraft && (
                     <button className="secondary" type="button" onClick={handleCaptureCurrent}>
-                      用当前酒馆配置覆盖此预设
+                      用当前空间配置覆盖此预设
                     </button>
                   )}
                 </section>
@@ -400,7 +400,7 @@ export default function PresetManager({ tavern, ownerId, onClose, onPresetApplie
                     </>
                   )}
                   <button type="button" className="btn-primary" onClick={handleApply} disabled={applying}>
-                    {applying ? '应用中...' : '应用到酒馆'}
+                    {applying ? '应用中...' : '应用到空间'}
                   </button>
                 </div>
               </div>

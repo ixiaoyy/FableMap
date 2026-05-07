@@ -119,7 +119,7 @@ def _markdown(
         "",
         "## 导出范围",
         "",
-        f"- 酒馆：{tavern_name}",
+        f"- 空间：{tavern_name}",
         f"- 访客：{visitor_id}",
         f"- NPC：{character_name}",
         f"- 可见对话：{len(messages)} 条",

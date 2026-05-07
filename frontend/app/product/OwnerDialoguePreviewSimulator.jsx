@@ -54,7 +54,7 @@ export default function OwnerDialoguePreviewSimulator({
     }
     const fallbackPreview = buildOwnerDialoguePreview({ tavern, character: selectedCharacter, visitorMessage })
     if (!tavern?.id || !ownerId) {
-      setError('缺少酒馆或店主身份，暂时只能显示本地模拟降级结果。')
+      setError('缺少空间或店主身份，暂时只能显示本地模拟降级结果。')
       setPreview(fallbackPreview)
       return
     }

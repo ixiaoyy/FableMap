@@ -218,7 +218,7 @@ function HeroPosterPreview() {
     <div className="relative min-h-[540px] overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-slate-950 shadow-[0_30px_90px_rgba(0,0,0,0.45)] lg:min-h-[640px]">
       <img
         src={heroReferenceImage}
-        alt="FableMap 赛博城市视觉基准"
+        alt="FableMap 城市视觉基准"
         className="absolute inset-0 h-full w-full object-cover"
         decoding="async"
       />
@@ -342,7 +342,7 @@ Replace the section aria label and headings:
 Inside it, replace:
 
 ```tsx
-<p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100/75">热门酒馆</p>
+<p className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100/75">热门空间</p>
 <h2 id="featured-taverns" className="mt-2 text-3xl font-black text-white sm:text-4xl">
   从地图进入真实的故事
 </h2>
@@ -409,7 +409,7 @@ Expected: TypeScript passes and there are no duplicate `id="featured-taverns"` r
 Run:
 
 ```powershell
-Select-String -Path frontend/app/routes/home.tsx -Pattern 'Cyber taverns|酒馆收录|热门酒馆|开店|店主入口|Home / 学校|学校 / 店铺|Home、学校|酒馆和角色关系放回真实坐标' -CaseSensitive:$false
+Select-String -Path frontend/app/routes/home.tsx -Pattern 'Cyber taverns|空间收录|热门空间|开店|店主入口|Home / 学校|学校 / 店铺|Home、学校|空间和角色关系放回真实坐标' -CaseSensitive:$false
 ```
 
 Expected: no matches for old Tavern-only homepage framing. Specific sample names like `夜莺门牌` may remain because they are example entries, not hero/product category framing.

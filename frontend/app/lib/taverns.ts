@@ -1172,7 +1172,7 @@ export function listGlobalChatSessions(
   userId = DEFAULT_OWNER_ID,
 ) {
   return readApiJson<ChatSessionListResponse>(
-    `/api/v1/sessions${queryString({
+    `/api/v1/chat/sessions${queryString({
       character_id: options.characterId,
       visitor_id: options.visitorId,
     })}`,

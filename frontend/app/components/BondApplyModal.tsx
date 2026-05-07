@@ -93,7 +93,7 @@ export function BondApplyModal({
       )
       if (result.pending_bond) {
         setState("success")
-        setResultMsg("申请已提交，等待酒馆审批。")
+        setResultMsg("申请已提交，等待空间审批。")
       } else if (result.active_bond) {
         setState("success")
         setResultMsg("结缘成功！")

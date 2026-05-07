@@ -1,4 +1,4 @@
-# 酒馆分享与病毒传播（完整路线）
+# 空间分享与病毒传播（完整路线）
 
 ## 背景
 
@@ -14,7 +14,7 @@
 
 ## 非目标
 
-- 不实现平台自动生成营销文案或酒馆/NPC/剧情内容。
+- 不实现平台自动生成营销文案或空间/NPC/剧情内容。
 - 不实现访客好友、动态墙、私信、全局在线状态。
 - 不新增外部分享 SDK、埋点、排行或付费转化系统。
 - 不改变 Tavern / TavernCharacter 持久化 schema。
@@ -32,7 +32,7 @@ Response 200:
 ```json
 {
   "tavern_id": "...",
-  "title": "酒馆名",
+  "title": "空间名",
   "description": "最长 200 字公开简介",
   "short_description": "最长 80 字公开简介",
   "cover": "",
@@ -43,15 +43,15 @@ Response 200:
   "characters": [{ "id": "...", "name": "...", "avatar": "..." }],
   "character_count": 1,
   "share_url": "http://host/tavern/...",
-  "share_title": "邀请你进入「酒馆名」",
+  "share_title": "邀请你进入「空间名」",
   "share_text": "..."
 }
 ```
 
 Errors:
 
-- 404: 酒馆不存在
-- 403: 此酒馆是私人的
+- 404: 空间不存在
+- 403: 此空间是私人的
 
 ## 实现计划
 
@@ -63,7 +63,7 @@ Errors:
 
 ## 验收标准
 
-- `/api/v1/taverns/{id}/share` 对 public/password 酒馆返回 public-safe payload。
-- private 酒馆非 owner 返回 403，owner 返回 200。
+- `/api/v1/taverns/{id}/share` 对 public/password 空间返回 public-safe payload。
+- private 空间非 owner 返回 403，owner 返回 200。
 - 响应文本不包含 `api_key`、`password_hash`、密码、私有 runtime bucket。
 - 前端 build/typecheck/test 通过，后端 compile/focused pytest 通过。

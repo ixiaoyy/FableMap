@@ -4,7 +4,7 @@
 
 - Replaced `/tavern/:id` first screen with a native SillyTavern-style chat workbench.
 - Kept tavern chat as the mainline: NPC roster, chat history, and persistent bottom composer are visible before folded panels.
-- Folded public secondary features under `更多酒馆功能`.
+- Folded public secondary features under `更多空间功能`.
 - Gated owner management with `isOwner` and `data-owner-only-panel`.
 - Removed loader fallback from visitor identity to `DEFAULT_OWNER_ID`.
 - Preserved owner identity from `/owner` tavern links with `?owner_id=...`.

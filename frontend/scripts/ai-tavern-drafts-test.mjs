@@ -24,8 +24,8 @@ assert.deepEqual(request, {
 
 const form = draftResponseToCreateForm({
   draft: {
-    name: '外滩雨灯酒馆',
-    description: '江风边的小酒馆。',
+    name: '外滩雨灯空间',
+    description: '江风边的小空间。',
     scene_prompt: '雨后霓虹。',
     character: {
       name: '灯叔',
@@ -35,12 +35,12 @@ const form = draftResponseToCreateForm({
   },
 })
 
-assert.equal(form.name, '外滩雨灯酒馆')
-assert.equal(form.description, '江风边的小酒馆。')
+assert.equal(form.name, '外滩雨灯空间')
+assert.equal(form.description, '江风边的小空间。')
 assert.equal(form.scene_prompt, '雨后霓虹。')
 assert.equal(form.character_name, '灯叔')
 assert.equal(form.character_description, '夜班招待。')
 assert.equal(form.first_mes, '伞先放门口。')
 
-assert.throws(() => draftResponseToCreateForm({}), /AI 酒馆草稿返回为空/)
+assert.throws(() => draftResponseToCreateForm({}), /AI 空间草稿返回为空/)
 console.log('AI tavern draft helpers ok')

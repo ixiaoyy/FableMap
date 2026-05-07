@@ -3,7 +3,7 @@ import { formatTavernAnchorLocation } from '../product/mapAnchorCopy.js'
 export const TAVERN_LAYOUTS = [
   {
     id: "lobby",
-    title: "酒馆大厅型",
+    title: "空间大厅型",
     navLabel: "大厅",
     eyebrow: "Lobby layout",
     icon: "home",

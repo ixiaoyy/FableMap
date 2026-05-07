@@ -24,6 +24,7 @@ import {
   buildOwnerOperatingSummary,
   formatOwnerSummaryTime,
 } from "../lib/owner-summary.js"
+import { hasExplicitOwnerIdentity } from "../lib/tavern-runtime-config.js"
 import {
   DEFAULT_OWNER_ID,
   errorMessage,
@@ -91,7 +92,7 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs): Promi
     const result = await listTaverns({ owner_id: ownerId })
     taverns = (result.taverns || []).filter((tavern) => !tavern.owner_id || tavern.owner_id === ownerId)
   } catch (error) {
-    errors.push(`读取酒馆失败：${errorMessage(error)}`)
+    errors.push(`读取空间失败：${errorMessage(error)}`)
   }
 
   try {
@@ -101,10 +102,12 @@ export async function clientLoader({ request }: ClientLoaderFunctionArgs): Promi
     errors.push(`读取会话失败：${errorMessage(error)}`)
   }
 
-  try {
-    ownerLLM = await getOwnerDefaultLLM(ownerId)
-  } catch (error) {
-    errors.push(`读取默认 AI 配置失败：${errorMessage(error)}`)
+  if (hasExplicitOwnerIdentity(ownerId)) {
+    try {
+      ownerLLM = await getOwnerDefaultLLM(ownerId)
+    } catch (error) {
+      errors.push(`读取默认 AI 配置失败：${errorMessage(error)}`)
+    }
   }
 
   const visitorRows = await Promise.all(
@@ -227,7 +230,7 @@ export default function OwnerRoute() {
               </div>
               <CardTitle className="text-4xl font-black leading-tight">店主经营摘要</CardTitle>
               <CardDescription className="text-base leading-7">
-                先不急着收费，先让店主看见：谁来过、谁回来了、哪些酒馆正在变活。
+                先不急着收费，先让店主看见：谁来过、谁回来了、哪些空间正在变活。
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -286,10 +289,10 @@ export default function OwnerRoute() {
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/70">当前判断</p>
                 <p className="mt-2 text-sm leading-7 text-violet-100/72">
                   {metrics.taverns === 0
-                    ? "还没有酒馆。第一步是创建一个真实坐标锚定入口。"
+                    ? "还没有空间。第一步是创建一个真实坐标锚定入口。"
                     : metrics.returningVisitors > 0
-                      ? `已有 ${metrics.returningVisitors} 位回访者，说明酒馆关系链开始成立。`
-                      : "已有酒馆基础，但还需要让访客完成第一次对话和回访。"}
+                      ? `已有 ${metrics.returningVisitors} 位回访者，说明空间关系链开始成立。`
+                      : "已有空间基础，但还需要让访客完成第一次对话和回访。"}
                 </p>
               </div>
 
@@ -327,7 +330,7 @@ export default function OwnerRoute() {
                   ) : action.tavernId ? (
                     <Button asChild size="sm" variant="ghost" className="mt-3">
                       <Link to={ownerTavernManagePath(action.tavernId, ownerId)}>
-                        管理酒馆
+                        管理空间
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </Button>
@@ -341,7 +344,7 @@ export default function OwnerRoute() {
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              label="酒馆"
+              label="空间"
               value={formatNumber(metrics.taverns)}
               helper={`${formatNumber(metrics.openTaverns)} 间营业中 · ${openRatio}% 开放率`}
               icon={Store}
@@ -379,7 +382,7 @@ export default function OwnerRoute() {
             <MetricCard
               label="Token"
               value={totalTokens > 0 ? `${(totalTokens / 1000).toFixed(1)}k` : "0"}
-              helper={`${Object.keys(tavernMetrics).length} 个酒馆统计`}
+              helper={`${Object.keys(tavernMetrics).length} 个空间统计`}
               icon={Zap}
             />
           </div>
@@ -390,7 +393,7 @@ export default function OwnerRoute() {
               <Card>
                 <CardHeader>
                   <CardTitle>消息量趋势</CardTitle>
-                  <CardDescription>各酒馆消息量随时间变化</CardDescription>
+                  <CardDescription>各空间消息量随时间变化</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <TokenUsageChart
@@ -441,7 +444,7 @@ export default function OwnerRoute() {
                   </article>
                 )) : (
                   <div className="grid min-h-40 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
-                    暂无回访者。访客第二次进入同一酒馆后，这里会开始显示关系线索。
+                    暂无回访者。访客第二次进入同一空间后，这里会开始显示关系线索。
                   </div>
                 )}
               </CardContent>
@@ -468,7 +471,7 @@ export default function OwnerRoute() {
                   </article>
                 )) : (
                   <div className="grid min-h-40 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
-                    暂无会话记录。先从发现页进入酒馆测试一次 NPC 对话。
+                    暂无会话记录。先从发现页进入空间测试一次 NPC 对话。
                   </div>
                 )}
               </CardContent>
@@ -504,7 +507,7 @@ export default function OwnerRoute() {
                 </article>
               )) : (
                 <div className="grid min-h-36 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
-                  暂无访客反馈。访客在酒馆内提交给店主的私密反馈会出现在这里，不会展示给其他访客。
+                  暂无访客反馈。访客在空间内提交给店主的私密反馈会出现在这里，不会展示给其他访客。
                 </div>
               )}
             </CardContent>
@@ -512,7 +515,7 @@ export default function OwnerRoute() {
 
           <Card>
             <CardHeader>
-              <CardTitle>酒馆表现</CardTitle>
+              <CardTitle>空间表现</CardTitle>
               <CardDescription>按访客、回访、会话和消息量综合排序。</CardDescription>
             </CardHeader>
             <CardContent>
@@ -543,7 +546,7 @@ export default function OwnerRoute() {
                 </div>
               ) : (
                 <div className="grid min-h-40 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
-                  暂无酒馆。创建第一间酒馆后，这里会显示经营表现。
+                  暂无空间。创建第一间空间后，这里会显示经营表现。
                 </div>
               )}
             </CardContent>

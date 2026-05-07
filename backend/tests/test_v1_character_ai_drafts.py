@@ -18,8 +18,8 @@ def _create_tavern(client: TestClient) -> str:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "静安夜航酒馆",
-            "description": "一间锚定上海静安公共街角的赛博小酒馆。",
+            "name": "静安夜航空间",
+            "description": "一间锚定上海静安公共街角的小空间。",
             "lat": 31.224,
             "lon": 121.445,
             "access": "public",
@@ -65,7 +65,7 @@ def test_owner_generates_ai_character_draft_without_persisting_it(tmp_path: Path
     for field in ("name", "description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
         assert draft[field]
     assert {"AI 草稿", "猫娘", "傲娇", "复国"}.issubset(set(draft["tags"]))
-    assert "静安夜航酒馆" in draft["scenario"]
+    assert "静安夜航空间" in draft["scenario"]
     assert "不要露骨" in draft["system_prompt"]
     assert "不要真实私人地址" in draft["system_prompt"]
     assert "自动发布" in draft["system_prompt"]
@@ -97,4 +97,4 @@ def test_ai_character_draft_is_owner_only(tmp_path: Path) -> None:
     )
 
     assert response.status_code == 403
-    assert response.json()["error"] == "你不是此酒馆的主人"
+    assert response.json()["error"] == "你不是此空间的主人"

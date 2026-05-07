@@ -8,7 +8,7 @@ import {
 
 export default function SystemCharacterPresetPicker({
   title = '系统预设角色',
-  description = '从系统内置角色原型里挑一个，再按你的酒馆风格继续改。',
+  description = '从系统内置角色原型里挑一个，再按你的空间风格继续改。',
   actionLabel = '加入角色',
   disabled = false,
   onPick,
@@ -57,7 +57,7 @@ export default function SystemCharacterPresetPicker({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜夜班、档案、公益、技术员..."
+            placeholder="搜夜班、档案、向导、技术员..."
             disabled={disabled}
           />
         </label>

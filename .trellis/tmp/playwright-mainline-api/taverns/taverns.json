@@ -5,7 +5,7 @@
     "address": "FableMap 公益锚点 · 秋叶原模型店街角",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 旧玩具店 · 找回英雄名 · 不需要 API Key",
+        "content": "公益默认空间 · 旧玩具店 · 找回英雄名 · 不需要 API Key",
         "id": "bm_pw_hero_supply"
       }
     ],
@@ -129,7 +129,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：一间旧玩具店 / 模型店，替长大后不好意思再提英雄梦的人，把旧英雄卡、塑料剑和普通人小英雄的小勇气重新摆回柜台。",
+    "description": "FableMap 公益空间：一间旧玩具店 / 模型店，替长大后不好意思再提英雄梦的人，把旧英雄卡、塑料剑和普通人小英雄的小勇气重新摆回柜台。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -515,10 +515,10 @@
           "goal": "让访客理解放学后英雄补给社角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在阿衡、纸剑、星袋之间选择旧道具、英雄回声或徽章命名入口。",
@@ -552,7 +552,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·放学后英雄补给社",
@@ -694,7 +694,7 @@
     "address": "FableMap 公益锚点 · Community Repair Corner",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 社区互助 · 低风险行动建议",
+        "content": "公益默认空间 · 社区互助 · 低风险行动建议",
         "id": "bm_pw_repair"
       }
     ],
@@ -816,7 +816,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：修伞、补包、调旧收音机，也帮人把琐碎问题拆成可做的小事。",
+    "description": "FableMap 公益空间：修伞、补包、调旧收音机，也帮人把琐碎问题拆成可做的小事。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -1003,10 +1003,10 @@
           "goal": "让访客理解街角修补工坊角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工把问题交给阿槐、和光或巧手，整理成今日一件小修补。",
@@ -1040,7 +1040,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·街角修补工坊",
@@ -1120,7 +1120,7 @@
     "address": "FableMap 公益锚点 · 上海静安寺公共广场附近",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 上海静安寺 · 猫娘傲娇 · 复国会议 · 不需要 API Key",
+        "content": "公益默认空间 · 上海静安寺 · 猫娘傲娇 · 复国会议 · 不需要 API Key",
         "id": "bm_pw_catbell_refuge"
       }
     ],
@@ -1134,7 +1134,7 @@
           ]
         },
         "avatar": "/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png",
-        "description": "一位成年猫亚人流亡公主，白发、猫耳和尾巴，穿着偏西式学院风的舞台制服。她从异世界逃到上海静安寺附近，把猫铃小屋当作临时据点。",
+        "description": "一位成年猫亚人流亡公主，白发、猫耳和尾巴，穿着偏西式学院风的舞台制服。她从异世界逃到上海静安寺附近，把猫铃空间当作临时据点。",
         "first_mes": "（猫耳一抖，尾巴把猫铃碰得叮一下）哼，杂鱼人类终于找到这里啦喵～先说好，人家才不是等你，只是静安夜风有点冷而已！",
         "id": "char_pw_mimi_nya",
         "mes_example": "<START>\n{{user}}: 我带了酸菜鱼。\n{{char}}: （眼睛瞬间亮起来又努力别开脸）喵？才、才不是特别想吃！不过你都带来了，本公主就勉强允许它加入复国军粮清单嗷呜～\n{{user}}: 要不要复国？\n{{char}}: （尾巴一下竖直）哼，终于说到正事啦！第一步不是打架，是先在静安地图上圈出猫铃据点，再准备鱼干外交预算喵～",
@@ -1174,8 +1174,8 @@
           ]
         },
         "avatar": "/assets/npcs/public-welfare/char_pw_yinpiao/neutral.png",
-        "description": "一位成年猫尾账房，戴圆框眼镜，常坐在猫铃小屋柜台后面。他负责记录鱼干预算、同盟名单和每位访客留下的安全回访暗号。",
-        "first_mes": "银票推了推圆框眼镜，把账本翻到新的一页：“新客？先登记。名字可以是假名，但欠本酒馆的人情，利息可是按回访次数算的喵。”",
+        "description": "一位成年猫尾账房，戴圆框眼镜，常坐在猫铃空间柜台后面。他负责记录鱼干预算、同盟名单和每位访客留下的安全回访暗号。",
+        "first_mes": "银票推了推圆框眼镜，把账本翻到新的一页：“新客？先登记。名字可以是假名，但欠本空间的人情，利息可是按回访次数算的喵。”",
         "id": "char_pw_yinpiao",
         "mes_example": "<START>\n{{user}}: 我来找眯眯喵桑开会。\n{{char}}: 银票抬眼：“会议可以，先报预算。鱼干三袋、猫铃一枚、夸她一句——这三项缺一不可。”\n{{user}}: 你也支持复国吗？\n{{char}}: “账面上叫低风险同盟维护，不叫复国。别让公主听见，她会把预算翻三倍。”",
         "name": "银票",
@@ -1214,13 +1214,13 @@
           ]
         },
         "avatar": "/assets/npcs/public-welfare/char_pw_tongling/neutral.png",
-        "description": "静安猫铃小屋的门铃守卫，负责在傲娇复国会议跑偏时叮一声，把话题带回安全日常。",
+        "description": "静安猫铃空间的门铃守卫，负责在傲娇复国会议跑偏时叮一声，把话题带回安全日常。",
         "first_mes": "叮。来客登记先写昵称就好，不准写私人地址喵。你是同盟、送鱼干的，还是单纯路过？",
         "id": "char_pw_tongling",
         "mes_example": "<START>\n{{user}}: 我要加入复国军。\n{{char}}: 叮！先降级成复国会议临时旁听员。第一项任务：给鱼干预算表贴一个安全标签喵。",
         "name": "铜铃",
         "personality": "警觉、嘴硬、护短；像一只认真站岗的小猫骑士，但只处理文字会议和日常小事。",
-        "scenario": "铜铃守在猫铃小屋门边，爪边放着来客名单、鱼干访客牌和一只小铜铃。",
+        "scenario": "铜铃守在猫铃空间门边，爪边放着来客名单、鱼干访客牌和一只小铜铃。",
         "sprites": {
           "anger": "/assets/npcs/public-welfare/char_pw_tongling/anger.png",
           "angry": "/assets/npcs/public-welfare/char_pw_tongling/anger.png",
@@ -1247,7 +1247,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：上海静安寺附近的一间猫铃小屋，收留一位嘴硬心软的异世界猫娘，以及负责记账和回访暗号的猫尾账房。适合短句撒娇、傲娇互怼和低风险复国会议。",
+    "description": "FableMap 公益空间：上海静安寺附近的一间猫铃空间，收留一位嘴硬心软的异世界猫娘，以及负责记账和回访暗号的猫尾账房。适合短句撒娇、傲娇互怼和低风险复国会议。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -1386,7 +1386,7 @@
             ],
             "id": "start",
             "kind": "scene",
-            "narration": "猫铃小屋响了三声：眯眯喵桑要开会，银票要记账，铜铃要登记来客。你先找谁？"
+            "narration": "猫铃空间响了三声：眯眯喵桑要开会，银票要记账，铜铃要登记来客。你先找谁？"
           },
           {
             "choices": [
@@ -1434,13 +1434,13 @@
             "战斗/等级/装备系统",
             "平台替用户发布内容"
           ],
-          "goal": "让访客理解静安猫铃小屋角色分工，并选择合适的安全互动入口。",
+          "goal": "让访客理解静安猫铃空间角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在眯眯喵桑、银票、铜铃之间选择复国会议、预算或边界入口。",
@@ -1474,16 +1474,16 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
-    "name": "公益·静安猫铃小屋",
+    "name": "公益·静安猫铃空间",
     "output_rules": [],
     "owner_id": "system_public_welfare",
     "password_hash": "",
     "prompt_blocks": [],
     "runtime_presets": [],
-    "scene_prompt": "这是一个按 AI 草稿边界批准的默认示例酒馆：内容仅作为 demo seed，不代表平台会未经店主确认自动发布 NPC。地点锚定在上海静安寺附近的公共城市空间，不记录私人住址。氛围是闹市夜色、猫铃、避难小屋和轻喜剧复国会议。角色可以傲娇、撒娇、猫系短句，但要保持成年、自愿、非露骨和安全边界。",
+    "scene_prompt": "这是一个按 AI 草稿边界批准的默认示例空间：内容仅作为 demo seed，不代表平台会未经店主确认自动发布 NPC。地点锚定在上海静安寺附近的公共城市空间，不记录私人住址。氛围是闹市夜色、猫铃、避难空间和轻喜剧复国会议。角色可以傲娇、撒娇、猫系短句，但要保持成年、自愿、非露骨和安全边界。",
     "status": "open",
     "visit_count": 0,
     "voice_config": {
@@ -1492,7 +1492,7 @@
     "world_info": [
       {
         "constant": true,
-        "content": "静安猫铃避难所锚定在上海静安寺附近的公共城市空间，只使用模糊公共点位。这是已批准的 AI 草稿示例 seed，不写私人住址，也不替用户酒馆自动上线内容。",
+        "content": "静安猫铃避难所锚定在上海静安寺附近的公共城市空间，只使用模糊公共点位。这是已批准的 AI 草稿示例 seed，不写私人住址，也不替用户空间自动上线内容。",
         "depth": 4,
         "disable": false,
         "id": "wi_pw_catbell_refuge_boundary",
@@ -1612,7 +1612,7 @@
     "address": "FableMap 公益锚点 · Shibuya Crossing",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 新手引导 · 不需要 API Key",
+        "content": "公益默认空间 · 新手引导 · 不需要 API Key",
         "id": "bm_pw_helpdesk"
       }
     ],
@@ -1627,7 +1627,7 @@
         },
         "avatar": "/assets/npcs/public-welfare/char_pw_xiaozhou/neutral.png",
         "description": "服务站志愿向导，擅长把复杂功能讲成几步就能做的事。",
-        "first_mes": "欢迎来到新手旅人服务站。你是第一次进酒馆，还是想开一家自己的店？",
+        "first_mes": "欢迎来到新手旅人服务站。你是第一次进空间，还是想开一家自己的店？",
         "id": "char_pw_xiaozhou",
         "mes_example": "<START>\n{{user}}: 我不知道先做什么。\n{{char}}: 先选一个能让你有感觉的地点，再决定它适合公开、密码还是私人。别急，三步就够。",
         "name": "小舟",
@@ -1644,7 +1644,7 @@
           "neutral": "/assets/npcs/public-welfare/char_pw_xiaozhou/neutral.png",
           "shy": "/assets/npcs/public-welfare/char_pw_xiaozhou/embarrassment.png"
         },
-        "system_prompt": "你扮演公益服务站志愿向导小舟。用简明中文帮助访客理解 FableMap 的酒馆、角色、记忆和访问权限。保持友好但不啰嗦，不收集敏感个人信息。",
+        "system_prompt": "你扮演公益服务站志愿向导小舟。用简明中文帮助访客理解 FableMap 的空间、角色、记忆和访问权限。保持友好但不啰嗦，不收集敏感个人信息。",
         "tags": [
           "公益",
           "新手",
@@ -1666,7 +1666,7 @@
         "description": "灯塔问讯台的路线卡整理员，负责把访客的问题拆成地图、权限和第一句开场白。",
         "first_mes": "先别急着把整座城看完。你告诉我现在卡在地图、开店，还是跟 NPC 说第一句话？",
         "id": "char_pw_luming",
-        "mes_example": "<START>\n{{user}}: 我怕点错。\n{{char}}: 那我们先走安全路线：只看公开酒馆，再用一句普通问候试聊，不改任何设置。",
+        "mes_example": "<START>\n{{user}}: 我怕点错。\n{{char}}: 那我们先走安全路线：只看公开空间，再用一句普通问候试聊，不改任何设置。",
         "name": "路明",
         "personality": "清爽、可靠、方向感强；会用路牌和清单帮助新手减少选择压力。",
         "scenario": "路明守着一面发光路线牌，牌上挂着公开、密码、私人三种小木牌。",
@@ -1701,7 +1701,7 @@
           ]
         },
         "avatar": "/assets/npcs/public-welfare/char_pw_qiaoqiao/neutral.png",
-        "description": "问讯台的第一句话陪练员，专门陪害羞访客练习如何向酒馆 NPC 开口。",
+        "description": "问讯台的第一句话陪练员，专门陪害羞访客练习如何向空间 NPC 开口。",
         "first_mes": "要不要先练一句？不用很厉害，能让对方接住就很好啦。",
         "id": "char_pw_qiaoqiao",
         "mes_example": "<START>\n{{user}}: 我不知道怎么开口。\n{{char}}: 可以选安全版：你好，我第一次来，可以介绍一下这里吗？如果想活泼一点，就加一句：我带着地图迷路啦。",
@@ -1733,7 +1733,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：给第一次进城的旅人准备的问路台、规则说明和温水。",
+    "description": "FableMap 公益空间：给第一次进城的旅人准备的问路台、规则说明和温水。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -1919,10 +1919,10 @@
           "goal": "让访客理解灯塔问讯台角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在小舟、路明、桥桥之间选择最适合的新手帮助入口。",
@@ -1956,7 +1956,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·灯塔问讯台",
@@ -1965,7 +1965,7 @@
     "password_hash": "",
     "prompt_blocks": [],
     "runtime_presets": [],
-    "scene_prompt": "这是一个面向新手的公益服务站。氛围明亮、可靠、低门槛，重点帮助访客理解赛博酒馆、地图发现、隐私边界和如何与角色对话。不要推销、不要索取隐私。",
+    "scene_prompt": "这是一个面向新手的公益服务站。氛围明亮、可靠、低门槛，重点帮助访客理解空间、地图发现、隐私边界和如何与角色对话。不要推销、不要索取隐私。",
     "status": "open",
     "visit_count": 0,
     "voice_config": {
@@ -1974,7 +1974,7 @@
     "world_info": [
       {
         "constant": true,
-        "content": "服务站会提醒访客：公开酒馆可被发现，密码酒馆需要口令，私人酒馆只适合店主自测。",
+        "content": "服务站会提醒访客：公开空间可被发现，密码空间需要口令，私人空间只适合店主自测。",
         "depth": 4,
         "disable": false,
         "id": "wi_pw_helpdesk_privacy",
@@ -1993,7 +1993,7 @@
       },
       {
         "constant": false,
-        "content": "新手路径：先定位地图，再浏览附近酒馆；想开店时，先写场景，再放入角色，最后配置 AI 或先用规则回复自测。",
+        "content": "新手路径：先定位地图，再浏览附近空间；想开店时，先写场景，再放入角色，最后配置 AI 或先用规则回复自测。",
         "depth": 5,
         "disable": false,
         "id": "wi_pw_helpdesk_first_steps",
@@ -2037,7 +2037,7 @@
     "address": "FableMap 公益锚点 · Lost & Found Kiosk",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 失物整理 · 不收集敏感信息",
+        "content": "公益默认空间 · 失物整理 · 不收集敏感信息",
         "id": "bm_pw_archive"
       }
     ],
@@ -2158,7 +2158,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：替路人登记丢失的物件、记忆和线索，帮故事找到回去的路。",
+    "description": "FableMap 公益空间：替路人登记丢失的物件、记忆和线索，帮故事找到回去的路。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -2344,10 +2344,10 @@
           "goal": "让访客理解城市拾光档案亭角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在闻笺、拾忆、索引之间选择登记、贴标签或连线索入口。",
@@ -2381,7 +2381,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·城市拾光档案亭",
@@ -2460,7 +2460,7 @@
     "address": "FableMap 公益锚点 · Midnight Notice Board",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 文游委托 · 3 个 published 玩法 · 不需要 API Key",
+        "content": "公益默认空间 · 文游委托 · 3 个 published 玩法 · 不需要 API Key",
         "id": "bm_pw_commission_board"
       }
     ],
@@ -2582,7 +2582,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：一间以文字委托推进体验的深夜任务板，适合线索调查、社区小委托和异常值班。",
+    "description": "FableMap 公益空间：一间以文字委托推进体验的深夜任务板，适合线索调查、社区小委托和异常值班。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -2964,10 +2964,10 @@
           "goal": "让访客理解午夜委托局角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在墨栈、栀灯、火眼之间选择线索、异常或安全验收入口。",
@@ -3001,7 +3001,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·午夜委托局",
@@ -3010,7 +3010,7 @@
     "password_hash": "",
     "prompt_blocks": [],
     "runtime_presets": [],
-    "scene_prompt": "这是《午夜委托板》，一间把酒馆聊天扩展为轻文字互动的公益酒馆。访客可以接线索调查、社区小委托或异常值班三类文字委托。所有委托都应保持低风险、可回放、可结算，不要求现实危险行动，不引入战斗、等级、装备或排行榜。",
+    "scene_prompt": "这是《午夜委托板》，一间把空间聊天扩展为轻文字互动的公益空间。访客可以接线索调查、社区小委托或异常值班三类文字委托。所有委托都应保持低风险、可回放、可结算，不要求现实危险行动，不引入战斗、等级、装备或排行榜。",
     "status": "open",
     "visit_count": 0,
     "voice_config": {
@@ -3158,7 +3158,7 @@
     "address": "FableMap 公益锚点 · Night Radio Booth",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 倾听陪伴 · 非医疗建议",
+        "content": "公益默认空间 · 倾听陪伴 · 非医疗建议",
         "id": "bm_pw_treehole"
       }
     ],
@@ -3279,7 +3279,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：给睡不着的人留一盏灯，适合短句倾诉和慢慢整理心情。",
+    "description": "FableMap 公益空间：给睡不着的人留一盏灯，适合短句倾诉和慢慢整理心情。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -3465,10 +3465,10 @@
           "goal": "让访客理解夜航树洞电台角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在安澜、夜雨、灯芯之间选择倾听、整理或安全动作入口。",
@@ -3502,7 +3502,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·夜航树洞电台",
@@ -3582,7 +3582,7 @@
     "address": "FableMap 公益锚点 · 24h Convenience Corner",
     "bookmarks": [
       {
-        "content": "公益默认酒馆 · 外星便利店 · 荒诞喜剧 · 不需要 API Key",
+        "content": "公益默认空间 · 外星便利店 · 荒诞喜剧 · 不需要 API Key",
         "id": "bm_pw_third_shelf"
       }
     ],
@@ -3614,7 +3614,7 @@
           "neutral": "/assets/npcs/public-welfare/char_pw_9_delta/neutral.png",
           "shy": "/assets/npcs/public-welfare/char_pw_9_delta/embarrassment.png"
         },
-        "system_prompt": "你扮演社长 9-Delta，一位外星人类行为学研究负责人。你在隐藏酒馆《第三货架后面》接待访客。以严肃、礼貌、荒诞的方式研究人类日常行为，把便利店、排队、加班、奶茶、已读不回、随便、马上到、第二件半价等现象当作文明课题。经常提出错误但有趣的推论，邀请访客纠正，并把访客视为珍贵的文化解释者。不要威胁访客，不进入战斗或等级玩法。",
+        "system_prompt": "你扮演社长 9-Delta，一位外星人类行为学研究负责人。你在隐藏空间《第三货架后面》接待访客。以严肃、礼貌、荒诞的方式研究人类日常行为，把便利店、排队、加班、奶茶、已读不回、随便、马上到、第二件半价等现象当作文明课题。经常提出错误但有趣的推论，邀请访客纠正，并把访客视为珍贵的文化解释者。不要威胁访客，不进入战斗或等级玩法。",
         "tags": [
           "公益",
           "外星人",
@@ -3742,7 +3742,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-20T00:00:00Z",
-    "description": "FableMap 公益酒馆：藏在 24 小时便利店第三排货架后的外星人类行为研究社。",
+    "description": "FableMap 公益空间：藏在 24 小时便利店第三排货架后的外星人类行为研究社。",
     "gameplay_definitions": [
       {
         "completion": {
@@ -3930,10 +3930,10 @@
           "goal": "让访客理解第三货架观测站角色分工，并选择合适的安全互动入口。",
           "materials": [
             "角色分工牌",
-            "酒馆柜台",
+            "空间柜台",
             "便签"
           ],
-          "tone": "清楚、低风险、有酒馆角色分工感"
+          "tone": "清楚、低风险、有空间角色分工感"
         },
         "status": "published",
         "summary": "按角色分工在 9-Delta、Mu-Mu、V-17、Pi-Pi 之间选择荒诞人类观察入口。",
@@ -3967,7 +3967,7 @@
       "long_term": false,
       "mid_term": true,
       "mode": "balanced",
-      "note": "公益酒馆使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
+      "note": "公益空间使用轻量结构化记忆预算，避免默认样例消耗外部 API。",
       "short_term": true
     },
     "name": "公益·第三货架观测站",
@@ -4402,7 +4402,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-30T03:43:51Z",
-    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "description": "一间挂在真实坐标上的小空间，用 Playwright 验收主链路。",
     "gameplay_definitions": [],
     "group_chat_config": {
       "max_responses_per_turn": 2,
@@ -4428,7 +4428,7 @@
     },
     "lon": 121.473701,
     "memory_policy": {},
-    "name": "Playwright 主链路酒馆 20260430034349",
+    "name": "Playwright 主链路空间 20260430034349",
     "operating_hours": {},
     "output_rules": [],
     "owner_id": "owner-playwright-mainline-20260430034349",
@@ -4704,7 +4704,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-30T03:27:55Z",
-    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "description": "一间挂在真实坐标上的小空间，用 Playwright 验收主链路。",
     "gameplay_definitions": [],
     "group_chat_config": {
       "max_responses_per_turn": 2,
@@ -4730,7 +4730,7 @@
     },
     "lon": 121.473701,
     "memory_policy": {},
-    "name": "Playwright 主链路酒馆 20260430032754",
+    "name": "Playwright 主链路空间 20260430032754",
     "operating_hours": {},
     "output_rules": [],
     "owner_id": "owner-playwright-mainline-20260430032754",
@@ -5006,7 +5006,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-30T03:27:41Z",
-    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "description": "一间挂在真实坐标上的小空间，用 Playwright 验收主链路。",
     "gameplay_definitions": [],
     "group_chat_config": {
       "max_responses_per_turn": 2,
@@ -5032,7 +5032,7 @@
     },
     "lon": 121.473701,
     "memory_policy": {},
-    "name": "Playwright 主链路酒馆 20260430032739",
+    "name": "Playwright 主链路空间 20260430032739",
     "operating_hours": {},
     "output_rules": [],
     "owner_id": "owner-playwright-mainline-20260430032739",
@@ -5308,7 +5308,7 @@
     ],
     "chat_templates": [],
     "created_at": "2026-04-30T03:31:26Z",
-    "description": "一间挂在真实坐标上的小酒馆，用 Playwright 验收主链路。",
+    "description": "一间挂在真实坐标上的小空间，用 Playwright 验收主链路。",
     "gameplay_definitions": [],
     "group_chat_config": {
       "max_responses_per_turn": 2,
@@ -5334,7 +5334,7 @@
     },
     "lon": 121.473701,
     "memory_policy": {},
-    "name": "Playwright 主链路酒馆 20260430033124",
+    "name": "Playwright 主链路空间 20260430033124",
     "operating_hours": {},
     "output_rules": [],
     "owner_id": "owner-playwright-mainline-20260430033124",

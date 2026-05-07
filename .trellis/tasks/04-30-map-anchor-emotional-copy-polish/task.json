@@ -2,7 +2,7 @@
   "id": "04-30-map-anchor-emotional-copy-polish",
   "name": "04-30-map-anchor-emotional-copy-polish",
   "title": "Map Anchor Emotional Copy Polish",
-  "description": "把真实坐标表达成“街角的门、巷口的灯牌、附近有人经营的酒馆”等产品语言。",
+  "description": "把真实坐标表达成“街角的门、巷口的灯牌、附近有人经营的空间”等产品语言。",
   "status": "completed",
   "dev_type": "frontend",
   "scope": "frontend/app/product map/discovery copy polish only; no backend/schema/API changes",

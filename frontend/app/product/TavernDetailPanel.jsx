@@ -4,9 +4,9 @@ import { enterTavern } from '../lib/taverns'
 import { inferTavernPlayMode, getTavernPlayBadges } from './tavernPlayModes'
 
 /**
- * TavernDetailPanel — 酒馆详情面板
+ * TavernDetailPanel — 空间详情面板
  *
- * 显示酒馆信息，允许访客进入或店主管理。
+ * 显示空间信息，允许访客进入或店主管理。
  */
 export default function TavernDetailPanel({
   tavern,
@@ -70,7 +70,7 @@ export default function TavernDetailPanel({
           <div className="tavern-detail-title-row">
             <div className="tavern-detail-access">{accessIcon}</div>
             <div>
-              <h2 className="tavern-detail-name">{tavern?.name || '未命名酒馆'}</h2>
+              <h2 className="tavern-detail-name">{tavern?.name || '未命名空间'}</h2>
               <div className="tavern-detail-badges">
                 <span className="tavern-badge" style={{ color: statusColor }}>
                   {statusLabel}
@@ -108,7 +108,7 @@ export default function TavernDetailPanel({
         {/* Status note */}
         {tavern?.status === 'closed' && (
           <div className="tavern-detail-notice tavern-detail-notice--warning">
-            此酒馆暂未配置 AI 或已歇业，暂时无法聊天。
+            此空间暂未配置 AI 或已歇业，暂时无法聊天。
           </div>
         )}
 
@@ -131,7 +131,7 @@ export default function TavernDetailPanel({
         {/* Character list */}
         {characters.length > 0 && (
           <div className="tavern-detail-section">
-            <label className="tavern-detail-label">酒馆角色</label>
+            <label className="tavern-detail-label">空间角色</label>
             <div className="tavern-detail-chars">
               {characters.map((char) => (
                 <div key={char.id} className="tavern-detail-char-item">
@@ -168,7 +168,7 @@ export default function TavernDetailPanel({
         {characters.length === 0 && (
           <div className="tavern-detail-section">
             <div className="tavern-detail-empty-chars">
-              这个酒馆还没有角色。让酒馆主人添加一些吧。
+              这个空间还没有角色。让空间主人添加一些吧。
             </div>
           </div>
         )}
@@ -191,7 +191,7 @@ export default function TavernDetailPanel({
               className="tavern-detail-btn tavern-detail-btn--manage"
               onClick={onOwnerManage}
             >
-              管理酒馆
+              管理空间
             </button>
           )}
 
@@ -202,7 +202,7 @@ export default function TavernDetailPanel({
               onClick={handlePublicEnter}
               disabled={entering}
             >
-              {entering ? '进入中...' : '进入酒馆'}
+              {entering ? '进入中...' : '进入空间'}
             </button>
           ) : (
             <button
@@ -221,7 +221,7 @@ export default function TavernDetailPanel({
         <div className="tavern-password-modal" onClick={(e) => e.target === e.currentTarget && setShowPasswordModal(false)}>
           <div className="tavern-password-box">
             <h3>{accessIcon} 需要密码</h3>
-            <p>此酒馆需要密码才能进入</p>
+            <p>此空间需要密码才能进入</p>
             <input
               type="password"
               value={password}

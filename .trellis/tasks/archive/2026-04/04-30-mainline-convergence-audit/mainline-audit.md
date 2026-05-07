@@ -11,7 +11,7 @@ The core loop is **technically present but not yet product-converged**.
 
 Canonical loop under audit:
 
-> 创建酒馆 → 配置 NPC / LLM → 访客进入 → 对话 → 写回状态 / 记忆 → 回访展示
+> 创建空间 → 配置 NPC / LLM → 访客进入 → 对话 → 写回状态 / 记忆 → 回访展示
 
 ## Authority Constraints Applied
 
@@ -24,7 +24,7 @@ Canonical loop under audit:
 
 | Step | Frontend surface | Backend/API/store | Persistence / return payload | Current status | Evidence |
 |---|---|---|---|---|---|
-| 1. 创建酒馆 | `frontend/app/product/TavernCreatePanel.jsx` builds payload and calls `createTavern`; after creation it adds queued characters | `POST /api/v1/taverns` → `TavernManagementApplicationMixin.create_tavern` → `TavernService.create_tavern` | `TavernStore.create_tavern` writes tavern JSON; if LLM configured, key is stored separately and status opens | **真闭环, with risk** | `TavernCreatePanel.jsx:183-203`; `api/v1/taverns.py:46-48`; `core/tavern.py:1445-1506`; `tests/test_tavern_create_wizard_regression.py` |
+| 1. 创建空间 | `frontend/app/product/TavernCreatePanel.jsx` builds payload and calls `createTavern`; after creation it adds queued characters | `POST /api/v1/taverns` → `TavernManagementApplicationMixin.create_tavern` → `TavernService.create_tavern` | `TavernStore.create_tavern` writes tavern JSON; if LLM configured, key is stored separately and status opens | **真闭环, with risk** | `TavernCreatePanel.jsx:183-203`; `api/v1/taverns.py:46-48`; `core/tavern.py:1445-1506`; `tests/test_tavern_create_wizard_regression.py` |
 | 2. 配置 NPC | Create flow queues characters; owner panel opens character manager; API supports add/update/import/delete | `POST/PUT/DELETE /api/v1/taverns/{id}/characters...` → `TavernService.add_character/update_character/import_character_card` | Characters persist inside tavern payload; SillyTavern import can attach world info | **真闭环, but should be part of golden path** | `TavernCreatePanel.jsx:194-203`; `api/v1/characters.py:42-94`; `core/tavern.py:1903-1968`; `tests/test_tavern_create_wizard_regression.py` |
 | 3. 配置 LLM | Create panel includes LLM config; owner panel saves LLM config | `update_tavern(... { llm_config })`; `test_llm_config` probes without persisting | Private key vault stores API key; public/private payloads must not leak secrets to visitors | **真闭环** | `TavernCreatePanel.jsx:183-194`; `TavernOwnerPanel.jsx:736-740`; `core/tavern.py:910-921`, `1586-1610`; `application/services/runtime.py:286-322`; create-wizard tests |
 | 4. 访客进入 | App/entry/interior call `enterTavern`; entry state is passed into chat room | `POST /api/v1/taverns/{id}/enter` → `TavernService.enter_tavern` | Updates `_visitors` private bucket for named visitor; increments tavern `visit_count`; returns `visitor_state` | **真闭环** | `frontend/app/lib/taverns.ts:735-744`; `api/v1/taverns.py:110-138`; `core/tavern.py:1842-1899`; `tests/test_tavern_visitor_state_api.py` |

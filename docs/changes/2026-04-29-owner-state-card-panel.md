@@ -2,7 +2,7 @@
 
 ## Summary
 
-店主侧状态卡（Canon Ledger）管理面板已完成。店主可查看酒馆所有状态卡（按状态/类型/范围筛选），确认/拒绝/替换访客提出的候选卡，以及手动创建酒馆级正史卡。
+店主侧状态卡（Canon Ledger）管理面板已完成。店主可查看空间所有状态卡（按状态/类型/范围筛选），确认/拒绝/替换访客提出的候选卡，以及手动创建空间级正史卡。
 
 ## Changes
 
@@ -25,7 +25,7 @@
 ### frontend/app/product/OwnerConsoleSections.jsx
 
 - `OwnerAdvancedToolPanel` 新增 `onManageStateCards` prop
-- 酒馆卡工具按钮区新增"状态卡"按钮（紧接"群聊"后）
+- 空间卡工具按钮区新增"状态卡"按钮（紧接"群聊"后）
 
 ### frontend/app/product/styles.css
 

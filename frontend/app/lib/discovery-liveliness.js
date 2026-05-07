@@ -31,7 +31,7 @@ export function buildDiscoveryLiveliness(tavern = {}) {
   const rumorValue = hasRumor ? '环境传闻可用' : '传闻待点亮'
   const feedbackValue = '回访反馈给店主'
   const summary = isQuiet
-    ? '等待第一束灯：先进入酒馆完成对话，或留下只给店主看的回访反馈。'
+    ? '等待第一束灯：先进入空间完成对话，或留下只给店主看的回访反馈。'
     : `附近有人经营：${levelLabel}，${rumorValue}，${feedbackValue}。`
 
   const chips = [
@@ -76,7 +76,7 @@ export function buildDiscoveryLiveliness(tavern = {}) {
       id: 'gameplay',
       label: '店内玩法',
       value: gameplaySignal.value,
-      helper: '只作为入店体验线索，不做跨酒馆竞争。',
+      helper: '只作为入店体验线索，不做跨空间竞争。',
       className: 'border-violet-300/24 bg-violet-300/10 text-violet-50',
     })
   }

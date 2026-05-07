@@ -253,9 +253,9 @@ export default function PresetImportPreviewModal({ tavern, ownerId = '', onClose
         <header className="modal-header">
           <div>
             <p className="mini-label">Preset Import · owner confirmed apply</p>
-            <h3>预览并应用预设：{tavern?.name || '当前酒馆'}</h3>
+            <h3>预览并应用预设：{tavern?.name || '当前空间'}</h3>
             <p className="note muted">
-              粘贴社区 / SillyTavern 风格 JSON，先生成风险报告；只有店主选择 supported 子集、查看 diff 后，才会写入酒馆。
+              粘贴社区 / SillyTavern 风格 JSON，先生成风险报告；只有店主选择 supported 子集、查看 diff 后，才会写入空间。
             </p>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>

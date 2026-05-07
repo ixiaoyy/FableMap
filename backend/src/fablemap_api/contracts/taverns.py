@@ -77,7 +77,7 @@ class TavernListResponse(BaseModel):
 
 
 class TavernStatusInfo(BaseModel):
-    """酒馆时间状态信息"""
+    """空间时间状态信息"""
     timezone: str | None = None
     local_time_display: str | None = None  # "22:47"
     is_open: bool = True
@@ -121,7 +121,7 @@ class RelationshipDecisionRequest(FlexibleBody):
 
 
 class MetricsResponse(BaseModel):
-    """酒馆运营数据指标"""
+    """空间运营数据指标"""
     tavern_id: str
     token_usage: int
     total_visits: int

@@ -2,7 +2,7 @@
   "id": "tavern-short-drama-gameplay-template-mvp",
   "name": "tavern-short-drama-gameplay-template-mvp",
   "title": "Tavern Short-drama Gameplay Template MVP",
-  "description": "把“显眼包式短剧情爽点”转译成酒馆内 3–5 步选择式玩法模板，复用 GameplayDefinition。",
+  "description": "把“显眼包式短剧情爽点”转译成空间内 3–5 步选择式玩法模板，复用 GameplayDefinition。",
   "status": "completed",
   "dev_type": "frontend",
   "scope": "frontend/gameplay-templates",

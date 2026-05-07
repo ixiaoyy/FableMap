@@ -78,12 +78,12 @@ Response:
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
 | Missing user identity | `401 {"error": "纪念图预览需要明确用户身份"}` |
 | Missing `visitor_id` | `400 {"error": "纪念图预览需要 visitor_id"}` |
 | Visitor previews another visitor | `403 {"error": "不能为其他访客预览纪念图"}` |
 | Missing/unknown character | `400` / `404` |
-| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此空间是私人的"}` |
 | Empty observable text | `400 {"error": "纪念图预览需要可观察回合文本"}` |
 | Valid preview | `200`, `image_generated=false`, prompt returned |
 

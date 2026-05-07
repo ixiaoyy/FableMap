@@ -8,7 +8,7 @@
 
 - 新增后端预览解析器：`backend/src/fablemap_api/core/preset_import.py`。
 - 新增 owner-only API：`POST /api/v1/taverns/{id}/preset-import/preview`。
-- 新增前端 owner modal：`PresetImportPreviewModal.jsx`，从酒馆卡片和高级工具进入。
+- 新增前端 owner modal：`PresetImportPreviewModal.jsx`，从空间卡片和高级工具进入。
 - 新增 typed/product 服务方法与脚本测试。
 - 新增 Trellis backend/frontend 规范，明确 preview-only 与 no-persistence 边界。
 

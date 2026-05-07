@@ -1,14 +1,14 @@
 # Add NPC to Catbell Tavern
 
 ## Goal
-在默认公益酒馆 `静安猫铃避难所` 中，为现有猫娘 `眯眯喵桑` 增加一个同馆 NPC。
+在默认公益空间 `静安猫铃避难所` 中，为现有猫娘 `眯眯喵桑` 增加一个同馆 NPC。
 
 ## Requirements
 - 新 NPC 与 `char_pw_mimi_nya` 位于同一个 Tavern：`pw_jingan_catbell_refuge`。
 - 不新增或修改 TavernCharacter Schema 字段；只增加默认 seed 内容和项目内 NPC 资产引用。
-- 新 NPC 必须是成年、原创、轻喜剧、安全边界明确的酒馆角色。
+- 新 NPC 必须是成年、原创、轻喜剧、安全边界明确的空间角色。
 - 新 NPC 必须带项目内头像 / 表情资源路径，满足 formal NPC asset contract。
-- 更新默认公益酒馆测试，验证同馆存在两个 NPC 且新 NPC 资源文件存在。
+- 更新默认公益空间测试，验证同馆存在两个 NPC 且新 NPC 资源文件存在。
 
 ## Acceptance Criteria
 - [ ] `pw_jingan_catbell_refuge` 默认 seed 的 `characters` 包含 `char_pw_mimi_nya` 和新 NPC。

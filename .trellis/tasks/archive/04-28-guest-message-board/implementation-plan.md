@@ -32,7 +32,7 @@
 
 ```python
 class TavernMessageModel(Base):
-    """酒馆留言模型"""
+    """空间留言模型"""
     __tablename__ = "tavern_messages"
 
     id = Column(String(64), primary_key=True)

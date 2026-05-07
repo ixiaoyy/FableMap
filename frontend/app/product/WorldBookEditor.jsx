@@ -124,7 +124,7 @@ function getTestStatusLabel(entry) {
 }
 
 /**
- * WorldBookEditor — 酒馆世界书编辑器
+ * WorldBookEditor — 空间世界书编辑器
  *
  * 将 Tavern.world_info 从 JSON 数据变成店主可直接编辑的 UI。
  */
@@ -378,7 +378,7 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
         <header className="modal-header world-book-header">
           <div>
             <p className="mini-label">世界书</p>
-            <h3>{tavern?.name || '当前酒馆'} 的背景资料</h3>
+            <h3>{tavern?.name || '当前空间'} 的背景资料</h3>
             <p className="note muted">
               把地点、传闻、规则和隐藏设定写成条目，AI 会按关键词或常驻规则读取。
               <span className="world-book-shortcut-hint"> Ctrl/⌘+S 保存，Ctrl/⌘+Enter 测试命中。</span>
@@ -391,7 +391,7 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
           <div className="world-book-loading" role="status" aria-live="polite">
             <span className="world-book-loading__orb" aria-hidden="true" />
             <strong>正在加载世界书...</strong>
-            <p>正在把酒馆的 WorldInfo 条目整理成可编辑草稿，不会自动改写或发布内容。</p>
+            <p>正在把空间的 WorldInfo 条目整理成可编辑草稿，不会自动改写或发布内容。</p>
           </div>
         ) : (
           <>
@@ -414,7 +414,7 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
             {entries.length === 0 ? (
               <div className="world-book-empty">
                 <p>还没有世界书条目。</p>
-                <p>可以先添加一个“常驻设定”，让 AI 每轮都知道酒馆背景。</p>
+                <p>可以先添加一个“常驻设定”，让 AI 每轮都知道空间背景。</p>
               </div>
             ) : (
               <ul className="world-book-items">
@@ -619,7 +619,7 @@ export default function WorldBookEditor({ tavern, ownerId, onClose, onWorldInfoC
         </div>
 
         <footer className="world-book-footer">
-          <p className="note muted">保存后会写入酒馆数据，导入角色卡带来的世界书也可以继续编辑。</p>
+          <p className="note muted">保存后会写入空间数据，导入角色卡带来的世界书也可以继续编辑。</p>
           <div className="modal-actions">
             <button type="button" className="secondary" onClick={onClose}>关闭</button>
             <button type="button" className="primary" onClick={handlePersist} disabled={saving}>

@@ -19,8 +19,8 @@ function characterAvatarUrl(character = {}) {
 }
 
 /**
- * TavernEntryPanel — 酒馆入场面板
- * 当用户在地图上点击一个酒馆标记时显示。
+ * TavernEntryPanel — 空间入场面板
+ * 当用户在地图上点击一个空间标记时显示。
  */
 export default function TavernEntryPanel({
   tavernId,
@@ -71,7 +71,7 @@ export default function TavernEntryPanel({
         <div className="loading-spinner">
           <div className="spinner-ring" />
         </div>
-        <p>正在打听酒馆消息...</p>
+        <p>正在打听空间消息...</p>
         <div className="skeleton-tavern-preview">
           <div className="skeleton-line skeleton-line--title" />
           <div className="skeleton-line skeleton-line--text" />
@@ -155,7 +155,7 @@ export default function TavernEntryPanel({
 
         {tavern.access === 'password' && (
           <div className="form-group password-group">
-            <label>该酒馆由于某种原因被锁上了。请输入密令：</label>
+            <label>该空间由于某种原因被锁上了。请输入密令：</label>
             <input 
               type="password" 
               value={password} 

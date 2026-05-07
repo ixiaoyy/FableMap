@@ -68,7 +68,7 @@ export function buildMapAnchorCardCopy(tavern = {}) {
 }
 
 export function buildMapAnchorMarkerCopy(tavern = {}) {
-  const name = toTrimmedText(tavern?.name) || '未命名酒馆'
+  const name = toTrimmedText(tavern?.name) || '未命名空间'
   const icon = getTavernAccessIcon(tavern?.access)
   const accessLabel = getTavernAccessMarkerLabel(tavern?.access)
   const statusText = tavern?.status === 'closed'

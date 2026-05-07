@@ -1,7 +1,7 @@
 # PRD: Home route productization or retirement
 
 ## Problem
-`home-me` 路由看起来是独立“我的空间”产品，但当前存在 owner 判断写死、成员回复 placeholder、与 `place_type=home` 酒馆主线重复等问题。若继续暴露，会让用户感觉是半成品 demo。
+`home-me` 路由看起来是独立“我的空间”产品，但当前存在 owner 判断写死、成员回复 placeholder、与 `place_type=home` 空间主线重复等问题。若继续暴露，会让用户感觉是半成品 demo。
 
 ## Evidence
 - `frontend/app/routes/home-me.tsx:473`：`const isOwner = true // TODO: 实际根据 userId 判断`。
@@ -11,7 +11,7 @@
 ## Goal
 二选一并落地：
 1. **产品化**：把 Home 作为真实坐标空间的一种 place_type，身份、成员、留言、可对话角色都走主链路；
-2. **下线/合并**：如果暂不做 Home，则从用户入口隐藏独立路由，只保留酒馆主线的 home 类型数据结构。
+2. **下线/合并**：如果暂不做 Home，则从用户入口隐藏独立路由，只保留空间主线的 home 类型数据结构。
 
 ## Non-goals
 - 不做无锚点自由空间。

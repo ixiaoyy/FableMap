@@ -2,7 +2,7 @@
 
 **日期**: 2026-04-17
 
-**背景**: 为赛博酒馆添加语音输入 (Speech-to-Text) 和语音合成 (Text-to-Speech) 支持。
+**背景**: 为空间添加语音输入 (Speech-to-Text) 和语音合成 (Text-to-Speech) 支持。
 
 ## 变更
 
@@ -14,9 +14,9 @@
   - 新增 `save_voice_config()`, `get_voice_config()` 存储方法
 
 - **web/service.py**
-  - `save_voice_config_payload()`: 保存酒馆语音配置
-  - `get_voice_config_payload()`: 获取酒馆语音配置
-  - `synthesize_voice_payload()`: 使用酒馆 TTS 配置合成语音
+  - `save_voice_config_payload()`: 保存空间语音配置
+  - `get_voice_config_payload()`: 获取空间语音配置
+  - `synthesize_voice_payload()`: 使用空间 TTS 配置合成语音
 
 - **web/router.py**
   - `GET /api/taverns/{tavern_id}/voice`: 获取语音配置
@@ -64,7 +64,7 @@ cd frontend && npm run build
 ## 已知限制
 
 - **STT**: 仅支持 Chrome 浏览器 (Web Speech API)
-- **TTS**: 需要酒馆已配置 LLM (使用相同 api_key)
+- **TTS**: 需要空间已配置 LLM (使用相同 api_key)
 - **语音文件**: 临时文件，需要前端及时消费 (createObjectURL)
 
 ## 未来工作

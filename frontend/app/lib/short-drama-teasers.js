@@ -61,7 +61,7 @@ export function buildShortDramaTeaser(tavern = {}) {
   if (!gameplay) return null
 
   const node = firstChoiceNode(gameplay)
-  const conflictTitle = cleanText(gameplay.title, '酒馆短剧一幕')
+  const conflictTitle = cleanText(gameplay.title, '空间短剧一幕')
   const sceneHook = truncateText(
     node?.narration || gameplay?.owner_brief?.goal || gameplay.summary,
     84,
@@ -72,7 +72,7 @@ export function buildShortDramaTeaser(tavern = {}) {
     gameplayId: cleanText(gameplay.id),
     kicker: '短剧入口',
     conflictTitle,
-    summary: truncateText(gameplay.summary || gameplay?.owner_brief?.goal || '进入一段店主发布的酒馆短剧玩法。', 72),
+    summary: truncateText(gameplay.summary || gameplay?.owner_brief?.goal || '进入一段店主发布的空间短剧玩法。', 72),
     sceneHook,
     ctaLabel: cleanText(gameplay.entry_label, '进入小剧场'),
     guardrail: '店主已发布的玩法承接；不是推荐排行，也不会自动生成或发布内容。',

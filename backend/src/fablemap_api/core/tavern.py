@@ -1,7 +1,7 @@
 """
-FableMap Tavern — 赛博酒馆 CRUD 核心
+FableMap Tavern — 空间 CRUD 核心
 
-提供酒馆(Tavern)的创建、读取、更新、删除操作。
+提供空间(Tavern)的创建、读取、更新、删除操作。
 支持 SillyTavern Character Card V2 格式的角色导入。
 """
 
@@ -195,7 +195,7 @@ class TavernSpriteSet:
 
 @dataclass
 class TavernCharacter:
-    """酒馆角色 — 兼容 SillyTavern Character Card V2"""
+    """空间角色 — 兼容 SillyTavern Character Card V2"""
     id: str
     tavern_id: str
     name: str
@@ -313,7 +313,7 @@ class WorldInfoEntry:
 
 @dataclass
 class LLMConfig:
-    """LLM 配置 — 酒馆主人提供的 AI 后端配置"""
+    """LLM 配置 — 空间主人提供的 AI 后端配置"""
     backend: str = "openai"
     model: str = "gpt-4o-mini"
     api_key: str = ""
@@ -515,7 +515,7 @@ class VoiceConfig:
 
 @dataclass
 class VisitorState:
-    """访客状态 — 访客与酒馆的关系"""
+    """访客状态 — 访客与空间的关系"""
     visitor_id: str
     tavern_id: str
     gender: str = "unspecified"
@@ -556,7 +556,7 @@ class VisitorState:
 
 @dataclass
 class Tavern:
-    """酒馆 — 地图上的一个可进入场所"""
+    """空间 — 地图上的一个可进入场所"""
     id: str
     name: str
     description: str
@@ -769,7 +769,7 @@ def _default_public_welfare_seeding_enabled() -> bool:
 # ─────────────────────────────────────────
 
 class TavernStore:
-    """酒馆数据存储 — JSON 文件持久化"""
+    """空间数据存储 — JSON 文件持久化"""
 
     def __init__(self, root: Path):
         self.root = root.resolve()
@@ -872,13 +872,15 @@ class TavernStore:
 
     @staticmethod
     def _merge_public_welfare_seed_defaults(existing: Any, default: dict[str, Any]) -> bool:
-        """Append missing built-in child records without overwriting store edits."""
+        """Keep built-in seed records current without touching runtime/private state."""
         if not isinstance(existing, dict):
             return False
         if str(existing.get("owner_id") or "") != DEFAULT_PUBLIC_WELFARE_OWNER_ID:
             return False
 
         changed = False
+        if TavernStore._refresh_public_welfare_seed_copy(existing, default):
+            changed = True
         for key in ("characters", "world_info", "bookmarks", "gameplay_definitions"):
             default_items = default.get(key)
             if not isinstance(default_items, list) or not default_items:
@@ -915,6 +917,100 @@ class TavernStore:
                 existing_ids.add(item_id)
                 existing_by_id[item_id] = existing_items[-1]
                 changed = True
+        return changed
+
+    @staticmethod
+    def _refresh_public_welfare_seed_copy(existing: dict[str, Any], default: dict[str, Any]) -> bool:
+        """Refresh canonical user-facing copy for system-owned built-in seeds.
+
+        Existing runtime state such as visits, LLM config, chat history side buckets,
+        and custom art overrides are intentionally preserved. The default seed copy is
+        not owner-authored content, so product wording updates should backfill older
+        local stores instead of leaving stale public labels visible.
+        """
+        changed = False
+        for key in ("name", "description", "address", "scene_prompt"):
+            default_value = default.get(key)
+            if default_value is not None and existing.get(key) != default_value:
+                existing[key] = deepcopy(default_value)
+                changed = True
+
+        default_memory_policy = default.get("memory_policy")
+        existing_memory_policy = existing.get("memory_policy")
+        if isinstance(default_memory_policy, dict) and isinstance(existing_memory_policy, dict):
+            default_note = default_memory_policy.get("note")
+            if default_note is not None and existing_memory_policy.get("note") != default_note:
+                existing_memory_policy["note"] = deepcopy(default_note)
+                changed = True
+
+        for key in ("world_info", "bookmarks", "gameplay_definitions"):
+            if TavernStore._refresh_public_welfare_seed_items(existing, default, key):
+                changed = True
+        if TavernStore._refresh_public_welfare_seed_characters(existing, default):
+            changed = True
+        return changed
+
+    @staticmethod
+    def _refresh_public_welfare_seed_items(existing: dict[str, Any], default: dict[str, Any], key: str) -> bool:
+        default_items = default.get(key)
+        existing_items = existing.get(key)
+        if not isinstance(default_items, list) or not isinstance(existing_items, list):
+            return False
+
+        changed = False
+        default_by_id = {
+            str(item.get("id") or "").strip(): item
+            for item in default_items
+            if isinstance(item, dict) and str(item.get("id") or "").strip()
+        }
+        for index, item in enumerate(existing_items):
+            if not isinstance(item, dict):
+                continue
+            default_item = default_by_id.get(str(item.get("id") or "").strip())
+            if default_item is None:
+                continue
+            if item != default_item:
+                existing_items[index] = deepcopy(default_item)
+                changed = True
+        return changed
+
+    @staticmethod
+    def _refresh_public_welfare_seed_characters(existing: dict[str, Any], default: dict[str, Any]) -> bool:
+        default_items = default.get("characters")
+        existing_items = existing.get("characters")
+        if not isinstance(default_items, list) or not isinstance(existing_items, list):
+            return False
+
+        changed = False
+        default_by_id = {
+            str(item.get("id") or "").strip(): item
+            for item in default_items
+            if isinstance(item, dict) and str(item.get("id") or "").strip()
+        }
+        text_keys = (
+            "name",
+            "description",
+            "personality",
+            "scenario",
+            "gender",
+            "system_prompt",
+            "first_mes",
+            "mes_example",
+            "alternate_greetings",
+            "tags",
+            "appearance",
+            "talkativeness",
+        )
+        for item in existing_items:
+            if not isinstance(item, dict):
+                continue
+            default_item = default_by_id.get(str(item.get("id") or "").strip())
+            if default_item is None:
+                continue
+            for key in text_keys:
+                if key in default_item and item.get(key) != default_item.get(key):
+                    item[key] = deepcopy(default_item[key])
+                    changed = True
         return changed
 
     @staticmethod
@@ -984,7 +1080,7 @@ class TavernStore:
     # ── Tavern CRUD ──────────────────────
 
     def list_taverns(self, include_private: bool = False, owner_id: str = "") -> list[Tavern]:
-        """列出所有酒馆"""
+        """列出所有空间"""
         data = self._load_taverns(include_seed_fallback=True)
         result = []
         for d in data.values():
@@ -1026,7 +1122,7 @@ class TavernStore:
     def create_tavern(self, tavern: Tavern) -> Tavern:
         data = self._load_taverns()
         if tavern.id in data:
-            raise HTTPException(status_code=409, detail="酒馆 ID 已存在")
+            raise HTTPException(status_code=409, detail="空间 ID 已存在")
         data[tavern.id] = tavern.to_dict()
         self._save_taverns(data)
         return tavern
@@ -1036,7 +1132,7 @@ class TavernStore:
         if tavern.id not in data:
             if self._is_seed_fallback_tavern(tavern.id):
                 return tavern
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         existing = data.get(tavern.id, {})
         updated = tavern.to_dict()
         # Preserve private extension buckets that are stored alongside the tavern
@@ -1054,7 +1150,7 @@ class TavernStore:
     def delete_tavern(self, tavern_id: str) -> None:
         data = self._load_taverns()
         if tavern_id not in data:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         del data[tavern_id]
         self._save_taverns(data)
         # 同时删除 keyvault 中的记录
@@ -1111,7 +1207,7 @@ class TavernStore:
     # ── Voice Config ───────────────────────
 
     def save_voice_config(self, tavern_id: str, config: VoiceConfig) -> None:
-        """保存语音配置（存储在酒馆数据中）"""
+        """保存语音配置（存储在空间数据中）"""
         data = self._load_taverns()
         if tavern_id not in data:
             return
@@ -1523,7 +1619,7 @@ def _visitor_relationship_stage(strength: float, visit_count: int) -> str:
     return "stranger"
 
 class TavernService:
-    """酒馆服务 — 业务逻辑"""
+    """空间服务 — 业务逻辑"""
 
     def __init__(self, store: TavernStore):
         self.store = store
@@ -1567,7 +1663,7 @@ class TavernService:
         query: str = "",
         owner_id: str = "",
     ) -> list[dict[str, Any]]:
-        """列出酒馆，支持位置过滤"""
+        """列出空间，支持位置过滤"""
         taverns = self.store.list_taverns(include_private=bool(owner_id), owner_id=owner_id)
         normalized_query = (query or "").strip()
         normalized_status = (status or "").strip()
@@ -1605,10 +1701,10 @@ class TavernService:
     def get_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         # 添加时间状态信息
         tavern_dict = tavern.to_dict_private(user_id) if tavern.owner_id and tavern.owner_id == user_id else tavern.to_dict_public()
@@ -1624,10 +1720,10 @@ class TavernService:
         return tavern_dict
 
     def create_tavern(self, data: dict[str, Any], owner_id: str = "") -> dict[str, Any]:
-        """创建酒馆"""
+        """创建空间"""
         owner_id = str(owner_id or "").strip()
         if not owner_id:
-            raise HTTPException(status_code=401, detail="创建酒馆需要明确店主身份")
+            raise HTTPException(status_code=401, detail="创建空间需要明确店主身份")
         tavern_id = data.get("id") or f"tavern_{uuid.uuid4().hex[:12]}"
         now = _utc_now_iso()
         place_type = _require_valid_place_type(data["place_type"]) if "place_type" in data else "tavern"
@@ -1637,7 +1733,7 @@ class TavernService:
 
         tavern = Tavern(
             id=tavern_id,
-            name=data.get("name", "未命名酒馆"),
+            name=data.get("name", "未命名空间"),
             description=data.get("description", ""),
             lat=float(data.get("lat", 0)),
             lon=float(data.get("lon", 0)),
@@ -1703,13 +1799,13 @@ class TavernService:
         return tavern.to_dict_private(owner_id)
 
     def update_tavern(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
-        """更新酒馆"""
+        """更新空间"""
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         # 更新字段
         if "name" in data:
@@ -1823,10 +1919,10 @@ class TavernService:
     def delete_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, str]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         self.store.delete_tavern(tavern_id)
         return {"ok": True, "tavern_id": tavern_id}
@@ -1834,7 +1930,7 @@ class TavernService:
     def add_home_member(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
             raise HTTPException(status_code=403, detail="你不是此 Home 的主人")
         if tavern.place_type != "home":
@@ -2048,21 +2144,21 @@ class TavernService:
         user_id: str = "",
         visitor_gender: str = "",
     ) -> dict[str, Any]:
-        """进入酒馆（验证密码）"""
+        """进入空间（验证密码）"""
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         # 密码验证
         if tavern.access == "password":
             if not password:
-                raise HTTPException(status_code=401, detail="此酒馆需要密码")
+                raise HTTPException(status_code=401, detail="此空间需要密码")
             if not _verify_password(password, tavern.password_hash):
                 raise HTTPException(status_code=401, detail="密码错误")
 
-        # 私人酒馆只允许主人进入
+        # 私人空间只允许主人进入
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         # 更新访客状态。有明确访客身份时才写入，避免匿名空 ID 污染回访面板。
         now = _utc_now_iso()
@@ -2084,7 +2180,7 @@ class TavernService:
             )
             self.store.update_visitor_state(tavern_id, visitor_state)
 
-        # 更新酒馆访问计数
+        # 更新空间访问计数
         tavern.visit_count += 1
         self.store.update_tavern(tavern)
 
@@ -2105,10 +2201,10 @@ class TavernService:
     def add_character(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         character = _character_from_payload(data, tavern_id)
         tavern.characters.append(character)
@@ -2125,10 +2221,10 @@ class TavernService:
     def update_character(self, tavern_id: str, char_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         char = next((c for c in tavern.characters if c.id == char_id), None)
         if not char:
@@ -2160,10 +2256,10 @@ class TavernService:
     def delete_character(self, tavern_id: str, char_id: str, user_id: str = "") -> dict[str, str]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         tavern.characters = [c for c in tavern.characters if c.id != char_id]
         self.store.update_tavern(tavern)
@@ -2183,14 +2279,14 @@ class TavernService:
     # ── 运营指标 ────────────────────────
 
     def get_tavern_metrics(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
-        """获取酒馆运营指标"""
+        """获取空间运营指标"""
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
-        # 验证访问权限（只有酒馆主人可以看到完整指标）
+        # 验证访问权限（只有空间主人可以看到完整指标）
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         # Token 用量
         token_usage = self.store.get_token_usage(tavern_id)

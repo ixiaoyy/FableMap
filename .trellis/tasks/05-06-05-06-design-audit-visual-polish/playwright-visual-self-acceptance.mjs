@@ -17,7 +17,7 @@ const demoTavern = {
   id: demoTavernId,
   owner_id: ownerId,
   name: '第三货架后面的观测吧台',
-  description: '便利店第三排货架后的赛博酒馆，外星社团正在研究人类的马上到、随便和第二件半价。',
+  description: '便利店第三排货架后的空间，外星社团正在研究人类的马上到、随便和第二件半价。',
   address: '上海市 · 便利店第三货架',
   latitude: 31.2304,
   longitude: 121.4737,
@@ -192,7 +192,7 @@ async function checkViewport(browser, config) {
   await expect(page.getByText(/下一步：/)).toBeVisible()
   screenshots.push(await screenshot(page, config.name, 'create-step-01'))
   await page.getByRole('button', { name: /Step 02/ }).click()
-  await expect(page.getByText(/Step 02 · 酒馆内容/)).toBeVisible()
+  await expect(page.getByText(/Step 02 · 空间内容/)).toBeVisible()
   screenshots.push(await screenshot(page, config.name, 'create-step-02'))
 
   await page.goto(`${baseUrl}/tavern/${demoTavernId}?owner_id=${ownerId}`, { waitUntil: 'networkidle' })

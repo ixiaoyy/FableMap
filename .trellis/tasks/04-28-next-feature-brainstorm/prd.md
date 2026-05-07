@@ -2,17 +2,17 @@
 
 ## Goal
 
-为 FableMap 下一轮“功能类”开发选择一个清晰、可落地、符合赛博酒馆主线的功能方向，并在进入实现前收敛 MVP 范围、边界、验收标准和技术路径。
+为 FableMap 下一轮“功能类”开发选择一个清晰、可落地、符合空间主线的功能方向，并在进入实现前收敛 MVP 范围、边界、验收标准和技术路径。
 
 ## What I already know
 
 * 用户希望使用 Trellis 开启另一个功能类开发的头脑风暴。
 * 当前没有 current task。
 * 当前仓库还有较多未提交变更；新功能需要避免和未提交的美术/归档/清理变更互相污染。
-* 当前产品主线是：真实坐标 / 地图发现 → 进入酒馆 → 配置 AI NPC → 对话互动 → 记忆写回 → 回访反馈。
+* 当前产品主线是：真实坐标 / 地图发现 → 进入空间 → 配置 AI NPC → 对话互动 → 记忆写回 → 回访反馈。
 * 产品原则：真实地图锚点、主人主权、AI 作为 NPC 对话引擎、Token 由店主承担、SillyTavern 兼容。
-* 当前不应做：平台自动发布酒馆/NPC 内容、平台级 Token 充值结算、无锚点自由空间、访客泛社交、传统地图 App 功能、战斗/等级装备系统。
-* 现有 active / in-progress 方向包括 Docker 部署、酒馆内景 UI、测试覆盖；本轮应尽量选择不和这些任务冲突的功能切片，或明确接续其中一个。
+* 当前不应做：平台自动发布空间/NPC 内容、平台级 Token 充值结算、无锚点自由空间、访客泛社交、传统地图 App 功能、战斗/等级装备系统。
+* 现有 active / in-progress 方向包括 Docker 部署、空间内景 UI、测试覆盖；本轮应尽量选择不和这些任务冲突的功能切片，或明确接续其中一个。
 
 ## Assumptions (temporary)
 
@@ -26,7 +26,7 @@
 
 ## Requirements (evolving)
 
-* 功能必须服务赛博酒馆主链路，不偏向传统地图或 RPG 系统。
+* 功能必须服务空间主链路，不偏向传统地图或 RPG 系统。
 * 不越过主人确认自动生成/发布内容。
 * 不引入大型新依赖，除非后续单独确认理由。
 * 先形成设计/PRD，再进入实现。
@@ -62,7 +62,7 @@
 
 用户选择本轮重点：**优化页面设计，让页面更吸引人**。
 
-初步理解：这不是单个按钮/样式问题，而是面向新访客与潜在店主的第一印象、视觉吸引力、信息层级和转化路径优化。后续需要明确优先页面（首页/发现页/酒馆详情/酒馆内页/创建页）与目标用户（探索者 vs 店主）。
+初步理解：这不是单个按钮/样式问题，而是面向新访客与潜在店主的第一印象、视觉吸引力、信息层级和转化路径优化。后续需要明确优先页面（首页/发现页/空间详情/空间内页/创建页）与目标用户（探索者 vs 店主）。
 
 ## Visual Brainstorm Notes
 
@@ -77,33 +77,33 @@
 
 ## User Correction
 
-用户纠正：**项目不只是开酒馆**。
+用户纠正：**项目不只是开空间**。
 
-修正理解：当前页面设计不能只围绕“开酒馆”来做，必须重新确认 FableMap 的更大产品表达。赛博酒馆可以是一个核心场景/示例/入口，但首页与整体视觉不应把产品误导成单一“开酒馆工具”。下一步应先梳理仓库里已经出现的非酒馆方向（Place/Home、多地点类型、真实地点上的 AI 场所等），再让用户选择更准确的产品叙事。
+修正理解：当前页面设计不能只围绕“开空间”来做，必须重新确认 FableMap 的更大产品表达。空间可以是一个核心场景/示例/入口，但首页与整体视觉不应把产品误导成单一“开空间工具”。下一步应先梳理仓库里已经出现的非空间方向（Place/Home、多地点类型、真实地点上的 AI 场所等），再让用户选择更准确的产品叙事。
 
 ## Repository Context After Reframe
 
 Evidence that FableMap has already moved beyond Tavern-only:
 
-* `.trellis/tasks/archive/2026-04/04-27-place-type-home-concept/prd.md` explicitly says “酒馆只是现实店铺 / 场所的一种形式”，and frames the product as `Place + Home + Relationship Graph`.
+* `.trellis/tasks/archive/2026-04/04-27-place-type-home-concept/prd.md` explicitly says “空间只是现实店铺 / 场所的一种形式”，and frames the product as `Place + Home + Relationship Graph`.
 * `.trellis/tasks/archive/2026-04/04-27-place-home-full-mvp/prd.md` defines a Tavern-compatible Place/Home MVP with `place_type`, Home, family members, school enrollment, and relationship graph.
-* Current `frontend/app/routes/home.tsx` is still visually/copy-wise tavern-heavy: nav has “酒馆 / NPC / 记忆 / 开店”, metrics say “酒馆收录”, preview type is `TavernPreview`, and brand tagline says `Cyber taverns on real places`.
+* Current `frontend/app/routes/home.tsx` is still visually/copy-wise tavern-heavy: nav has “空间 / NPC / 记忆 / 开店”, metrics say “空间收录”, preview type is `TavernPreview`, and brand tagline says `Cyber taverns on real places`.
 
 Updated design problem:
 
-* The page redesign should likely reposition the public-facing UI from “开一间赛博酒馆” toward a broader “真实地点上的 AI 场所 / 个人 Home / 角色关系” platform.
+* The page redesign should likely reposition the public-facing UI from “开一间空间” toward a broader “真实地点上的 AI 场所 / 个人 Home / 角色关系” platform.
 * Tavern can remain as one high-signal example, but not the whole product category.
 
 ## Narrative Decision
 
-用户选择首页/页面设计的大叙事：**城市里的赛博生活模拟器**。
+用户选择首页/页面设计的大叙事：**城市里的生活模拟器**。
 
 Implications:
 
-* 首页不应再只说“开酒馆”。
-* 酒馆、Home、学校、便利店、咖啡店等应作为城市生活切片共同出现。
+* 首页不应再只说“开空间”。
+* 空间、Home、学校、便利店、咖啡店等应作为城市生活切片共同出现。
 * 设计气质可以更沉浸、更幻想，但仍必须保留真实地图锚点和结构化关系边界。
-* 后续页面设计应优先解决“第一眼吸引人 + 一眼看懂不是传统地图/不是单一酒馆工具”。
+* 后续页面设计应优先解决“第一眼吸引人 + 一眼看懂不是传统地图/不是单一空间工具”。
 
 ## Visual Direction Decision
 
@@ -111,10 +111,10 @@ Implications:
 
 Working design direction:
 
-* 首页第一眼优先做“赛博城市海报”级吸引力，而不是工具型 dashboard。
+* 首页第一眼优先做“城市海报”级吸引力，而不是工具型 dashboard。
 * 主视觉表达：真实城市 + AI 生活切片 + 多种 Place/Home 节点。
-* Tavern/酒馆只作为城市生活中的一种高情绪场景出现，不再作为唯一品类。
-* 后续文案应从“开店/酒馆收录”改为更宽的“在真实城市里创建/发现 AI 场所、Home、角色关系”。
+* Tavern/空间只作为城市生活中的一种高情绪场景出现，不再作为唯一品类。
+* 后续文案应从“开店/空间收录”改为更宽的“在真实城市里创建/发现 AI 场所、Home、角色关系”。
 
 ## Scope Decision
 
@@ -132,7 +132,7 @@ Interpretation:
 
 Stage 1 proposed boundary:
 
-* Define a site-wide visual language for “城市里的赛博生活模拟器”.
+* Define a site-wide visual language for “城市里的生活模拟器”.
 * Update homepage shell / hero / nav / key cards first.
 * Establish reusable tokens/patterns for later pages: background treatment, cards, buttons, place chips, section rhythm, copy terminology.
 * Do not yet deeply rebuild discovery/create/detail/interior pages; only prepare terminology/design direction so later tasks can follow.
@@ -169,7 +169,7 @@ Revised design principle:
 
 ## User Feedback on Grabby Directions
 
-用户选择方向：**A. 赛博电影海报**，但反馈当前预览开屏很丑。
+用户选择方向：**A. 电影海报**，但反馈当前预览开屏很丑。
 
 Interpretation:
 
@@ -180,7 +180,7 @@ Interpretation:
 
 ## User Correction: Preserve Original Cyber Index Quality
 
-用户指出：**原来的 index 设计很有赛博感，不能越改越后退。**
+用户指出：**原来的 index 设计很有感，不能越改越后退。**
 
 Updated constraint:
 
@@ -200,12 +200,12 @@ Updated constraint:
 
 1. 主标题 “这座城市开始记得你” 不合适；产品不只是“建造一座城市”。
 2. Hero 可以复用现有 `neon-cyber-tavern-reference.png` 作为视觉基准。
-3. 首屏不要露出 `Home / 学校 / 店铺 / 酒馆` 这类类型 chip。对探索者来说，它们应当是等价的、待探索的区域，而不是一开始就被分类解释。
+3. 首屏不要露出 `Home / 学校 / 店铺 / 空间` 这类类型 chip。对探索者来说，它们应当是等价的、待探索的区域，而不是一开始就被分类解释。
 
 Updated design constraints:
 
 * 首屏避免“城市建造 / 类型枚举 / 说明书”语感。
-* 面向探索者时，所有 Home / 学校 / 店铺 / 酒馆等都先统一表达为“待探索区域 / 入口 / 坐标上的空间”。
+* 面向探索者时，所有 Home / 学校 / 店铺 / 空间等都先统一表达为“待探索区域 / 入口 / 坐标上的空间”。
 * 类型可以在进入后或详情层出现，但不应破坏首屏的一体化神秘感。
 * Stage 1 hero visual should use existing high-quality cyber index reference as baseline.
 
@@ -216,7 +216,7 @@ Updated design constraints:
 Rationale:
 
 * 强调真实地图坐标。
-* 暗示每个区域都可探索，不预先区分 Home / 学校 / 店铺 / 酒馆。
+* 暗示每个区域都可探索，不预先区分 Home / 学校 / 店铺 / 空间。
 * 有神秘感和开屏吸引力，且不把产品误解成“建造一座城市”。
 
 ## Implementation Plan Written
@@ -230,7 +230,7 @@ Rationale:
 * Changed `frontend/app/routes/home.tsx` as Stage 1 homepage visual shell only; no backend/API/schema changes.
 * Reused existing project-local hero asset `frontend/app/assets/homepage-reference/neon-cyber-tavern-reference.png` as the cyber index visual baseline.
 * Updated hero headline to “每个坐标，都可能藏着一个世界”, with manual line breaks for desktop/mobile readability.
-* Removed first-screen type chips and old Tavern-only framing; Home / 学校 / 店铺 / 酒馆 are not enumerated on the first screen.
+* Removed first-screen type chips and old Tavern-only framing; Home / 学校 / 店铺 / 空间 are not enumerated on the first screen.
 * Reframed homepage labels toward broader explorable regions / coordinates / spaces: “开始探索”, “创建我的空间”, “主人入口”, “正在发光的区域”.
 * Verification:
   * `npm --prefix .\frontend run typecheck`: exit 0 (`react-router typegen && tsc --noEmit`).

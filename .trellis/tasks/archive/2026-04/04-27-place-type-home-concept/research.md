@@ -7,9 +7,9 @@
 ## Relevant Specs / Docs
 
 - `AGENTS.md`：仓库硬约束；中高风险任务需明确目标、范围、不可改范围、依据文档和验证方式；不得擅自新增 Schema 字段或全局术语。
-- `README.md`：当前一句话定位仍是“赛博酒馆 UGC 平台”，主链路是坐标/定位 → 真实底图 → 浏览酒馆 → 进入酒馆 → 配置 AI NPC → 对话 → 写回记忆 → 回访。
+- `README.md`：当前一句话定位仍是“空间 UGC 平台”，主链路是坐标/定位 → 真实底图 → 浏览空间 → 进入空间 → 配置 AI NPC → 对话 → 写回记忆 → 回访。
 - `docs/PRODUCT_BRIEF.md`：核心价值是“真实锚点 / 主人主权 / 最小平台 / SillyTavern 兼容”；AI 草稿只能作为店主确认前的辅助。
-- `docs/FABLEMAP_TAVERN_PLATFORM.md`：当前主线设计以 Tavern 为实现实体，但理念上已经承认学校、小区、公园、商场、咖啡馆等真实区域都可成为“酒馆”隐喻。
+- `docs/FABLEMAP_TAVERN_PLATFORM.md`：当前主线设计以 Tavern 为实现实体，但理念上已经承认学校、小区、公园、商场、咖啡馆等真实区域都可成为“空间”隐喻。
 - `docs/WHAT_NOT_TO_BUILD.md`：禁止无锚点自由空间、无边界访客社交、平台绕过主人确认发布内容、传统地图 App 功能、战斗/等级装备/传统 RPG 任务。
 - `docs/WORLD_SCHEMA.md`：当前核心 Schema 是 `Tavern` / `TavernCharacter` / `VisitorState` / `GameplayDefinition`；`Place / POI` 目前只是旧概念映射到 `Tavern`，不能在本任务直接恢复成新持久模型。
 - `.trellis/spec/guides/cross-layer-thinking-guide.md`：若后续进入 Place/Home Schema 或 API 改造，必须先定义跨层数据流、边界、格式、验证和错误矩阵。
@@ -19,7 +19,7 @@
 - `backend/src/fablemap_api/core/tavern.py`：`Tavern` 是当前唯一可进入地点实体，包含 `lat/lon/address/access/status/characters/world_info/gameplay_definitions/layout_style/timezone/operating_hours` 等字段。
 - `backend/src/fablemap_api/contracts/taverns.py`：创建/更新请求仍以 Tavern 为契约；任何新增 `place_type`、`home`、`member` 字段都属于 API/Schema 变更，需另开实现任务。
 - `frontend/app/lib/taverns.ts`：前端 typed client 也围绕 `Tavern`；部分历史字段仍出现 `place_id`，但不是新的 Place 模型依据。
-- `docs/CURRENT_TASKS.md` / `docs/AI_SHARED_TASKLIST.md`：当前实现进度集中在酒馆体验壳、记忆、世界书、Prompt、分享/导入导出等能力；没有已批准的 Home 或关系图实现任务。
+- `docs/CURRENT_TASKS.md` / `docs/AI_SHARED_TASKLIST.md`：当前实现进度集中在空间体验壳、记忆、世界书、Prompt、分享/导入导出等能力；没有已批准的 Home 或关系图实现任务。
 
 ## Files Likely Needed in Future Implementation
 

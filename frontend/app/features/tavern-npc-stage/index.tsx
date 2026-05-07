@@ -31,10 +31,10 @@ type NpcVisualStyle = {
 const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
   {
     id: "warm-cyber-tavern",
-    title: "暖木质赛博酒馆",
+    title: "暖木质空间",
     label: "铜边围裙 · 烛火终端",
     tavernCue: "木桌、铜边、羊皮纸菜单与一点青色运行灯。",
-    portraitCue: "适合可靠向导、店员、档案管理员或默认新手酒馆 NPC。",
+    portraitCue: "适合可靠向导、店员、档案管理员或默认新手空间 NPC。",
     accent: "#f8c76a",
     accentSoft: "rgba(248, 199, 106, 0.18)",
     secondary: "#34e6d2",
@@ -43,12 +43,12 @@ const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
     body: "linear-gradient(160deg, #7c3f1d 0%, #2a160b 58%, #153b3b 100%)",
     badge: "烛",
     preferredArchetypes: ["merchant", "scholar", "healer"],
-    keywords: ["暖", "木", "酒馆", "茶", "档案", "服务", "向导", "管理员", "社区", "修补", "小舟", "阿槐", "闻笺"],
+    keywords: ["暖", "木", "空间", "茶", "档案", "服务", "向导", "管理员", "社区", "修补", "小舟", "阿槐", "闻笺"],
     appearanceIds: ["museum-docent", "archive-curator", "tea-storyteller", "dusty-bookshop", "city-photographer"],
   },
   {
     id: "neon-megacity",
-    title: "霓虹夜城赛博朋克",
+    title: "霓虹夜城朋克",
     label: "雨衣机能服 · 霓虹目镜",
     tavernCue: "雨夜窗、故障招牌、湿地面反光和低频蓝紫光。",
     portraitCue: "适合夜班主持、机修师、末班站台或硬核都市 NPC。",
@@ -60,7 +60,7 @@ const NPC_VISUAL_STYLES: NpcVisualStyle[] = [
     body: "linear-gradient(160deg, #082f49 0%, #111827 46%, #581c87 100%)",
     badge: "霓",
     preferredArchetypes: ["guardian", "wanderer", "merchant"],
-    keywords: ["霓虹", "赛博", "夜", "雨", "电台", "站台", "机修", "都市", "街", "安澜"],
+    keywords: ["霓虹", "", "夜", "雨", "电台", "站台", "机修", "都市", "街", "安澜"],
     appearanceIds: ["rain-clerk", "night-platform", "neon-maintainer"],
   },
   {
@@ -186,7 +186,7 @@ function NpcPortrait({
     <div
       className={NPC_PORTRAIT_FRAME_CLASS}
       role="img"
-      aria-label={`${character.name || "NPC"} 的${style.title}酒馆主题人像`}
+      aria-label={`${character.name || "NPC"} 的${style.title}空间主题人像`}
       style={frameStyle}
     >
       <img
@@ -221,9 +221,9 @@ export function TavernNpcStage({
   return (
     <Card className="min-w-0 overflow-hidden">
       <CardHeader>
-        <CardTitle>酒馆内 NPC 形象</CardTitle>
+        <CardTitle>空间内 NPC 形象</CardTitle>
         <CardDescription>
-          按不同酒馆风格展示 NPC：优先使用店主上传头像/精灵图，缺省时使用项目内真实二次元酒馆主题人像资产，不写回角色卡。
+          按不同空间风格展示 NPC：优先使用店主上传头像/精灵图，缺省时使用项目内真实二次元空间主题人像资产，不写回角色卡。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -301,7 +301,7 @@ export function TavernNpcStage({
           </div>
         ) : (
           <p className="rounded-3xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-violet-100/65">
-            这间酒馆还没有 NPC。等店主添加角色卡后，这里会按酒馆风格把 NPC 放进室内场景。
+            这间空间还没有 NPC。等店主添加角色卡后，这里会按空间风格把 NPC 放进室内场景。
           </p>
         )}
       </CardContent>

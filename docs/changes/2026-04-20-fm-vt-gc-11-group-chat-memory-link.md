@@ -10,7 +10,7 @@
 |------|------|
 | `fablemap/web/service.py` | 群聊成功发送后更新 VisitorState；将多角色回复合并提炼为 `visitor_tavern` 记忆；API 返回 `visitor_state` 和 `created_memories` |
 | `frontend/src/TavernChatRoom.jsx` | 群聊发送后消费 `visitor_state` / `created_memories`，刷新访客记忆面板状态 |
-| `tests/test_group_chat.py` | 酒馆级群聊路由测试增加 visitor_state、created_memories 和 `/memories` 可读断言 |
+| `tests/test_group_chat.py` | 空间级群聊路由测试增加 visitor_state、created_memories 和 `/memories` 可读断言 |
 | `docs/AI_SHARED_TASKLIST.md` | 新增并完成 FM-VT-GC-11 |
 | `docs/CURRENT_TASKS.md` | 同步 Phase 11 群聊任务状态 |
 | `docs/claims/2026-04-20-fm-vt-gc-11-group-chat-memory-link.md` | 新增本次任务认领说明 |

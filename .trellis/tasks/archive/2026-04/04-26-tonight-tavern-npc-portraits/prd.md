@@ -1,8 +1,8 @@
-# 今晚新增酒馆 NPC 专属头像
+# 今晚新增空间 NPC 专属头像
 
 ## Goal
 
-为今晚新增的两个默认公益酒馆补充角色专属展示头像，让《第三货架后面》和《午夜委托板》的 NPC 在没有店主上传头像时，也能显示与角色设定匹配的酒馆主题形象。
+为今晚新增的两个默认公益空间补充角色专属展示头像，让《第三货架后面》和《午夜委托板》的 NPC 在没有店主上传头像时，也能显示与角色设定匹配的空间主题形象。
 
 ## Requirements
 
@@ -13,7 +13,7 @@
   - `char_pw_pi_pi`
   - `char_pw_mozhan`
   - `char_pw_zhideng`
-- 头像必须是酒馆/便利店/委托板场景中的角色形象，不使用纯占位图。
+- 头像必须是空间/便利店/委托板场景中的角色形象，不使用纯占位图。
 - 头像只作为前端展示 fallback；不得写回角色卡，不得覆盖店主自定义 `sprites` / `avatar` / `image_url`。
 - 资产放在 `frontend/app/assets/npc-style-cast/portraits/` 下，并由现有 `tavern-npc-stage` 解析逻辑消费。
 - 保持 SillyTavern 兼容与现有后端 TavernCharacter schema 不变。

@@ -574,9 +574,9 @@ def _build_landmarks(
                 "name": _preferred_real_name(tags, prefer_zh=prefer_zh) or ("未命名地标" if prefer_zh else "Unnamed Landmark"),
                 "type": tags.get("tourism") or tags.get("historic"),
                 "description": (
-                    "一个让城区官方叙事显得略微不稳定的地点。"
+                    "一个让街区旧故事显得有些摇晃的地点。"
                     if prefer_zh
-                    else "A place where the district's official story feels slightly unstable."
+                    else "A place where the district's settled story feels slightly unstable."
                 ),
                 "visual_hint": {
                     "position": _extract_position(element, fallback),

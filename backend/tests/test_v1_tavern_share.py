@@ -21,8 +21,8 @@ def _client(tmp_path: Path) -> TestClient:
 
 def _create_tavern(client: TestClient, *, access: str = "public") -> str:
     payload = {
-        "name": "雾港酒馆",
-        "description": "潮湿码头边的一间小酒馆，店主写下了旧灯塔、海风和夜班水手的设定。" * 4,
+        "name": "雾港空间",
+        "description": "潮湿码头边的一间小空间，店主写下了旧灯塔、海风和夜班水手的设定。" * 4,
         "lat": 31.2304,
         "lon": 121.4737,
         "address": "上海 · 外滩",
@@ -60,7 +60,7 @@ def test_v1_tavern_share_returns_public_safe_payload(tmp_path: Path) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["tavern_id"] == tavern_id
-    assert payload["title"] == "雾港酒馆"
+    assert payload["title"] == "雾港空间"
     assert len(payload["description"]) <= 200
     assert len(payload["short_description"]) <= 80
     assert payload["location"] == {"lat": 31.2304, "lon": 121.4737, "address": "上海 · 外滩"}
@@ -68,8 +68,8 @@ def test_v1_tavern_share_returns_public_safe_payload(tmp_path: Path) -> None:
     assert payload["character_count"] == 1
     assert payload["characters"] == [{"id": payload["characters"][0]["id"], "name": "守灯人", "avatar": "/generated/keeper.png"}]
     assert payload["share_url"] == f"http://testserver/tavern/{tavern_id}"
-    assert payload["share_title"] == "邀请你进入「雾港酒馆」"
-    assert "雾港酒馆" in payload["share_text"]
+    assert payload["share_title"] == "邀请你进入「雾港空间」"
+    assert "雾港空间" in payload["share_text"]
 
     serialized = json.dumps(payload, ensure_ascii=False)
     assert "sk-share-secret" not in serialized
@@ -86,7 +86,7 @@ def test_v1_tavern_share_hides_private_taverns_from_non_owner(tmp_path: Path) ->
 
     forbidden = client.get(f"/api/v1/taverns/{tavern_id}/share", headers={"X-User-Id": VISITOR_ID})
     assert forbidden.status_code == 403
-    assert forbidden.json()["error"] == "此酒馆是私人的"
+    assert forbidden.json()["error"] == "此空间是私人的"
 
     owner_view = client.get(f"/api/v1/taverns/{tavern_id}/share", headers={"X-User-Id": OWNER_ID})
     assert owner_view.status_code == 200
@@ -114,7 +114,7 @@ def test_v1_tavern_share_missing_tavern_is_404(tmp_path: Path) -> None:
     response = client.get("/api/v1/taverns/missing-share-tavern/share")
 
     assert response.status_code == 404
-    assert response.json()["error"] == "酒馆不存在"
+    assert response.json()["error"] == "空间不存在"
 
 
 def test_tavern_share_policy_encodes_share_url_and_defaults() -> None:
@@ -134,7 +134,7 @@ def test_tavern_share_policy_encodes_share_url_and_defaults() -> None:
     payload = build_tavern_share_payload(tavern, base_url="https://fablemap.example/")
 
     assert payload["share_url"] == "https://fablemap.example/tavern/fog%20tavern%2F1"
-    assert payload["share_title"] == "邀请你进入「未命名酒馆」"
-    assert payload["share_text"] == "邀请你进入「未命名酒馆」：店主还没有写下公开简介。"
+    assert payload["share_title"] == "邀请你进入「未命名空间」"
+    assert payload["share_text"] == "邀请你进入「未命名空间」：店主还没有写下公开简介。"
     assert payload["characters"] == []
     assert payload["character_count"] == 0

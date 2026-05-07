@@ -87,7 +87,7 @@ class TavernApplicationService(
     def _get_tavern_or_404(self, tavern_id: str) -> Tavern:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         return tavern
 
     def _is_owner(self, tavern: Tavern, user_id: str) -> bool:
@@ -95,11 +95,11 @@ class TavernApplicationService(
 
     def _ensure_owner(self, tavern: Tavern, user_id: str) -> None:
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
     def _ensure_visible(self, tavern: Tavern, user_id: str) -> None:
         if not can_view_tavern(tavern, user_id):
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
     def _safe_int(self, value: Any, fallback: int = 0) -> int:
         try:

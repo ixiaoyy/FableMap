@@ -1,8 +1,8 @@
 {
   "id": "tv-drama-tavern",
   "name": "tv-drama-tavern",
-  "title": "热门电视剧人物酒馆",
-  "description": "探索将热门电视剧人物（如甄嬛传）放入酒馆，让用户与剧中角色互动的玩法。",
+  "title": "热门电视剧人物空间",
+  "description": "探索将热门电视剧人物（如甄嬛传）放入空间，让用户与剧中角色互动的玩法。",
   "status": "completed",
   "dev_type": "product",
   "scope": null,
@@ -55,7 +55,7 @@
     ".trellis/tasks/04-24-tv-drama-tavern/brainstorm.md",
     ".trellis/tasks/04-24-tv-drama-tavern/prd.md"
   ],
-  "notes": "2026-04-24 完成产品边界评审。热门电视剧人物酒馆有传播力，但如果由平台预置或生成具体剧中人物，会触碰平台不生成 NPC/酒馆内容的边界，并带来影视 IP 风险。本轮不进入实现，不新增 schema/API/前端模板；仅保留为未来方向。未来如重启，应改为店主自带授权内容导入，或原创泛风格模板，而不是平台提供具体热门剧角色。",
+  "notes": "2026-04-24 完成产品边界评审。热门电视剧人物空间有传播力，但如果由平台预置或生成具体剧中人物，会触碰平台不生成 NPC/空间内容的边界，并带来影视 IP 风险。本轮不进入实现，不新增 schema/API/前端模板；仅保留为未来方向。未来如重启，应改为店主自带授权内容导入，或原创泛风格模板，而不是平台提供具体热门剧角色。",
   "meta": {
     "type": "product_boundary_review",
     "not_immediate": true,

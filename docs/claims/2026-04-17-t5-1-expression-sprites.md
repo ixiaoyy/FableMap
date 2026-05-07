@@ -31,7 +31,7 @@ Codex
 - `docs/changes/2026-04-17-t5-1-expression-sprites.md`
 
 ## 明确不改范围
-- 不修改酒馆/角色数据 schema。
+- 不修改空间/角色数据 schema。
 - 不新增图片资源或生成角色立绘。
 - 不接管 T4.2 的并行改动。
 - 不新增前端依赖。

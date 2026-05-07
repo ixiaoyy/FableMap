@@ -188,7 +188,7 @@ class StateCardApplicationMixin:
         if card.fixed_canon:
             raise HTTPException(status_code=403, detail="固定正史只能由店主维护")
         if card.canon_scope == "tavern":
-            raise HTTPException(status_code=403, detail="酒馆级正史只能由店主确认")
+            raise HTTPException(status_code=403, detail="空间级正史只能由店主确认")
         if card.visitor_id and card.visitor_id != user_id:
             raise HTTPException(status_code=403, detail="不能修改其他访客的状态卡")
         if creating and card.status != "pending":

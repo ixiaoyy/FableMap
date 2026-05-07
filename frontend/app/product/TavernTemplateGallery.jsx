@@ -102,13 +102,13 @@ export default function TavernTemplateGallery({
   const selectedCounts = selectedTemplate ? getPackageCounts(selectedTemplate) : { characters: 0, worldInfo: 0 }
 
   return (
-    <section className="template-gallery page-enter" aria-label="酒馆模板库">
+    <section className="template-gallery page-enter" aria-label="空间模板库">
       <header className="template-gallery__header panel">
         <div>
           <p className="mini-label">模板库</p>
-          <h2>从一个可复用酒馆包开始</h2>
+          <h2>从一个可复用空间包开始</h2>
           <p className="note muted">
-            选择模板、指定真实地图坐标，即可安装成你的私人酒馆；之后可继续编辑角色、世界书和 AI 配置。
+            选择模板、指定真实地图坐标，即可安装成你的私人空间；之后可继续编辑角色、世界书和 AI 配置。
           </p>
         </div>
         <div className="template-gallery__actions">
@@ -117,7 +117,7 @@ export default function TavernTemplateGallery({
           </button>
           {onOpenOwner ? (
             <button type="button" className="secondary" onClick={onOpenOwner}>
-              去我的酒馆
+              去我的空间
             </button>
           ) : null}
         </div>
@@ -198,7 +198,7 @@ export default function TavernTemplateGallery({
               </div>
 
               <label className="form-group">
-                <span>安装后的酒馆名</span>
+                <span>安装后的空间名</span>
                 <input
                   value={installForm.name}
                   onChange={(event) => setInstallForm((form) => ({ ...form, name: event.target.value }))}
@@ -240,7 +240,7 @@ export default function TavernTemplateGallery({
               </button>
               {status ? <div className="template-install-status">{status}</div> : null}
               <p className="note muted">
-                模板不包含 API Key。安装后如果没有可用 AI 配置，酒馆会先保持歇业，可在“我的酒馆 → AI 配置”中开门。
+                模板不包含 API Key。安装后如果没有可用 AI 配置，空间会先保持歇业，可在“我的空间 → AI 配置”中开门。
               </p>
             </>
           ) : (

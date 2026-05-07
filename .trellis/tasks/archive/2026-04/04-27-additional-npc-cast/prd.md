@@ -8,7 +8,7 @@
 
 - 生成 6 个原创 tavern-themed NPC 头像。
 - 图片落入 `frontend/app/assets/npc-style-cast/portraits/`，作为项目内可复用素材。
-- 角色卡草稿落入本任务目录，作为候选内容，不自动写入默认 seed，不自动发布到任何酒馆。
+- 角色卡草稿落入本任务目录，作为候选内容，不自动写入默认 seed，不自动发布到任何空间。
 - 每生成一个角色，就更新 `progress.md` 和 `generated-prompts.md`，记录源文件与目标路径。
 
 ## NPC List
@@ -23,7 +23,7 @@
 ## Constraints
 
 - 原创角色，不模仿现有 IP、名人或特定画师。
-- 头像必须有酒馆/赛博酒馆语义，不使用纯色/几何/抽象占位。
+- 头像必须有空间/空间语义，不使用纯色/几何/抽象占位。
 - 本轮不新增 schema，不写入 `TavernCharacter` seed，不覆盖店主内容。
 - 图片生成源不能只留在 `.codex/generated_images`；最终必须复制/转换到仓库路径。
 

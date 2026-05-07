@@ -472,7 +472,7 @@ def sanitize_tavern_draft(data: dict[str, Any]) -> dict[str, Any]:
         },
     }
     if not draft["name"] or not draft["description"] or not draft["scene_prompt"]:
-        raise ValueError("AI 草稿缺少酒馆名称、简介或场景提示")
+        raise ValueError("AI 草稿缺少空间名称、简介或场景提示")
     if not draft["character"]["name"] or not draft["character"]["first_mes"]:
         raise ValueError("AI 草稿缺少 NPC 名称或首次问候")
     return draft
@@ -551,7 +551,7 @@ export function createTavernDraftRequest({ lat = 0, lon = 0, address = '', place
 export function draftResponseToCreateForm(response) {
   const draft = response?.draft
   const character = draft?.character
-  if (!draft || !character) throw new Error('AI 酒馆草稿返回为空')
+  if (!draft || !character) throw new Error('AI 空间草稿返回为空')
   return {
     name: text(draft.name),
     description: text(draft.description),

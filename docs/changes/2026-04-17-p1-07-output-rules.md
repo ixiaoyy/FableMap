@@ -12,9 +12,9 @@
   - `GET /api/taverns/{id}/output-rules`
   - `PUT /api/taverns/{id}/output-rules`
   - `POST /api/taverns/{id}/output-rules/test`
-- 酒馆包导入 / 导出包含 `output_rules`，仍过滤 API Key、密码和访客聊天。
+- 空间包导入 / 导出包含 `output_rules`，仍过滤 API Key、密码和访客聊天。
 - 新增 `frontend/src/OutputRulesEditor.jsx`，店主可开关、编辑、复制、恢复默认和预览规则。
-- `TavernOwnerPanel` 酒馆卡片新增“护栏”入口。
+- `TavernOwnerPanel` 空间卡片新增“护栏”入口。
 
 ## 验证
 

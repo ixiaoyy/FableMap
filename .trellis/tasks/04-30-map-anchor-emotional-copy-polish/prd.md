@@ -2,7 +2,7 @@
 
 ## Goal
 
-把真实坐标表达成“街角的门、巷口的灯牌、附近有人经营的酒馆”等产品语言。
+把真实坐标表达成“街角的门、巷口的灯牌、附近有人经营的空间”等产品语言。
 
 ## Source Planning
 
@@ -44,7 +44,7 @@
 ### Relevant docs/specs
 
 * `docs/PRODUCT_BRIEF.md`: FableMap differentiates by real map anchors + cyber tavern UGC; owner content remains owner-confirmed.
-* `docs/FABLEMAP_TAVERN_PLATFORM.md`: discovery flow is “打开地图 → 看到酒馆标记 → 查看简介和角色 → 进入酒馆”.
+* `docs/FABLEMAP_TAVERN_PLATFORM.md`: discovery flow is “打开地图 → 看到空间标记 → 查看简介和角色 → 进入空间”.
 * `docs/WHAT_NOT_TO_BUILD.md`: do not add route planning, POI rating, traditional map app features, or unanchored free spaces.
 * `.trellis/spec/frontend/component-guidelines.md`: keep UI accessible, readable, and mobile-aware.
 * `.trellis/spec/frontend/type-safety.md`: normalize dynamic `address` / `lat` / `lon` payloads at display boundaries.
@@ -66,7 +66,7 @@
   * `buildMapAnchorSummaryCopy({ matching, total })`
 * Updated tavern discovery cards to show `街区灯牌`, `街角门牌`, `坐标门牌`, `灯牌亮着`, `附近有人经营`, and door-rule copy.
 * Updated discovery summary/load-more/empty states to say `灯牌` instead of user-visible `marker`.
-* Updated map topbar/legend copy to `街区底图`, `酒馆灯牌`, and shared lantern summary.
+* Updated map topbar/legend copy to `街区底图`, `空间灯牌`, and shared lantern summary.
 * Updated AMap tavern marker HTML to show access “灯牌” badge and lantern status.
 * Added `frontend/scripts/map-anchor-copy-test.mjs` and wired it into `npm --prefix .\frontend test`.
 * Added `.trellis/spec/frontend/map-anchor-copy.md` and linked it from the frontend spec index.

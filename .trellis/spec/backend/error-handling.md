@@ -24,7 +24,7 @@ Use these conventions:
 
 | Situation | Pattern |
 |-----------|---------|
-| Missing resource | `HTTPException(status_code=404, detail="酒馆不存在")` |
+| Missing resource | `HTTPException(status_code=404, detail="空间不存在")` |
 | Missing/invalid identity | `HTTPException(status_code=400 or 403, detail="...")` |
 | Permission denied | `HTTPException(status_code=403, detail="...")` |
 | Invalid user payload | `HTTPException(status_code=400, detail="...")` |

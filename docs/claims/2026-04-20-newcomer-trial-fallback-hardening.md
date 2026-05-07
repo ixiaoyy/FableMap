@@ -16,12 +16,12 @@ Codex
 前端稳定性
 
 ## 任务目标
-加固新人试玩入口的回退逻辑，确保默认酒馆不可用时能回退到公开公益酒馆
+加固新人试玩入口的回退逻辑，确保默认空间不可用时能回退到公开公益空间
 
 ## 具体实现
-- 抽取酒馆解析逻辑到 `frontend/src/services/newcomerTavern.js`
-- 默认新手酒馆只有在公开且营业中时才直接进入
-- 回退逻辑搜索公开营业的公益酒馆
+- 抽取空间解析逻辑到 `frontend/src/services/newcomerTavern.js`
+- 默认新手空间只有在公开且营业中时才直接进入
+- 回退逻辑搜索公开营业的公益空间
 
 ## 可修改范围
 - `frontend/src/services/newcomerTavern.js`

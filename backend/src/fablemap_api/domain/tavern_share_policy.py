@@ -29,7 +29,7 @@ def build_tavern_share_payload(tavern: Any, *, base_url: str = "") -> dict[str, 
     """Build a public-safe share payload from owner-authored tavern data."""
 
     tavern_id = str(getattr(tavern, "id", "") or "")
-    name = clean_text(getattr(tavern, "name", "") or "未命名酒馆", max_length=80) or "未命名酒馆"
+    name = clean_text(getattr(tavern, "name", "") or "未命名空间", max_length=80) or "未命名空间"
     description = clean_text(getattr(tavern, "description", ""), max_length=200)
     short_description = clean_text(getattr(tavern, "description", ""), max_length=80)
     encoded_id = quote(tavern_id, safe="")

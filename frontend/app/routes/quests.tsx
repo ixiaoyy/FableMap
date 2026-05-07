@@ -47,7 +47,7 @@ export default function QuestsRoute() {
               </div>
               <CardTitle className="text-4xl font-black leading-tight">探索清单</CardTitle>
               <CardDescription className="text-base leading-7">
-                这是赛博酒馆的轻量引导，不是传统 RPG 主线、数值成长或竞赛榜单。目标只帮助你找到下一间真实坐标酒馆、认识 NPC、记录完成与回访提示。
+                这是空间的轻量引导，不是传统 RPG 主线、数值成长或竞赛榜单。目标只帮助你找到下一间真实坐标空间、认识 NPC、记录完成与回访提示。
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -61,7 +61,7 @@ export default function QuestsRoute() {
                 <Button asChild size="lg" variant="secondary">
                   <Link to={`/create?owner_id=${encodeURIComponent(ownerId)}`}>
                     <Sparkles className="h-4 w-4" />
-                    创建自己的酒馆
+                    创建自己的空间
                   </Link>
                 </Button>
               </div>
@@ -72,7 +72,7 @@ export default function QuestsRoute() {
                   边界说明
                 </p>
                 <p className="mt-2 text-sm leading-7 text-violet-100/72">
-                  本 MVP 只根据现有酒馆列表做前端引导与进度估算；不新增持久化清单 Schema，不发放可交易奖励，不展示任何排名。
+                  本 MVP 只根据现有空间列表做前端引导与进度估算；不新增持久化清单 Schema，不发放可交易奖励，不展示任何排名。
                 </p>
               </div>
 
@@ -87,11 +87,11 @@ export default function QuestsRoute() {
           <Card>
             <CardHeader>
               <CardTitle>当前引导状态</CardTitle>
-              <CardDescription>进度来自当前可见酒馆数据，不读取访客私密记忆。</CardDescription>
+              <CardDescription>进度来自当前可见空间数据，不读取访客私密记忆。</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm">
               <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-                <p className="text-violet-100/55">可见酒馆</p>
+                <p className="text-violet-100/55">可见空间</p>
                 <p className="mt-1 text-2xl font-black text-white">{summary.metrics.taverns}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
@@ -119,7 +119,7 @@ export default function QuestsRoute() {
               <p className="mt-2 text-sm text-violet-100/58">可继续推进的安全目标</p>
             </Card>
             <Card className="p-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100/62">玩法酒馆</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100/62">玩法空间</p>
               <p className="mt-3 text-3xl font-black text-white">{summary.metrics.questPlayTaverns}</p>
               <p className="mt-2 text-sm text-violet-100/58">含探索布局或已发布玩法</p>
             </Card>

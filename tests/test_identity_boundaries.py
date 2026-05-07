@@ -10,7 +10,7 @@ def test_create_tavern_requires_explicit_owner_identity(tmp_path):
     response = client.post(
         "/api/v1/taverns",
         json={
-            "name": "身份边界酒馆",
+            "name": "身份边界空间",
             "description": "没有店主身份时不能创建。",
             "lat": 31.2304,
             "lon": 121.4737,

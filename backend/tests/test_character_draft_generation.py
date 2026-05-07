@@ -22,8 +22,8 @@ def _create_tavern(client: TestClient) -> str:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "雨灯路口酒馆",
-            "description": "真实路口旁的小酒馆，门口有一盏蓝色雨灯。",
+            "name": "雨灯路口空间",
+            "description": "真实路口旁的小空间，门口有一盏蓝色雨灯。",
             "lat": 31.2304,
             "lon": 121.4737,
             "access": "public",
@@ -52,12 +52,12 @@ def test_character_draft_uses_owner_default_llm_and_exposes_source(
                 content = json.dumps(
                     {
                         "name": "雨灯见习生",
-                        "description": "在雨灯路口酒馆试写的未发布 NPC。",
+                        "description": "在雨灯路口空间试写的未发布 NPC。",
                         "personality": "温暖、短句、会先问店主是否确认设定。",
                         "scenario": "站在吧台旁，等待店主审核。",
                         "system_prompt": "保持原创；店主保存前不得声称已经发布。",
                         "first_mes": "我先把雨灯调暗一点，等店主确认后再正式接待你。",
-                        "mes_example": "<START>\n{{user}}: 这里是什么地方？\n{{char}}: 这里是雨灯路口酒馆。",
+                        "mes_example": "<START>\n{{user}}: 这里是什么地方？\n{{char}}: 这里是雨灯路口空间。",
                         "tags": ["雨灯", "招待员"],
                     },
                     ensure_ascii=False,
@@ -97,7 +97,7 @@ def test_character_draft_uses_owner_default_llm_and_exposes_source(
     assert body["warnings"] == ["AI 草稿不会自动发布，必须由店主确认保存。"]
     assert captured["config"].api_key == "sk-owner-draft-secret"
     prompt = "\n".join(message["content"] for message in captured["messages"])
-    assert "雨灯路口酒馆" in prompt
+    assert "雨灯路口空间" in prompt
     assert "雨夜" in prompt
     assert "sk-owner-draft-secret" not in prompt
 

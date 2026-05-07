@@ -25,11 +25,11 @@ import {
 } from './characterPromptRiskLinter.js'
 
 /**
- * CharacterManagementModal — 酒馆角色管理面板
+ * CharacterManagementModal — 空间角色管理面板
  *
- * 允许店主从酒馆添加、编辑、导入和删除角色。
+ * 允许店主从空间添加、编辑、导入和删除角色。
  *
- * @param {object}   tavern        - 当前酒馆数据
+ * @param {object}   tavern        - 当前空间数据
  * @param {string}   ownerId       - 店主 ID
  * @param {Function} onClose       - () => void 关闭回调
  * @param {Function} onCharactersChanged - (characters) => void 角色变动回调（用于更新父组件）
@@ -60,7 +60,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   const [draftStatus, setDraftStatus] = useState('')
   const [aiDraftStyleText, setAiDraftStyleText] = useState(DEFAULT_AI_DRAFT_STYLE_TAGS.join(', '))
   const [aiDraftForbiddenText, setAiDraftForbiddenText] = useState(DEFAULT_AI_DRAFT_FORBIDDEN.join(', '))
-  const [aiDraftTone, setAiDraftTone] = useState('温暖、短句、有酒馆陪伴感')
+  const [aiDraftTone, setAiDraftTone] = useState('温暖、短句、有空间陪伴感')
   const characterDraftLifecycle = buildAiDraftLifecycle('character')
 
   // 批量背景 NPC：先预览，店主确认后才逐个走现有 addCharacter API
@@ -353,7 +353,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
 
             {characters.length === 0 ? (
               <div className="char-mgmt-empty">
-                <p>这个酒馆还没有角色。</p>
+                <p>这个空间还没有角色。</p>
                 <p>可以导入 SillyTavern 角色卡，或新建一个空白角色。</p>
               </div>
             ) : (
@@ -518,7 +518,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                         value={aiDraftTone}
                         onChange={(event) => setAiDraftTone(event.target.value)}
                         disabled={drafting || saving || importing || deleting}
-                        placeholder="温暖、短句、有酒馆陪伴感"
+                        placeholder="温暖、短句、有空间陪伴感"
                       />
                     </label>
                   </div>
@@ -576,7 +576,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
         {/* 删除确认 */}
         {deletingCharId && (
           <div className="char-mgmt-delete-confirm">
-            <p>确定要删除这个角色吗？角色将从酒馆中移除，此操作不可恢复。</p>
+            <p>确定要删除这个角色吗？角色将从空间中移除，此操作不可恢复。</p>
             <div className="char-mgmt-delete-actions">
               <button
                 type="button"

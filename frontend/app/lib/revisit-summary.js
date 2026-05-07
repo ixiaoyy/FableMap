@@ -15,7 +15,7 @@ function clamp(value, min, max) {
 
 function tavernLabel(name) {
   const value = String(name || "").trim()
-  return value ? `「${value}」` : "这间酒馆"
+  return value ? `「${value}」` : "这间空间"
 }
 
 function isEstablishedStage(stage) {
@@ -55,14 +55,14 @@ export function buildRevisitCue(visitorState, options = {}) {
     return {
       available: false,
       isReturning: false,
-      title: "进入酒馆后建立回访状态",
-      detail: "点击「进入酒馆」后，后端会返回这名访客与当前酒馆的关系状态。",
+      title: "进入空间后建立回访状态",
+      detail: "点击「进入空间」后，后端会返回这名访客与当前空间的关系状态。",
       stageLabel: "未建立",
       visitCount: 0,
       strengthPercent: 0,
       lastVisitLabel: "暂无记录",
       chips: ["未进入"],
-      promptHint: "先点击「进入酒馆」，再开始和 NPC 对话。",
+      promptHint: "先点击「进入空间」，再开始和 NPC 对话。",
     }
   }
 
@@ -77,7 +77,7 @@ export function buildRevisitCue(visitorState, options = {}) {
     isReturning,
     title: isReturning ? `欢迎回来，已第 ${safeVisitCount} 次到访${label}` : `第一次到访${label}`,
     detail: isReturning
-      ? `本次入场已带回关系上下文，${target} 可以据此延续这名访客和酒馆之间的记忆线索。`
+      ? `本次入场已带回关系上下文，${target} 可以据此延续这名访客和空间之间的记忆线索。`
       : `本次入场已建立访客状态，继续与 ${target} 对话会让后续回访有可用关系上下文。`,
     stageLabel,
     visitCount: safeVisitCount,

@@ -55,7 +55,7 @@ const ACCESS_FILTERS = [
 
 const OWNER_SECTION_COPY = {
   overview: { label: '总览', helper: '经营摘要' },
-  taverns: { label: '酒馆', helper: '基础管理' },
+  taverns: { label: '空间', helper: '基础管理' },
   visitors: { label: '访客', helper: '回访与会话' },
   ai: { label: 'AI', helper: '成本与配置' },
   advanced: { label: '高级工具', helper: '世界书 / 护栏 / 数据' },
@@ -109,7 +109,7 @@ function getChatMessageSpeaker(message, session) {
 function buildChatTranscript(session, messages = []) {
   if (!session || !Array.isArray(messages) || messages.length === 0) return ''
   const header = [
-    `酒馆：${session.tavern_name || session.tavern_id || '未知酒馆'}`,
+    `空间：${session.tavern_name || session.tavern_id || '未知空间'}`,
     `角色：${session.character_name || session.character_id || '未知角色'}`,
     `访客：${getSessionVisitorLabel(session)}`,
   ].join('\n')
@@ -151,9 +151,9 @@ function downloadJsonFile(filename, payload) {
  * Props:
  *   ownerId        — 店主 ID
  *   onClose        — () => void — 关闭面板
- *   onTavernCreated — (tavern) => void — 酒馆创建/更新后回调
+ *   onTavernCreated — (tavern) => void — 空间创建/更新后回调
  *   initialTab     — number — 初始标签页（0=列表，1=创建）
- *   editTavern     — object — 初始要编辑的酒馆数据
+ *   editTavern     — object — 初始要编辑的空间数据
  *   createSignal   — number — 外部递增时直接打开创建向导
  */
 export default function TavernOwnerPanel({
@@ -370,7 +370,7 @@ export default function TavernOwnerPanel({
     setError(null)
     if (!ownerId) {
       setMyTaverns([])
-      setError('缺少店主身份，暂时无法读取你的酒馆。')
+      setError('缺少店主身份，暂时无法读取你的空间。')
       setLoading(false)
       return
     }
@@ -531,7 +531,7 @@ export default function TavernOwnerPanel({
     const character = tavern?.characters?.find((item) => item.id === message.character_id)
     return {
       tavern_id: message.tavern_id || '',
-      tavern_name: tavern?.name || message.tavern_id || '未知酒馆',
+      tavern_name: tavern?.name || message.tavern_id || '未知空间',
       visitor_id: message.visitor_id || '',
       visitor_name: message.visitor_name || '',
       character_id: message.character_id || '',
@@ -555,7 +555,7 @@ export default function TavernOwnerPanel({
       return
     }
     if (!chatSearchTavernId) {
-      setChatSearchError('请先选择要搜索的酒馆。')
+      setChatSearchError('请先选择要搜索的空间。')
       return
     }
     if (!keyword) {
@@ -797,7 +797,7 @@ export default function TavernOwnerPanel({
       const payload = await exportTavernPackage(tavern.id, ownerId)
       const filename = `${slugifyFilename(payload?.tavern?.name || tavern.name)}-fablemap-package.json`
       downloadJsonFile(filename, payload)
-      setPackageStatus(`已导出《${tavern.name}》酒馆包，不包含 API Key 和访客聊天。`)
+      setPackageStatus(`已导出《${tavern.name}》空间包，不包含 API Key 和访客聊天。`)
     } catch (err) {
       setPackageStatus(`导出失败：${err.message}`)
     } finally {
@@ -821,18 +821,18 @@ export default function TavernOwnerPanel({
       const tavernPayload = packageData?.tavern || {}
       const defaultLat = tavernPayload.lat ?? createInitialLat ?? 0
       const defaultLon = tavernPayload.lon ?? createInitialLon ?? 0
-      const latInput = window.prompt('导入酒馆包：请输入新酒馆纬度', String(defaultLat))
+      const latInput = window.prompt('导入空间包：请输入新空间纬度', String(defaultLat))
       if (latInput == null) return
-      const lonInput = window.prompt('导入酒馆包：请输入新酒馆经度', String(defaultLon))
+      const lonInput = window.prompt('导入空间包：请输入新空间经度', String(defaultLon))
       if (lonInput == null) return
-      const nameInput = window.prompt('导入后的酒馆名称', `${tavernPayload.name || '导入酒馆'} 副本`)
+      const nameInput = window.prompt('导入后的空间名称', `${tavernPayload.name || '导入空间'} 副本`)
       if (nameInput == null) return
       const imported = await importTavernPackage(
         packageData,
         {
           lat: Number(latInput),
           lon: Number(lonInput),
-          name: nameInput.trim() || `${tavernPayload.name || '导入酒馆'} 副本`,
+          name: nameInput.trim() || `${tavernPayload.name || '导入空间'} 副本`,
           access: 'private',
         },
         ownerId,
@@ -842,7 +842,7 @@ export default function TavernOwnerPanel({
         setMyTaverns(prev => [newTavern, ...prev.filter(t => t.id !== newTavern.id)])
         if (onTavernCreated) onTavernCreated(newTavern)
       }
-      setPackageStatus(`已导入酒馆包：${newTavern?.name || nameInput}`)
+      setPackageStatus(`已导入空间包：${newTavern?.name || nameInput}`)
       setOwnerSection('taverns')
     } catch (err) {
       setPackageStatus(`导入失败：${err.message}`)
@@ -918,7 +918,7 @@ export default function TavernOwnerPanel({
       <header className="owner-header">
         <div className="owner-header__title">
           <p className="mini-label">店主控制台</p>
-          <h1>我的酒馆控制台</h1>
+          <h1>我的空间控制台</h1>
           <p className="note muted owner-header__note">
             店主身份：<code>{ownerLabel}</code>
           </p>
@@ -931,7 +931,7 @@ export default function TavernOwnerPanel({
             <button className="secondary" onClick={onClose}>返回</button>
           ) : null}
           <button className="secondary" onClick={openPackageImport} disabled={packageBusy === 'import'}>
-            {packageBusy === 'import' ? '导入中...' : '导入酒馆包'}
+            {packageBusy === 'import' ? '导入中...' : '导入空间包'}
           </button>
           <input
             ref={packageInputRef}
@@ -941,7 +941,7 @@ export default function TavernOwnerPanel({
             onChange={handlePackageFileChange}
           />
           <button className="btn-primary" onClick={() => setShowCreate(true)}>
-            + 创建新酒馆
+            + 创建新空间
           </button>
         </div>
       </header>
@@ -958,11 +958,11 @@ export default function TavernOwnerPanel({
 
       {ownerSection === 'overview' && (
         <>
-          <section className="owner-overview" aria-label="我的酒馆摘要">
+          <section className="owner-overview" aria-label="我的空间摘要">
             <article className="owner-overview-item">
-              <span className="mini-label">全部酒馆</span>
+              <span className="mini-label">全部空间</span>
               <strong>{ownerStats.total}</strong>
-              <p>当前身份拥有的酒馆数量</p>
+              <p>当前身份拥有的空间数量</p>
             </article>
             <article className="owner-overview-item">
               <span className="mini-label">营业中</span>
@@ -1224,7 +1224,7 @@ export default function TavernOwnerPanel({
             </header>
             <div className="llm-modal-body">
               <p className="form-hint" style={{ marginBottom: 12 }}>
-                保存 API Key 后，酒馆将变为"营业中"状态，访客可以和 AI NPC 对话了。
+                保存 API Key 后，空间将变为"营业中"状态，访客可以和 AI NPC 对话了。
               </p>
               <LLMConfigForm
                 value={llmFormData || {}}
@@ -1269,11 +1269,11 @@ export default function TavernOwnerPanel({
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal-content panel delete-modal" onClick={e => e.stopPropagation()}>
             <header className="modal-header">
-              <h3>确认删除酒馆</h3>
+              <h3>确认删除空间</h3>
               <button className="close-btn" onClick={() => setDeleteTarget(null)}>&times;</button>
             </header>
             <p className="delete-warning">
-              删除酒馆将清除所有角色和对话记录。此操作不可恢复。
+              删除空间将清除所有角色和对话记录。此操作不可恢复。
             </p>
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={() => setDeleteTarget(null)}>取消</button>
@@ -1317,19 +1317,19 @@ function OwnerTavernManagementSection({
   onDelete,
 }) {
   return (
-    <section className="owner-section-panel" aria-label="酒馆管理">
+    <section className="owner-section-panel" aria-label="空间管理">
       <div className="owner-section-heading">
         <div>
-          <p className="mini-label">酒馆</p>
+          <p className="mini-label">空间</p>
           <h2>基础信息、营业状态与公开入口</h2>
-          <p className="note muted">常用经营动作放在这里；角色、世界书和护栏也可以从每张酒馆卡片进入。</p>
+          <p className="note muted">常用经营动作放在这里；角色、世界书和护栏也可以从每张空间卡片进入。</p>
         </div>
-        <button className="btn-primary" type="button" onClick={onCreate}>+ 创建新酒馆</button>
+        <button className="btn-primary" type="button" onClick={onCreate}>+ 创建新空间</button>
       </div>
 
-      <section className="owner-filters" aria-label="酒馆筛选">
+      <section className="owner-filters" aria-label="空间筛选">
         <label className="owner-search">
-          <span className="mini-label">搜索酒馆</span>
+          <span className="mini-label">搜索空间</span>
           <input
             type="search"
             value={searchQuery}
@@ -1363,19 +1363,19 @@ function OwnerTavernManagementSection({
       </section>
 
       {loading ? (
-        <div className="owner-loading panel">正在读取酒馆数据...</div>
+        <div className="owner-loading panel">正在读取空间数据...</div>
       ) : error ? (
         <div className="owner-error panel">读取失败: {error}</div>
       ) : myTaverns.length === 0 ? (
         <div className="owner-empty panel">
           <div className="empty-icon">🏚️</div>
-          <p>你还没有创建任何酒馆。现在就开始你的店主生涯吧！</p>
+          <p>你还没有创建任何空间。现在就开始你的店主生涯吧！</p>
           <button className="button-link" onClick={onCreate}>立即创建</button>
         </div>
       ) : filteredTaverns.length === 0 ? (
         <div className="owner-empty panel">
           <div className="empty-icon">🔎</div>
-          <p>当前筛选没有匹配的酒馆。</p>
+          <p>当前筛选没有匹配的空间。</p>
           <button className="button-link" onClick={onClearFilters}>清除筛选</button>
         </div>
       ) : (
@@ -1463,7 +1463,7 @@ export function TokenUsagePanel({ tokenStats, onManageLlm }) {
       </div>
 
       {rows.length === 0 ? (
-        <div className="owner-token-empty">创建酒馆后，这里会显示每间酒馆的 AI 用量参考状态，不会生成平台账单。</div>
+        <div className="owner-token-empty">创建空间后，这里会显示每间空间的 AI 用量参考状态，不会生成平台账单。</div>
       ) : (
         <div className="owner-token-list">
           {rows.map((row) => {
@@ -1524,7 +1524,7 @@ function OwnerChatDetailModal({
             <p className="mini-label">会话详情</p>
             <h3>{visitorLabel} ↔ {session.character_name || '未知角色'}</h3>
             <p className="note muted">
-              {session.tavern_name || '未知酒馆'} · {session.message_count || messages.length || 0} 条消息 · {formatChatTimestamp(session.updated_at)}
+              {session.tavern_name || '未知空间'} · {session.message_count || messages.length || 0} 条消息 · {formatChatTimestamp(session.updated_at)}
             </p>
           </div>
           <button className="close-btn" onClick={onClose}>&times;</button>
@@ -1586,7 +1586,7 @@ function OwnerChatActivityPanel({ sessions, stats, loading, error, onRefresh, on
           <p className="mini-label">访客反馈</p>
           <h2>最近对话会话</h2>
           <p className="note muted">
-            来自酒馆聊天历史的会话摘要，帮助店主观察访客回访与 NPC 互动情况。
+            来自空间聊天历史的会话摘要，帮助店主观察访客回访与 NPC 互动情况。
           </p>
         </div>
         <button type="button" className="secondary" onClick={onRefresh} disabled={loading}>
@@ -1614,7 +1614,7 @@ function OwnerChatActivityPanel({ sessions, stats, loading, error, onRefresh, on
       ) : loading ? (
         <div className="owner-chat-empty">正在读取访客会话...</div>
       ) : rows.length === 0 ? (
-        <div className="owner-chat-empty">还没有访客对话。开放酒馆后，这里会显示最近的 NPC 互动。</div>
+        <div className="owner-chat-empty">还没有访客对话。开放空间后，这里会显示最近的 NPC 互动。</div>
       ) : (
         <div className="owner-chat-list">
           {rows.map((session) => {
@@ -1628,7 +1628,7 @@ function OwnerChatActivityPanel({ sessions, stats, loading, error, onRefresh, on
                 <div className="owner-chat-row__meta">
                   <div>
                     <strong>{visitorLabel}</strong>
-                    <span>{session.tavern_name || '未知酒馆'} · {session.character_name || '未知角色'}</span>
+                    <span>{session.tavern_name || '未知空间'} · {session.character_name || '未知角色'}</span>
                   </div>
                   <time>{formatChatTimestamp(session.updated_at)}</time>
                 </div>
@@ -1674,14 +1674,14 @@ function OwnerChatSearchPanel({
           <p className="mini-label">会话检索</p>
           <h2>搜索访客消息</h2>
           <p className="note muted">
-            在单个酒馆的聊天历史中查找关键词，便于回看高价值反馈或问题线索。
+            在单个空间的聊天历史中查找关键词，便于回看高价值反馈或问题线索。
           </p>
         </div>
       </div>
 
       <form className="owner-chat-search-form" onSubmit={onSearch}>
         <label>
-          <span className="mini-label">酒馆</span>
+          <span className="mini-label">空间</span>
           <select
             value={selectedTavernId}
             onChange={(event) => onSelectTavern(event.target.value)}
@@ -1690,7 +1690,7 @@ function OwnerChatSearchPanel({
             {hasTaverns ? taverns.map((tavern) => (
               <option key={tavern.id} value={tavern.id}>{tavern.name || tavern.id}</option>
             )) : (
-              <option value="">暂无酒馆</option>
+              <option value="">暂无空间</option>
             )}
           </select>
         </label>
@@ -1727,7 +1727,7 @@ function OwnerChatSearchPanel({
                 <div className="owner-chat-search-result__meta">
                   <div>
                     <strong>{speaker}</strong>
-                    <span>{session.tavern_name || '未知酒馆'} · {visitorLabel} · {session.character_name || '未知角色'}</span>
+                    <span>{session.tavern_name || '未知空间'} · {visitorLabel} · {session.character_name || '未知角色'}</span>
                   </div>
                   <time>{formatChatTimestamp(message.timestamp)}</time>
                 </div>
@@ -1789,7 +1789,7 @@ function OwnerVisitorStatePanel({ visitors, stats, loading, error, onRefresh, on
       ) : loading ? (
         <div className="owner-visitor-empty">正在读取访客状态...</div>
       ) : rows.length === 0 ? (
-        <div className="owner-visitor-empty">还没有可展示的访客状态。访客进入酒馆后，这里会开始记录回访。</div>
+        <div className="owner-visitor-empty">还没有可展示的访客状态。访客进入空间后，这里会开始记录回访。</div>
       ) : (
         <div className="owner-visitor-list">
           {rows.map((visitor) => {
@@ -1805,7 +1805,7 @@ function OwnerVisitorStatePanel({ visitors, stats, loading, error, onRefresh, on
                 <div className="owner-visitor-row__main">
                   <div>
                     <strong>{visitorLabel}</strong>
-                    <span>{visitor.tavern_name || '未知酒馆'} · {formatRelationshipStage(rel.stage)}</span>
+                    <span>{visitor.tavern_name || '未知空间'} · {formatRelationshipStage(rel.stage)}</span>
                   </div>
                   <div className="owner-visitor-row__visits">
                     <strong>{visitor.visit_count || 0}</strong>
@@ -1977,7 +1977,7 @@ function TavernEditModal({ tavern, onSave, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content panel edit-modal" onClick={e => e.stopPropagation()}>
         <header className="modal-header">
-          <h3>编辑酒馆: {tavern.name}</h3>
+          <h3>编辑空间: {tavern.name}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </header>
 
@@ -1985,14 +1985,14 @@ function TavernEditModal({ tavern, onSave, onClose }) {
           <div className="form-grid">
             <div className="form-main">
               <div className="form-group">
-                <label>酒馆名称</label>
+                <label>空间名称</label>
                 <input
                   value={form.name}
                   onChange={e => setForm(f => ({...f, name: e.target.value}))}
                 />
               </div>
               <div className="form-group">
-                <label>酒馆描述</label>
+                <label>空间描述</label>
                 <textarea
                   value={form.description}
                   onChange={e => setForm(f => ({...f, description: e.target.value}))}
@@ -2016,7 +2016,7 @@ function TavernEditModal({ tavern, onSave, onClose }) {
                   value={form.scene_prompt}
                   onChange={e => setForm(f => ({...f, scene_prompt: e.target.value}))}
                   rows={4}
-                  placeholder="描述酒馆的环境、气氛，帮助 AI 更好入戏"
+                  placeholder="描述空间的环境、气氛，帮助 AI 更好入戏"
                 />
               </div>
             </div>
@@ -2252,7 +2252,7 @@ function OwnerVisitorMemoryModal({ visitor, atoms, loading, error, onClose, onPi
             <p className="mini-label">访客记忆</p>
             <h3>{visitorLabel} 的结构化记忆</h3>
             <p className="note muted">
-              {visitor.tavern_name || '未知酒馆'} · {atoms.length} 条记忆
+              {visitor.tavern_name || '未知空间'} · {atoms.length} 条记忆
             </p>
           </div>
           <button className="close-btn" onClick={onClose}>&times;</button>

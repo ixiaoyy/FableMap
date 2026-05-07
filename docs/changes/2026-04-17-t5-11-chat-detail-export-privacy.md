@@ -10,11 +10,11 @@ T5.9 已让店主看到最近访客会话摘要，但还缺少“点开看完整
 
 - 后端
   - `GET /api/taverns/{id}/chat` 增加 `X-User-Id` 校验和 `limit` 参数。
-  - 只有会话访客本人或酒馆主人可以读取指定访客历史。
+  - 只有会话访客本人或空间主人可以读取指定访客历史。
   - `/api/chats` 显式 `visitor_id` 过滤时同样校验访客本人/店主身份。
   - `/api/chats/export`、`/api/chats/search`、`/api/bulkedit` 增加同样的会话范围校验。
   - `/api/chats` 保存/导入时阻止带身份请求写入其他访客会话；匿名兼容路径只允许请求体自带 visitor_id 的旧集成继续写入。
-  - 匿名进入酒馆不再创建空 visitor_id 的 VisitorState，避免店主回访面板出现空访客。
+  - 匿名进入空间不再创建空 visitor_id 的 VisitorState，避免店主回访面板出现空访客。
 
 - 前端
   - `tavernService.getChatHistory`、`sendChat`、`exportChatHistory` 统一携带 `X-User-Id`。

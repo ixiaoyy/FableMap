@@ -242,8 +242,8 @@ Frontend native clients belong in `frontend/app/lib/taverns.ts` and must use `/a
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
-| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此空间是私人的"}` |
 | Create without `X-User-Id` | `401 {"error": "创建记忆需要明确用户身份"}` |
 | Empty `content` | `400 {"error": "记忆内容不能为空"}` |
 | Private memory read by owner/other visitor | `403 {"error": "不能访问这条记忆"}` |
@@ -346,11 +346,11 @@ WorldInfo diagnostic matching lives in `backend/src/fablemap_api/domain/world_in
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
-| Non-owner user | `403 {"error": "你不是此酒馆的主人"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
+| Non-owner user | `403 {"error": "你不是此空间的主人"}` |
 | WorldInfo test | deterministic hit diagnostics, no persistence, no LLM call |
 | Output rules test | returns transformed text plus applied/errors diagnostics |
-| Prompt-block preview without character | `400 {"error": "请先为酒馆添加角色"}` |
+| Prompt-block preview without character | `400 {"error": "请先为空间添加角色"}` |
 | Runtime preset not found | `404 {"error": "运行预设不存在"}` |
 | Runtime preset apply | preserves existing owner API key only through private owner update path; presets themselves never persist `api_key` |
 
@@ -420,11 +420,11 @@ Package-safe redaction helpers live in `backend/src/fablemap_api/domain/tavern_p
 
 | Case | Expected |
 |------|----------|
-| Export missing tavern | `404 {"error": "酒馆不存在"}` |
-| Export/list visitors/import card by non-owner | `403 {"error": "你不是此酒馆的主人"}` |
-| Import wrong package type | `400 {"error": "不支持的酒馆包类型"}` |
-| Import missing tavern payload | `400 {"error": "酒馆包缺少 tavern 数据"}` |
-| Import invalid coordinates | `400 {"error": "导入酒馆包时需要有效坐标"}` |
+| Export missing tavern | `404 {"error": "空间不存在"}` |
+| Export/list visitors/import card by non-owner | `403 {"error": "你不是此空间的主人"}` |
+| Import wrong package type | `400 {"error": "不支持的空间包类型"}` |
+| Import missing tavern payload | `400 {"error": "空间包缺少 tavern 数据"}` |
+| Import invalid coordinates | `400 {"error": "导入空间包时需要有效坐标"}` |
 | Abandon other visitor session | `403 {"error": "不能访问其他访客的玩法会话"}` |
 | Abandon missing session | `404 {"error": "玩法会话不存在"}` |
 
@@ -494,13 +494,13 @@ Group-chat normalization helpers live in `backend/src/fablemap_api/domain/group_
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
-| Tavern LLM probe by non-owner | `403 {"error": "你不是此酒馆的主人"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
+| Tavern LLM probe by non-owner | `403 {"error": "你不是此空间的主人"}` |
 | External LLM probe without key/base_url | `200 {"ok": false, "message": "请提供 API Key 或 Base URL"}` |
 | Group chat disabled | `400 {"error": "群聊未启用"}` |
-| Group chat with no characters | `400 {"error": "酒馆没有角色"}` |
+| Group chat with no characters | `400 {"error": "空间没有角色"}` |
 | Other visitor reads requested visitor history | `403 {"error": "不能访问其他访客的群聊会话"}` |
-| Visitor updates group config/talkativeness | `403 {"error": "你不是此酒馆的主人"}` |
+| Visitor updates group config/talkativeness | `403 {"error": "你不是此空间的主人"}` |
 | TTS while voice disabled | `400 {"error": "语音未启用"}` |
 | STT with browser provider | `400 {"error": "浏览器 STT 无需上传到后端"}` |
 
@@ -572,9 +572,9 @@ Expression keyword fallback and sprite-map normalization live in `backend/src/fa
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
 | Missing character | `404 {"error": "角色不存在"}` |
-| Visitor updates sprites | `403 {"error": "你不是此酒馆的主人"}` |
+| Visitor updates sprites | `403 {"error": "你不是此空间的主人"}` |
 | Empty inference text | `400 {"error": "text is required"}` |
 | Rules/public-welfare inference | deterministic keyword result, no external LLM call |
 | Invalid character-card payload | `400` with parser error, no partial persistence |
@@ -646,9 +646,9 @@ Normalization and diagnostics reuse `backend/src/fablemap_api/domain/world_info_
 | Case | Expected |
 |------|----------|
 | Missing `tavern_id` on write/test | `400 {"error": "tavern_id is required"}` |
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
-| Non-owner create/update/delete | `403 {"error": "你不是此酒馆的主人"}` |
-| Visitor lists private tavern entries | omitted from global list; scoped private list returns `403 {"error": "此酒馆是私人的"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
+| Non-owner create/update/delete | `403 {"error": "你不是此空间的主人"}` |
+| Visitor lists private tavern entries | omitted from global list; scoped private list returns `403 {"error": "此空间是私人的"}` |
 | Missing entry on update/delete | `404 {"error": "WorldInfo entry not found"}` |
 | Empty global test text/message | `400 {"error": "text is required"}` |
 
@@ -823,8 +823,8 @@ Public tavern payloads should expose only public-safe claim state; the dedicated
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
-| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此空间是私人的"}` |
 | Non-owner updates mode | `403` owner error |
 | Unsupported `roleplay_mode` | `400 {"error": "Unsupported roleplay_mode"}` |
 | Claim while mode is `ai_only` | `400 {"error": "This tavern has not enabled player NPC roleplay"}` |

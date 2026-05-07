@@ -2,11 +2,11 @@
 
 ## 目的
 
-扩展 LLM 客户端，支持 OpenAI、Claude、Ollama 和 OpenRouter 后端，使酒馆 NPC 能够进行真正的 AI 对话。
+扩展 LLM 客户端，支持 OpenAI、Claude、Ollama 和 OpenRouter 后端，使空间 NPC 能够进行真正的 AI 对话。
 
 ## 当前状态
 
-- `rules` backend 已实现（公益酒馆用，基于规则的回复）
+- `rules` backend 已实现（公益空间用，基于规则的回复）
 - 缺少真正的 LLM 集成
 
 ## 待实现功能
@@ -59,7 +59,7 @@ class LLMConfig:
 ### 4. Token 统计
 
 - 每个请求记录 `token_used`
-- 酒馆 Owner 面板显示用量
+- 空间 Owner 面板显示用量
 
 ## 实现步骤
 

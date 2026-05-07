@@ -32,7 +32,7 @@ def test_migration_moves_legacy_runtime_files_into_database(tmp_path):
         {
             tavern_id: {
                 "id": tavern_id,
-                "name": "旧文件酒馆",
+                "name": "旧文件空间",
                 "description": "from json",
                 "lat": 35.0,
                 "lon": 139.0,
@@ -186,7 +186,7 @@ def test_migration_moves_legacy_runtime_files_into_database(tmp_path):
     try:
         with db.session_scope() as session:
             tavern = session.query(TavernModel).filter_by(id=tavern_id).one()
-            assert tavern.name == "旧文件酒馆"
+            assert tavern.name == "旧文件空间"
             assert tavern.layout_style == "npc-chat"
             assert tavern.place_type == "convenience-store"
 

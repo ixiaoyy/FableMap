@@ -2,7 +2,7 @@
 
 ## Goal
 
-把现有 `GameplayDefinition` 包装成更像竖屏短剧小游戏的酒馆原生体验：店主可以选择轻量短剧玩法模板，访客在真实坐标酒馆内通过 2–3 个大按钮完成 3–5 步互动选择。
+把现有 `GameplayDefinition` 包装成更像竖屏短剧小游戏的空间原生体验：店主可以选择轻量短剧玩法模板，访客在真实坐标空间内通过 2–3 个大按钮完成 3–5 步互动选择。
 
 ## Source Planning
 
@@ -14,7 +14,7 @@
 ## Requirements
 
 * 优先复用现有 `GameplayDefinition.nodes/choices/fallback_events`，默认不新增 Tavern schema。
-* 模板必须挂接酒馆/真实地点，不做脱离地图锚点的泛短剧小游戏。
+* 模板必须挂接空间/真实地点，不做脱离地图锚点的泛短剧小游戏。
 * 内容必须是店主可编辑/确认的玩法草稿或模板，不做平台自动生成并发布。
 * 访客体验优先移动竖屏：目标、当前剧情、NPC/场景、2–3 个大按钮选择、完成/再来一次。
 * 可提供 3–5 个短剧式模板，例如：
@@ -45,7 +45,7 @@
 
 * Implementation evidence inspected on 2026-05-03:
   * `frontend/app/product/shortDramaGameplayTemplates.js`: defines 4 short-drama templates, `createShortDramaGameplayFromTemplate(...)`, `isShortDramaCandidate(...)`, shared forbidden guardrails, and `draft` output using existing `GameplayDefinition` fields.
-  * `frontend/app/product/GameplayManager.jsx`: renders owner-side “短剧模板” panel and creates only local drafts with status copy: “请检查内容、按本酒馆调整，并保存/发布后访客才可见。”
+  * `frontend/app/product/GameplayManager.jsx`: renders owner-side “短剧模板” panel and creates only local drafts with status copy: “请检查内容、按本空间调整，并保存/发布后访客才可见。”
   * `frontend/app/product/TavernGameplayLauncher.jsx`: tags short-drama gameplay as “竖屏短剧感”, shows the owner brief goal, and calls existing `onStart?.(gameplay)`.
   * `frontend/app/product/GameplaySessionPanel.jsx`: displays “本局目标”, narration, 2–3 choice CTAs, free-text submit, completion, and abandon control.
   * `frontend/app/product/tavernGameplay.css`: includes `.gameplay-session-panel__choice { min-height: 44px; }`, mobile grid collapse, and short-drama card styling.

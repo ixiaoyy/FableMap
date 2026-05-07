@@ -43,7 +43,7 @@ assert.deepEqual(
 const stats = buildTavernLayoutStats(
   {
     id: "fog",
-    name: "雾灯酒馆",
+    name: "雾灯空间",
     lat: 31.2304,
     lon: 121.4737,
     access: "password",

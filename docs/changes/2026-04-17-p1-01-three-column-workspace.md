@@ -1,4 +1,4 @@
-# P1-01: 酒馆内三栏工作台
+# P1-01: 空间内三栏工作台
 
 ## 概述
 
@@ -10,7 +10,7 @@
 
 - `frontend/src/TavernContextPanel.jsx` — 上下文面板组件，提供五个标签页：
   - 角色：当前角色卡、性格、场景设定等
-  - 场所：酒馆名称、简介、场景氛围、访问权限
+  - 场所：空间名称、简介、场景氛围、访问权限
   - 世界书：所有世界书条目及状态
   - 记忆：访客关系、到访次数、历史消息
   - AI：AI 后端配置、模型、温度等参数
@@ -18,13 +18,13 @@
 ### 修改文件
 
 - `frontend/src/TavernChatRoom.jsx`:
-  - 新增 `tavern` prop 接收完整酒馆数据
+  - 新增 `tavern` prop 接收完整空间数据
   - 新增 `contextPanelOpen` 状态控制右侧面板显示
   - header 新增"📋 上下文"按钮切换面板
   - 引入 `TavernContextPanel` 组件
 
 - `frontend/src/App.jsx`:
-  - TavernChatRoom 调用新增 `tavern` prop 传入完整酒馆数据
+  - TavernChatRoom 调用新增 `tavern` prop 传入完整空间数据
 
 - `frontend/src/styles.css`:
   - 新增 `.tavern-context-panel` 布局样式（三栏固定宽度 300px）
@@ -39,6 +39,6 @@
 
 ## 影响
 
-- 访客进入酒馆后可以看到更丰富的上下文信息
-- 店主可以在上下文面板快速查看酒馆配置
+- 访客进入空间后可以看到更丰富的上下文信息
+- 店主可以在上下文面板快速查看空间配置
 - 移动端保持可用性

@@ -513,9 +513,9 @@ export default function WorldMap({
         </div>
       </div>
 
-      <div className="tavern-map-legend" aria-label="酒馆灯牌分类">
+      <div className="tavern-map-legend" aria-label="空间灯牌分类">
         <div className="tavern-map-legend__header">
-          <span>酒馆灯牌</span>
+          <span>空间灯牌</span>
           <strong>{taverns.length}/{totalTavernMatches}</strong>
         </div>
         {hiddenTavernMarkerCount ? (

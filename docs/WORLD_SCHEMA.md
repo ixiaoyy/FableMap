@@ -1,35 +1,35 @@
 # FableMap 世界 Schema v0.8
 
-> **状态**：本文档已更新以反映赛博酒馆平台的数据模型。旧 `world` Schema 作为历史参考保留。新的核心数据模型为 `Tavern`、`TavernCharacter`、`LLMConfig` 等。
+> **状态**：本文档已更新以反映空间平台的数据模型。旧 `world` Schema 作为历史参考保留。新的核心数据模型为 `Tavern`、`TavernCharacter`、`LLMConfig` 等。
 
 ---
 
 ## 一、核心概念映射
 
-| 旧概念（叙事引擎版） | 新概念（赛博酒馆版） | 说明 |
+| 旧概念（叙事引擎版） | 新概念（空间版） | 说明 |
 |---------------------|---------------------|------|
 | Place / POI | Tavern | 地图上的可进入场所 |
-| Faction | TavernCharacter | 酒馆内的 AI NPC |
+| Faction | TavernCharacter | 空间内的 AI NPC |
 | World Info | WorldInfoEntry | 关键词触发的背景注入 |
-| World | TavernScene | 酒馆场景设定 |
-| Player State | VisitorState | 访客与酒馆的关系 |
+| World | TavernScene | 空间场景设定 |
+| Player State | VisitorState | 访客与空间的关系 |
 | OSM Data | 地图底图 | 不变 |
 | Fantasy Name | Tavern Name | 自定义 |
 
 ---
 
-## 二、Tavern（酒馆）
+## 二、Tavern（空间）
 
-酒馆是 FableMap 赛博酒馆平台的核心实体。
+空间是 FableMap 空间平台的核心实体。
 
 ```typescript
 /**
- * 酒馆 — 地图上的一个可进入场所
+ * 空间 — 地图上的一个可进入场所
  */
 interface Tavern {
   // ── 身份 ──────────────────────────
   id: string;                    // UUID，唯一标识
-  name: string;                  // 酒馆名称（如「第三中学传达室」）
+  name: string;                  // 空间名称（如「第三中学传达室」）
   description: string;           // 场景描述（给访客看）
 
   // ── 地图位置 ─────────────────────
@@ -48,11 +48,11 @@ interface Tavern {
   // ── 运营状态 ──────────────────────
   status: 'open' | 'closed';    // open = LLM 可用，closed = LLM 不可用
   roleplay_mode: 'ai_only' | 'hybrid'; // NPC 驱动模式：纯 AI 或店主审批的玩家混合扮演
-  layout_style: 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'; // 酒馆页默认体验布局
+  layout_style: 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'; // 空间页默认体验布局
   place_type: PlaceType;         // 地点类型；缺省 tavern，Home 默认私密
 
-  // ── 酒馆内容 ──────────────────────
-  characters: TavernCharacter[];  // 酒馆内的 NPC 列表
+  // ── 空间内容 ──────────────────────
+  characters: TavernCharacter[];  // 空间内的 NPC 列表
   character_claims: CharacterClaim[]; // 玩家扮演 NPC 的认领记录
   world_info: WorldInfoEntry[];   // 世界知识（关键词注入）
   gameplay_definitions: GameplayDefinition[]; // 店主配置的结构化玩法定义
@@ -186,7 +186,7 @@ interface SchoolMemberSummary {
 
 布局约束：
 
-- `layout_style` 只决定酒馆详情页的默认展示结构，不生成或改写酒馆内容。
+- `layout_style` 只决定空间详情页的默认展示结构，不生成或改写空间内容。
 - 缺失或不支持的 `layout_style` 必须兼容读取为 `lobby`。
 - 合法值为：`lobby`（大厅型）、`npc-chat`（NPC 会话型）、`quest-play`（任务/玩法型）、`hybrid-room`（混合房间型）。
 
@@ -194,7 +194,7 @@ interface SchoolMemberSummary {
 
 ## 四、CharacterClaim（玩家扮演 NPC 认领）
 
-`CharacterClaim` 记录某个玩家申请 / 获准扮演某个既有 NPC 的状态。它是酒馆内的治理记录，不是跨酒馆私信、好友关系或全局在线状态。
+`CharacterClaim` 记录某个玩家申请 / 获准扮演某个既有 NPC 的状态。它是空间内的治理记录，不是跨空间私信、好友关系或全局在线状态。
 
 ```typescript
 interface CharacterClaim {
@@ -214,22 +214,22 @@ interface CharacterClaim {
 - 只有 `roleplay_mode = 'hybrid'` 时访客可以申请认领。
 - 店主可以批准、拒绝或撤销认领。
 - 同一角色同一时间最多只有一个 `approved` 认领。
-- 认领只绑定当前酒馆和当前 NPC，不创建访客好友、私信、动态墙或跨酒馆社交关系。
+- 认领只绑定当前空间和当前 NPC，不创建访客好友、私信、动态墙或跨空间社交关系。
 
 ---
 
-## 五、TavernCharacter（酒馆角色）
+## 五、TavernCharacter（空间角色）
 
-酒馆角色是酒馆内的 AI NPC。格式兼容 SillyTavern Character Card V2。
+空间角色是空间内的 AI NPC。格式兼容 SillyTavern Character Card V2。
 
 ```typescript
 /**
- * 酒馆角色 — 酒馆内的 AI NPC
+ * 空间角色 — 空间内的 AI NPC
  * 兼容 SillyTavern Character Card V2 格式
  */
 interface TavernCharacter {
   id: string;                    // UUID
-  tavern_id: string;             // 所属酒馆
+  tavern_id: string;             // 所属空间
 
   // ── 角色信息 ──────────────────────
   name: string;                  // 角色名称（如「刘大爷」）
@@ -294,7 +294,7 @@ interface NpcDraftPreview {
 
 - 店主确认前，AI 草稿不得进入公开 `Tavern` payload。
 - 店主确认前，AI 草稿不得覆盖已有 `TavernCharacter`。
-- 店主确认前，AI 草稿不得随酒馆包导出。
+- 店主确认前，AI 草稿不得随空间包导出。
 - 店主确认后，草稿按现有 `TavernCharacter` 字段保存；AI 草稿本身不新增持久字段。
 - 若未来要保存草稿历史、审核状态或多版本草稿，必须另行设计持久化模型并更新本文档。
 
@@ -332,11 +332,11 @@ interface WorldInfoEntry {
 
 ## 八、LLMConfig（LLM 配置）
 
-LLM 配置由酒馆主人提供，用于驱动酒馆内的 AI 对话。API Key 和敏感信息仅主人可见。
+LLM 配置由空间主人提供，用于驱动空间内的 AI 对话。API Key 和敏感信息仅主人可见。
 
 ```typescript
 /**
- * LLM 配置 — 酒馆主人提供的 AI 后端配置
+ * LLM 配置 — 空间主人提供的 AI 后端配置
  * 敏感字段（api_key）仅 owner 可见
  */
 interface LLMConfig {
@@ -361,16 +361,16 @@ interface LLMConfig {
 
 ## 九、VisitorState（访客状态）
 
-记录访客与特定酒馆的关系状态。
+记录访客与特定空间的关系状态。
 
 ```typescript
 /**
- * 访客状态 — 访客与酒馆的关系
+ * 访客状态 — 访客与空间的关系
  */
 interface VisitorState {
   visitor_id: string;           // 访客 user_id
-  tavern_id: string;            // 酒馆 id
-  gender: Gender;                // 访客自声明性别；缺省 unspecified，酒馆内作用域
+  tavern_id: string;            // 空间 id
+  gender: Gender;                // 访客自声明性别；缺省 unspecified，空间内作用域
 
   visit_count: number;          // 访问次数
   first_visit?: string;         // 首次访问时间
@@ -439,13 +439,13 @@ interface ChatMessage {
 
 ---
 
-## 十一、Gameplay（酒馆玩法）
+## 十一、Gameplay（空间玩法）
 
-Gameplay 是酒馆内容的一部分：`GameplayDefinition` 随 Tavern 导出 / 导入；访客运行时进度进入 `GameplaySession`，不混入 `ChatMessage`，也不进入公开 Tavern payload。
+Gameplay 是空间内容的一部分：`GameplayDefinition` 随 Tavern 导出 / 导入；访客运行时进度进入 `GameplaySession`，不混入 `ChatMessage`，也不进入公开 Tavern payload。
 
 ```typescript
 /**
- * 玩法定义 — 店主发布在单间酒馆内的可玩体验
+ * 玩法定义 — 店主发布在单间空间内的可玩体验
  */
 interface GameplayDefinition {
   id: string;
@@ -492,7 +492,7 @@ interface GameplayFallbackEvent {
 }
 
 /**
- * 玩法会话 — 某个访客在某间酒馆的一局玩法进度
+ * 玩法会话 — 某个访客在某间空间的一局玩法进度
  */
 interface GameplaySession {
   id: string;
@@ -530,14 +530,14 @@ interface GameplayEvent {
 
 约束：
 
-- 访客只能通过专用 Gameplay API 读取自己的 `GameplaySession`；店主可查看本酒馆 session 摘要。
-- `_gameplay_sessions` 是 `TavernStore` 私有桶，不写入公开 Tavern payload，不随酒馆包导出。
+- 访客只能通过专用 Gameplay API 读取自己的 `GameplaySession`；店主可查看本空间 session 摘要。
+- `_gameplay_sessions` 是 `TavernStore` 私有桶，不写入公开 Tavern payload，不随空间包导出。
 - AI Director 只能在店主给出的玩法定义和安全边界内主持；没有可用 AI 或 AI 返回非法结构时，使用节点 `fallback_events`。
 - 玩法不等于战斗 / 等级 / 装备 / 排行榜系统；不得要求真实危险行动或索取敏感身份信息。
 
 ---
 
-## 十二、Tavern Skill Packs（酒馆技能包）
+## 十二、Tavern Skill Packs（空间技能包）
 
 Tavern Skill Packs 是店主显式启用的 NPC 能力包：它让 NPC “可以做某类被允许的事”，但不改变 TavernCharacter 身份、世界书、访问规则、LLM 配置或 StateCard 正史。MVP 只内置 `local-rumor`（环境传闻）技能包。
 
@@ -569,17 +569,17 @@ interface SkillPackSetting {
 
 - `skill_packs` 是 Tavern 持久字段，默认空数组；API 展示时会合并为安全的 disabled 默认设置。
 - 店主通过 `GET/PUT /api/v1/taverns/{tavern_id}/skill-packs` 查看和保存；非店主不能修改。
-- `local-rumor` 只能引用已有 NeighborhoodRumor；没有传闻时不得编造目标酒馆、现实地点或事实。
-- 技能包提示必须说明“传闻不是正史”，不得自动写入记忆、状态卡、角色卡、世界书或酒馆事实。
+- `local-rumor` 只能引用已有 NeighborhoodRumor；没有传闻时不得编造目标空间、现实地点或事实。
+- 技能包提示必须说明“传闻不是正史”，不得自动写入记忆、状态卡、角色卡、世界书或空间事实。
 - `revisit-care`、`visual-souvenir` 等需要主动通知、图片/音频隐私、成本与资源留存规则的能力不属于本 Schema 版本。
 
 ---
 
 ## 十三、StateCard / Canon Ledger（连续性状态卡）
 
-StateCard 是长期酒馆会话的连续性台账：AI / NPC 可以提出“候选变化”，但这些变化默认是 `pending`，不会直接覆盖店主配置的 Tavern、TavernCharacter、WorldInfoEntry、访问规则或 LLM 配置。访客或店主确认后，状态卡才进入 `confirmed` 正史记录。
+StateCard 是长期空间会话的连续性台账：AI / NPC 可以提出“候选变化”，但这些变化默认是 `pending`，不会直接覆盖店主配置的 Tavern、TavernCharacter、WorldInfoEntry、访问规则或 LLM 配置。访客或店主确认后，状态卡才进入 `confirmed` 正史记录。
 
-StateCard 存储在 `TavernStore` 私有桶 `_state_cards` 中，不进入公开 Tavern payload，不随酒馆包导出。
+StateCard 存储在 `TavernStore` 私有桶 `_state_cards` 中，不进入公开 Tavern payload，不随空间包导出。
 
 ```typescript
 type StateCardCategory = 'character' | 'task' | 'resource' | 'conflict' | 'event_log';
@@ -591,7 +591,7 @@ interface StateCard {
   tavern_id: string;
   category: StateCardCategory;
   status: StateCardStatus;
-  canon_scope: StateCardScope;     // visitor: 某访客连续性；tavern: 酒馆级正史
+  canon_scope: StateCardScope;     // visitor: 某访客连续性；tavern: 空间级正史
   title: string;                   // 最长 80 字
   summary: string;                 // 最长 600 字；只写可观察摘要，不写 chain-of-thought
   visitor_id?: string;
@@ -654,7 +654,7 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 
 ## 十五、旧世界 Schema（历史参考）
 
-以下为旧的 world Schema，保留为历史参考。新的赛博酒馆平台不再使用这套概念体系。
+以下为旧的 world Schema，保留为历史参考。新的空间平台不再使用这套概念体系。
 
 旧 Schema 核心结构（Place/Faction/World 体系）：
 
@@ -825,9 +825,9 @@ type QueueStatus = "waiting" | "promoted" | "expired";
 ---
 
 
-## 十七、RelationshipGraph（酒馆/角色关系图谱）
+## 十七、RelationshipGraph（空间/角色关系图谱）
 
-RelationshipGraph 表达店主 / 系统在其治理范围内确认的酒馆与角色关系，以及这些关系对单个访客的私有关系投影。它不是访客社交图谱、阵营战或排行榜系统。
+RelationshipGraph 表达店主 / 系统在其治理范围内确认的空间与角色关系，以及这些关系对单个访客的私有关系投影。它不是访客社交图谱、阵营战或排行榜系统。
 
 ```typescript
 type RelationshipNodeType = 'tavern' | 'character';
@@ -890,14 +890,14 @@ interface VisitorRelationshipProjection {
 - v1.4 (2026-05-06): 运行时持久化默认切换为数据库存储；未配置数据库 URL 时使用 `<output_root>/fablemap.sqlite3`，JSON 文件存储仅保留为显式本地兼容模式。
 - v1.3 (2026-04-30): `PlaceType` 增加公开 `hospital` 类型，用于医院 / 护士站 / 分诊便签等地点语义；医院类 NPC 内容必须保留现实医疗安全边界，不替代医生诊疗、处方或急救。
 - v1.2 (2026-04-29): 增加 Tavern Skill Packs MVP：`Tavern.skill_packs` 持久字段、`local-rumor` 环境传闻技能包、店主 `GET/PUT /skill-packs` 配置端点；技能包只能启用显式能力，不自动改写角色、世界书、记忆或正史状态卡。
-- v1.1 (2026-04-29): 增加 StateCard / Canon Ledger 连续性状态卡：Chat 可生成 pending 任务、资源、冲突、事件台账候选；确认后进入结构化正史记录；状态卡存储在 `_state_cards` 私有桶，不进入公开 Tavern payload 或酒馆包。
+- v1.1 (2026-04-29): 增加 StateCard / Canon Ledger 连续性状态卡：Chat 可生成 pending 任务、资源、冲突、事件台账候选；确认后进入结构化正史记录；状态卡存储在 `_state_cards` 私有桶，不进入公开 Tavern payload 或空间包。
 - v1.0 (2026-04-28): 增加 NpcPublicBond（NPC 公开关系 / 结缘系统）：16 种系统内置关系类型（9 种 1:1 排他 + 7 种多人），close_friend（strength ≥ 0.70）触发申请，经店主审批生效，1:1 冲突进入等待队列，店主可随时撤销。数据库表 `npc_public_bonds`、`npc_public_bond_queues`；完整 API 路由 + 服务层；前端 BondBadge / BondApplyModal 组件；`docs/WORLD_SCHEMA.md` 更新。
 - v0.9 (2026-04-27): 增加好感度系统（Affinity System）：6 阶段好感度（stranger → acquaintance → familiar → friend → close_friend → best_friend），情感分析自动计算，衰减机制（7 天未访问 -0.02，30 天 -0.05）；更新 VisitorState.relationship.stage 枚举；新增 `GET /api/v1/affinity/stages` 接口；前端 AffinityBadge / AffinityProgress 组件。
 - v0.8 (2026-04-27): 增加 `Gender` 枚举、`TavernCharacter.gender` 与 `VisitorState.gender`；游客性别为 tavern-scoped 自声明字段，NPC 性别为店主填写字段，旧数据默认 `unspecified`，不得自动推断或用于公开社交筛选。
 - v0.7 (2026-04-27): 增加 Place/Home MVP Schema：`place_type`、`HomeMember`、可扩展 `PlaceRelationshipType`/`PlaceRelationship`、学校成员摘要与 Home 默认私密 / 跨主人审批边界；`school_enrollment` 是关系类型之一而非唯一关系。
 - v0.6 (2026-04-27): 增加时间系统：`timezone`、`operating_hours`、`OperatingHours` 类型、`TavernTimeStatus` 接口。支持基于地理位置的时区推断和精确到分钟的营业时间管理。
 - v0.5 (2026-04-27): 增加 AI 草稿边界说明；AI 草稿是未发布临时状态，确认后才映射为现有 TavernCharacter，MVP 不新增持久 Schema。
-- v0.4 (2026-04-27): 增加 `layout_style`，用于持久化酒馆页默认布局样式，缺省为 `lobby`。
+- v0.4 (2026-04-27): 增加 `layout_style`，用于持久化空间页默认布局样式，缺省为 `lobby`。
 - v0.3 (2026-04-21): 增加 `gameplay_definitions`、`GameplayDefinition`、`GameplaySession`、`GameplayEvent`，明确玩法会话与公开 Tavern payload 的边界。
-- v0.2 (2026-04-14): 按赛博酒馆平台方向重写，替换为 Tavern/TavernCharacter/LLMConfig 模型。旧 Schema 降级为历史参考。
+- v0.2 (2026-04-14): 按空间平台方向重写，替换为 Tavern/TavernCharacter/LLMConfig 模型。旧 Schema 降级为历史参考。
 - v0.1 (2026-03-10): 初始版本，基于 AI 生成叙事引擎方向。

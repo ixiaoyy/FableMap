@@ -24,7 +24,7 @@
   - source includes labels `雷达视图` and `卡片视图`.
   - source includes `附近坐标正在发光`.
   - source includes a manual view state like `manualViewMode`.
-  - source does not include old hero copy `发现附近的赛博酒馆` or old placeholder `搜索酒馆名称…`.
+  - source does not include old hero copy `发现附近的空间` or old placeholder `搜索空间名称…`.
 - [ ] Add the script to `frontend/package.json` test chain.
 - [ ] Run `node .\frontend\scripts\discover-view-mode-test.mjs`; expected failure before implementation.
 

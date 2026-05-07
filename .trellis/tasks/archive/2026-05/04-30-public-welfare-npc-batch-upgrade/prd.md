@@ -35,7 +35,7 @@
 5. `pw_third_shelf_observatory` / 公益·第三货架观测站：社长 9-Delta、临时店员 Mu-Mu、样本保管员 V-17、地球礼仪实习生 Pi-Pi。
 6. `pw_midnight_commission_board` / 公益·午夜委托局：墨栈、栀灯、火眼。
 7. `pw_after_school_hero_supply` / 公益·放学后英雄补给社：阿衡、纸剑、星袋。
-8. `pw_jingan_catbell_refuge` / 公益·静安猫铃小屋：眯眯喵桑、银票、铜铃。
+8. `pw_jingan_catbell_refuge` / 公益·静安猫铃空间：眯眯喵桑、银票、铜铃。
 9. `pw_hospital_night_care` / 公益·夜间护理站：弥夏、青柚、南星（新质量基线）。
 
 现有项目资源目录：`frontend/public/assets/npcs/public-welfare/<character_id>/{neutral,joy,anger,embarrassment,curiosity}.png`。

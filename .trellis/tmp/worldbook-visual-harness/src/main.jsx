@@ -5,7 +5,7 @@ import '../../../../frontend/app/product/styles.css'
 
 const initialTavern = {
   id: 'worldbook_harness_tavern',
-  name: '世界书验收酒馆',
+  name: '世界书验收空间',
   owner_id: 'owner-demo',
   world_info: [
     {
@@ -24,7 +24,7 @@ const initialTavern = {
       id: 'wi_tavern_rules',
       keys: [],
       keys_secondary: [],
-      content: '这间酒馆永远尊重店主确认的内容，不自动发布平台生成设定。',
+      content: '这间空间永远尊重店主确认的内容，不自动发布平台生成设定。',
       selective: false,
       constant: true,
       depth: 2,

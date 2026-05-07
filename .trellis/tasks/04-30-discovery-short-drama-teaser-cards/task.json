@@ -2,7 +2,7 @@
   "id": "04-30-discovery-short-drama-teaser-cards",
   "name": "04-30-discovery-short-drama-teaser-cards",
   "title": "Discovery Short-drama Teaser Cards",
-  "description": "在发现页/酒馆入口展示短剧式冲突标题和 CTA，引导进入对应酒馆玩法。",
+  "description": "在发现页/空间入口展示短剧式冲突标题和 CTA，引导进入对应空间玩法。",
   "status": "completed",
   "dev_type": "frontend",
   "scope": null,

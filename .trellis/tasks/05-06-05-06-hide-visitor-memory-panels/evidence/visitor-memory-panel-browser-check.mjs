@@ -28,7 +28,7 @@ async function checkViewport(browser, name, viewport) {
   await page.goto(baseUrl, { waitUntil: "networkidle" })
   await page.getByText(/社长 9-Delta|公益·第三货架观测站|第三货架/).first().waitFor({ timeout: 15_000 })
   await page.getByText("聊天辅助").waitFor({ timeout: 10_000 })
-  await page.getByText("更多酒馆功能").waitFor({ timeout: 10_000 })
+  await page.getByText("更多空间功能").waitFor({ timeout: 10_000 })
 
   const pageText = await page.locator("body").innerText()
   for (const snippet of hiddenCopy) {

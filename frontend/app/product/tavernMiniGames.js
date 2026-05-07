@@ -6,7 +6,7 @@ export const MINI_GAME_TEMPLATES = [
     duration: '5-8 分钟',
     summary: '灯下有一条线索等你翻开。',
     tags: ['clue', 'family-friendly'],
-    startInstruction: '请给出一个和这间酒馆氛围相关的小线索，再用【目标】【已知线索】【可选行动】三块开始；每轮只推进一个安全动作。',
+    startInstruction: '请给出一个和这间空间氛围相关的小线索，再用【目标】【已知线索】【可选行动】三块开始；每轮只推进一个安全动作。',
   },
   {
     id: 'riddle-quiz',
@@ -15,7 +15,7 @@ export const MINI_GAME_TEMPLATES = [
     duration: '3-5 分钟',
     summary: '一小题，一点提示，一声揭晓。',
     tags: ['riddle', 'family-friendly'],
-    startInstruction: '请先出一道和这间酒馆氛围相关、无需专业知识的谜题，再给出【规则】【谜题】【可选回答方式】【提示次数】。',
+    startInstruction: '请先出一道和这间空间氛围相关、无需专业知识的谜题，再给出【规则】【谜题】【可选回答方式】【提示次数】。',
   },
   {
     id: 'story-relay',
@@ -40,9 +40,9 @@ export const MINI_GAME_TEMPLATES = [
     title: '二十问',
     icon: '❓',
     duration: '5-10 分钟',
-    summary: '猜一个藏在酒馆里的小东西。',
+    summary: '猜一个藏在空间里的小东西。',
     tags: ['question', 'family-friendly'],
-    startInstruction: '请在心里想一个和这间酒馆相关的物品、地点或人物，并用【规则】【剩余问题】【可以开始问】开局；你只能回答是、否、不确定或接近。',
+    startInstruction: '请在心里想一个和这间空间相关的物品、地点或人物，并用【规则】【剩余问题】【可以开始问】开局；你只能回答是、否、不确定或接近。',
   },
   {
     id: 'tiny-quest',

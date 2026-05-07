@@ -45,7 +45,7 @@ export async function clientLoader({ params, request }: ClientLoaderFunctionArgs
   const tavernId = params.tavernId ?? ""
   const currentUserId = getCurrentUserIdFromRequest(request)
   if (!tavernId) {
-    return { tavernId, currentUserId, tavern: null, roleplay: null, error: "缺少酒馆 ID" }
+    return { tavernId, currentUserId, tavern: null, roleplay: null, error: "缺少空间 ID" }
   }
   try {
     const tavern = await getTavern(tavernId, currentUserId)
@@ -121,7 +121,7 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
               邀请链接
             </CardTitle>
             <CardDescription className="mt-2">
-              复制当前酒馆入口给朋友或社群。文案只使用店主公开填写的信息，不生成或改写酒馆内容。
+              复制当前空间入口给朋友或社群。文案只使用店主公开填写的信息，不生成或改写空间内容。
             </CardDescription>
           </div>
           <Button type="button" variant="secondary" onClick={handleCopyShareText}>
@@ -148,7 +148,7 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
           value={sharePayload.copyText}
           rows={4}
           className="w-full resize-none rounded-2xl border border-white/12 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-violet-50 outline-none focus:border-cyan-300/60"
-          aria-label="酒馆邀请文案"
+          aria-label="空间邀请文案"
         />
         {shareStatus ? <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm text-violet-50/64">{shareStatus}</p> : null}
         {copyStatus ? <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{copyStatus}</p> : null}
@@ -163,18 +163,18 @@ function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
   return (
     <Card className="min-w-0 overflow-hidden border-cyan-300/18 bg-cyan-300/8">
       <CardHeader>
-        <CardTitle>也在附近开一间自己的酒馆</CardTitle>
+        <CardTitle>也在附近开一间自己的空间</CardTitle>
         <CardDescription className="mt-2">
-          只带入这处真实空间锚点的坐标/地址，不复制原酒馆名称、简介、角色或场景内容。
+          只带入这处真实空间锚点的坐标/地址，不复制原空间名称、简介、角色或场景内容。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="rounded-2xl border border-white/10 bg-slate-950/45 p-3 text-sm leading-6 text-violet-50/72">
-          如果这间酒馆让你有了灵感，可以用同一片现实区域开一间属于自己的赛博酒馆；内容仍由你自己确认。
+          如果这间空间让你有了灵感，可以用同一片现实区域开一间属于自己的空间；内容仍由你自己确认。
         </p>
         <Button asChild>
           <Link to={createLink}>
-            开自己的酒馆
+            开自己的空间
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -209,7 +209,7 @@ function VisitorFeedbackCard({ tavern }: { tavern: Tavern }) {
       <CardHeader>
         <CardTitle>给店主的私密反馈</CardTitle>
         <CardDescription className="mt-2">
-          这不是公开留言墙：反馈只发送给本酒馆店主，不支持访客互相回复、点赞或私信。
+          这不是公开留言墙：反馈只发送给本空间店主，不支持访客互相回复、点赞或私信。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -263,14 +263,14 @@ export default function TavernRoute() {
         ) : (
           <Card className="min-w-0 overflow-hidden">
             <CardHeader>
-              <CardTitle>无法进入酒馆</CardTitle>
+              <CardTitle>无法进入空间</CardTitle>
               <CardDescription className="mt-2">
-                {error || `未找到酒馆 ${tavernId}`}
+                {error || `未找到空间 ${tavernId}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-violet-50/70">
-                请确认酒馆链接、访问权限或当前用户身份。店主可从管理页进入并携带 owner_id。
+                请确认空间链接、访问权限或当前用户身份。店主可从管理页进入并携带 owner_id。
               </p>
             </CardContent>
           </Card>

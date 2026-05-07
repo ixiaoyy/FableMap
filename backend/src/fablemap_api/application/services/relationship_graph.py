@@ -265,7 +265,7 @@ class RelationshipGraphApplicationMixin:
         payload = data or {}
         source_tavern_id = str(payload.get("source_tavern_id") or tavern_id).strip()
         if source_tavern_id != tavern_id:
-            raise HTTPException(status_code=400, detail="只能创建当前酒馆 source-side 关系")
+            raise HTTPException(status_code=400, detail="只能创建当前空间 source-side 关系")
 
         target_tavern_id = str(payload.get("target_tavern_id") or "").strip()
         if not target_tavern_id:

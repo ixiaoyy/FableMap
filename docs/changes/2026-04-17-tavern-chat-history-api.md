@@ -6,7 +6,7 @@
 
 ## 改动
 
-- `TavernStore` 增加 `list_chat_sessions()`，可按酒馆、访客、角色列出聊天会话。
+- `TavernStore` 增加 `list_chat_sessions()`，可按空间、访客、角色列出聊天会话。
 - `TavernStore` 增加 `delete_chat_history()`，按访客/角色删除匹配的 JSONL 文件。
 - `/api/chats` 列表接口改为读取真实会话文件，并返回访客、角色、消息数、最后一条消息和更新时间。
 - `/api/chats/{tavern_id}/{character_id}` 支持按 `visitor_id` 查询；未提供访客时可聚合角色下所有会话。

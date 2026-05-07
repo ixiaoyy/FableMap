@@ -26,16 +26,16 @@ export function OwnerNextActionPanel({ ownerStats, visitorStats, chatStats, onCr
   const actions = [
     {
       id: 'create',
-      label: ownerStats.total ? '继续开新酒馆' : '创建第一间酒馆',
-      note: ownerStats.total ? '从地点、角色、AI 到开门继续走向导。' : '3 分钟完成地点、酒馆、角色和 AI 基础配置。',
+      label: ownerStats.total ? '继续开新空间' : '创建第一间空间',
+      note: ownerStats.total ? '从地点、角色、AI 到开门继续走向导。' : '3 分钟完成地点、空间、角色和 AI 基础配置。',
       cta: '开始创建',
       onClick: onCreate,
     },
     {
       id: 'taverns',
-      label: '管理酒馆基础信息',
+      label: '管理空间基础信息',
       note: `${ownerStats.open} 间营业中，${ownerStats.closed} 间歇业中。`,
-      cta: '进入酒馆',
+      cta: '进入空间',
       onClick: () => onOpenSection('taverns'),
     },
     {
@@ -106,17 +106,17 @@ export function OwnerAdvancedToolPanel({
         </div>
         <div className="owner-advanced-panel__actions">
           <button type="button" className="secondary" onClick={onImportPackage} disabled={packageBusy === 'import'}>
-            {packageBusy === 'import' ? '导入中...' : '导入酒馆包'}
+            {packageBusy === 'import' ? '导入中...' : '导入空间包'}
           </button>
-          <button type="button" className="btn-primary" onClick={onCreate}>+ 创建酒馆</button>
+          <button type="button" className="btn-primary" onClick={onCreate}>+ 创建空间</button>
         </div>
       </div>
 
       {taverns.length === 0 ? (
         <div className="owner-empty">
           <div className="empty-icon">🧰</div>
-          <p>创建酒馆后，这里会出现角色、世界书、运行预设、Prompt 段落、输出护栏和导出入口。</p>
-          <button className="button-link" type="button" onClick={onCreate}>先创建一间酒馆</button>
+          <p>创建空间后，这里会出现角色、世界书、运行预设、Prompt 段落、输出护栏和导出入口。</p>
+          <button className="button-link" type="button" onClick={onCreate}>先创建一间空间</button>
         </div>
       ) : (
         <div className="owner-advanced-grid">

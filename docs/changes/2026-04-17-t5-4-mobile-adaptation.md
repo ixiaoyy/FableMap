@@ -1,4 +1,4 @@
-# T5.4 变更记录：移动端适配 — TavernChatRoom + 酒馆创建面板
+# T5.4 变更记录：移动端适配 — TavernChatRoom + 空间创建面板
 
 ## 变更日期
 2026-04-17
@@ -10,7 +10,7 @@ T5.4
 样式优化（响应式）
 
 ## 概述
-在 `styles.css` 中新增 `@media (max-width: 720px)` 媒体查询，覆盖 `TavernChatRoom` 聊天界面和 `TavernCreatePanel` 酒馆创建面板的移动端布局。
+在 `styles.css` 中新增 `@media (max-width: 720px)` 媒体查询，覆盖 `TavernChatRoom` 聊天界面和 `TavernCreatePanel` 空间创建面板的移动端布局。
 
 ## 为什么改
 `TavernChatRoom` 和 `TavernCreatePanel` 在移动端（< 720px）没有专项样式，存在以下问题：

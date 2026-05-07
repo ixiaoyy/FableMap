@@ -32,7 +32,7 @@ function hasLocalRumorPack(tavern = {}) {
 function activityLevel(visitCount, characterCount, hasRumor) {
   const score = Math.min(3, Math.floor(visitCount / 8)) + Math.min(2, characterCount) + (hasRumor ? 1 : 0)
   if (score >= 5) return { label: '很有活性', helper: '已有到访、角色和环境传闻共同支撑氛围。' }
-  if (score >= 3) return { label: '正在变热', helper: '有可感知活动，但仍保持单酒馆边界。' }
+  if (score >= 3) return { label: '正在变热', helper: '有可感知活动，但仍保持单空间边界。' }
   if (score >= 1) return { label: '轻微信号', helper: '可展示入口氛围，不制造公开社交压力。' }
   return { label: '等待第一束灯', helper: '还没有足够活动记录，先鼓励进入和反馈。' }
 }
@@ -63,7 +63,7 @@ export function buildTavernActivitySignals(tavern = {}) {
         id: 'rumor',
         label: '环境传闻',
         value: hasRumor ? '可用' : '未启用',
-        helper: '只作为附近酒馆线索，不是公开动态流。',
+        helper: '只作为附近空间线索，不是公开动态流。',
       },
       {
         id: 'feedback',
@@ -75,7 +75,7 @@ export function buildTavernActivitySignals(tavern = {}) {
         id: 'gameplay',
         label: '玩法线索',
         value: gameplayCount ? `${gameplayCount} 个` : '可后续添加',
-        helper: '玩法属于酒馆内体验，不做跨酒馆竞争榜单。',
+        helper: '玩法属于空间内体验，不做跨空间竞争榜单。',
       },
     ],
   }

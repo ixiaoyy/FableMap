@@ -2,7 +2,7 @@
 
 ## Goal
 
-沉淀店主可选择的轻量酒馆玩法模板库，复用现有 `GameplayDefinition` / `gameplay_definitions` / `nodes` / `choices`，不走 RPG 战斗/等级路线。
+沉淀店主可选择的轻量空间玩法模板库，复用现有 `GameplayDefinition` / `gameplay_definitions` / `nodes` / `choices`，不走 RPG 战斗/等级路线。
 
 ## Source Planning
 

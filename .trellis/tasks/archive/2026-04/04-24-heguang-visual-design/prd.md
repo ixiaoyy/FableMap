@@ -6,18 +6,18 @@
 
 ## What I already know
 
-- 「和光」已经作为 TavernCharacter 放入官方公益酒馆 `pw_community_repair` / 「社区修补铺」。
+- 「和光」已经作为 TavernCharacter 放入官方公益空间 `pw_community_repair` / 「社区修补铺」。
 - 角色定位是“公益沟通调停师”：帮助访客处理关键对话、人际冲突复盘、说服、道歉、协作和行动落地。
 - 现有文本设定关键词包括：共同目标、安全感、真诚尊重、事实 / 想法 / 情绪 / 行动区分、低攻击性、行动闭环。
 - 场景锚点是修补铺后间圆桌：两杯温水、一叠空白便签、一支细笔。
 - 当前 `appearance_id` 是 `museum-docent`，未来若做专属头像，应保持“克制、耐心、引导型”的视觉语义。
-- NPC 图像规范要求真实 tavern-themed character art，不能是几何占位、抽象头像、无酒馆背景的泛 anime 头像或既有 IP 仿作。
+- NPC 图像规范要求真实 tavern-themed character art，不能是几何占位、抽象头像、无空间背景的泛 anime 头像或既有 IP 仿作。
 
 ## Requirements
 
 - 视觉形象必须服务「和光」的已有角色卡语义，不能改写成心理医生、律师、审判者、恋爱导师或平台客服。
-- 必须保持公益酒馆语境：温和、低风险、陪访客把对话落到可执行小事。
-- 必须有明确酒馆 / 修补铺后间环境线索，至少包含两类 tavern / repair cues。
+- 必须保持公益空间语境：温和、低风险、陪访客把对话落到可执行小事。
+- 必须有明确空间 / 修补铺后间环境线索，至少包含两类 tavern / repair cues。
 - 形象设计只能作为 Trellis 记录与后续资产输入，不新增 TavernCharacter 字段，不改 API，不写回用户角色卡。
 - 未来若生成图片，应遵守 `docs/IMAGE_ASSETS_SPEC.md` 与 `.trellis/spec/frontend/npc-art-guidelines.md` 的 prompt / asset 约束。
 

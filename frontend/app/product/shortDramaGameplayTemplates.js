@@ -4,7 +4,7 @@ const COMMON_FORBIDDEN = [
   '不索取真实身份信息、手机号、住址或证件',
   '不要求访客执行真实危险行动',
   '不使用广告复活、内购、排行、战斗、等级或装备系统',
-  '不绕过店主确认自动发布剧情、NPC 或酒馆内容',
+  '不绕过店主确认自动发布剧情、NPC 或空间内容',
 ]
 
 function clone(value) {
@@ -31,10 +31,10 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
     summary: '像短剧一样处理突发状况：先稳住场面，再帮店主把误会圆回来。',
     bestFor: '咖啡店、便利店、深夜食堂、社区小店',
     entryLabel: '进入救场小剧场',
-    goal: '帮助店主连续化解 4 个轻量突发状况，保持酒馆气氛不失控。',
+    goal: '帮助店主连续化解 4 个轻量突发状况，保持空间气氛不失控。',
     tone: '短剧主持感、节奏快、夸张但不羞辱任何人',
     materials: ['店主的口头规则', '今日菜单或招牌物', '一位难缠但可沟通的客人', '柜台上的小道具'],
-    rewardText: '你把这间酒馆从尴尬边缘拉回来了，店主记下了你的救场名场面。',
+    rewardText: '你把这间空间从尴尬边缘拉回来了，店主记下了你的救场名场面。',
     nodes: [
       {
         id: 'opening',
@@ -94,12 +94,12 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
     badge: '读空气',
     duration: '3 步',
     summary: '从 NPC 的一句话里读懂真正需求，选错也能换个角度继续。',
-    bestFor: '角色扮演酒馆、占卜摊、心理树洞、书店',
+    bestFor: '角色扮演空间、占卜摊、心理树洞、书店',
     entryLabel: '开始读潜台词',
     goal: '通过 3 次选择听懂 NPC 的真实意图，但不替对方做心理诊断或现实承诺。',
     tone: '细腻、悬疑、像小剧场旁白',
     materials: ['NPC 的口头禅', '一件象征物', '店内安静角落', '访客可选择的回应'],
-    rewardText: 'NPC 觉得你真的听见了话外之音，留下一句只属于这间酒馆的感谢。',
+    rewardText: 'NPC 觉得你真的听见了话外之音，留下一句只属于这间空间的感谢。',
     nodes: [
       {
         id: 'opening',
@@ -121,12 +121,12 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
           { id: 'push-secret', label: '追问隐私身份', next_node_id: 'boundary' },
           { id: 'offer-note', label: '建议写一张不含隐私的留言', next_node_id: 'third-beat' },
         ],
-        fallback_events: fallback('主持人把话题收回到酒馆内可公开、可确认的留言。', 'third-beat'),
+        fallback_events: fallback('主持人把话题收回到空间内可公开、可确认的留言。', 'third-beat'),
       },
       {
         id: 'boundary',
         kind: 'scene',
-        narration: 'NPC 往后退了一步。你意识到不能追问真实身份信息，可以换成酒馆内安全的问题。',
+        narration: 'NPC 往后退了一步。你意识到不能追问真实身份信息，可以换成空间内安全的问题。',
         choices: [
           { id: 'repair', label: '改问“想留下什么氛围”', next_node_id: 'third-beat' },
           { id: 'symbol', label: '请 TA 选一个象征物', next_node_id: 'third-beat' },
@@ -142,12 +142,12 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
           { id: 'promise-real', label: '承诺一定找到那个人', next_node_id: 'boundary' },
           { id: 'small-ritual', label: '请 NPC 给门铃系一条丝带', next_node_id: 'complete', completes: true },
         ],
-        fallback_events: fallback('主持人选择一个安全、温柔、只发生在酒馆内的收束。', 'complete'),
+        fallback_events: fallback('主持人选择一个安全、温柔、只发生在空间内的收束。', 'complete'),
       },
       {
         id: 'complete',
         kind: 'complete',
-        narration: '结算：你读懂了潜台词，也守住了边界。NPC 把杯垫推给你，像是把这段话暂时托管给酒馆。',
+        narration: '结算：你读懂了潜台词，也守住了边界。NPC 把杯垫推给你，像是把这段话暂时托管给空间。',
         choices: [],
         fallback_events: fallback('这局潜台词短剧已经完成。', 'complete'),
       },
@@ -158,8 +158,8 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
     title: '处理深夜怪客',
     badge: '深夜',
     duration: '4 步',
-    summary: '在真实地点的深夜酒馆里，帮 NPC 处理古怪但安全的小插曲。',
-    bestFor: '便利店、夜间咖啡、街角酒馆、24 小时店',
+    summary: '在真实地点的深夜空间里，帮 NPC 处理古怪但安全的小插曲。',
+    bestFor: '便利店、夜间咖啡、街角空间、24 小时店',
     entryLabel: '开始深夜一幕',
     goal: '在不制造恐怖、血腥或真实危险的前提下，帮 NPC 处理 4 个深夜怪客小插曲。',
     tone: '轻悬疑、幽默、像竖屏短剧但保持安全',
@@ -180,7 +180,7 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
       {
         id: 'boundary',
         kind: 'scene',
-        narration: '你差点把故事推向恐怖方向。FableMap 的酒馆短剧只做轻悬疑，不制造血腥或真实危险。',
+        narration: '你差点把故事推向恐怖方向。FableMap 的空间短剧只做轻悬疑，不制造血腥或真实危险。',
         choices: [
           { id: 'soft-reset', label: '改成“误会一个物件昵称”', next_node_id: 'second-beat' },
           { id: 'owner-rule', label: '请 NPC 说明店内安全规则', next_node_id: 'second-beat' },
@@ -205,9 +205,9 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
         choices: [
           { id: 'guestbook', label: '请 TA 留一句非实名留言', next_node_id: 'complete', completes: true },
           { id: 'track-real', label: '询问真实姓名和住址', next_node_id: 'boundary' },
-          { id: 'symbolic-name', label: '让 TA 选一个酒馆内代号', next_node_id: 'complete', completes: true },
+          { id: 'symbolic-name', label: '让 TA 选一个空间内代号', next_node_id: 'complete', completes: true },
         ],
-        fallback_events: fallback('主持人让回访反馈停留在访客自愿、非实名、酒馆内的范围。', 'complete'),
+        fallback_events: fallback('主持人让回访反馈停留在访客自愿、非实名、空间内的范围。', 'complete'),
       },
       {
         id: 'complete',
@@ -223,10 +223,10 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
     title: '判断谁在说谎',
     badge: '判断',
     duration: '3-4 步',
-    summary: '用酒馆线索做轻推理：不是审讯，而是帮 NPC 找出可确认的矛盾。',
-    bestFor: '学校门卫、社区中心、侦探风酒馆、图书馆',
+    summary: '用空间线索做轻推理：不是审讯，而是帮 NPC 找出可确认的矛盾。',
+    bestFor: '学校门卫、社区中心、侦探风空间、图书馆',
     entryLabel: '开始轻推理',
-    goal: '通过 3 个安全线索判断哪句话前后矛盾，只给出酒馆内结论，不做人身指控。',
+    goal: '通过 3 个安全线索判断哪句话前后矛盾，只给出空间内结论，不做人身指控。',
     tone: '轻推理、清楚、避免羞辱和定罪',
     materials: ['访客登记册', '一张座位小票', '店主确认的规则', 'NPC 的观察'],
     rewardText: 'NPC 认可你的判断：你找的是矛盾，不是给人定罪。',
@@ -245,7 +245,7 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
       {
         id: 'boundary',
         kind: 'scene',
-        narration: '这不是审讯局。你需要把表达改成“哪条说法和酒馆记录矛盾”，而不是攻击某个人。',
+        narration: '这不是审讯局。你需要把表达改成“哪条说法和空间记录矛盾”，而不是攻击某个人。',
         choices: [
           { id: 'reframe', label: '改问“哪条记录对不上”', next_node_id: 'second-beat' },
           { id: 'npc-observation', label: '请 NPC 只说观察到的事实', next_node_id: 'second-beat' },
@@ -277,7 +277,7 @@ export const SHORT_DRAMA_GAMEPLAY_TEMPLATES = [
       {
         id: 'complete',
         kind: 'complete',
-        narration: '结算：你用线索完成了轻推理，没有把酒馆变成审判现场。NPC 把登记册合上了。',
+        narration: '结算：你用线索完成了轻推理，没有把空间变成审判现场。NPC 把登记册合上了。',
         choices: [],
         fallback_events: fallback('这局轻推理短剧已经完成。', 'complete'),
       },
@@ -292,11 +292,11 @@ export function createShortDramaGameplayFromTemplate(template, index = 1) {
     id,
     title: template.title || `短剧玩法 ${index}`,
     status: 'draft',
-    summary: template.summary || '3-5 步完成一段酒馆内短剧选择体验。',
+    summary: template.summary || '3-5 步完成一段空间内短剧选择体验。',
     entry_label: template.entryLabel || '进入小剧场',
     mode: 'ai_directed_branch',
     owner_brief: {
-      goal: template.goal || '完成一段安全、轻量、贴合本酒馆氛围的短剧选择体验。',
+      goal: template.goal || '完成一段安全、轻量、贴合本空间氛围的短剧选择体验。',
       tone: template.tone || '短剧主持感、节奏清楚、老少皆宜',
       materials: [...(template.materials || [])],
       forbidden: [...COMMON_FORBIDDEN],
@@ -304,7 +304,7 @@ export function createShortDramaGameplayFromTemplate(template, index = 1) {
     nodes: clone(template.nodes),
     completion: {
       complete_node_ids: ['complete'],
-      reward_text: template.rewardText || '你完成了这段酒馆短剧体验。',
+      reward_text: template.rewardText || '你完成了这段空间短剧体验。',
       memory_atom: { enabled: false },
     },
   }

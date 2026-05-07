@@ -20,7 +20,7 @@ def _create_tavern(client: TestClient, *, backend: str = "rules", api_key: str =
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "干跑预览酒馆",
+            "name": "干跑预览空间",
             "description": "用于测试店主 prompt dry-run。",
             "lat": 31.2304,
             "lon": 121.4737,
@@ -30,7 +30,7 @@ def _create_tavern(client: TestClient, *, backend: str = "rules", api_key: str =
                 {
                     "id": "rain-memory",
                     "keys": ["雨声"],
-                    "content": "雨声会触发旧日传闻，但只能作为酒馆内背景。",
+                    "content": "雨声会触发旧日传闻，但只能作为空间内背景。",
                     "constant": False,
                     "selective": True,
                 }
@@ -52,7 +52,7 @@ def _create_tavern(client: TestClient, *, backend: str = "rules", api_key: str =
                 {
                     "id": "rain-memory",
                     "keys": ["雨声"],
-                    "content": "雨声会触发旧日传闻，但只能作为酒馆内背景。",
+                    "content": "雨声会触发旧日传闻，但只能作为空间内背景。",
                     "constant": False,
                     "selective": True,
                 }
@@ -71,8 +71,8 @@ def _add_character(client: TestClient, tavern_id: str) -> str:
             "name": "铃兰",
             "description": "吧台后的 NPC",
             "personality": "温和、谨慎",
-            "scenario": "雨夜酒馆",
-            "system_prompt": "保持赛博酒馆 NPC 口吻。",
+            "scenario": "雨夜空间",
+            "system_prompt": "保持空间 NPC 口吻。",
             "first_mes": "欢迎回来。",
         },
     )

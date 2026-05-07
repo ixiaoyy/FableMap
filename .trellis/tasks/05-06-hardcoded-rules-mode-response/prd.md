@@ -7,7 +7,7 @@
 - `backend/src/fablemap_api/core/public_welfare_rules.py:5` 明确写着 `demo behavior for no-network public-welfare taverns`。
 - `backend/src/fablemap_api/core/web/service.py:2198` / `:3069` 在 chat 路径调用 `_rules_backend_response(...)`。
 - `backend/src/fablemap_api/core/web/service.py:2437` 定义 `_rules_backend_response`，其中根据关键词和角色信息生成规则回复。
-- `backend/src/fablemap_api/core/default_taverns.py` 给公益酒馆配置 `backend=rules` / `public-welfare-rules-v1`。
+- `backend/src/fablemap_api/core/default_taverns.py` 给公益空间配置 `backend=rules` / `public-welfare-rules-v1`。
 
 ## Goal
 把“规则回复”产品化为明确、数据驱动、范围可控的 no-key 模式，而不是 demo 级硬编码：
@@ -16,16 +16,16 @@
 3. 对角色体验：规则回复不再暴露系统设定拼接感。
 
 ## Non-goals
-- 不让平台自动替店主创作酒馆内容。
-- 不取消公益酒馆的 no-key 可用性。
-- 不把所有用户酒馆强制转为规则模式。
+- 不让平台自动替店主创作空间内容。
+- 不取消公益空间的 no-key 可用性。
+- 不把所有用户空间强制转为规则模式。
 
 ## Acceptance Criteria
 - [x] `public_welfare_rules.py` 中 demo 注释和写死规则被替换为可维护的数据/配置结构，或改名为明确的 built-in rules fixture。
-- [x] 用户自建酒馆若没有 LLM Key，不应静默伪装成 AI NPC；需要明确降级状态或引导店主配置。
-- [x] 公益酒馆规则回复基于角色卡字段和配置模板生成，不直接把系统设定句拼给访客。
+- [x] 用户自建空间若没有 LLM Key，不应静默伪装成 AI NPC；需要明确降级状态或引导店主配置。
+- [x] 公益空间规则回复基于角色卡字段和配置模板生成，不直接把系统设定句拼给访客。
 - [x] 前端聊天页能展示“规则模式/AI 模式”的差异，但不把内部 prompt、系统策略暴露给访客。
-- [x] 增加回归测试：公益酒馆 no-key 可聊天、用户酒馆 no-key 降级透明、规则回复不含内部配置字段。
+- [x] 增加回归测试：公益空间 no-key 可聊天、用户空间 no-key 降级透明、规则回复不含内部配置字段。
 
 ## Suggested files
 - `backend/src/fablemap_api/core/public_welfare_rules.py`
@@ -48,7 +48,7 @@ User decision: 系统店 / 公益店应正常开通；`kilo-auto/free` 只作为
 - Backend chat payloads now include `response_mode` metadata:
   - `built_in_rules` for公益/内置规则模式；
   - `owner_llm` for 店主外部 LLM；
-  - `llm_not_configured` for 自建酒馆无可用模型配置；
+  - `llm_not_configured` for 自建空间无可用模型配置；
   - `local_fallback` for 外部 LLM 调用失败后本地规则兜底。
 - v1 runtime and migrated product-core chat service both return the same mode labels/messages without exposing `api_key`、`system_prompt`、`scene_prompt`、`prompt_blocks` or internal rules model names to visitors.
 - Frontend native tavern workbench and legacy product chat room show a visible mode badge: “规则模式 / 无 Key 轻量接待”, “外部 LLM 模式”, or closed/unconfigured guidance.

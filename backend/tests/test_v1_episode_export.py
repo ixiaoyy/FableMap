@@ -27,7 +27,7 @@ def _create_tavern_with_character(client: TestClient, *, access: str = "public")
             "lon": 121.47,
             "access": access,
             "status": "open",
-            "scene_prompt": "温暖的赛博酒馆。",
+            "scene_prompt": "温暖的空间。",
             "llm_config": {"backend": "rules", "model": "rules"},
         },
     )

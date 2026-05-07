@@ -2,7 +2,7 @@
 
 ## Goal
 
-为 FableMap 设计并落地“酒馆连续性状态卡 / Canon Ledger”基础能力，让长期酒馆会话中的角色事实、任务、资源、冲突和事件日志可追踪、可验证、可回放。AI 可以制造困难、提出冲突和剧情变化，但不能只靠聊天上下文静默改写权威状态。
+为 FableMap 设计并落地“空间连续性状态卡 / Canon Ledger”基础能力，让长期空间会话中的角色事实、任务、资源、冲突和事件日志可追踪、可验证、可回放。AI 可以制造困难、提出冲突和剧情变化，但不能只靠聊天上下文静默改写权威状态。
 
 ## Parent context
 
@@ -19,15 +19,15 @@ Skill Packs let the tavern act.
 
 ## Product principles
 
-* 保持 FableMap 的真实地图赛博酒馆定位，不转向通用修仙/RPG 模拟器。
-* 主人主权优先：店主设定的酒馆事实、NPC 身份、访问规则不能被 AI 静默覆盖。
+* 保持 FableMap 的真实地图空间定位，不转向通用修仙/RPG 模拟器。
+* 主人主权优先：店主设定的空间事实、NPC 身份、访问规则不能被 AI 静默覆盖。
 * AI 是 NPC / GM 辅助引擎：可以提出候选变化，但 durable canon 必须进入结构化记录并经过验证。
 * 不做 jailbreak / 破甲 / provider-specific safety bypass。
 * 不新增持久 Schema 字段，除非设计阶段明确必要并同步 `docs/WORLD_SCHEMA.md`、测试和前后端契约。
 
 ## Problem
 
-正常 AI 酒馆/角色扮演体验的爽点来自：AI 像轻量 GM 一样制造障碍、强敌、资源压力、关系冲突和剧情分支。
+正常 AI 空间/角色扮演体验的爽点来自：AI 像轻量 GM 一样制造障碍、强敌、资源压力、关系冲突和剧情分支。
 
 但长线游玩会出现连续性 bug：
 
@@ -46,7 +46,7 @@ Skill Packs let the tavern act.
    * NPC / 访客相关的稳定事实：角色名、关系摘要、公开状态、承诺、限制。
 
 2. **Task / Quest Card**
-   * 酒馆委托、调查线索、回访目标、未完成事项。
+   * 空间委托、调查线索、回访目标、未完成事项。
 
 3. **Resource / Asset Card**
    * 已确认存在的物品、线索、房间摆件、地方特产、合照/纪念品、可被后续剧情引用的资源。
@@ -90,7 +90,7 @@ Skill Packs let the tavern act.
 * 不实现 preset import converter。
 * 不实现 NSFW、破甲或模型审查绕过。
 * 不实现通用修仙 RPG 属性系统。
-* 不实现公开社交、好友、私信或跨酒馆社交图谱。
+* 不实现公开社交、好友、私信或跨空间社交图谱。
 
 ## Initial technical notes
 

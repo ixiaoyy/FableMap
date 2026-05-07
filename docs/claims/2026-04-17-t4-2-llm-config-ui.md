@@ -16,10 +16,10 @@ Claude Sonnet (Claude Code)
 前端功能切片
 
 ## 任务目标
-完善酒馆创建流程中的 LLM 配置体验：
+完善空间创建流程中的 LLM 配置体验：
 
 1. 在 `TavernCreatePanel` Step 2 使用 `LLMConfigForm` 替代手动表单字段。
-2. 店主在创建酒馆时即可选择全部 24 个 AI 后端。
+2. 店主在创建空间时即可选择全部 24 个 AI 后端。
 3. 保留 API Key、模型、自定义端点、温度等完整配置。
 
 ## 可修改范围
@@ -43,7 +43,7 @@ Claude Sonnet (Claude Code)
 
 ## 预期产出
 - `TavernCreatePanel` Step 2 使用 `LLMConfigForm` 组件。
-- 店主在创建酒馆时可选全部 24 个后端（OpenAI/Claude/Ollama 等）。
+- 店主在创建空间时可选全部 24 个后端（OpenAI/Claude/Ollama 等）。
 - 当前任务状态同步。
 - 本次变更记录。
 

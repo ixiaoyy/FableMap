@@ -103,7 +103,7 @@ class PresetImportApplyRequest(FlexibleBody):
 
 
 class TavernDraftGenerateRequest(FlexibleBody):
-    """生成酒馆草稿请求"""
+    """生成空间草稿请求"""
     lat: float
     lon: float
     address: str | None = None
@@ -126,7 +126,7 @@ class TavernDraftCharacter(BaseModel):
 
 
 class TavernDraftResponse(BaseModel):
-    """酒馆草稿响应"""
+    """空间草稿响应"""
     draft: dict[str, Any]
 
 

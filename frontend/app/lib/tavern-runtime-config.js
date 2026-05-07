@@ -59,9 +59,13 @@ export function requireExplicitOwnerIdentity(ownerId, action = "店主操作") {
   return identity
 }
 
+export function hasExplicitOwnerIdentity(ownerId) {
+  return Boolean(normalizeIdentity(ownerId))
+}
+
 export const NEWCOMER_TAVERN_CONFIG = Object.freeze({
   tavernId: "pw_lantern_helpdesk",
-  query: "公益",
+  query: "社区",
 })
 
 export const PUBLIC_WELFARE_NPC_EXPRESSION_PREVIEW_KEYS = Object.freeze([

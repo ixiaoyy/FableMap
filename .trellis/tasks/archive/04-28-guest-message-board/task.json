@@ -2,7 +2,7 @@
   "id": "04-28-guest-message-board",
   "name": "04-28-guest-message-board",
   "title": "Guest Message Board - 访客留言板",
-  "description": "允许访客在酒馆留下公开留言，酒馆主人可以回复留言。",
+  "description": "允许访客在空间留下公开留言，空间主人可以回复留言。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": "message-board",

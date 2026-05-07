@@ -2,7 +2,7 @@
   "id": "04-30-tavern-short-drama-gameplay-template-mvp",
   "name": "04-30-tavern-short-drama-gameplay-template-mvp",
   "title": "Tavern Short-drama Gameplay Template MVP",
-  "description": "把现有 GameplayDefinition 包装成酒馆原生的竖屏短剧选择玩法模板，优先验证短剧选择爽点是否适配 FableMap。",
+  "description": "把现有 GameplayDefinition 包装成空间原生的竖屏短剧选择玩法模板，优先验证短剧选择爽点是否适配 FableMap。",
   "status": "completed",
   "dev_type": "frontend",
   "scope": null,

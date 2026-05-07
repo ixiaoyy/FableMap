@@ -102,7 +102,7 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
     try {
       const result = await enterTavern(tavern.id, "", visitorId, visitorGender)
       setVisitorState(result.visitor_state ?? null)
-      setNotice(result.first_mes || "已进入酒馆。")
+      setNotice(result.first_mes || "已进入空间。")
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -190,7 +190,7 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
           <p className="text-xs text-violet-100/60">当前访客性别：{genderLabel(visitorState.gender)}</p>
         ) : null}
         <Button type="button" variant="secondary" disabled={busy} onClick={handleEnter}>
-          进入酒馆
+          进入空间
         </Button>
         {visitorState ? <VisitorStateSummary state={visitorState} /> : null}
         <RevisitCuePanel cue={revisitCue} />

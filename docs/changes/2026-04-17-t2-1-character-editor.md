@@ -40,13 +40,13 @@
 ### prop 接口
 `CharacterManagementModal` 的 props：
 ```jsx
-tavern             // 酒馆数据（从中读取 tavern.id 和 tavern.characters）
+tavern             // 空间数据（从中读取 tavern.id 和 tavern.characters）
 ownerId           // 店主 ID（目前用于语义，可选）
 onClose           // () => void — 关闭回调
 onCharactersChanged  // (characters: Char[]) => void — 角色列表变化后通知父组件
 ```
 
-父组件（`handleCharactersUpdated`）将其适配为完整的酒馆对象更新：
+父组件（`handleCharactersUpdated`）将其适配为完整的空间对象更新：
 ```jsx
 onCharactersChanged={(chars) => handleCharactersUpdated({ ...characterManagerTavern, characters: chars })}
 ```

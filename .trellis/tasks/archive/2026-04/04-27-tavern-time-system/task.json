@@ -1,8 +1,8 @@
 {
   "id": "tavern-time-system",
   "name": "tavern-time-system",
-  "title": "酒馆时间系统",
-  "description": "为酒馆引入基于地理位置的时区、营业时间、当地时间展示、打烊熄灯视觉和时间感知 LLM prompt。",
+  "title": "空间时间系统",
+  "description": "为空间引入基于地理位置的时区、营业时间、当地时间展示、打烊熄灯视觉和时间感知 LLM prompt。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": "tavern-time-system",

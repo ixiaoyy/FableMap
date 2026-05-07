@@ -42,7 +42,7 @@ export async function resolveNewcomerTavern(serviceOrUserId = '', maybeUserId = 
     if (isPublicOpenTavern(primaryTavern)) {
       return primaryTavern
     }
-    primaryError = new Error('内置公益新手酒馆当前未公开营业。')
+    primaryError = new Error('内置新手体验空间当前未公开营业。')
   } catch (err) {
     primaryError = err
   }
@@ -60,5 +60,5 @@ export async function resolveNewcomerTavern(serviceOrUserId = '', maybeUserId = 
     return exactFallback || publicFallback
   }
 
-  throw primaryError || new Error('没有找到可用的公益新手酒馆。')
+  throw primaryError || new Error('没有找到可用的新手体验空间。')
 }

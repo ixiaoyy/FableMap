@@ -2,10 +2,10 @@
 
 ## Relevant Specs
 
-- `.trellis/spec/frontend/npc-art-guidelines.md`: NPC portrait 必须是真实酒馆主题角色图，owner/imported art 优先，project fallback art display-only，不写回 TavernCharacter。
-- `docs/IMAGE_ASSETS_SPEC.md`: 角色头像规格为 256×256 PNG，原创 anime / game-style tavern NPC portrait，半身或腰部以上，背景应为酒馆内景。
-- `docs/WHAT_NOT_TO_BUILD.md`: 不实现平台自动生成酒馆 / NPC / 故事内容，不做脱离真实锚点的自由空间。
-- `.trellis/tasks/04-24-official-welfare-heguang-npc/prd.md`: 「和光」应位于官方公益酒馆内，保持 TavernCharacter / SillyTavern 兼容，不新增 Schema 字段。
+- `.trellis/spec/frontend/npc-art-guidelines.md`: NPC portrait 必须是真实空间主题角色图，owner/imported art 优先，project fallback art display-only，不写回 TavernCharacter。
+- `docs/IMAGE_ASSETS_SPEC.md`: 角色头像规格为 256×256 PNG，原创 anime / game-style tavern NPC portrait，半身或腰部以上，背景应为空间内景。
+- `docs/WHAT_NOT_TO_BUILD.md`: 不实现平台自动生成空间 / NPC / 故事内容，不做脱离真实锚点的自由空间。
+- `.trellis/tasks/04-24-official-welfare-heguang-npc/prd.md`: 「和光」应位于官方公益空间内，保持 TavernCharacter / SillyTavern 兼容，不新增 Schema 字段。
 
 ## Source Character Facts
 
@@ -24,7 +24,7 @@ From `backend/src/fablemap_api/core/default_taverns.py`:
 - 形象不能像审判者：避免法槌、法袍、过度权威姿势。
 - 形象不能像医疗 / 心理诊疗：避免白大褂、诊疗室、医疗符号、诊断姿态。
 - 形象不能像营销客服：避免 headset、客服工牌、企业办公室。
-- 形象不能离开酒馆 / 修补铺空间：背景应有圆桌、工具墙、旧收音机、针线盒、温水、木架、灯光等锚点。
+- 形象不能离开空间 / 修补铺空间：背景应有圆桌、工具墙、旧收音机、针线盒、温水、木架、灯光等锚点。
 - “和光”中的光应表现为柔和漫反射或桌面暖光，不应做成神圣光环、超能力或宗教化符号。
 
 ## Feasible Approaches

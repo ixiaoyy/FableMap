@@ -12,17 +12,17 @@ export const AI_DRAFT_LIFECYCLE_STEPS = [
   {
     id: 'published',
     label: '已发布内容',
-    helper: '只有店主提交保存后才进入酒馆。',
+    helper: '只有店主提交保存后才进入空间。',
   },
 ]
 
 const CONTEXT_COPY = {
   tavern: {
-    title: '酒馆草稿生命周期',
-    summary: 'AI 草稿只填入可编辑表单；店主检查并点击「创建酒馆」后，才会保存为正式酒馆和首个 NPC。',
+    title: '空间草稿生命周期',
+    summary: 'AI 草稿只填入可编辑表单；店主检查并点击「创建空间」后，才会保存为正式空间和首个 NPC。',
     guardrails: [
       '确认前不进入公开 Tavern payload',
-      '不自动创建酒馆或 NPC',
+      '不自动创建空间或 NPC',
       '不替店主承担最终创作责任',
     ],
   },
@@ -31,7 +31,7 @@ const CONTEXT_COPY = {
     summary: '生成结果只进入右侧编辑器；店主可改写、丢弃或点击「保存角色」后再成为正式 TavernCharacter。',
     guardrails: [
       '确认前不覆盖已有 NPC',
-      '确认前不随酒馆包导出',
+      '确认前不随空间包导出',
       '不绕过店主保存动作',
     ],
   },

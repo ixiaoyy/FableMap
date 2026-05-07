@@ -2,7 +2,7 @@
 
 ## 背景
 
-公益酒馆 NPC 表情资源中存在大量“同一张底图换色 + 贴奇怪图标”的假表情：放大镜、红叉、粉色贴片、菱形亮点等 UI 符号覆盖在角色图上。它们虽然满足了旧测试的“PNG 存在且 hash 不同”，但不满足 FableMap NPC 美术规范：NPC art 必须是真实 tavern-themed character art，表情变化应由人物面部/姿态表达，而不是滤镜或符号占位。
+公益空间 NPC 表情资源中存在大量“同一张底图换色 + 贴奇怪图标”的假表情：放大镜、红叉、粉色贴片、菱形亮点等 UI 符号覆盖在角色图上。它们虽然满足了旧测试的“PNG 存在且 hash 不同”，但不满足 FableMap NPC 美术规范：NPC art 必须是真实 tavern-themed character art，表情变化应由人物面部/姿态表达，而不是滤镜或符号占位。
 
 ## 目标
 
@@ -59,7 +59,7 @@
    - `atmosphere-market.png`
    - `atmosphere-transit.png`
 2. 每张地点氛围图必须符合 `docs/IMAGE_ASSETS_SPEC.md`：512×288、PNG、Fantasy 水彩/数字绘、半鸟瞰或略抬高视角、真实地点场景叠加幻想元素。
-3. 修改 `frontend/app/product/TavernInterior.jsx`，让酒馆内部主视觉优先使用上述项目内图片资源；CSS 渐变只可作为图片加载失败或未知类型的 fallback，不可作为验收替代品。
+3. 修改 `frontend/app/product/TavernInterior.jsx`，让空间内部主视觉优先使用上述项目内图片资源；CSS 渐变只可作为图片加载失败或未知类型的 fallback，不可作为验收替代品。
 4. 补齐低优先级但已被验收点名的势力徽章资源到 `frontend/public/faction-emblems/`：
    - `emblem-trade.svg`
    - `emblem-order.svg`

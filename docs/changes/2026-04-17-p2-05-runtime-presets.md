@@ -20,8 +20,8 @@
   - Prompt Blocks
   - 输出护栏
   - 记忆策略
-- 应用预设会尽量保留同 AI 服务下已有 API Key，但预设本身和酒馆包都不会保存 API Key。
-- 酒馆包导出新增：
+- 应用预设会尽量保留同 AI 服务下已有 API Key，但预设本身和空间包都不会保存 API Key。
+- 空间包导出新增：
   - `runtime_presets`
   - `default_runtime_presets`
   - `active_preset_id`
@@ -30,8 +30,8 @@
   - 查看内置 / 自定义运行预设
   - 复制内置预设为自定义
   - 编辑模型参数、说明、记忆模式和预算
-  - 从当前酒馆捕获 Prompt 段落 / 输出护栏 / 记忆策略组合
-  - 保存自定义预设并应用到酒馆
+  - 从当前空间捕获 Prompt 段落 / 输出护栏 / 记忆策略组合
+  - 保存自定义预设并应用到空间
 - `TavernOwnerPanel` 与高级工具台新增“预设”入口。
 - 新增 `tests/test_tavern_runtime_presets.py`，覆盖密钥剥离、默认预设、自定义保存、应用、导出和权限边界。
 

@@ -2,7 +2,7 @@
   "id": "art-upgrade-image-surfaces",
   "name": "art-upgrade-image-surfaces",
   "title": "需要图片位置的美术升级",
-  "description": "盘点并升级所有产品中明确需要图片的位置，尤其是正式 NPC 头像/立绘/表情差分、酒馆封面/氛围图和入口传播图片。",
+  "description": "盘点并升级所有产品中明确需要图片的位置，尤其是正式 NPC 头像/立绘/表情差分、空间封面/氛围图和入口传播图片。",
   "status": "completed",
   "dev_type": "fullstack",
   "scope": "frontend-assets, default-taverns, npc-art",

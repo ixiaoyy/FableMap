@@ -1,4 +1,4 @@
-export const DEFAULT_AI_DRAFT_STYLE_TAGS = ['酒馆 NPC', '招待员', '温暖']
+export const DEFAULT_AI_DRAFT_STYLE_TAGS = ['空间 NPC', '招待员', '温暖']
 export const DEFAULT_AI_DRAFT_FORBIDDEN = ['不要露骨', '不要现实名人', '不要真实私人地址']
 
 function cleanText(value) {

@@ -32,8 +32,8 @@ def test_mainline_golden_path_persists_chat_memory_state_cards_and_revisit_feedb
         headers=owner_headers,
         json={
             "id": "mainline-golden-path-tavern",
-            "name": "主链路验收酒馆",
-            "description": "一间挂在真实坐标上的小酒馆，用来验收主链路。",
+            "name": "主链路验收空间",
+            "description": "一间挂在真实坐标上的小空间，用来验收主链路。",
             "lat": 31.230416,
             "lon": 121.473701,
             "address": "上海市黄浦区真实坐标测试点",

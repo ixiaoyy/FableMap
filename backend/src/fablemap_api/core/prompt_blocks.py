@@ -24,7 +24,7 @@ PROMPT_BLOCK_TYPES = {
 DEFAULT_PROMPT_BLOCKS: list[dict[str, Any]] = [
     {
         "id": "scene",
-        "name": "酒馆场景",
+        "name": "空间场景",
         "enabled": True,
         "type": "scene",
         "order": 10,

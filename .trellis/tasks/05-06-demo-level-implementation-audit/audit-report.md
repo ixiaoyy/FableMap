@@ -63,7 +63,7 @@
 
 ### 6. Quest checklist is a front-end estimation MVP
 
-- `frontend/app/routes/quests.tsx:75`：声明“本 MVP 只根据现有酒馆列表做前端引导与进度估算；不新增持久化清单 Schema”。
+- `frontend/app/routes/quests.tsx:75`：声明“本 MVP 只根据现有空间列表做前端引导与进度估算；不新增持久化清单 Schema”。
 - Created task: `.trellis/tasks/05-06-quest-checklist-persistence`
 
 ### 7. Preset import has preview but no apply

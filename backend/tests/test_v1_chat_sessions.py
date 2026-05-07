@@ -19,13 +19,13 @@ def _create_tavern_with_character(client: TestClient) -> tuple[str, str]:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "会话测试酒馆",
+            "name": "会话测试空间",
             "description": "用于测试聊天会话列表和导出",
             "lat": 31.2304,
             "lon": 121.4737,
             "access": "public",
             "status": "open",
-            "scene_prompt": "温暖的酒馆。",
+            "scene_prompt": "温暖的空间。",
             "llm_config": {"backend": "rules", "model": "rules"},
         },
     )
@@ -81,7 +81,7 @@ def test_v1_list_chat_sessions_with_messages(tmp_path: Path) -> None:
     client = _client(tmp_path)
     tavern_id, character_id = _create_tavern_with_character(client)
 
-    _send_chat(client, tavern_id, character_id, VISITOR_ID, "你好，我想了解这间酒馆。")
+    _send_chat(client, tavern_id, character_id, VISITOR_ID, "你好，我想了解这间空间。")
     _send_chat(client, tavern_id, character_id, VISITOR_ID, "有什么特色吗？")
 
     response = client.get(

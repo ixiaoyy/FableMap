@@ -14,14 +14,14 @@ import { TAVERN_TEMPLATES } from '../app/product/tavernTemplates.js'
 
 const guildTavern = {
   name: '街角探索清单台',
-  description: '查看探索清单、领取酒馆委托、记录完成，获得文字纪念章和回访提示。',
-  scene_prompt: '用老少皆宜的探索清单规则主持酒馆委托、完成记录和回访提示。',
+  description: '查看探索清单、领取空间委托、记录完成，获得文字纪念章和回访提示。',
+  scene_prompt: '用老少皆宜的探索清单规则主持空间委托、完成记录和回访提示。',
   characters: [
     {
-      name: '洛塔',
+      name: '领航兔·洛塔',
       personality: '探索清单引导员，会登记委托和提醒回访提示。',
       system_prompt: '始终给出【完成记录】【可领取清单】【回访提示】【可选行动】。',
-      tags: ['探索清单', '酒馆委托'],
+      tags: ['探索清单', '空间委托'],
     },
   ],
 }
@@ -97,7 +97,7 @@ assert.ok(prompt.includes('文字纪念章'))
 assert.ok(prompt.includes(acceptedQuest.title))
 
 const postPrompt = buildGuildActionPrompt('post', null, getGuildTier(14))
-assert.ok(postPrompt.includes('友善酒馆委托草稿'))
+assert.ok(postPrompt.includes('友善空间委托草稿'))
 assert.ok(postPrompt.includes('需要店主确认'))
 assert.ok(postPrompt.includes('老少皆宜'))
 

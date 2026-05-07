@@ -44,7 +44,7 @@ def test_v1_tavern_mainline_create_discover_enter_and_chat(tmp_path: Path) -> No
         headers=owner_headers,
         json={
             "name": "星港夜谈",
-            "description": "靠近真实坐标的赛博小酒馆",
+            "description": "靠近真实坐标的小空间",
             "lat": 31.2304,
             "lon": 121.4737,
             "access": "public",

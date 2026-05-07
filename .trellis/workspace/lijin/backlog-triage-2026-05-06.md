@@ -76,7 +76,7 @@
 - `05-05-brainstorm-sillytavern-vs-fablemap` — SillyTavern vs FableMap 架构对比。
 - `05-05-character-gacha-gameplay-brainstorm` — 角色抽卡/玩法方向。
 - `05-06-local-codex-llm-chat-evaluation` — 本地 Codex 作为 LLM/chat backend 可行性评估。
-- `05-06-tavern-soft-currency-gifts-design` — 酒馆纪念币 / 礼物 / 好感度 / 限额抽卡券设计。
+- `05-06-tavern-soft-currency-gifts-design` — 空间纪念币 / 礼物 / 好感度 / 限额抽卡券设计。
 - `05-06-visitor-profile-affinity-access-brainstorm` — 游客身份画像、初始好感、可见性与长期记忆边界。
 
 ## 6. 建议的下一步认领策略

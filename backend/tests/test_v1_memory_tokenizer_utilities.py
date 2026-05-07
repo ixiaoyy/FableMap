@@ -32,7 +32,7 @@ def test_v1_tokenizer_utilities_count_text_and_messages(tmp_path: Path) -> None:
         json={
             "backend": "cl100k_base",
             "messages": [
-                {"role": "system", "content": "你是酒馆 NPC。"},
+                {"role": "system", "content": "你是空间 NPC。"},
                 {"role": "user", "content": [{"type": "text", "text": "今晚有什么故事？"}]},
             ],
         },

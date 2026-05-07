@@ -13,7 +13,7 @@ The left place-type cards updated `placeType` and `activePlaceType`, but the rig
 - `frontend/scripts/create-wizard-route-test.mjs`
   - Added regression checks that the right rail uses `activePlaceType` and no longer keeps tavern-only hardcoded preview copy.
 - `.trellis/tasks/05-05-05-05-create-place-type-live-preview/artifacts/playwright-check.mjs`
-  - Added browser assertions that switching 酒馆 → 餐馆 → 医院 → Home → 餐馆 updates the right rail on desktop and mobile.
+  - Added browser assertions that switching 空间 → 餐馆 → 医院 → Home → 餐馆 updates the right rail on desktop and mobile.
 
 ## Verification
 

@@ -62,10 +62,10 @@ const demoTavern = {
       id: 'gp-truth-register',
       title: '判断谁在说谎',
       status: 'published',
-      summary: '用酒馆内登记册线索做轻推理，不做人身指控。',
+      summary: '用空间内登记册线索做轻推理，不做人身指控。',
       entry_label: '开始轻推理',
       owner_brief: {
-        goal: '通过 3 个安全线索判断哪句话前后矛盾，只给出酒馆内结论。',
+        goal: '通过 3 个安全线索判断哪句话前后矛盾，只给出空间内结论。',
         tone: '短剧主持感、节奏清楚、克制',
       },
       nodes: [
@@ -144,7 +144,7 @@ async function checkViewport(browser, config) {
   const searchInput = page.getByPlaceholder(/搜索坐标/)
   await searchInput.fill('轻推理')
   await expect(page.locator('[aria-label="短剧入口卡"]').first()).toBeVisible()
-  await expect(page.getByText('用酒馆内登记册线索做轻推理').first()).toBeVisible()
+  await expect(page.getByText('用空间内登记册线索做轻推理').first()).toBeVisible()
 
   const filteredPath = resolve(artifactDir, `${config.name}-discover-search-short-drama.png`)
   await page.screenshot({ path: filteredPath, fullPage: true })

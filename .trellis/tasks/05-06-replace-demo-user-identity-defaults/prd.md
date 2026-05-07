@@ -33,7 +33,7 @@
 - 移除前端生产运行时中的 `owner-demo` / `visitor-demo` 常量；`DEFAULT_OWNER_ID` 现在为空字符串，owner-only 操作必须由页面 query/form/session 显式传入 owner identity。
 - 新增 `getOrCreateVisitorIdentity(...)`，通过 `localStorage` 保存匿名访客 ID；无浏览器 storage 的测试/SSR 环境退化为进程内生成值。
 - 新增 `requireExplicitOwnerIdentity(...)`，并用 `identity-boundary-test.mjs` 固化 owner/visitor 默认身份边界。
-- 后端 native v1 与兼容 WebService 的创建酒馆入口在缺失 owner identity 时返回 401，避免创建 ownerless tavern。
+- 后端 native v1 与兼容 WebService 的创建空间入口在缺失 owner identity 时返回 401，避免创建 ownerless tavern。
 - 验证：
   - `node frontend/scripts/identity-boundary-test.mjs`
   - `node frontend/scripts/runtime-config-centralization-test.mjs`

@@ -27,7 +27,7 @@ const fixture = {
     {
       id: "pw_test_market",
       name: "旧市集夜摊",
-      description: "市场门口的小酒馆。",
+      description: "市场门口的小小屋。",
       lat: 30.5728,
       lon: 104.0668,
       address: "成都 · 夜市入口",

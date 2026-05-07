@@ -204,7 +204,7 @@ function EmptyCitySliceState({ error }: { error?: string }) {
         <MapPinned className="mx-auto h-10 w-10 text-cyan-100/65" />
         <p className="font-black text-white">暂时没有可展示的真实坐标入口</p>
         <p className="text-sm leading-6 text-violet-100/58">
-          {error ? `酒馆列表暂不可用：${error}` : "创建第一个公开酒馆后，这里会自动显示真实入口与对应氛围图。"}
+          {error ? `空间列表暂不可用：${error}` : "创建第一个公开空间后，这里会自动显示真实入口与对应氛围图。"}
         </p>
         <Button asChild variant="secondary">
           <Link to="/create">创建我的空间</Link>
@@ -339,7 +339,7 @@ export default function HomeRoute() {
         </div>
         {homepage.error ? (
           <p className="mb-4 rounded-2xl border border-amber-300/24 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-            酒馆列表暂不可用，首页已切换为安全空态：{homepage.error}
+            空间列表暂不可用，首页已切换为安全空态：{homepage.error}
           </p>
         ) : null}
         <div className="grid gap-6 md:grid-cols-3">

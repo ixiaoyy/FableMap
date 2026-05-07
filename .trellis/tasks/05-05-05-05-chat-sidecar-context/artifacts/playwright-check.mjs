@@ -117,7 +117,7 @@ async function checkViewport(name, viewport) {
     if (!sidecarText.includes(required)) throw new Error(`${name}: conversation sidecar missing ${required}`)
   }
   const bodyText = await page.locator('body').innerText()
-  for (const forbidden of ["当前 NPC 资料", "表情缩略", "First message", "Current NPC", "酒馆信息", "真实地图锚点与公开说明", "管理入口仅酒馆所有人可见"]) {
+  for (const forbidden of ["当前 NPC 资料", "表情缩略", "First message", "Current NPC", "小屋信息", "真实地图锚点与公开说明", "管理入口仅小屋所有人可见"]) {
     if (bodyText.includes(forbidden)) throw new Error(`${name}: project-like sidebar copy is still visible: ${forbidden}`)
   }
 

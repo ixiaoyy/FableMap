@@ -5,7 +5,7 @@ import CharacterManagementModal from '../../../../frontend/app/product/Character
 
 const initialTavern = {
   id: 'npc_batch_harness_tavern',
-  name: '批量验收酒馆',
+  name: '批量验收空间',
   owner_id: 'owner-demo',
   characters: [
     {

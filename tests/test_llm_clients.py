@@ -74,7 +74,7 @@ def test_llm_backend_base_helpers_build_request_body_and_headers() -> None:
     )
 
     body = backend._build_body(
-        [{"role": "user", "content": "你好，酒馆"}],
+        [{"role": "user", "content": "你好，空间"}],
         "unit-model",
         stream=True,
         response_format={"type": "json_object"},
@@ -83,7 +83,7 @@ def test_llm_backend_base_helpers_build_request_body_and_headers() -> None:
 
     assert body == {
         "model": "unit-model",
-        "messages": [{"role": "user", "content": "你好，酒馆"}],
+        "messages": [{"role": "user", "content": "你好，空间"}],
         "temperature": 0.25,
         "max_tokens": 128,
         "top_p": 0.75,
@@ -142,7 +142,7 @@ def test_openai_complete_builds_expected_request_without_network(monkeypatch: py
             return json.dumps(
                 {
                     "model": "gpt-test",
-                    "choices": [{"message": {"content": "酒馆回应"}}],
+                    "choices": [{"message": {"content": "空间回应"}}],
                     "usage": {"prompt_tokens": 3, "completion_tokens": 5},
                 }
             ).encode("utf-8")
@@ -173,7 +173,7 @@ def test_openai_complete_builds_expected_request_without_network(monkeypatch: py
     )
     response = backend.complete([{"role": "user", "content": "今晚营业吗？"}], user="visitor-1")
 
-    assert response.content == "酒馆回应"
+    assert response.content == "空间回应"
     assert response.model == "gpt-test"
     assert response.usage == {"prompt_tokens": 3, "completion_tokens": 5}
     assert captured["url"] == "https://llm.example/v1/chat/completions"
@@ -213,13 +213,13 @@ def test_textgen_prompt_conversion_and_base_url_guardrail() -> None:
 
     prompt = backend._messages_to_prompt(
         [
-            {"role": "system", "content": "只使用主人提供的酒馆设定。"},
+            {"role": "system", "content": "只使用主人提供的空间设定。"},
             {"role": "user", "content": "你好"},
             {"role": "assistant", "content": "欢迎。"},
         ]
     )
 
-    assert "### System:\n只使用主人提供的酒馆设定。\n" in prompt
+    assert "### System:\n只使用主人提供的空间设定。\n" in prompt
     assert "### User:\n你好\n" in prompt
     assert "### Assistant:\n欢迎。\n" in prompt
     assert prompt.rstrip().endswith("### Assistant:")

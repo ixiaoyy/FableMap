@@ -26,7 +26,7 @@ const hospitalTavern = {
   name: "夜间护理站",
   description: "公共医院附近的护士站，提供分诊便签和现实求助边界提醒。",
   address: "东京湾岸公共医院街区附近",
-  characters: [{ tags: ["公益", "医院", "护士", "夜间护理"] }],
+  characters: [{ tags: ["社区", "医院", "护士", "夜间护理"] }],
 }
 
 const homeLikeTavern = {
@@ -39,7 +39,7 @@ const homeLikeTavern = {
 assert.equal(derivePlaceType(convenienceTavern), "convenience-store", "便利店关键词应推断为 convenience-store")
 assert.equal(derivePlaceType(schoolTavern), "school", "学校/中学关键词应推断为 school")
 assert.equal(derivePlaceType(hospitalTavern), "hospital", "医院/护士/分诊关键词应推断为 hospital")
-assert.equal(derivePlaceType({ name: "夜莺酒馆", characters: [] }), "tavern", "未知或酒馆内容应回退 tavern")
+assert.equal(derivePlaceType({ name: "夜莺空间", characters: [] }), "tavern", "未知或空间内容应回退 tavern")
 
 const cafeDisplay = derivePlaceTypeDisplay({ name: "转角咖啡", description: "咖啡师、拿铁和读书角" })
 assert.equal(cafeDisplay.id, "cafe")
@@ -66,8 +66,8 @@ assert.equal(placeTypeMatchesTavern(hospitalTavern, "hospital"), true)
 
 const persistedSchool = {
   place_type: "school",
-  name: "夜莺酒馆",
-  description: "名字像酒馆，但后端字段已经确认它是学校。",
+  name: "夜莺空间",
+  description: "名字像空间，但后端字段已经确认它是学校。",
 }
 assert.equal(derivePlaceType(persistedSchool), "school", "持久 place_type 应优先于关键词推断")
 assert.equal(placeTypeMatchesTavern(persistedSchool, "school"), true, "筛选应使用持久 place_type")

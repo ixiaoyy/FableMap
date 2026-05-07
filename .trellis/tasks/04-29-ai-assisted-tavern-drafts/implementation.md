@@ -2,7 +2,7 @@
 
 ## Summary
 
-Implemented owner-confirmed AI-assisted tavern drafts for the `/create` flow. Draft generation uses the current owner default LLM configuration, returns a structured tavern + first-NPC draft, and only fills the create form. It does not create or publish Tavern / Character records until the owner clicks `创建酒馆`.
+Implemented owner-confirmed AI-assisted tavern drafts for the `/create` flow. Draft generation uses the current owner default LLM configuration, returns a structured tavern + first-NPC draft, and only fills the create form. It does not create or publish Tavern / Character records until the owner clicks `创建空间`.
 
 ## Files changed
 

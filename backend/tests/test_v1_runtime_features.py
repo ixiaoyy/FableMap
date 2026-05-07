@@ -26,7 +26,7 @@ def _create_tavern(
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "运行时酒馆",
+            "name": "运行时空间",
             "description": "用于测试 LLM、群聊和语音迁移",
             "lat": 31.2304,
             "lon": 121.4737,
@@ -46,7 +46,7 @@ def _create_tavern(
                 "name": name,
                 "description": f"{name} 负责群聊测试。",
                 "personality": "友好、简短",
-                "first_mes": "欢迎来到运行时酒馆。",
+                "first_mes": "欢迎来到运行时空间。",
                 "talkativeness": 1.0,
             },
         )

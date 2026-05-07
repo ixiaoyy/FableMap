@@ -98,7 +98,7 @@ function RoleplayPanel({
           <div>
             <p className="text-sm font-black text-white">扮演模式信号</p>
             <p className="mt-1 text-xs leading-5 text-cyan-50/58">
-              模式保存后才会影响本酒馆；店主身份仍由后端权限校验决定。
+              模式保存后才会影响本空间；店主身份仍由后端权限校验决定。
             </p>
           </div>
           <div className="grid min-w-0 gap-3">
@@ -503,7 +503,7 @@ export function TavernOwnerManagement({
               <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100/62">Dedicated owner mode</p>
               <CardTitle>只处理管理，不默认聊天</CardTitle>
               <CardDescription className="mt-2">
-                这里是本酒馆 owner-only 的治理台。访客聊天、密码入场和 NPC 对话保留在独立访客视角。
+                这里是本空间 owner-only 的治理台。访客聊天、密码入场和 NPC 对话保留在独立访客视角。
               </CardDescription>
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">

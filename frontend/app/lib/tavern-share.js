@@ -15,7 +15,7 @@ function normalizeOrigin(origin) {
 }
 
 function tavernName(tavern = {}) {
-  return toText(tavern.name) || "未命名酒馆"
+  return toText(tavern.name) || "未命名空间"
 }
 
 function tavernPath(tavern = {}) {
@@ -80,7 +80,7 @@ export function buildTavernSharePayload(tavern = {}, options = {}) {
 }
 
 export function buildTavernShareDisplay(payload = {}) {
-  const tavernTitle = toText(payload.title) || "未命名酒馆"
+  const tavernTitle = toText(payload.title) || "未命名空间"
   const title = toText(payload.share_title) || `邀请你进入「${tavernTitle}」`
   const summary = truncateShareText(payload.short_description || payload.description) || DEFAULT_SUMMARY
   const url = toText(payload.share_url) || (toText(payload.tavern_id) ? `/tavern/${encodeURIComponent(payload.tavern_id)}` : "/discover")

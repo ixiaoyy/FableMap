@@ -384,8 +384,8 @@ Use concise blocks such as:
 
 ```text
 【关系立场】
-本酒馆对“B 酒馆”的立场：商业竞争（rival）。
-当前访客与 B 酒馆较亲近，因此本酒馆角色可能表现出轻微疏离或试探。
+本空间对“B 空间”的立场：商业竞争（rival）。
+当前访客与 B 空间较亲近，因此本空间角色可能表现出轻微疏离或试探。
 ```
 
 - [ ] **Step 3: Add discovery/detail hints only if product-approved**

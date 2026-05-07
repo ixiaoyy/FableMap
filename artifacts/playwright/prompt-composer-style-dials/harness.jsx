@@ -6,7 +6,7 @@ import CharacterEditor from 'file:///D:/work/ai-/frontend/app/product/CharacterE
 
 const initialCharacter = {
   name: '灯叔',
-  description: '深夜便利店柜台旁的赛博酒馆店员。',
+  description: '深夜便利店柜台旁的赛博小屋店员。',
   personality: '慢热，短句，愿意解释规则。',
   scenario: '雨夜，门口有人误会了登记册规则。',
   system_prompt: '保持店主确认的边界。',

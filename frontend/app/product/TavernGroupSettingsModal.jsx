@@ -203,7 +203,7 @@ export default function TavernGroupSettingsModal({
         <header className="modal-header">
           <div>
             <p className="mini-label">群聊设置</p>
-            <h3>{tavern?.name || '酒馆'} 的多人对话</h3>
+            <h3>{tavern?.name || '空间'} 的多人对话</h3>
           </div>
           <button className="close-btn" type="button" onClick={onClose}>&times;</button>
         </header>
@@ -243,7 +243,7 @@ export default function TavernGroupSettingsModal({
             </span>
           </label>
           {!canEnable ? (
-            <div className="group-settings-warning">当前酒馆角色不足，群聊保存时会保持关闭或提示补角色。</div>
+            <div className="group-settings-warning">当前空间角色不足，群聊保存时会保持关闭或提示补角色。</div>
           ) : null}
           {loadingConfig ? (
             <div className="group-settings-notice">正在读取最新群聊配置...</div>

@@ -31,7 +31,7 @@ P1 / blocker-level refactor task.
 迁移必须服从 FableMap 权威文档与 AGENTS.md：
 
 - 真实地图坐标锚定的 cyber tavern 是产品主线。
-- 店主创作酒馆、NPC、氛围、访问规则；平台不自动生成酒馆内容。
+- 店主创作空间、NPC、氛围、访问规则；平台不自动生成空间内容。
 - SillyTavern 兼容性优先保持，但不能把 FableMap 变成完整 SillyTavern clone。
 - 店主 API Key / LLM 配置 / token 信息按敏感数据处理。
 - 不引入平台 token 充值结算、访客社交、无锚点空间、传统地图 App、RPG 战斗等级装备。

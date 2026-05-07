@@ -63,7 +63,7 @@ export function coordinateToEmotionalLabel(
   lat,
   lon,
   address = "",
-  placeTypeLabel = "酒馆",
+  placeTypeLabel = "空间",
 ) {
   const latNum = Number(lat)
   const lonNum = Number(lon)
@@ -106,7 +106,7 @@ export function buildEmotionalLocationLabel(
   lat,
   lon,
   address = "",
-  placeTypeLabel = "酒馆",
+  placeTypeLabel = "空间",
   localHour,
 ) {
   const neighborhood = extractNeighborhood(address)
@@ -135,7 +135,7 @@ export function compactLocationLabel(
   lat,
   lon,
   address = "",
-  placeTypeLabel = "酒馆",
+  placeTypeLabel = "空间",
 ) {
   const neighborhood = extractNeighborhood(address)
   return neighborhood || `附近${placeTypeLabel}`

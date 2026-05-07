@@ -4,9 +4,9 @@ import { resolveTavernAtmosphereImage } from './services/atmosphereAssets'
 import { enterTavern, getTavernChatHistory, sendTavernChat } from '../lib/taverns'
 
 /**
- * TavernInterior — 酒馆内部视图
+ * TavernInterior — 空间内部视图
  *
- * 显示酒馆内的角色列表和聊天界面。
+ * 显示空间内的角色列表和聊天界面。
  * 访客可以选择一个角色开始聊天。
  */
 
@@ -208,7 +208,7 @@ export default function TavernInterior({
       <div className="tavern-interior tavern-password-gate">
         <div className="tavern-password-form">
           <h3>{getTavernAccessIcon('password')} 需要密码</h3>
-          <p>此酒馆需要密码才能进入</p>
+          <p>此空间需要密码才能进入</p>
           <input
             type="password"
             value={password}
@@ -268,7 +268,7 @@ export default function TavernInterior({
         {/* Character list */}
         {characters.length > 0 && (
           <div className="tavern-char-list">
-            <h4>酒馆角色</h4>
+            <h4>空间角色</h4>
             {characters.map((char) => (
               <button
                 key={char.id}
@@ -361,8 +361,8 @@ export default function TavernInterior({
             </>
           ) : (
             <div className="tavern-empty">
-              <p>这个酒馆还没有角色。</p>
-              <p className="muted">让酒馆主人添加一些角色吧。</p>
+              <p>这个空间还没有角色。</p>
+              <p className="muted">让空间主人添加一些角色吧。</p>
             </div>
           )}
         </div>

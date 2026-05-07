@@ -66,7 +66,7 @@
 5. **优先处理高价值路径**
    - P0-A：`frontend/public/assets/npcs/public-welfare/` 当前所有公益 NPC sprites。
    - P0-B：本次任务产物 `artifacts/04-30-public-welfare-npc-batch-upgrade/` 中 prompt manifest / source / target 的映射回填。
-   - P1：发现页、首页、酒馆封面、产品演示图等正式 UI 资产。
+   - P1：发现页、首页、空间封面、产品演示图等正式 UI 资产。
    - P2：文档示例图、历史 artifacts 中仅作审查参考的图片。
 
 ## Proposed sidecar format

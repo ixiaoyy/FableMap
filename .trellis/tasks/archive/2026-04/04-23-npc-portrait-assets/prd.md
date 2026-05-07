@@ -2,7 +2,7 @@
 
 ## Goal
 
-为 FableMap 生成第一批可直接接入前端的 NPC 形象素材，让酒馆在“店主未上传头像 / 未导入 sprites”时，仍能展示**真实可用的 tavern-themed NPC portrait**，替换当前仅作风格参考的 `npc-style-cast` 占位方案。
+为 FableMap 生成第一批可直接接入前端的 NPC 形象素材，让空间在“店主未上传头像 / 未导入 sprites”时，仍能展示**真实可用的 tavern-themed NPC portrait**，替换当前仅作风格参考的 `npc-style-cast` 占位方案。
 
 ## What I already know
 
@@ -12,7 +12,7 @@
   * `character.avatar`
   * `character.image_url`
   * 否则退回 `npcStyleCastSheet` 的裁切背景。
-* `.trellis/spec/frontend/npc-art-guidelines.md` 明确要求：fallback 必须是**真实酒馆主题 NPC 立绘/半身像**，不能是几何占位或空头像；并且当前规范倾向把 fallback 资产放在 `frontend/app/assets/npc-style-cast/`。
+* `.trellis/spec/frontend/npc-art-guidelines.md` 明确要求：fallback 必须是**真实空间主题 NPC 立绘/半身像**，不能是几何占位或空头像；并且当前规范倾向把 fallback 资产放在 `frontend/app/assets/npc-style-cast/`。
 * `docs/IMAGE_ASSETS_SPEC.md` 里已有一套更早的规划：在 `frontend/public/character-portraits/` 下提供 archetype 头像资源，原型包括：
   * `merchant`
   * `guardian`
@@ -46,7 +46,7 @@
 ## Requirements (evolving)
 
 * 提供真实可用的 NPC 形象素材，不能再用 style board 裁切图充当最终头像。
-* 形象必须明显属于“酒馆内部 NPC”语义：吧台、酒杯、木架、灯笼、菜单板、终端光、地图桌等 tavern cue 至少出现 2 个。
+* 形象必须明显属于“空间内部 NPC”语义：吧台、酒杯、木架、灯笼、菜单板、终端光、地图桌等 tavern cue 至少出现 2 个。
 * 保持当前 owner-authored 图像优先级不变：
   * `sprites.neutral` > `avatar` > `image_url` > project fallback art
 * 新素材仅用于 display fallback，不得写回角色卡字段。
@@ -68,7 +68,7 @@
 * 后端 API、schema、数据库、角色卡格式变更。
 * 平台为店主“自动生成并保存”角色头像。
 * place atmosphere、faction emblem 等其他图片资源。
-* 一次性完成所有酒馆 UI 的头像系统重构（如 ChatPanel / Header / 列表项全部接入），除非在本 task 中明确追加。
+* 一次性完成所有空间 UI 的头像系统重构（如 ChatPanel / Header / 列表项全部接入），除非在本 task 中明确追加。
 
 ## Research Notes
 
@@ -182,7 +182,7 @@
   * `curl.exe --noproxy '*' http://127.0.0.1:8950/api/meta` — 200
   * `curl.exe --noproxy '*' http://127.0.0.1:8950/` — 200
   * `curl.exe --noproxy '*' http://127.0.0.1:8950/api/taverns` — 200
-* 当前默认公益酒馆样例可命中 fallback 路径：
+* 当前默认公益空间样例可命中 fallback 路径：
   * `阿槐 / 小舟 / 闻笺 / 安澜` 等角色均无 `sprites.neutral`、无 `avatar`、无 `image_url`
   * 但保留 `appearance.active_preset_id`，符合 `portraitCatalog.ts` 的 archetype/style 匹配输入
 * 已验证优化后的运行时资源可被后端静态服务：

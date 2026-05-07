@@ -78,7 +78,7 @@ export function NotificationCenterPanel({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryTile label="未读" value={effectiveUnread} helper="可一键标记已读" />
           <SummaryTile label="全部事件" value={view.total} helper="仅当前身份" />
-          <SummaryTile label="店主侧" value={view.ownerCount} helper="酒馆维护 / 反馈" />
+          <SummaryTile label="店主侧" value={view.ownerCount} helper="空间维护 / 反馈" />
           <SummaryTile label="访客侧" value={view.visitorCount} helper="个人探索事件" />
         </div>
 

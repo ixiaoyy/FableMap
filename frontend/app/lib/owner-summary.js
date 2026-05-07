@@ -50,7 +50,7 @@ function summarizeReturningVisitors(visitors) {
       const relationship = visitor.relationship && typeof visitor.relationship === "object" ? visitor.relationship : {}
       return {
         tavernId: String(visitor.tavern_id || ""),
-        tavernName: visitor.tavern_name || visitor.tavern_id || "未知酒馆",
+        tavernName: visitor.tavern_name || visitor.tavern_id || "未知空间",
         visitorId: String(visitor.visitor_id || ""),
         visitorLabel: getOwnerVisitorLabel(visitor),
         visitCount: toNumber(visitor.visit_count),
@@ -73,7 +73,7 @@ function summarizeRecentSessions(sessions) {
   return sessions
     .map((session) => ({
       tavernId: String(session.tavern_id || ""),
-      tavernName: session.tavern_name || session.tavern_id || "未知酒馆",
+      tavernName: session.tavern_name || session.tavern_id || "未知空间",
       visitorId: String(session.visitor_id || ""),
       visitorLabel: getOwnerSessionVisitorLabel(session),
       characterId: String(session.character_id || ""),
@@ -91,7 +91,7 @@ function summarizeVisitorNotes(notes) {
     .map((note) => ({
       noteId: String(note.id || ""),
       tavernId: String(note.tavern_id || ""),
-      tavernName: note.tavern_name || note.tavern_id || "未知酒馆",
+      tavernName: note.tavern_name || note.tavern_id || "未知空间",
       visitorId: String(note.visitor_id || ""),
       visitorLabel: note.visitor_nickname || (note.visitor_id ? String(note.visitor_id).slice(0, 16) : "匿名访客"),
       content: String(note.content || ""),
@@ -115,7 +115,7 @@ function summarizeTaverns(taverns, visitors, sessions) {
       const score = tavernVisitors.length * 2 + returningVisitorCount * 3 + tavernSessions.length + messageCount / 10
       return {
         tavernId,
-        tavernName: tavern.name || tavernId || "未命名酒馆",
+        tavernName: tavern.name || tavernId || "未命名空间",
         status: tavern.status || "unknown",
         access: tavern.access || "public",
         visitorCount: tavernVisitors.length,
@@ -140,8 +140,8 @@ function buildNextActions(metrics, taverns, returningHighlights, latestFeedback)
   if (metrics.taverns === 0) {
     actions.push({
       kind: "create_first_tavern",
-      title: "先开出第一间酒馆",
-      detail: "创建一间真实坐标锚定的酒馆，让发现页有第一个可进入入口。",
+      title: "先开出第一间空间",
+      detail: "创建一间真实坐标锚定的空间，让发现页有第一个可进入入口。",
       to: "/create",
     })
     return actions
@@ -179,8 +179,8 @@ function buildNextActions(metrics, taverns, returningHighlights, latestFeedback)
   if (closedCount > 0) {
     actions.push({
       kind: "reopen_closed",
-      title: "检查歇业酒馆",
-      detail: `${closedCount} 间酒馆当前歇业。优先确认 LLM 配置或手动开放状态，避免访客进门即流失。`,
+      title: "检查歇业空间",
+      detail: `${closedCount} 间空间当前歇业。优先确认 LLM 配置或手动开放状态，避免访客进门即流失。`,
     })
   }
 
@@ -188,7 +188,7 @@ function buildNextActions(metrics, taverns, returningHighlights, latestFeedback)
     actions.push({
       kind: "invite_first_visitor",
       title: "让第一个访客完成对话",
-      detail: "当前还没有会话记录。可以从发现页进入自己的公开酒馆，验证首句问候和 NPC 回复。",
+      detail: "当前还没有会话记录。可以从发现页进入自己的公开空间，验证首句问候和 NPC 回复。",
       to: "/discover",
     })
   }

@@ -20,7 +20,7 @@ Complete as an owner-reviewable content draft artifact. Nothing is inserted into
     "id": "wi_cat_empire_origin",
     "keys": ["猫帝国", "猫王国", "复国"],
     "keys_secondary": ["旧地图", "徽章", "屋檐", "传闻"],
-    "content": "【店主待确认草稿】酒馆旧地图上有一枚猫爪徽章，被传说为‘猫帝国’旧驿站的标记。NPC 只能把它当作本酒馆内的民间传闻，不得宣称现实地点真的存在该政权。",
+    "content": "【店主待确认草稿】空间旧地图上有一枚猫爪徽章，被传说为‘猫帝国’旧驿站的标记。NPC 只能把它当作本空间内的民间传闻，不得宣称现实地点真的存在该政权。",
     "constant": false,
     "selective": true,
     "depth": 2,
@@ -44,7 +44,7 @@ Complete as an owner-reviewable content draft artifact. Nothing is inserted into
     "id": "wi_cat_empire_boundary",
     "keys": ["猫帝国誓约", "复国仪式", "效忠"],
     "keys_secondary": ["强迫", "现实身份", "私人信息"],
-    "content": "【边界】猫帝国设定只能作为酒馆内的虚构传闻和角色扮演线索。NPC 不应要求访客效忠、提交现实身份、泄露联系方式、参与强制关系或相信现实政治主张。",
+    "content": "【边界】猫帝国设定只能作为空间内的虚构传闻和角色扮演线索。NPC 不应要求访客效忠、提交现实身份、泄露联系方式、参与强制关系或相信现实政治主张。",
     "constant": false,
     "selective": true,
     "depth": 2,
@@ -60,7 +60,7 @@ Complete as an owner-reviewable content draft artifact. Nothing is inserted into
 - Title: `屋檐下的第二枚猫爪`
 - Owner-facing premise: visitor helps the tavern NPC verify whether an old cat-paw emblem is just decoration or a clue to a playful in-tavern legend.
 - Steps: inspect bar counter bell → ask an NPC about the old map → choose whether to archive the clue as “rumor”, “joke”, or “future quest seed”.
-- Success copy: “你把这条传闻留在了酒馆留言簿旁。它仍只是店主确认过的酒馆故事，不会变成现实地图事实。”
+- Success copy: “你把这条传闻留在了空间留言簿旁。它仍只是店主确认过的空间故事，不会变成现实地图事实。”
 - Boundaries: no combat, no levels/equipment, no adult/forced relationship content, no auto-publication, no unanchored world space.
 
 ## Verification

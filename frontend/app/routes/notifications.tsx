@@ -63,7 +63,7 @@ export default function NotificationsRoute() {
               <div className="rounded-3xl border border-cyan-300/16 bg-cyan-300/[0.07] p-4">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/70">边界</p>
                 <p className="mt-2 text-sm leading-7 text-violet-100/72">
-                  通知只围绕酒馆访问、owner-visible 反馈、审批和个人探索状态；不会变成公开社交流，也不会用于广告复活。
+                  通知只围绕空间访问、owner-visible 反馈、审批和个人探索状态；不会变成公开社交流，也不会用于广告复活。
                 </p>
               </div>
             </CardContent>

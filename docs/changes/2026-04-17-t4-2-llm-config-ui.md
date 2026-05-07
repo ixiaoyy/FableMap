@@ -10,13 +10,13 @@ T4.2
 前端功能完善
 
 ## 概述
-在 `TavernCreatePanel` Step 2（AI 配置步骤）中，用 `LLMConfigForm` 组件替换手动表单字段，使店主在创建酒馆时即可使用完整的 24 后端选择界面。
+在 `TavernCreatePanel` Step 2（AI 配置步骤）中，用 `LLMConfigForm` 组件替换手动表单字段，使店主在创建空间时即可使用完整的 24 后端选择界面。
 
 ## 为什么改
 `TavernCreatePanel` Step 2 原有实现只提供了 4 个后端选项（OpenAI/Claude/Ollama/OpenRouter）的 `<select>` 下拉框，以及手动的模型名/API Key/端点输入框。
 
 `LLMConfigForm` 组件已完整实现（含 24 个后端、完整参数、高级设置、连接测试），但 `TavernCreatePanel` 未接入该组件，导致：
-1. 店主无法在创建酒馆时选择全部 24 个后端
+1. 店主无法在创建空间时选择全部 24 个后端
 2. 24 个后端选项仅在 `TavernOwnerPanel` 的编辑/配置弹窗中可用
 3. 体验不一致
 
@@ -58,8 +58,8 @@ T4.2
 - `npm run build` 在 `frontend/` 目录执行成功（vite build, 72 modules, 303 kB）
 
 ## 风险点
-- ~~`LLMConfigForm` 在 `TavernCreatePanel` Step 2 传入 `tavernId={null}`，连接测试按钮会提示"需要先保存酒馆才能测试"，属于预期行为（创建时酒馆不存在）~~ — **已解决**：新增 `/api/llm/test-config` 端点支持无 tavernId 测试
-- 后续可考虑在酒馆创建成功后，自动引导到 AI 配置弹窗进行测试
+- ~~`LLMConfigForm` 在 `TavernCreatePanel` Step 2 传入 `tavernId={null}`，连接测试按钮会提示"需要先保存空间才能测试"，属于预期行为（创建时空间不存在）~~ — **已解决**：新增 `/api/llm/test-config` 端点支持无 tavernId 测试
+- 后续可考虑在空间创建成功后，自动引导到 AI 配置弹窗进行测试
 
 ## 依赖
 - `LLMConfigForm.jsx`（已有，已修改 — 新增 `testDirect` prop）
@@ -72,7 +72,7 @@ T4.2
 ## 后继变更 (2026-04-17 后续)：支持创建时测试 LLM 连接
 
 ### 为什么改
-创建酒馆时，用户在 Step 2 配置 LLM 后，无法验证配置是否正确（测试按钮不显示或报错"需要先保存酒馆"）。需要在酒馆创建前就能测试 LLM 连接。
+创建空间时，用户在 Step 2 配置 LLM 后，无法验证配置是否正确（测试按钮不显示或报错"需要先保存空间"）。需要在空间创建前就能测试 LLM 连接。
 
 ### 改了什么
 
@@ -97,4 +97,4 @@ T4.2
 - `npm run build` 在 `frontend/` 执行成功（73 modules, 312.84 kB）
 
 ### 风险点
-- `/api/llm/test-config` 端点无需认证，但 API Key 由用户在前端直接传入，后端不存储；若后续需要持久化 LLM 配置，需在创建酒馆后保存到数据库
+- `/api/llm/test-config` 端点无需认证，但 API Key 由用户在前端直接传入，后端不存储；若后续需要持久化 LLM 配置，需在创建空间后保存到数据库

@@ -64,7 +64,7 @@ export function createTavernService(getBaseUrl) {
     // ─── Tavern CRUD ───────────────────────────────────────────────
 
     /**
-     * 获取酒馆列表
+     * 获取空间列表
      * @param {object} options
      * @param {number} options.lat - 中心纬度
      * @param {number} options.lon - 中心经度
@@ -92,11 +92,11 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 创建酒馆
+     * 创建空间
      * @param {object} data
      * @param {string} userId - 店主/操作者 ID
-     * @param {string} data.name - 酒馆名称
-     * @param {string} data.description - 酒馆描述
+     * @param {string} data.name - 空间名称
+     * @param {string} data.description - 空间描述
      * @param {number} data.lat - 纬度
      * @param {number} data.lon - 经度
      * @param {string} data.access - public | password | private
@@ -114,7 +114,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆详情
+     * 获取空间详情
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -128,7 +128,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆统计数据
+     * 获取空间统计数据
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>} 统计数据，包含 total_visits, total_messages, total_tokens
@@ -142,7 +142,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆分享信息
+     * 获取空间分享信息
      * @param {string} tavernId
      * @returns {Promise<object>} 分享信息，包含 title, description, share_url 等
      */
@@ -154,7 +154,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 更新酒馆
+     * 更新空间
      * @param {string} tavernId
      * @param {object} data
      * @param {string} userId
@@ -170,11 +170,11 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 保存酒馆世界书
+     * 保存空间世界书
      * @param {string} tavernId
      * @param {Array<object>} worldInfo
      * @param {string} userId
-     * @returns {Promise<object>} 更新后的酒馆
+     * @returns {Promise<object>} 更新后的空间
      */
     async saveWorldInfo(tavernId, worldInfo, userId = '') {
       const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}`, {
@@ -202,7 +202,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆输出修正规则
+     * 获取空间输出修正规则
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>} { rules, default_rules }
@@ -216,11 +216,11 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 保存酒馆输出修正规则
+     * 保存空间输出修正规则
      * @param {string} tavernId
      * @param {Array<object>} rules
      * @param {string} userId
-     * @returns {Promise<object>} 更新后的规则和酒馆
+     * @returns {Promise<object>} 更新后的规则和空间
      */
     async saveOutputRules(tavernId, rules, userId = '') {
       const response = await fetch(`${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/output-rules`, {
@@ -248,7 +248,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆 Prompt 段落
+     * 获取空间 Prompt 段落
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>} { blocks, default_blocks }
@@ -262,7 +262,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 保存酒馆 Prompt 段落
+     * 保存空间 Prompt 段落
      * @param {string} tavernId
      * @param {Array<object>} blocks
      * @param {string} userId
@@ -294,7 +294,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取当前用户可见的酒馆玩法定义。
+     * 获取当前用户可见的空间玩法定义。
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>} { tavern_id, gameplays }
@@ -458,7 +458,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取店主可配置的酒馆技能包。
+     * 获取店主可配置的空间技能包。
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>} { available_packs, skill_packs, enabled_pack_ids }
@@ -472,7 +472,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 保存酒馆技能包启用状态。
+     * 保存空间技能包启用状态。
      * @param {string} tavernId
      * @param {Array<object>} skillPacks
      * @param {string} userId
@@ -488,7 +488,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆运行预设（内置 + 店主自定义）
+     * 获取空间运行预设（内置 + 店主自定义）
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>} { presets, custom_presets, default_presets, active_preset_id }
@@ -566,7 +566,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 导出可分享的酒馆包（不包含 API Key / 访客聊天 / 私密记忆）
+     * 导出可分享的空间包（不包含 API Key / 访客聊天 / 私密记忆）
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -580,7 +580,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 导入酒馆包并挂载到指定坐标
+     * 导入空间包并挂载到指定坐标
      * @param {object} packageData
      * @param {object} options — { lat, lon, name, access, address }
      * @param {string} userId
@@ -618,7 +618,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 测试 LLM 配置是否可用（无需酒馆 ID，直接测试配置）
+     * 测试 LLM 配置是否可用（无需空间 ID，直接测试配置）
      * @param {object} config — { backend, model, api_key, base_url }
      * @returns {Promise<object>}
      */
@@ -632,7 +632,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 删除酒馆
+     * 删除空间
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -646,7 +646,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 进入酒馆（密码验证）
+     * 进入空间（密码验证）
      * @param {string} tavernId
      * @param {string} password - 密码
      * @param {string} userId
@@ -665,7 +665,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆访客状态列表（店主视图）
+     * 获取空间访客状态列表（店主视图）
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -800,7 +800,7 @@ export function createTavernService(getBaseUrl) {
     // ─── Character Management ──────────────────────────────────────
 
     /**
-     * 获取酒馆角色列表
+     * 获取空间角色列表
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -1048,7 +1048,7 @@ export function createTavernService(getBaseUrl) {
     // ─── Tavern Group Chat API ────────────────────────────────────
 
     /**
-     * 获取酒馆持久群聊配置和角色发言积极度
+     * 获取空间持久群聊配置和角色发言积极度
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -1062,7 +1062,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 保存酒馆持久群聊配置（店主）
+     * 保存空间持久群聊配置（店主）
      * @param {string} tavernId
      * @param {object} data — { group_chat_enabled, group_chat_config, character_talkativeness? }
      * @param {string} userId
@@ -1078,7 +1078,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 向酒馆持久群聊发送消息，由后端选择多个角色并返回回复
+     * 向空间持久群聊发送消息，由后端选择多个角色并返回回复
      * @param {string} tavernId
      * @param {string} message
      * @param {string} visitorId
@@ -1108,7 +1108,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆持久群聊历史
+     * 获取空间持久群聊历史
      * @param {string} tavernId
      * @param {string} visitorId
      * @param {string} userId
@@ -1150,7 +1150,7 @@ export function createTavernService(getBaseUrl) {
     // ─── Voice (TTS/STT) API ───────────────────────────────────────
 
     /**
-     * 获取酒馆语音配置
+     * 获取空间语音配置
      * @param {string} tavernId
      * @param {string} userId
      * @returns {Promise<object>}
@@ -1164,7 +1164,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 保存酒馆语音配置（店主）
+     * 保存空间语音配置（店主）
      * @param {string} tavernId
      * @param {object} config
      * @param {string} userId
@@ -1293,7 +1293,7 @@ export function createTavernService(getBaseUrl) {
     // ─── Chat ─────────────────────────────────────────────────────
 
     /**
-     * 获取聊天会话摘要（店主看自己酒馆时默认返回全部访客会话）
+     * 获取聊天会话摘要（店主看自己空间时默认返回全部访客会话）
      * @param {object} options
      * @param {string} options.tavernId
      * @param {string} options.characterId
@@ -1315,7 +1315,7 @@ export function createTavernService(getBaseUrl) {
     },
 
     /**
-     * 获取酒馆聊天记录
+     * 获取空间聊天记录
      * @param {string} tavernId
      * @param {string} visitorId
      * @param {string} characterId
@@ -1499,7 +1499,7 @@ export function createTavernService(getBaseUrl) {
      * 用 LLM 推断文本对应的表情
      * @param {string} text - 待分析文本
      * @param {string} characterName - 角色名
-     * @param {string} tavernId - 酒馆 ID
+     * @param {string} tavernId - 空间 ID
      * @param {string} characterId - 角色 ID
      * @returns {Promise<object>}
      */
@@ -1666,7 +1666,7 @@ function getAccessMeta(access) {
 }
 
 /**
- * 酒馆状态颜色
+ * 空间状态颜色
  * @param {string} status
  * @returns {string}
  */
@@ -1679,7 +1679,7 @@ export function getTavernStatusColor(status) {
 // ─── Voice (TTS/STT) API ───────────────────────────────────────────────────────
 
 /**
- * 获取酒馆的语音配置
+ * 获取空间的语音配置
  * @param {string} tavernId
  * @returns {Promise<object>}
  */
@@ -1694,7 +1694,7 @@ export async function getVoiceConfig(tavernId) {
 }
 
 /**
- * 保存酒馆的语音配置
+ * 保存空间的语音配置
  * @param {string} tavernId
  * @param {object} config - VoiceConfig object
  * @returns {Promise<object>}
@@ -1790,7 +1790,7 @@ export async function listTtsVoices(provider, apiKey = '') {
 }
 
 /**
- * 酒馆状态标签
+ * 空间状态标签
  * @param {string} status
  * @returns {string}
  */

@@ -163,7 +163,7 @@ export function evaluateRevisitCareCandidate(candidate = {}, policyValue = {}) {
   }
 
   if (event.containsGeneratedContent) {
-    blockers.push(blocker('generated_content_blocked', '不得自动生成发布内容', '回访关怀不能绕过店主确认生成或发布酒馆/NPC/故事内容。'))
+    blockers.push(blocker('generated_content_blocked', '不得自动生成发布内容', '回访关怀不能绕过店主确认生成或发布空间/NPC/故事内容。'))
   }
 
   if (isQuietTime(now, policy.quietHours)) {
@@ -222,7 +222,7 @@ export function buildRevisitCarePolicyChecklist(policyValue = {}) {
       id: 'content_boundary',
       label: 'Content boundary',
       status: 'ready',
-      detail: '只提醒既有回访事实，不生成、发布或改写酒馆内容。',
+      detail: '只提醒既有回访事实，不生成、发布或改写空间内容。',
     },
   ]
 }

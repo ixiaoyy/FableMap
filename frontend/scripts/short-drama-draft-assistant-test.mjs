@@ -48,7 +48,7 @@ for (const node of draft.nodes) {
   }
 }
 
-const secondDraft = createShortDramaDraftFromTavern({ name: '无名酒馆', gameplay_definitions: [{ id: 'existing' }] }, {}, 1)
+const secondDraft = createShortDramaDraftFromTavern({ name: '无名空间', gameplay_definitions: [{ id: 'existing' }] }, {}, 1)
 assert.equal(secondDraft.status, 'draft')
 assert.equal(secondDraft.id.includes('existing'), false, 'assistant should not overwrite existing gameplay ids')
 

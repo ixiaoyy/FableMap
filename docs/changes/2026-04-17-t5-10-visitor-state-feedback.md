@@ -2,7 +2,7 @@
 
 ## 概述
 
-继续补齐“入场 → 对话 → 写回 → 回访反馈”闭环：访客进入酒馆时现在会携带稳定 `X-User-Id`，公开酒馆也会调用 `enter_tavern`，后端会更新 `VisitorState`。店主控制台新增“访客关系与回访”面板。
+继续补齐“入场 → 对话 → 写回 → 回访反馈”闭环：访客进入空间时现在会携带稳定 `X-User-Id`，公开空间也会调用 `enter_tavern`，后端会更新 `VisitorState`。店主控制台新增“访客关系与回访”面板。
 
 ## 改了什么
 
@@ -10,7 +10,7 @@
 |------|------|
 | `frontend/src/services/tavernService.js` | `enterTavern` 支持 `userId` 请求头；新增 `getTavernVisitors` |
 | `frontend/src/App.jsx` | `TavernEntryPanel` 接收当前 `visitorId` |
-| `frontend/src/TavernEntryPanel.jsx` | 查询详情和入场均携带 visitorId；公开/密码酒馆都会调用入场 API |
+| `frontend/src/TavernEntryPanel.jsx` | 查询详情和入场均携带 visitorId；公开/密码空间都会调用入场 API |
 | `frontend/src/TavernDetailPanel.jsx` | 入场携带 visitorId |
 | `frontend/src/TavernInterior.jsx` | 入场携带 visitorId |
 | `fablemap/tavern.py` | 新增 `list_visitor_states`；入场时按 visit_count/relationship_strength 更新关系阶段 |

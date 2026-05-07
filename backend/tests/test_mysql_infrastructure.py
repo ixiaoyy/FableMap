@@ -64,7 +64,7 @@ class TestDatabase:
         with db.session_scope() as session:
             tavern = TavernModel(
                 id="test_001",
-                name="测试酒馆",
+                name="测试空间",
                 lat=35.6581,
                 lon=139.7016,
                 created_at=datetime.utcnow(),
@@ -74,7 +74,7 @@ class TestDatabase:
         with db.session_scope() as session:
             result = session.query(TavernModel).filter(TavernModel.id == "test_001").first()
             assert result is not None
-            assert result.name == "测试酒馆"
+            assert result.name == "测试空间"
 
     def test_session_scope_rollback(self, db: Database):
         """测试 session_scope 异常回滚"""
@@ -82,7 +82,7 @@ class TestDatabase:
             with db.session_scope() as session:
                 tavern = TavernModel(
                     id="test_002",
-                    name="测试酒馆2",
+                    name="测试空间2",
                     lat=35.6581,
                     lon=139.7016,
                     created_at=datetime.utcnow(),
@@ -100,13 +100,13 @@ class TestTavernCRUD:
     """Tavern CRUD 操作测试"""
 
     def test_create_and_get_tavern(self, store: MySQLTavernStore):
-        """测试创建和获取酒馆"""
+        """测试创建和获取空间"""
         from fablemap_api.core.tavern import Tavern
 
         tavern = Tavern(
             id="tavern_001",
-            name="测试酒馆",
-            description="这是一个测试酒馆",
+            name="测试空间",
+            description="这是一个测试空间",
             lat=35.6581,
             lon=139.7016,
             address="测试地址",
@@ -119,24 +119,24 @@ class TestTavernCRUD:
         # 创建
         created = store.create_tavern(tavern)
         assert created.id == "tavern_001"
-        assert created.name == "测试酒馆"
+        assert created.name == "测试空间"
 
         # 获取
         retrieved = store.get_tavern("tavern_001")
         assert retrieved is not None
         assert retrieved.id == "tavern_001"
-        assert retrieved.name == "测试酒馆"
-        assert retrieved.description == "这是一个测试酒馆"
+        assert retrieved.name == "测试空间"
+        assert retrieved.description == "这是一个测试空间"
 
     def test_list_taverns(self, store: MySQLTavernStore):
-        """测试列出酒馆"""
+        """测试列出空间"""
         from fablemap_api.core.tavern import Tavern
 
-        # 创建多个酒馆
+        # 创建多个空间
         for i in range(3):
             tavern = Tavern(
                 id=f"tavern_{i:03d}",
-                name=f"酒馆 {i}",
+                name=f"空间 {i}",
                 description="",
                 lat=35.6581 + i * 0.001,
                 lon=139.7016,
@@ -150,7 +150,7 @@ class TestTavernCRUD:
         assert len(taverns) >= 3
 
     def test_update_tavern(self, store: MySQLTavernStore):
-        """测试更新酒馆"""
+        """测试更新空间"""
         from fablemap_api.core.tavern import Tavern
 
         tavern = Tavern(
@@ -178,12 +178,12 @@ class TestTavernCRUD:
         assert retrieved.status == "closed"
 
     def test_layout_style_round_trip(self, store: MySQLTavernStore):
-        """测试酒馆布局样式持久化"""
+        """测试空间布局样式持久化"""
         from fablemap_api.core.tavern import Tavern
 
         tavern = Tavern(
             id="tavern_layout_style",
-            name="布局样式酒馆",
+            name="布局样式空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -258,12 +258,12 @@ class TestTavernCRUD:
         assert updated.place_relationships[0]["status"] == "approved"
 
     def test_delete_tavern(self, store: MySQLTavernStore):
-        """测试删除酒馆"""
+        """测试删除空间"""
         from fablemap_api.core.tavern import Tavern
 
         tavern = Tavern(
             id="tavern_delete",
-            name="待删除酒馆",
+            name="待删除空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -284,7 +284,7 @@ class TestCharacterCRUD:
     """Character CRUD 操作测试"""
 
     def test_create_tavern_with_characters(self, store: MySQLTavernStore):
-        """测试创建带角色的酒馆"""
+        """测试创建带角色的空间"""
         from fablemap_api.core.tavern import Tavern, TavernCharacter
 
         character = TavernCharacter(
@@ -298,7 +298,7 @@ class TestCharacterCRUD:
 
         tavern = Tavern(
             id="tavern_chars",
-            name="角色测试酒馆",
+            name="角色测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -313,13 +313,13 @@ class TestCharacterCRUD:
         assert created.characters[0].name == "测试角色"
 
     def test_add_character_to_existing_tavern(self, store: MySQLTavernStore):
-        """测试向已有酒馆添加角色"""
+        """测试向已有空间添加角色"""
         from fablemap_api.core.tavern import Tavern, TavernCharacter
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_add_char",
-            name="添加角色酒馆",
+            name="添加角色空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -328,7 +328,7 @@ class TestCharacterCRUD:
         )
         store.create_tavern(tavern)
 
-        # 获取酒馆并添加角色
+        # 获取空间并添加角色
         tavern = store.get_tavern("tavern_add_char")
         new_character = TavernCharacter(
             id="char_new",
@@ -356,7 +356,7 @@ class TestCharacterCRUD:
         )
         tavern = Tavern(
             id="tavern_char_gender",
-            name="角色性别酒馆",
+            name="角色性别空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -385,10 +385,10 @@ class TestVisitorState:
         """测试更新和获取访客状态"""
         from fablemap_api.core.tavern import Tavern, VisitorState
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_visitor",
-            name="访客测试酒馆",
+            name="访客测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -433,10 +433,10 @@ class TestVisitorState:
         """测试列出访客状态"""
         from fablemap_api.core.tavern import Tavern, VisitorState
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_list_visitors",
-            name="列表访客酒馆",
+            name="列表访客空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -466,10 +466,10 @@ class TestChatMessages:
         """测试添加和获取聊天消息"""
         from fablemap_api.core.tavern import Tavern, ChatMessage
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_chat",
-            name="聊天测试酒馆",
+            name="聊天测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -499,7 +499,7 @@ class TestChatMessages:
             visitor_id="visitor_001",
             visitor_name="访客甲",
             role="assistant",
-            content="你好！欢迎来到测试酒馆。",
+            content="你好！欢迎来到测试空间。",
             timestamp="2026-04-22T10:00:01Z",
         )
         store.add_chat_message(assistant_msg)
@@ -518,10 +518,10 @@ class TestLLMConfig:
         """测试保存和获取 LLM 配置"""
         from fablemap_api.core.tavern import Tavern, LLMConfig
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_llm",
-            name="LLM 测试酒馆",
+            name="LLM 测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -555,10 +555,10 @@ class TestLLMConfig:
         """测试 Token 使用量"""
         from fablemap_api.core.tavern import Tavern
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_token",
-            name="Token 测试酒馆",
+            name="Token 测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -590,10 +590,10 @@ class TestMemoryAtoms:
         from fablemap_api.core.tavern import Tavern
         from fablemap_api.core.memory import MemoryAtom
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_memory",
-            name="记忆测试酒馆",
+            name="记忆测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -610,7 +610,7 @@ class TestMemoryAtoms:
             dimension="general",
             horizon="short_term",
             subject="visitor_001",
-            content="访客喜欢询问关于酒馆历史的问题",
+            content="访客喜欢询问关于空间历史的问题",
             importance=0.7,
             confidence=0.8,
             created_at="2026-04-22T10:00:00Z",
@@ -623,7 +623,7 @@ class TestMemoryAtoms:
         # 获取记忆原子
         retrieved = store.get_memory_atom("tavern_memory", "atom_001")
         assert retrieved is not None
-        assert retrieved.content == "访客喜欢询问关于酒馆历史的问题"
+        assert retrieved.content == "访客喜欢询问关于空间历史的问题"
         assert retrieved.importance == 0.7
 
     def test_list_memory_atoms(self, store: MySQLTavernStore):
@@ -631,10 +631,10 @@ class TestMemoryAtoms:
         from fablemap_api.core.tavern import Tavern
         from fablemap_api.core.memory import MemoryAtom
 
-        # 创建酒馆
+        # 创建空间
         tavern = Tavern(
             id="tavern_list_memories",
-            name="列表记忆酒馆",
+            name="列表记忆空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -666,21 +666,21 @@ class TestWorldInfo:
     """世界知识测试"""
 
     def test_create_tavern_with_world_info(self, store: MySQLTavernStore):
-        """测试创建带世界知识的酒馆"""
+        """测试创建带世界知识的空间"""
         from fablemap_api.core.tavern import Tavern, WorldInfoEntry
 
         world_info = WorldInfoEntry(
             id="wi_001",
             tavern_id="tavern_worldinfo",
-            keys=["酒馆历史", "创建者"],
-            content="这家酒馆建于 2026 年，由一位热爱故事的老猎人创建。",
+            keys=["空间历史", "创建者"],
+            content="这家空间建于 2026 年，由一位热爱故事的老猎人创建。",
             order=10,
             depth=4,
         )
 
         tavern = Tavern(
             id="tavern_worldinfo",
-            name="世界知识测试酒馆",
+            name="世界知识测试空间",
             description="",
             lat=35.6581,
             lon=139.7016,
@@ -692,7 +692,7 @@ class TestWorldInfo:
         created = store.create_tavern(tavern)
 
         assert len(created.world_info) == 1
-        assert created.world_info[0].keys == ["酒馆历史", "创建者"]
+        assert created.world_info[0].keys == ["空间历史", "创建者"]
         assert "老猎人" in created.world_info[0].content
 
 

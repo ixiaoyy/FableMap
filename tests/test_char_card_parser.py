@@ -48,8 +48,8 @@ def test_parse_sillytavern_v2_maps_core_fields_world_info_and_sprites() -> None:
             "name": "灯塔掌柜",
             "description": "店主编写的坐标锚定 NPC。",
             "personality": "温和、短句回复",
-            "scenario": "黄浦江边的赛博酒馆。",
-            "system_prompt": "只基于主人提供的酒馆设定回应。",
+            "scenario": "黄浦江边的空间。",
+            "system_prompt": "只基于主人提供的空间设定回应。",
             "first_mes": "灯还亮着，欢迎回来。",
             "mes_example": "<START>\n{{char}}: 地图还记得你的桌位。",
             "alternate_greetings": ["又见面了。"],
@@ -62,7 +62,7 @@ def test_parse_sillytavern_v2_maps_core_fields_world_info_and_sprites() -> None:
                         "id": "wi_lighthouse",
                         "keys": ["灯塔"],
                         "secondary_keys": ["雾"],
-                        "content": "灯塔是酒馆的暗号。",
+                        "content": "灯塔是空间的暗号。",
                         "constant": True,
                         "selective": False,
                         "order": 17,
@@ -79,7 +79,7 @@ def test_parse_sillytavern_v2_maps_core_fields_world_info_and_sprites() -> None:
     assert character.source_format == "sillytavern_2.0"
     assert character.name == "灯塔掌柜"
     assert character.description == "店主编写的坐标锚定 NPC。"
-    assert character.system_prompt == "只基于主人提供的酒馆设定回应。"
+    assert character.system_prompt == "只基于主人提供的空间设定回应。"
     assert character.first_mes == "灯还亮着，欢迎回来。"
     assert character.alternate_greetings == ["又见面了。"]
     assert character.tags == ["tavern", "42"]
@@ -93,7 +93,7 @@ def test_parse_sillytavern_v2_maps_core_fields_world_info_and_sprites() -> None:
     assert entry["id"] == "wi_lighthouse"
     assert entry["keys"] == ["灯塔"]
     assert entry["keys_secondary"] == ["雾"]
-    assert entry["content"] == "灯塔是酒馆的暗号。"
+    assert entry["content"] == "灯塔是空间的暗号。"
     assert entry["constant"] is True
     assert entry["selective"] is False
     assert entry["insertion_order"] == 17

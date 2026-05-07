@@ -22,7 +22,7 @@ def _create_tavern(client: TestClient) -> str:
         "/api/v1/taverns",
         headers={"X-User-Id": OWNER_ID},
         json={
-            "name": "兼容清单酒馆",
+            "name": "兼容清单空间",
             "description": "用于核验 compatibility inventory 中的 native parity。",
             "lat": 31.2304,
             "lon": 121.4737,
@@ -118,7 +118,7 @@ def test_v1_chat_sessions_keep_compat_owner_and_visitor_boundaries(tmp_path: Pat
     character_response = client.post(
         f"/api/v1/taverns/{tavern_id}/characters",
         headers={"X-User-Id": OWNER_ID},
-        json={"name": "档案员", "first_mes": "欢迎来到兼容清单酒馆。"},
+        json={"name": "档案员", "first_mes": "欢迎来到兼容清单空间。"},
     )
     assert character_response.status_code == 200
     character_id = character_response.json()["id"]

@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+from fablemap_api.core.default_taverns import DEFAULT_PUBLIC_WELFARE_OWNER_ID
 from fablemap_api.core.notifications import SQLAlchemyNotificationStore
 from fablemap_api.core.rumor import NeighborhoodRumor, SQLAlchemyRumorStore
+from fablemap_api.core.tavern import LLMConfig
 from fablemap_api.core.writeback import SQLAlchemyWritebackStore, WritebackEngine
 from fablemap_api.infrastructure.home_store import SQLAlchemyHomeStore
 from fablemap_api.infrastructure.owner_config_store import SQLAlchemyOwnerConfigStore
@@ -29,6 +31,17 @@ def _database_settings(tmp_path: Path) -> ApiSettings:
     )
 
 
+def _collect_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _collect_strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _collect_strings(item)
+
+
 def test_database_backend_is_default_sqlite_store(tmp_path: Path) -> None:
     settings = _database_settings(tmp_path)
     store = create_tavern_store(settings)
@@ -37,6 +50,48 @@ def test_database_backend_is_default_sqlite_store(tmp_path: Path) -> None:
     assert store_database(store) is not None
     assert (tmp_path / "fablemap.sqlite3").exists()
     assert not (tmp_path / "taverns").exists()
+
+
+def test_database_seed_refreshes_existing_public_welfare_user_copy(tmp_path: Path) -> None:
+    settings = _database_settings(tmp_path)
+    store = create_tavern_store(settings)
+    helpdesk = store.get_tavern("pw_lantern_helpdesk")
+    assert helpdesk is not None
+
+    helpdesk.name = "公益·灯塔问讯台"
+    helpdesk.description = "FableMap 公益酒馆：旧文案"
+    helpdesk.address = "FableMap 公益锚点 · Shibuya Crossing"
+    helpdesk.scene_prompt = "这是一个面向新手的公益服务站。"
+    helpdesk.memory_policy = dict(helpdesk.memory_policy)
+    helpdesk.memory_policy["note"] = "公益酒馆使用轻量结构化记忆预算。"
+    helpdesk.bookmarks[0]["content"] = "公益默认酒馆 · 新手引导 · 不需要 API Key"
+    helpdesk.characters[0].system_prompt = "你扮演公益服务站志愿向导小舟。"
+    helpdesk.characters[0].tags = ["公益", "新手"]
+    helpdesk.visit_count = 42
+    store.update_tavern(helpdesk)
+    store.save_llm_config(
+        helpdesk.id,
+        LLMConfig(
+            backend="openai",
+            model="gpt-test-model",
+            api_key="secret-key-must-survive",
+            base_url="https://llm.example.test",
+        ),
+    )
+
+    reloaded_store = create_tavern_store(settings)
+    refreshed = reloaded_store.get_tavern("pw_lantern_helpdesk")
+    assert refreshed is not None
+    payload = refreshed.to_dict_private(DEFAULT_PUBLIC_WELFARE_OWNER_ID)
+    visible_text = "\n".join(_collect_strings(payload))
+
+    assert refreshed.name == "小灯塔问路铺"
+    assert "公益" not in visible_text
+    assert "官方" not in visible_text
+    assert refreshed.visit_count == 42
+    private_config = reloaded_store.get_llm_config_private("pw_lantern_helpdesk")
+    assert private_config is not None
+    assert private_config.api_key == "secret-key-must-survive"
 
 
 def test_runtime_side_stores_persist_in_database(tmp_path: Path) -> None:
@@ -70,10 +125,10 @@ def test_runtime_side_stores_persist_in_database(tmp_path: Path) -> None:
             "owner_a",
             "new_visitor",
             "新访客进入",
-            "旅人A 进入了你的酒馆",
+            "旅人A 进入了你的空间",
             {"tavern_id": "tavern_a"},
             tavern_id="tavern_a",
-            tavern_name="测试酒馆",
+            tavern_name="测试空间",
         )
         reloaded = SQLAlchemyNotificationStore(db)
         rows, total_count, unread_count = await reloaded.get_notifications("owner_a")
@@ -89,14 +144,14 @@ def test_runtime_side_stores_persist_in_database(tmp_path: Path) -> None:
     rumor = NeighborhoodRumor.create(
         source_tavern_id="source_tavern",
         target_tavern_id="target_tavern",
-        target_tavern_name="目标酒馆",
+        target_tavern_name="目标空间",
         character_id="npc_a",
         character_name="NPC A",
-        rumor_text="听说目标酒馆今天很热闹。",
+        rumor_text="听说目标空间今天很热闹。",
         trigger_keywords=["热闹"],
     )
     rumor_store.add(rumor)
-    assert SQLAlchemyRumorStore(db).get(rumor.id).rumor_text == "听说目标酒馆今天很热闹。"
+    assert SQLAlchemyRumorStore(db).get(rumor.id).rumor_text == "听说目标空间今天很热闹。"
 
     home_store = SQLAlchemyHomeStore(db)
     home = home_store.create_home("owner_a", "Owner 的空间", visit_settings={"public": True})

@@ -15,8 +15,8 @@ assert.equal(textBatch.count, 2)
 assert.equal(textBatch.characters[0].name, '夜班灯叔')
 assert.equal(textBatch.characters[0].gender, 'unspecified')
 assert(textBatch.characters[0].tags.includes(BACKGROUND_NPC_TAG), 'plain-text drafts should be marked as background NPCs')
-assert.match(textBatch.characters[0].system_prompt, /店主确认加入酒馆/, 'background drafts must keep owner confirmation boundary')
-assert.match(textBatch.characters[0].system_prompt, /不要擅自扩写酒馆正史/, 'background drafts must not auto-expand canon')
+assert.match(textBatch.characters[0].system_prompt, /店主确认加入空间/, 'background drafts must keep owner confirmation boundary')
+assert.match(textBatch.characters[0].system_prompt, /不要擅自扩写空间正史/, 'background drafts must not auto-expand canon')
 
 const jsonBatch = parseNpcBatchInput(JSON.stringify({
   characters: [

@@ -749,7 +749,7 @@ class WebService:
         """Create a new tavern"""
         owner_id = str(owner_id or "").strip()
         if not owner_id:
-            raise HTTPException(status_code=401, detail="创建酒馆需要明确店主身份")
+            raise HTTPException(status_code=401, detail="创建空间需要明确店主身份")
         return self.tavern_service.create_tavern(data, owner_id)
 
     def update_tavern_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
@@ -764,20 +764,20 @@ class WebService:
         """Get shareable info for a tavern (public data only)."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
         return build_tavern_share_payload(tavern, base_url=base_url)
 
     # ─── Gameplay System ────────────────────────────────────────────────
 
     def _ensure_gameplay_tavern_visible(self, tavern: Any, user_id: str) -> None:
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
     def _ensure_gameplay_owner(self, tavern: Any, user_id: str) -> None:
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="只有酒馆主人可以编辑玩法")
+            raise HTTPException(status_code=403, detail="只有空间主人可以编辑玩法")
 
     def _gameplay_definition_for_user(self, gameplay: dict[str, Any], *, owner: bool) -> dict[str, Any]:
         if owner:
@@ -794,7 +794,7 @@ class WebService:
     def get_gameplays_payload(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         self._ensure_gameplay_tavern_visible(tavern, user_id)
         owner = bool(user_id and tavern.owner_id == user_id)
         gameplays = normalize_gameplay_definitions(tavern.gameplay_definitions)
@@ -811,7 +811,7 @@ class WebService:
     def save_gameplays_payload(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         self._ensure_gameplay_owner(tavern, user_id)
         payload = data or {}
         try:
@@ -858,7 +858,7 @@ class WebService:
     ) -> dict[str, Any]:
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         self._ensure_gameplay_tavern_visible(tavern, user_id)
 
         owner = bool(user_id and tavern.owner_id == user_id)
@@ -885,7 +885,7 @@ class WebService:
             raise HTTPException(status_code=403, detail="缺少访客身份")
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         self._ensure_gameplay_tavern_visible(tavern, user_id)
 
         payload = data or {}
@@ -953,7 +953,7 @@ class WebService:
                 {
                     "role": "system",
                     "content": (
-                        "你是 FableMap 酒馆玩法的 AI Director。只返回 JSON，字段包括 "
+                        "你是 FableMap 空间玩法的 AI Director。只返回 JSON，字段包括 "
                         "action(stay/move/complete), next_node_id, event_type, narration, completed。"
                         "不要索取隐私，不给医疗、法律或金融结论，不要求真实危险行动。"
                     ),
@@ -1031,7 +1031,7 @@ class WebService:
     ) -> dict[str, Any]:
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         session = self.tavern_store.get_gameplay_session(tavern_id, session_id)
         if not session:
             raise HTTPException(status_code=404, detail="玩法会话不存在")
@@ -1069,7 +1069,7 @@ class WebService:
     def abandon_gameplay_session_payload(self, tavern_id: str, session_id: str, user_id: str = "") -> dict[str, Any]:
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         session = self.tavern_store.get_gameplay_session(tavern_id, session_id)
         if not session:
             raise HTTPException(status_code=404, detail="玩法会话不存在")
@@ -1087,7 +1087,7 @@ class WebService:
         """
         tavern = self.get_tavern_payload(tavern_id, user_id)
         if tavern.get("owner_id") and tavern.get("owner_id") != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
         payload = data or {}
         message = str(payload.get("message") or "")
         recent_messages = payload.get("recent_messages") or []
@@ -1183,9 +1183,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         rules = normalize_output_rules(tavern.output_rules)
         if not rules:
@@ -1201,9 +1201,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         payload = data or {}
         source_rules = payload.get("rules", payload.get("output_rules"))
@@ -1222,9 +1222,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         payload = data or {}
         source_rules = payload.get("rules", payload.get("output_rules", tavern.output_rules))
@@ -1239,9 +1239,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         blocks = normalize_prompt_blocks(tavern.prompt_blocks)
         if not blocks:
@@ -1257,9 +1257,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         payload = data or {}
         blocks = normalize_prompt_blocks(payload.get("blocks", payload.get("prompt_blocks")))
@@ -1277,9 +1277,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         payload = data or {}
         blocks = normalize_prompt_blocks(payload.get("blocks", payload.get("prompt_blocks", tavern.prompt_blocks)))
@@ -1291,7 +1291,7 @@ class WebService:
         if not character:
             character = tavern.characters[0] if tavern.characters else None
         if not character:
-            raise HTTPException(status_code=400, detail="请先为酒馆添加角色")
+            raise HTTPException(status_code=400, detail="请先为空间添加角色")
 
         message = str(payload.get("message") or "我想了解这里。")
         visitor_name = _normalize_visitor_name(payload.get("visitor_name")) or "旅人"
@@ -1330,9 +1330,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         custom_presets = custom_runtime_presets(tavern.runtime_presets)
         return {
@@ -1349,9 +1349,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         payload = data or {}
         custom_presets = custom_runtime_presets(payload.get("presets", payload.get("runtime_presets")))
@@ -1373,9 +1373,9 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         payload = data or {}
         preset: dict[str, Any] | None = None
@@ -1436,9 +1436,9 @@ class WebService:
         """Save voice config (TTS/STT settings)"""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         from fablemap_api.core.tavern import VoiceConfig
         voice_config = VoiceConfig.from_dict(data)
@@ -1454,7 +1454,7 @@ class WebService:
         """Get voice config — owner sees full config, others see public config"""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         vc = self.tavern_store.get_voice_config(tavern_id)
         if vc:
@@ -1475,7 +1475,7 @@ class WebService:
         """Synthesize speech for a tavern using its TTS config."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         vc = self.tavern_store.get_voice_config(tavern_id)
         if not vc or not vc.enabled:
@@ -1515,7 +1515,7 @@ class WebService:
         """Transcribe uploaded audio using the tavern's STT config (Whisper/FasterWhisper)."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         vc = self.tavern_store.get_voice_config(tavern_id)
         if not vc or not vc.enabled:
@@ -1550,7 +1550,7 @@ class WebService:
         if not tavern:
             raise HTTPException(status_code=404, detail="Tavern not found")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         visitor_names: dict[str, str] = {}
         message_counts: dict[str, int] = {}
@@ -1589,9 +1589,9 @@ class WebService:
         """List structured memory atoms visible to the current user."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         filters = {
             "scope": _memory_filter(scope, MEMORY_SCOPES),
@@ -1625,9 +1625,9 @@ class WebService:
         """Return a single structured memory atom if visible to the current user."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         atom = self.tavern_store.get_memory_atom(tavern_id, memory_id)
         if not atom:
@@ -1643,10 +1643,10 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         owner = _is_tavern_owner_obj(tavern, user_id)
         if tavern.access == "private" and not owner:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         atom = _memory_atom_from_payload(data or {}, tavern_id=tavern_id, user_id=user_id)
         if atom.visibility == "private" and not _memory_subject_matches(atom, user_id):
@@ -1658,7 +1658,7 @@ class WebService:
         if atom.scope.startswith("visitor_") and atom.visitor_id and atom.visitor_id != user_id and not owner:
             raise HTTPException(status_code=403, detail="不能为其他访客创建记忆")
         if atom.visibility != "private" and not owner and atom.scope not in {"visitor_character", "visitor_tavern"}:
-            raise HTTPException(status_code=403, detail="只有店主能创建公共酒馆或地点记忆")
+            raise HTTPException(status_code=403, detail="只有店主能创建公共空间或地点记忆")
 
         created = self.tavern_store.save_memory_atom(tavern_id, atom)
         return {"ok": True, "tavern_id": tavern_id, "memory_atom": created.to_dict()}
@@ -1673,9 +1673,9 @@ class WebService:
         """Update a structured memory atom if the current user can edit it."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         existing = self.tavern_store.get_memory_atom(tavern_id, memory_id)
         if not existing:
@@ -1700,9 +1700,9 @@ class WebService:
         """Delete a structured memory atom if the current user can edit it."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.access == "private" and not _is_tavern_owner_obj(tavern, user_id):
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
         atom = self.tavern_store.get_memory_atom(tavern_id, memory_id)
         if not atom:
             raise HTTPException(status_code=404, detail="记忆不存在")
@@ -1742,9 +1742,9 @@ class WebService:
         """Export a shareable tavern package without credentials or visitor data."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         tavern_payload = tavern.to_dict()
         safe_tavern = _safe_tavern_package_tavern(tavern_payload)
@@ -1786,19 +1786,19 @@ class WebService:
         if not isinstance(package, dict):
             raise HTTPException(status_code=400, detail="package is required")
         if package.get("type") != TAVERN_PACKAGE_TYPE:
-            raise HTTPException(status_code=400, detail="不支持的酒馆包类型")
+            raise HTTPException(status_code=400, detail="不支持的空间包类型")
 
         tavern_payload = package.get("tavern") if isinstance(package.get("tavern"), dict) else {}
         if not tavern_payload:
-            raise HTTPException(status_code=400, detail="酒馆包缺少 tavern 数据")
+            raise HTTPException(status_code=400, detail="空间包缺少 tavern 数据")
 
         try:
             lat = float(payload.get("lat", tavern_payload.get("lat")))
             lon = float(payload.get("lon", tavern_payload.get("lon")))
         except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=400, detail="导入酒馆包时需要有效坐标") from exc
+            raise HTTPException(status_code=400, detail="导入空间包时需要有效坐标") from exc
 
-        source_name = str(tavern_payload.get("name") or "导入酒馆").strip() or "导入酒馆"
+        source_name = str(tavern_payload.get("name") or "导入空间").strip() or "导入空间"
         tavern_id = str(payload.get("tavern_id") or f"tavern_{uuid.uuid4().hex[:12]}").strip()
         raw_access = str(payload.get("access") or tavern_payload.get("access") or "private").strip()
         access = raw_access if raw_access in {"public", "private", "password"} else "private"
@@ -1881,7 +1881,7 @@ class WebService:
         if not tavern:
             raise HTTPException(status_code=404, detail="Tavern not found")
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         chat_sessions = self.tavern_store.list_chat_sessions(tavern_id, limit=None)
         payload = {
@@ -1938,13 +1938,13 @@ class WebService:
         existing = self.tavern_store.get_tavern(target_tavern_id)
         if existing:
             if existing.owner_id and existing.owner_id != user_id:
-                raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+                raise HTTPException(status_code=403, detail="你不是此空间的主人")
             self.tavern_service.update_tavern(target_tavern_id, tavern_payload, user_id)
         else:
             from fablemap_api.core.tavern import Tavern
             restored_tavern = Tavern.from_dict({**tavern_payload, "id": target_tavern_id})
             if restored_tavern.owner_id and restored_tavern.owner_id != user_id:
-                raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+                raise HTTPException(status_code=403, detail="你不是此空间的主人")
             restored_tavern.owner_id = restored_tavern.owner_id or user_id
             self.tavern_store.create_tavern(restored_tavern)
 
@@ -2140,7 +2140,7 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         visitor_id = str(visitor_id or user_id or "").strip()
         user_id = str(user_id or "").strip()
@@ -2149,7 +2149,7 @@ class WebService:
         if user_id and user_id != visitor_id and tavern.owner_id != user_id:
             raise HTTPException(status_code=403, detail="不能代替其他访客发送消息")
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         visitor_display_name = _normalize_visitor_name(visitor_name)
         prompt_user_name = visitor_display_name or visitor_id[:16] or "旅人"
@@ -2168,9 +2168,9 @@ class WebService:
                 character_name=character.name,
                 response_text="此店暂时歇业中。",
                 reason="tavern_closed",
-                title="酒馆正在歇业",
-                message="店主暂时关闭了这间酒馆。等它重新营业后，就可以继续和角色对话。",
-                action="稍后再来，或请店主在控制台重新开放酒馆。",
+                title="空间正在歇业",
+                message="店主暂时关闭了这间空间。等它重新营业后，就可以继续和角色对话。",
+                action="稍后再来，或请店主在控制台重新开放空间。",
                 tavern_status=tavern.status,
             )
 
@@ -2184,7 +2184,7 @@ class WebService:
                 response_text="此店暂未配置 AI，无法回应。",
                 reason="llm_not_configured",
                 title="AI 后端还没配置",
-                message="这间酒馆还没有可用的 API Key 或 Base URL。",
+                message="这间空间还没有可用的 API Key 或 Base URL。",
                 action="店主可以在 AI 配置里补全连接信息并测试通过。",
                 tavern_status="closed",
             )
@@ -2229,7 +2229,7 @@ class WebService:
                 degradation = self._build_degradation(
                     reason="llm_unexpected_error",
                     title="AI 回应暂时中断",
-                    message="酒馆后端遇到异常，已切换为规则回应。",
+                    message="空间后端遇到异常，已切换为规则回应。",
                     action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
                     technical_detail=str(e),
                 )
@@ -2397,7 +2397,7 @@ class WebService:
             return {
                 "kind": "llm_not_configured",
                 "label": "AI 后端未配置",
-                "message": "这间酒馆还没有可用模型配置；店主需要在 AI 配置页补全连接并测试通过后，NPC 才会以外部 LLM 接待。",
+                "message": "这间空间还没有可用模型配置；店主需要在 AI 配置页补全连接并测试通过后，NPC 才会以外部 LLM 接待。",
                 "requires_owner_llm": True,
             }
         if reason in {"llm_error", "llm_unexpected_error"}:
@@ -2411,7 +2411,7 @@ class WebService:
             return {
                 "kind": "built_in_rules",
                 "label": "规则模式 / 无 Key 轻量接待",
-                "message": "这间内置公益酒馆使用本地规则模板接待，不消耗店主 Token；它不是外部 LLM NPC。",
+                "message": "这间小馆使用本地规则模板接待，不消耗店主 Token；它不是外部 LLM NPC。",
                 "requires_owner_llm": False,
             }
         if reason:
@@ -2490,7 +2490,7 @@ class WebService:
             message=message,
             tavern_id=getattr(tavern, "id", "") or "",
             character_name=getattr(character, "name", "") or "值守员",
-            tavern_name=getattr(tavern, "name", "") or "公益酒馆",
+            tavern_name=getattr(tavern, "name", "") or "小馆",
             first_mes=(getattr(character, "first_mes", "") or "").strip(),
         )
 
@@ -2609,7 +2609,7 @@ class WebService:
         """Get chat history for a tavern"""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         visitor_id = str(visitor_id or "").strip()
         user_id = str(user_id or "").strip()
@@ -2622,7 +2622,7 @@ class WebService:
             raise HTTPException(status_code=403, detail="不能读取其他访客的聊天记录")
 
         if tavern.access == "private" and not is_owner:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         history_limit = _clamp_chat_history_limit(limit)
         messages = self.tavern_store.get_chat_history(
@@ -2837,10 +2837,10 @@ class WebService:
         """Get group chat status and config for a tavern."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         return {
             "tavern_id": tavern_id,
@@ -2867,10 +2867,10 @@ class WebService:
         """Update group chat config (owner only)."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         if tavern.owner_id and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="你不是此酒馆的主人")
+            raise HTTPException(status_code=403, detail="你不是此空间的主人")
 
         data = data or {}
 
@@ -2993,7 +2993,7 @@ class WebService:
 
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         visitor_id = str(visitor_id or user_id or "").strip()
         user_id = str(user_id or "").strip()
@@ -3002,20 +3002,20 @@ class WebService:
         self._ensure_group_chat_visitor_scope(tavern, user_id, visitor_id)
 
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         # Check if group chat is enabled
         if not tavern.group_chat_enabled:
             raise HTTPException(status_code=400, detail="群聊未启用")
 
         if not tavern.characters:
-            raise HTTPException(status_code=400, detail="酒馆没有角色")
+            raise HTTPException(status_code=400, detail="空间没有角色")
 
         # Check if tavern is open
         if tavern.status != "open":
             return {
                 "messages": [],
-                "error": "酒馆正在歇业",
+                "error": "空间正在歇业",
                 "degraded": True,
             }
 
@@ -3302,7 +3302,7 @@ class WebService:
         """Get group chat history."""
         tavern = self.tavern_store.get_tavern(tavern_id)
         if not tavern:
-            raise HTTPException(status_code=404, detail="酒馆不存在")
+            raise HTTPException(status_code=404, detail="空间不存在")
 
         requested_visitor_id = str(visitor_id or "").strip()
         user_id = str(user_id or "").strip()
@@ -3318,7 +3318,7 @@ class WebService:
 
         # Check access
         if tavern.access == "private" and tavern.owner_id != user_id:
-            raise HTTPException(status_code=403, detail="此酒馆是私人的")
+            raise HTTPException(status_code=403, detail="此空间是私人的")
 
         # Get chat history
         history = self._group_chat_history_messages(

@@ -37,7 +37,7 @@
   - `tts_request={ text, character_id }`
   - `notes`
 - 响应不能包含 API Key、授权头、owner secret、audio bytes。
-- 私密酒馆遵守可见性边界。
+- 私密空间遵守可见性边界。
 - 角色不存在返回 404。
 - 前端必须通过 service helper 调用。
 
@@ -45,7 +45,7 @@
 
 - [x] Core helper 能从 `first_mes` / `alternate_greetings` 选择开场白，并返回 no-audio 预览 payload。
 - [x] API `POST /api/v1/taverns/{id}/voice-greeting/preview` 能返回可播放前预览和 `/tts` 请求参数。
-- [x] API 覆盖 voice disabled、voice enabled、角色不存在、私密酒馆不可见。
+- [x] API 覆盖 voice disabled、voice enabled、角色不存在、私密空间不可见。
 - [x] 前端 native/product 服务均有 `previewVoiceGreeting` helper，路径和请求体正确。
 - [x] README、ARCHITECTURE、Trellis spec 和 changes 文档说明 no-audio/no-cloning/no-cost boundary。
 - [x] 验证命令记录在本文件和 `task.json` 中。

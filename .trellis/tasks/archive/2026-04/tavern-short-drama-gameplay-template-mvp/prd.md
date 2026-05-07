@@ -2,7 +2,7 @@
 
 ## Goal
 
-把“显眼包式短剧情爽点”转译成酒馆内 3–5 步选择式玩法模板，复用 GameplayDefinition。
+把“显眼包式短剧情爽点”转译成空间内 3–5 步选择式玩法模板，复用 GameplayDefinition。
 
 ## Source Planning
 
@@ -38,7 +38,7 @@
 
 ### Relevant Specs / Docs
 
-* `docs/WHAT_NOT_TO_BUILD.md`: 明确禁止平台绕过店主确认自动发布 AI 剧情/酒馆内容，禁止广告复活、排行榜、战斗/等级/装备等传统游戏化方向。
+* `docs/WHAT_NOT_TO_BUILD.md`: 明确禁止平台绕过店主确认自动发布 AI 剧情/空间内容，禁止广告复活、排行榜、战斗/等级/装备等传统游戏化方向。
 * `docs/WORLD_SCHEMA.md`: `GameplayDefinition` 已支持 `owner_brief`、`nodes`、`choices`、`fallback_events`、`completion`，本任务应复用既有字段，不新增 schema。
 * `.trellis/spec/frontend/component-guidelines.md`: 店主编辑器应使用受控输入、清晰按钮、移动端可用；不要把平台生成内容伪装为店主内容。
 * `.trellis/spec/frontend/quality-guidelines.md`: 前端 UI 改动至少运行 build；如果改服务/规则脚本则运行 frontend test。

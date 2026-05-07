@@ -26,7 +26,7 @@
 
 `frontend/src/tavernPlayModes.js` 继续作为玩法识别和冒险工会本地状态的唯一来源：
 
-- `inferTavernPlayMode()`：根据酒馆/角色/书签文本推断聊天、帮助、文字游戏、线索调查、冒险工会。
+- `inferTavernPlayMode()`：根据空间/角色/书签文本推断聊天、帮助、文字游戏、线索调查、冒险工会。
 - `getTavernPlayBadges()`：为发现、详情、入场 UI 提供简短玩法标签。
 - `getGuildQuestBoard()` / `updateGuildProgress()` / `getGuildTier()`：维护本地任务板、声望和身份。
 
@@ -61,7 +61,7 @@
 1. 店主在创建向导选择模板或添加系统 NPC。
 2. `TavernCreatePanel` 调用模板数据生成表单内容，并通过 `getWizardReadiness()` 展示开门检查。
 3. 访客在发现页、详情页、入场页看到 `inferTavernPlayMode()` 推断出的玩法说明。
-4. 进入酒馆后，`TavernChatRoom` 展示快捷句；冒险工会模式显示任务板。
+4. 进入空间后，`TavernChatRoom` 展示快捷句；冒险工会模式显示任务板。
 5. 冒险工会状态通过 `saveGuildProgress()` 存入 localStorage；发送给 LLM 的内容通过 `buildGuildActionPrompt()` 保持老少皆宜的任务格式。
 
 ## Error Handling

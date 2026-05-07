@@ -22,7 +22,7 @@
 * 关键 CTA 不被底部导航遮挡。
 * 移动底部 dock 保持访客优先：`首页 / 发现 / 进店 / 清单 / 管理`。
 * 桌面顶部导航仍保留店主明确入口：`创建空间` / `管理入口`。
-* `/tavern/:id` 移动端默认显示入店主线与活性信号，Place/Home、回访反馈、邻里传闻等次级面板默认折叠在 `更多酒馆信息`。
+* `/tavern/:id` 移动端默认显示入店主线与活性信号，Place/Home、回访反馈、邻里传闻等次级面板默认折叠在 `更多空间信息`。
 
 ## Acceptance Criteria
 
@@ -31,7 +31,7 @@
 * [x] Mobile bottom dock label/order is covered by focused regression.
 * [x] Mobile top navigation is hidden below `lg` so it does not duplicate bottom dock or expose owner-create wording in the first line.
 * [x] Desktop top navigation keeps `创建空间` and creator conversion remains desktop-only.
-* [x] Tavern mobile secondary panels remain collapsed behind `更多酒馆信息`; desktop secondary panels remain visible.
+* [x] Tavern mobile secondary panels remain collapsed behind `更多空间信息`; desktop secondary panels remain visible.
 * [x] Implementation uses existing schema/API; no contract change was introduced.
 * [x] Playwright self-acceptance captured desktop and mobile screenshots/report.
 

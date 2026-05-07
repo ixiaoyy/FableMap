@@ -128,7 +128,7 @@ Completed on 2026-04-28.
 
 **Approach A: Hero-Dream Tavern Template / Default Tavern** (Recommended)
 
-* How it works: create a tavern pattern such as "旧英雄梦酒馆" with owner-authored scene prompt, NPCs, WorldInfo, and 2-3 published light gameplays. Visitors can say what kind of hero they imagined as a child, receive a gentle "hero name/oath/first small quest", and the memory/revisit layer can remember that identity.
+* How it works: create a tavern pattern such as "旧英雄梦空间" with owner-authored scene prompt, NPCs, WorldInfo, and 2-3 published light gameplays. Visitors can say what kind of hero they imagined as a child, receive a gentle "hero name/oath/first small quest", and the memory/revisit layer can remember that identity.
 * Pros: fits current FableMap architecture; no schema/API change required; easy to demo; protects owner sovereignty; naturally works with `quest-play` layout.
 * Cons: the hero identity is mostly content/prompt/memory-driven, not a first-class global product object.
 

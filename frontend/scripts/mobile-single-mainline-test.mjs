@@ -76,7 +76,7 @@ assert.ok(workbenchSource.includes('data-chat-workbench="sillytavern-style"'), "
 assert.ok(workbenchSource.includes('aria-label="NPC 角色列表"'), "workbench mobile first screen should include the NPC roster")
 assert.ok(workbenchSource.includes('aria-label="聊天记录"'), "workbench mobile first screen should include chat history")
 assert.ok(workbenchSource.includes("Shift+Enter 换行"), "workbench should keep an obvious composer hint")
-assert.ok(workbenchSource.includes("更多酒馆功能"), "public secondary panels should be folded behind 更多酒馆功能")
+assert.ok(workbenchSource.includes("更多空间功能"), "public secondary panels should be folded behind 更多空间功能")
 assert.ok(!workbenchSource.includes("data-owner-only-panel"), "visitor chat workbench should not contain owner-only management panels")
 
 assert.ok(tavernSource.includes("publicPanel={"), "route should pass folded public tavern features into the workbench")

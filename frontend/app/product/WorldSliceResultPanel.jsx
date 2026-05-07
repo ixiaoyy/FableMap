@@ -56,11 +56,11 @@ export default function WorldSliceResultPanel({
       <div className="section-heading world-result-panel__heading">
         <div>
           <p className="mini-label">附近摘要</p>
-          <h2>{result ? '附近内容已准备好，下一步选择地点或酒馆' : '等待附近内容'}</h2>
+          <h2>{result ? '附近内容已准备好，下一步选择地点或空间' : '等待附近内容'}</h2>
         </div>
         <p className="note muted">
           {result
-            ? '这里只保留最短摘要，真正的进入动作在下方地图和酒馆列表中完成。'
+            ? '这里只保留最短摘要，真正的进入动作在下方地图和空间列表中完成。'
             : '刷新成功后，这里会显示附近氛围摘要，然后把注意力交给下方地图。'}
         </p>
       </div>
@@ -82,8 +82,8 @@ export default function WorldSliceResultPanel({
             </div>
             <div className="world-result-panel__next-action" aria-live="polite">
               <span className="mini-label">现在就做</span>
-              <strong>继续往下看地图和酒馆列表，点击一个你想进入的地点。</strong>
-              <p>先看名字和简介；如果附近有酒馆，可以直接打开入场卡片开始对话。</p>
+              <strong>继续往下看地图和空间列表，点击一个你想进入的地点。</strong>
+              <p>先看名字和简介；如果附近有空间，可以直接打开入场卡片开始对话。</p>
             </div>
           </div>
 
@@ -102,8 +102,8 @@ export default function WorldSliceResultPanel({
               <p className="mini-label">推荐路径</p>
               <div className="story-bullets world-result-panel__bullets">
                 <div className="story-bullet">先看下方地图里最值得进入的候选地点。</div>
-                <div className="story-bullet">如果已有附近酒馆，优先进入酒馆和 NPC 对话。</div>
-                <div className="story-bullet">需要开店时，点击顶部“创建酒馆”即可使用向导。</div>
+                <div className="story-bullet">如果已有附近空间，优先进入空间和 NPC 对话。</div>
+                <div className="story-bullet">需要开店时，点击顶部“创建空间”即可使用向导。</div>
               </div>
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function WorldSliceResultPanel({
             <div className="empty-chips">
               <span>{statusOk ? '服务已就绪' : '先确认服务'}</span>
               <span>推荐先试离线演示样例</span>
-              <span>刷新后可直接选择地点或酒馆</span>
+              <span>刷新后可直接选择地点或空间</span>
             </div>
           </div>
         </div>

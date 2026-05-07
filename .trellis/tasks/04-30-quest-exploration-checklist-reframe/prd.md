@@ -2,7 +2,7 @@
 
 ## Goal
 
-把 Quest/任务系统继续收敛为“探索清单/酒馆委托”，避免传统 RPG 化。
+把 Quest/任务系统继续收敛为“探索清单/空间委托”，避免传统 RPG 化。
 
 ## Source Planning
 
@@ -44,7 +44,7 @@
   * guide items now talk about recording, memorial text, and revisit hints;
   * `statusLabel` uses `可记录`; `rewardText` is text memorial / revisit hint, not tradeable reward.
 * Reframed product chat “guild quest” surface while preserving existing function/storage names for compatibility:
-  * visible panel is now “探索清单 / 酒馆委托”;
+  * visible panel is now “探索清单 / 空间委托”;
   * progress is completion points, recorded items, and text memorial/revisit hints;
   * buttons are `领取清单`, `记录完成`, `提委托草稿`;
   * prompts explicitly require owner confirmation for submitted委托草稿.

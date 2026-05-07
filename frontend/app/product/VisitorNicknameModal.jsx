@@ -37,9 +37,9 @@ export default function VisitorNicknameModal({ onSubmit }) {
           </svg>
         </div>
 
-        <h2 id="nickname-title" className="visitor-nickname-title">欢迎来到赛博酒馆</h2>
+        <h2 id="nickname-title" className="visitor-nickname-title">欢迎来到空间</h2>
         <p className="visitor-nickname-subtitle">
-          设置你在酒馆中的显示名称，角色会用这个称呼与你对话。
+          设置你在空间中的显示名称，角色会用这个称呼与你对话。
         </p>
 
         <form className="visitor-nickname-form" onSubmit={handleSubmit}>
@@ -70,7 +70,7 @@ export default function VisitorNicknameModal({ onSubmit }) {
             className="primary visitor-nickname-submit"
             disabled={!nickname.trim()}
           >
-            进入酒馆
+            进入空间
           </button>
         </form>
 

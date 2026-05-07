@@ -35,11 +35,11 @@ export function createBlankGameplay(index = 1) {
     id: `gp_custom_${Date.now().toString(36)}_${index}`,
     title: `新玩法 ${index}`,
     status: 'draft',
-    summary: '用三到五步完成一段酒馆内的小体验。',
+    summary: '用三到五步完成一段空间内的小体验。',
     entry_label: '开始玩法',
     mode: 'ai_directed_branch',
     owner_brief: {
-      goal: '让访客完成一段安全、轻量、贴合本酒馆氛围的小体验。',
+      goal: '让访客完成一段安全、轻量、贴合本空间氛围的小体验。',
       tone: '温和、有主持感、不催促',
       materials: [],
       forbidden: ['索取身份证件、住址、手机号等敏感信息', '要求真实危险行动'],

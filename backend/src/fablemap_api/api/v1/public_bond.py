@@ -34,7 +34,7 @@ router = APIRouter(prefix="/taverns", tags=["public-bond"])
 types_router = APIRouter(prefix="/public-bond", tags=["public-bond-types"])
 
 
-# ─── 关系类型定义（无需酒馆上下文）────────────────────────────────────────
+# ─── 关系类型定义（无需空间上下文）────────────────────────────────────────
 
 @types_router.get("/types")
 def list_public_bond_types(request: Request) -> dict[str, Any]:
@@ -142,7 +142,7 @@ def get_public_bonds_for_character(
 # ─── 店主/管理员审批端点 ──────────────────────────────────────────────────
 
 def _check_owner_authority(request: Request, tavern_id: str) -> str:
-    """验证当前用户是否为酒馆主人或平台管理员。"""
+    """验证当前用户是否为空间主人或平台管理员。"""
     user_id = get_user_id(request)
     service = taverns_service(request)
     tavern = service._get_tavern_or_404(tavern_id)
@@ -241,7 +241,7 @@ def get_bond_queue(
     """获取等待队列（店主可见）。
 
     - 若传 character_id，返回该 NPC 的等待队列。
-    - 若不传 character_id，返回该酒馆所有 NPC 的等待队列。
+    - 若不传 character_id，返回该空间所有 NPC 的等待队列。
     """
     _check_owner_authority(request, tavern_id)
     service = taverns_service(request)
@@ -249,7 +249,7 @@ def get_bond_queue(
     if character_id:
         return service.get_bond_queue(tavern_id, character_id)
 
-    # 返回该酒馆所有等待队列
+    # 返回该空间所有等待队列
     from fablemap_api.infrastructure.models import NpcPublicBondQueueModel
     from fablemap_api.core.public_bond import QueueStatus
 

@@ -320,7 +320,7 @@ export default function App() {
         setTaverns((prev) => [entered, ...prev.filter((item) => item.id !== routeTavernId)])
       } catch (err) {
         if (!cancelled) {
-          setRouteTavernError(err?.message || '无法进入这间酒馆')
+          setRouteTavernError(err?.message || '无法进入这间空间')
         }
       } finally {
         if (!cancelled) setRouteTavernLoading(false)
@@ -405,9 +405,9 @@ export default function App() {
       navigateTo(`/tavern/${encodeURIComponent(tavern.id)}`)
       return { ...tavern, entry_state: entryState }
     } catch (err) {
-      let message = err?.message || '新手酒馆暂时无法进入，请稍后重试或先刷新附近酒馆。'
-      if (message.includes('酒馆不存在') || message.includes('404')) {
-        message = '内置公益新手酒馆未启用；请确认后端已启动，并且没有关闭 FABLEMAP_SEED_DEFAULT_TAVERNS。'
+      let message = err?.message || '新手空间暂时无法进入，请稍后重试或先刷新附近空间。'
+      if (message.includes('空间不存在') || message.includes('404')) {
+        message = '内置新手体验空间未启用；请确认后端已启动，并且没有关闭 FABLEMAP_SEED_DEFAULT_TAVERNS。'
       }
       setQuickStartError(message)
       throw new Error(message)
@@ -611,7 +611,7 @@ export default function App() {
                 navigateTo('/discover')
               }}
             >
-              🚪 离开酒馆
+              🚪 离开空间
             </button>
           ) : null}
           <button
@@ -669,7 +669,7 @@ export default function App() {
                 <button type="button" className="home-route-card" onClick={openDiscoverView}>
                   <span>01</span>
                   <strong>附近门牌</strong>
-                  <p>打开地图，看附近有哪些酒馆亮着灯。</p>
+                  <p>打开地图，看附近有哪些空间亮着灯。</p>
                 </button>
                 <button type="button" className="home-route-card" onClick={openTemplateView}>
                   <span>02</span>
@@ -775,7 +775,7 @@ export default function App() {
                 <div className="panel route-loading-panel">
                   <span className="mini-label">Tavern Room</span>
                   <h2>{routeTavernLoading ? '正在推门...' : '这扇门暂时打不开'}</h2>
-                  {routeTavernError ? <p>{routeTavernError}</p> : <p>正在读取酒馆房间。</p>}
+                  {routeTavernError ? <p>{routeTavernError}</p> : <p>正在读取空间房间。</p>}
                   {routeTavernError ? <button type="button" className="secondary" onClick={openDiscoverView}>回到附近门牌</button> : null}
                 </div>
               )}

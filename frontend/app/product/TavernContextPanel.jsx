@@ -101,7 +101,7 @@ function TavernInfoTab({ tavern }) {
   if (!tavern) {
     return (
       <div className="ctx-empty">
-        <p>没有酒馆信息</p>
+        <p>没有空间信息</p>
       </div>
     )
   }
@@ -369,7 +369,7 @@ function MemoryTab({ entryState, messages, visitorNickname, roomName, selectedCh
       <div className="ctx-field">
         <span className="mini-label">注入到 Prompt 的稳定事实</span>
         <ul className="ctx-memory-facts">
-          <li>酒馆：{roomName}</li>
+          <li>空间：{roomName}</li>
           <li>访客称呼：{visitorNickname || '旅人'}</li>
           <li>关系阶段：{stageMeta.name_zh || stage || '未建立'}</li>
           <li>到访次数：{visitCount}</li>
@@ -498,7 +498,7 @@ function StateCardsTab({ tavernId, visitorId }) {
                       <span className="ctx-sc-badge fixed">正史</span>
                     )}
                     {card.canon_scope === 'tavern' && !card.fixed_canon && (
-                      <span className="ctx-sc-badge tavern">酒馆</span>
+                      <span className="ctx-sc-badge tavern">空间</span>
                     )}
                   </div>
                   <h5 className="ctx-sc-title">{card.title}</h5>
@@ -554,7 +554,7 @@ function AIConfigTab({ tavern, voiceConfig }) {
 
       {!llm.backend && (
         <div className="ctx-empty">
-          <p>酒馆还没有配置 AI。</p>
+          <p>空间还没有配置 AI。</p>
           <p className="muted">店主可以在 AI 配置里设置。</p>
         </div>
       )}

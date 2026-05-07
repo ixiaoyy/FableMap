@@ -84,8 +84,8 @@ Response:
 
 | Case | Expected |
 |------|----------|
-| Missing tavern | `404 {"error": "酒馆不存在"}` |
-| Private tavern viewed by non-owner | `403 {"error": "此酒馆是私人的"}` |
+| Missing tavern | `404 {"error": "空间不存在"}` |
+| Private tavern viewed by non-owner | `403 {"error": "此空间是私人的"}` |
 | Missing `character_id` | `400 {"error": "语音问候预览需要 character_id"}` |
 | Unknown character | `404 {"error": "角色不存在"}` |
 | Voice disabled | `200`, `tts_ready=false`, note mentions 语音未启用 |

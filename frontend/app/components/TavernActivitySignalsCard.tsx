@@ -20,7 +20,7 @@ export function TavernActivitySignalsCard({ tavern }: TavernActivitySignalsCardP
               <Activity className="h-3.5 w-3.5" />
               Activity without social graph
             </div>
-            <CardTitle>酒馆活性信号</CardTitle>
+            <CardTitle>空间活性信号</CardTitle>
             <CardDescription className="mt-2">
               用街区传闻和聚合活动摘要表现这里的生活痕迹，但不展示访客身份、聊天记录或公开社交关系。
             </CardDescription>
@@ -46,7 +46,7 @@ export function TavernActivitySignalsCard({ tavern }: TavernActivitySignalsCardP
           ))}
         </div>
 
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="酒馆活性边界">
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="空间活性边界">
           {TAVERN_ACTIVITY_GUARDRAILS.map((item) => (
             <li key={item} className="rounded-2xl border border-emerald-300/16 bg-emerald-300/[0.07] px-3 py-2 text-sm font-bold text-emerald-50">
               {item}

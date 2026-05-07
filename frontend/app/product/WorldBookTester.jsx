@@ -185,8 +185,8 @@ export default function WorldBookTester({
               checked={includeContext}
               onChange={(e) => setIncludeContext(e.target.checked)}
             />
-            <span>包含酒馆背景上下文</span>
-            <small>（酒馆名、简介、场景描述也会参与匹配）</small>
+            <span>包含空间背景上下文</span>
+            <small>（空间名、简介、场景描述也会参与匹配）</small>
           </label>
 
           <label className="form-group wbt-recent">
