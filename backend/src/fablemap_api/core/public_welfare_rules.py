@@ -286,9 +286,4 @@ def resolve_public_welfare_rules_response(
             tavern_name=tavern_name,
         )
 
-    text = str(message or "").strip()
-    snippet = text[:28] + ("…" if len(text) > 28 else "")
-    return (
-        f"{character_name}点点头，把“{snippet or '这件事'}”记在便签上：我听见了。"
-        "我们可以先把它分成三部分：已经发生的、你能控制的、需要别人帮忙的。你想先看哪一部分？"
-    )
+    return “”
