@@ -12,7 +12,6 @@ from urllib.request import Request, urlopen
 from fastapi import HTTPException
 
 from fablemap_api.domain.tavern_share_policy import build_tavern_share_payload
-from fablemap_api.core.public_welfare_rules import resolve_public_welfare_rules_response
 
 logger = logging.getLogger(__name__)
 
@@ -329,6 +328,7 @@ from fablemap_api.core.dynamic_signals import inject_disturbance, clear_disturba
 from fablemap_api.core.tavern import (
     TavernService as TavernServiceCore,
     TavernStore as TavernStoreCore,
+    _is_system_or_public_welfare_tavern_data,
     _normalize_bool,
     _normalize_group_chat_config,
     _normalize_talkativeness,
@@ -2166,7 +2166,7 @@ class WebService:
             return self._degraded_chat_payload(
                 character_id=character_id,
                 character_name=character.name,
-                response_text="此店暂时歇业中。",
+                response_text="",
                 reason="tavern_closed",
                 title="空间正在歇业",
                 message="店主暂时关闭了这间空间。等它重新营业后，就可以继续和角色对话。",
@@ -2181,7 +2181,7 @@ class WebService:
             return self._degraded_chat_payload(
                 character_id=character_id,
                 character_name=character.name,
-                response_text="此店暂未配置 AI，无法回应。",
+                response_text="",
                 reason="llm_not_configured",
                 title="AI 后端还没配置",
                 message="这间空间还没有可用的 API Key 或 Base URL。",
@@ -2200,38 +2200,58 @@ class WebService:
         )
         prompt_result = prompt_bundle["prompt_result"]
 
-        # Call LLM using the new llm_clients
+        # Call LLM using the new llm_clients. NPC chat is LLM-only:
+        # rules/public_welfare markers are configuration sentinels, not a local reply engine.
         response = None
         degradation: dict[str, Any] | None = None
         if str(llm_config.backend or "").lower() in {"rules", "rule_based", "public_welfare"}:
-            response_text = self._rules_backend_response(message, character, tavern)
+            return self._degraded_chat_payload(
+                character_id=character_id,
+                character_name=character.name,
+                response_text="",
+                reason="llm_not_configured",
+                title="AI 后端还没配置",
+                message="规则后端不是可用的 NPC LLM；这间空间需要外部模型或系统公益 LLM。",
+                action="店主可以在 AI 配置里补全连接信息并测试通过。",
+                tavern_status="closed",
+            )
         else:
             try:
                 llm_client_config = _tavern_llm_config_to_client(llm_config)
                 llm_client = create_client(llm_client_config)
                 response = llm_client.complete(prompt_result["messages"])
-                response_text = response.content
+                response_text = str(getattr(response, "content", "") or "").strip()
+                if not response_text:
+                    raise LLMError("LLM returned an empty response")
             except LLMError as e:
-                logger.warning(f"LLM call failed: {e}, falling back to rule-based response")
-                response_text = self._fallback_response(message, character.name)
-                self._mark_tavern_closed(tavern)
-                degradation = self._build_degradation(
+                logger.warning("LLM call failed for tavern=%s character=%s: %s", tavern_id, character_id, e)
+                return self._degraded_chat_payload(
+                    character_id=character_id,
+                    character_name=character.name,
+                    response_text="",
                     reason="llm_error",
                     title="AI 后端暂时不可用",
-                    message="刚才的模型调用失败，已切换为规则回应。",
+                    message="模型调用失败，本轮没有生成 NPC 回复。",
                     action="店主可以在 AI 配置里测试连接，确认 API Key、模型名称或 Base URL。",
                     technical_detail=str(e),
+                    tavern_status=tavern.status,
+                    llm_config=llm_config,
+                    tavern=tavern,
                 )
             except Exception as e:
                 logger.error(f"Unexpected error during LLM call: {e}")
-                response_text = self._fallback_response(message, character.name)
-                self._mark_tavern_closed(tavern)
-                degradation = self._build_degradation(
+                return self._degraded_chat_payload(
+                    character_id=character_id,
+                    character_name=character.name,
+                    response_text="",
                     reason="llm_unexpected_error",
                     title="AI 回应暂时中断",
-                    message="空间后端遇到异常，已切换为规则回应。",
+                    message="空间后端遇到异常，本轮没有生成 NPC 回复。",
                     action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
                     technical_detail=str(e),
+                    tavern_status=tavern.status,
+                    llm_config=llm_config,
+                    tavern=tavern,
                 )
 
         output_rule_result = apply_output_rules(response_text, tavern.output_rules)
@@ -2328,6 +2348,7 @@ class WebService:
             "degradation": degradation,
             "response_mode": self._chat_response_mode(
                 llm_config,
+                tavern=tavern,
                 reason=str((degradation or {}).get("reason") or ""),
             ),
             "output_rules": {
@@ -2373,6 +2394,8 @@ class WebService:
         action: str,
         tavern_status: str,
         technical_detail: str = "",
+        llm_config: Any | None = None,
+        tavern: Any | None = None,
     ) -> dict[str, Any]:
         return {
             "character_id": character_id,
@@ -2387,12 +2410,18 @@ class WebService:
                 action=action,
                 technical_detail=technical_detail,
             ),
-            "response_mode": self._chat_response_mode(reason=reason),
+            "response_mode": self._chat_response_mode(llm_config, tavern=tavern, reason=reason),
             "tavern_status": tavern_status,
             "timestamp": _now_ms(),
         }
 
-    def _chat_response_mode(self, llm_config: Any | None = None, *, reason: str = "") -> dict[str, Any]:
+    def _chat_response_mode(
+        self,
+        llm_config: Any | None = None,
+        *,
+        tavern: Any | None = None,
+        reason: str = "",
+    ) -> dict[str, Any]:
         if reason == "llm_not_configured":
             return {
                 "kind": "llm_not_configured",
@@ -2401,19 +2430,26 @@ class WebService:
                 "requires_owner_llm": True,
             }
         if reason in {"llm_error", "llm_unexpected_error"}:
+            public_welfare_runtime = bool(tavern and _is_system_or_public_welfare_tavern_data(tavern))
             return {
-                "kind": "local_fallback",
-                "label": "规则兜底回应",
-                "message": "模型调用失败，本轮已切换为本地规则回应；店主可以检查模型配置。",
-                "requires_owner_llm": True,
+                "kind": "llm_unavailable",
+                "label": "AI 后端不可用",
+                "message": (
+                    "系统公益 LLM 调用失败，本轮没有生成 NPC 回复；请稍后重试。"
+                    if public_welfare_runtime
+                    else "模型调用失败，本轮没有生成 NPC 回复；请稍后重试或请店主检查模型配置。"
+                ),
+                "requires_owner_llm": not public_welfare_runtime,
             }
-        if llm_config and str(getattr(llm_config, "backend", "") or "").lower() in {"rules", "rule_based", "public_welfare"}:
+        if tavern and _is_system_or_public_welfare_tavern_data(tavern):
             return {
-                "kind": "built_in_rules",
-                "label": "规则模式 / 无 Key 轻量接待",
-                "message": "这间小馆使用本地规则模板接待，不消耗店主 Token；它不是外部 LLM NPC。",
+                "kind": "system_public_welfare_llm",
+                "label": "公益 LLM",
+                "message": "公益空间由系统 LLM 驱动。",
                 "requires_owner_llm": False,
             }
+        if llm_config and str(getattr(llm_config, "backend", "") or "").lower() in {"rules", "rule_based", "public_welfare"}:
+            return self._chat_response_mode(reason="llm_not_configured")
         if reason:
             return {
                 "kind": "unavailable",
@@ -2484,34 +2520,6 @@ class WebService:
         total = counter.count(input_text) + counter.count(output_text)
         return total
 
-    def _rules_backend_response(self, message: str, character: Any, tavern: Any) -> str:
-        """Local, no-network response mode for built-in public welfare taverns."""
-        return resolve_public_welfare_rules_response(
-            message=message,
-            tavern_id=getattr(tavern, "id", "") or "",
-            character_name=getattr(character, "name", "") or "值守员",
-            tavern_name=getattr(tavern, "name", "") or "小馆",
-            first_mes=(getattr(character, "first_mes", "") or "").strip(),
-        )
-
-    def _fallback_response(self, message: str, char_name: str) -> str:
-        """Rule-based fallback when LLM is unavailable."""
-        msg_lower = message.lower()
-        if any(k in msg_lower for k in ["你好", "hi", "hello"]):
-            return "你好，欢迎光临。"
-        if any(k in msg_lower for k in ["再见", "bye", "离开"]):
-            return "后会有期，有空再来。"
-        if any(k in msg_lower for k in ["谢谢", "thank"]):
-            return "不客气。"
-        import random
-        responses = [
-            "我明白了。让我想想……",
-            "嗯，这很有趣。",
-            "你说的这些，我倒是有所耳闻。",
-            "这里每天都有新故事。你想聊什么？",
-        ]
-        return random.choice(responses)
-
     def test_llm_payload(
         self,
         tavern_id: str,
@@ -2540,6 +2548,8 @@ class WebService:
                 top_p=float(llm_config_data.get("top_p", 1.0)),
             )
 
+            if str(cfg.backend or "").strip().lower() in {"rules", "rule_based", "public_welfare"}:
+                return {"ok": False, "message": "规则后端不是可用的 NPC LLM；请配置外部模型或使用系统公益 LLM。"}
             if not cfg.api_key and not cfg.base_url:
                 return {"ok": False, "message": "请提供 API Key 或 Base URL"}
 
@@ -2578,6 +2588,8 @@ class WebService:
                 top_p=float(llm_config_data.get("top_p", 1.0)),
             )
 
+            if str(cfg.backend or "").strip().lower() in {"rules", "rule_based", "public_welfare"}:
+                return {"ok": False, "message": "规则后端不是可用的 NPC LLM；请配置外部模型或使用系统公益 LLM。"}
             if not cfg.api_key and not cfg.base_url:
                 return {"ok": False, "message": "请提供 API Key 或 Base URL"}
 
@@ -3083,8 +3095,6 @@ class WebService:
             token_count=0,
         ))
 
-        rules_backend = str(llm_config.backend or "").lower() in {"rules", "rule_based", "public_welfare"}
-
         # Select speakers
         active_character_ids = [
             member.character_id
@@ -3124,36 +3134,42 @@ class WebService:
                 )
                 prompt_result = prompt_bundle["prompt_result"]
 
-                if rules_backend:
-                    response_text = self._rules_backend_response(message, char, tavern)
-                else:
-                    client = create_client(_tavern_llm_config_to_client(llm_config))
-                    response = client.complete(prompt_result["messages"])
-                    response_text = response.content
+                if str(llm_config.backend or "").lower() in {"rules", "rule_based", "public_welfare"}:
+                    turn_degraded = True
+                    degradation = self._build_degradation(
+                        reason="llm_not_configured",
+                        title="AI 后端还没配置",
+                        message="规则后端不是可用的 NPC LLM；本轮该 NPC 没有生成回复。",
+                        action="店主可以在 AI 配置里补全连接信息并测试通过。",
+                    )
+                    continue
+                client = create_client(_tavern_llm_config_to_client(llm_config))
+                response = client.complete(prompt_result["messages"])
+                response_text = str(getattr(response, "content", "") or "").strip()
+                if not response_text:
+                    raise LLMError("LLM returned an empty response")
             except LLMError as e:
                 logger.warning(f"Group chat LLM error for {speaker.character_id}: {e}")
-                response_text = self._fallback_response(message, char.name)
-                self._mark_tavern_closed(tavern)
                 turn_degraded = True
                 degradation = self._build_degradation(
                     reason="llm_error",
                     title="AI 后端暂时不可用",
-                    message="刚才的模型调用失败，已切换为规则回应。",
+                    message="模型调用失败，本轮该 NPC 没有生成回复。",
                     action="店主可以在 AI 配置里测试连接，确认 API Key、模型名称或 Base URL。",
                     technical_detail=str(e),
                 )
+                continue
             except Exception as e:
                 logger.error(f"Unexpected group chat error for {speaker.character_id}: {e}")
-                response_text = self._fallback_response(message, char.name)
-                self._mark_tavern_closed(tavern)
                 turn_degraded = True
                 degradation = self._build_degradation(
                     reason="llm_unexpected_error",
                     title="AI 回应暂时中断",
-                    message="群聊后端遇到异常，已切换为规则回应。",
+                    message="群聊后端遇到异常，本轮该 NPC 没有生成回复。",
                     action="稍后重试；如果持续出现，请店主重新测试 AI 配置。",
                     technical_detail=str(e),
                 )
+                continue
 
             output_rule_result = apply_output_rules(response_text, tavern.output_rules)
             response_text = output_rule_result["text"]

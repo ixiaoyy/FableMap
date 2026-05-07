@@ -364,18 +364,18 @@ class LLMConfig:
     def is_configured(self) -> bool:
         """检查是否已配置有效的 LLM"""
         no_external_backend = {"rules", "rule_based", "public_welfare"}
-        if self.backend in no_external_backend:
-            return True
+        if str(self.backend or "").strip().lower() in no_external_backend:
+            return False
         local_no_key_backends = {"ollama", "local", "localai"}
         if not self.backend:
             return False
         if self.api_key:
             return True
-        return self.backend in local_no_key_backends and bool(self.base_url)
+        return str(self.backend or "").strip().lower() in local_no_key_backends and bool(self.base_url)
 
 
 def _is_system_or_public_welfare_tavern_data(value: Any, *, tavern_id: str = "") -> bool:
-    """Return true for platform/system taverns allowed to use no-key rules fallback."""
+    """Return true for current built-in/developed spaces that use system公益 LLM."""
     if isinstance(value, dict):
         owner_id = str(value.get("owner_id") or "").strip()
         candidate_id = str(value.get("id") or tavern_id or "").strip()
@@ -419,14 +419,20 @@ def _versioned_system_public_welfare_llm_config(
     if not isinstance(llm_payload, dict):
         return None
     config = LLMConfig.from_dict(llm_payload)
+    if not config.is_configured():
+        return None
     if not include_api_key:
         config.api_key = ""
     config.token_used = token_used
-    return config if config.is_configured() else None
+    return config
 
 
 def _should_hydrate_system_public_welfare_llm_choice(candidate: LLMConfig, versioned: LLMConfig) -> bool:
-    """Only hydrate the explicit versioned test model choice, not arbitrary owner configs."""
+    """Hydrate public-welfare rules/unconfigured markers or the explicit versioned model."""
+    builtin_rules_backends = {"rules", "rule_based", "public_welfare"}
+    candidate_backend = str(candidate.backend or "").strip().lower()
+    if candidate_backend in builtin_rules_backends or not candidate.is_configured():
+        return True
     candidate_model = str(candidate.model or "").strip().lower()
     versioned_model = str(versioned.model or "").strip().lower()
     return bool(candidate_model and versioned_model and candidate_model == versioned_model)
@@ -439,7 +445,7 @@ def _hydrate_system_public_welfare_llm_config(
     tavern_id: str = "",
     include_api_key: bool = True,
 ) -> LLMConfig:
-    """Fill the repo-versioned Kilo test credentials for system/public-welfare opt-in choices."""
+    """Fill repo-versioned system公益 LLM credentials for built-in/public-welfare spaces."""
     if not _is_system_or_public_welfare_tavern_data(value, tavern_id=tavern_id):
         return candidate
     versioned = _versioned_system_public_welfare_llm_config(
@@ -461,10 +467,14 @@ def _system_public_welfare_rules_fallback(
     *,
     tavern_id: str = "",
     token_used: int = 0,
+    include_api_key: bool = True,
 ) -> LLMConfig | None:
     if not _is_system_or_public_welfare_tavern_data(value, tavern_id=tavern_id):
         return None
-    return _public_welfare_rules_fallback_llm_config(token_used=token_used)
+    return _versioned_system_public_welfare_llm_config(
+        include_api_key=include_api_key,
+        token_used=token_used,
+    )
 
 
 @dataclass
@@ -607,6 +617,12 @@ class Tavern:
         self.skill_packs = normalize_skill_pack_settings(self.skill_packs)
 
     def to_dict(self) -> dict[str, Any]:
+        visible_llm_config = _hydrate_system_public_welfare_llm_config(
+            self,
+            self.llm_config,
+            tavern_id=self.id,
+            include_api_key=False,
+        )
         return {
             "id": self.id,
             "name": self.name,
@@ -636,7 +652,7 @@ class Tavern:
             "active_preset_id": self.active_preset_id,
             "memory_policy": deepcopy(self.memory_policy),
             "scene_prompt": self.scene_prompt,
-            "llm_config": self.llm_config.to_dict(),  # 不包含 api_key
+            "llm_config": visible_llm_config.to_dict(),  # 不包含 api_key
             "voice_config": self.voice_config.to_dict(),
             "visit_count": self.visit_count,
             "group_chat_enabled": self.group_chat_enabled,
@@ -660,7 +676,6 @@ class Tavern:
         """公开版本，不包含敏感信息"""
         result = self.to_dict()
         result.pop("password_hash", None)
-        result["llm_config"] = self.llm_config.to_dict()
         result.pop("voice_config", None)
         result["character_claims"] = [
             deepcopy(claim)

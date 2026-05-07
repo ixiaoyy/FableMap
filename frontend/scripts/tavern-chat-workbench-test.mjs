@@ -15,6 +15,8 @@ const workbenchSource = readFileSync(workbenchPath, "utf8")
 assert.ok(existsSync(manageRoutePath), "dedicated tavern owner management route should exist")
 const manageRouteSource = readFileSync(manageRoutePath, "utf8")
 const productChatRoomSource = readFileSync(resolve(__dirname, "../app/product/TavernChatRoom.jsx"), "utf8")
+const productInteriorSource = readFileSync(resolve(__dirname, "../app/product/TavernInterior.jsx"), "utf8")
+const legacyFeatureChatSource = readFileSync(resolve(__dirname, "../app/features/tavern-chat/index.tsx"), "utf8")
 const tavernClientSource = readFileSync(resolve(__dirname, "../app/lib/taverns.ts"), "utf8")
 
 assert.ok(
@@ -56,7 +58,8 @@ for (const snippet of [
   'data-chat-workbench="sillytavern-style"',
   'aria-label="NPC 角色列表"',
   'aria-label="聊天记录"',
-  'placeholder="Type a message',
+  "Type a message",
+  "公共频道：直接发言",
   "Shift+Enter 换行",
   'data-current-npc-stage-card',
   'aria-label="当前 NPC 舞台"',
@@ -150,19 +153,91 @@ assert.ok(
 )
 assert.ok(
   workbenchSource.includes("responseModeLabel") &&
-    workbenchSource.includes("公共空间") &&
+    workbenchSource.includes("公益 LLM") &&
     workbenchSource.includes("AI 对话"),
-  "native tavern workbench should show rules/AI response mode labels",
+  "native tavern workbench should show public-welfare LLM/AI response mode labels",
 )
 assert.ok(
-  workbenchSource.includes("result.response_mode?.message"),
-  "native tavern workbench should prefer backend response_mode guidance after chat",
+  !workbenchSource.includes("result.response_mode?.message") &&
+    !workbenchSource.includes("setNotice") &&
+    !workbenchSource.includes("已进入空间，可以开始和 NPC 聊天。"),
+  "native tavern workbench should not show informational prompt banners after enter/chat",
+)
+assert.ok(
+  !workbenchSource.includes("getTavernChatHistory") &&
+    !workbenchSource.includes("CHAT_HISTORY_LIMIT"),
+  "native tavern workbench should not replay previous chat history in the visible chat area on entry",
+)
+assert.ok(
+  workbenchSource.includes("data-entrance-reactions") &&
+    workbenchSource.includes("entranceReactionMessages") &&
+    workbenchSource.includes("characters.map"),
+  "native tavern workbench should show fresh per-NPC entrance reactions for the current visit",
+)
+assert.ok(
+  workbenchSource.includes('type ChatChannel = "public" | "private"') &&
+    workbenchSource.includes('useState<ChatChannel>("public")') &&
+    workbenchSource.includes("data-public-chat-channel") &&
+    workbenchSource.includes("data-private-chat-channel") &&
+    workbenchSource.includes('data-active-chat-channel={activeChatChannel}'),
+  "native tavern workbench should default to a public chat channel and expose a private NPC channel",
+)
+assert.ok(
+  workbenchSource.includes("sendGroupChat") &&
+    workbenchSource.includes("parsePublicMentionTarget") &&
+    workbenchSource.includes("@NPC名") &&
+    workbenchSource.includes('setActiveChatChannel("private")') &&
+    workbenchSource.includes('setActiveChatChannel("public")'),
+  "native tavern workbench should support public chat @mentions and switch NPC clicks into private chat",
+)
+assert.ok(
+  workbenchSource.includes("hostGuideMessage") &&
+    workbenchSource.includes("店长") &&
+    workbenchSource.includes("gameplay_definitions") &&
+    workbenchSource.includes("任务"),
+  "native tavern workbench should include a local shopkeeper guide that can point visitors to tasks",
 )
 assert.ok(
   productChatRoomSource.includes("getTavernResponseMode") &&
-    productChatRoomSource.includes("公共空间") &&
+    productChatRoomSource.includes("公益 LLM") &&
     productChatRoomSource.includes("AI 对话"),
-  "legacy product chat room should also show a rules/AI response mode badge",
+  "legacy product chat room should also show a public-welfare LLM/AI response mode badge",
+)
+assert.ok(
+  !productChatRoomSource.includes("getTavernChatHistory") &&
+    !productChatRoomSource.includes("getGroupChatHistory") &&
+    !productChatRoomSource.includes("加载对话历史"),
+  "legacy product chat room should not replay previous single or group chat history in the visible chat area",
+)
+assert.ok(
+  productChatRoomSource.includes("data-entrance-reactions") &&
+    productChatRoomSource.includes("entranceReactionMessages") &&
+    productChatRoomSource.includes("characters.map"),
+  "legacy product chat room should show fresh per-NPC entrance reactions for the current visit",
+)
+assert.ok(
+  productChatRoomSource.includes("activeChatChannel") &&
+    productChatRoomSource.includes("data-public-chat-channel") &&
+    productChatRoomSource.includes("data-private-chat-channel") &&
+    productChatRoomSource.includes("parsePublicMentionTarget") &&
+    productChatRoomSource.includes("sendGroupChat") &&
+    productChatRoomSource.includes("店长"),
+  "legacy product chat room should preserve public/private channel semantics with @mention support",
+)
+assert.ok(
+  !productInteriorSource.includes("getTavernChatHistory") &&
+    productInteriorSource.includes("data-entrance-reactions") &&
+    productInteriorSource.includes("entranceReactionMessages") &&
+    productInteriorSource.includes("characters.map"),
+  "legacy tavern interior should not replay visible chat history and should show per-NPC entrance reactions",
+)
+assert.ok(
+  legacyFeatureChatSource.includes("data-entrance-reactions") &&
+    legacyFeatureChatSource.includes("entranceReactionMessages") &&
+    legacyFeatureChatSource.includes("availableCharacters.map") &&
+    !legacyFeatureChatSource.includes("setNotice") &&
+    !legacyFeatureChatSource.includes("已进入空间。"),
+  "legacy layout showcase chat should render local entrance reactions without informational prompt banners",
 )
 
 console.log("tavern-chat-workbench-test: ok")

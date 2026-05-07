@@ -286,4 +286,4 @@ def resolve_public_welfare_rules_response(
             tavern_name=tavern_name,
         )
 
-    return “”
+    return ""

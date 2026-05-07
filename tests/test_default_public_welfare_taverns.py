@@ -4,6 +4,8 @@ import struct
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from fablemap_api.core.default_taverns import (
     DEFAULT_PUBLIC_WELFARE_OWNER_ID,
     DEFAULT_PUBLIC_WELFARE_TAVERN_IDS,
@@ -14,8 +16,31 @@ from fablemap_api.core.web.config import ApiSettings
 from fablemap_api.core.web.service import WebService
 
 
+@pytest.fixture(autouse=True)
+def _stub_public_welfare_web_llm(monkeypatch):
+    class StubResponse:
+        content = "测试 LLM 回复。"
+        model = "stub-model"
+        usage = {"total_tokens": 12}
+
+    class StubClient:
+        def __init__(self, config):
+            self.config = config
+
+        def complete(self, messages):
+            return StubResponse()
+
+    monkeypatch.setattr("fablemap_api.core.web.service.create_client", lambda cfg: StubClient(cfg))
+
+
 def _service(tmpdir: str) -> WebService:
     return WebService(ApiSettings(output_root=Path(tmpdir), fixture_file=None, frontend_root=None))
+
+
+def _assert_public_welfare_visible_llm_config(llm_config: dict) -> None:
+    assert llm_config["backend"] == "custom"
+    assert llm_config["model"] == "kilo-auto/free"
+    assert llm_config.get("api_key", "") == ""
 
 
 def _assert_project_png_asset(sprite_url: str) -> None:
@@ -77,15 +102,16 @@ def test_default_public_welfare_taverns_hide_internal_welfare_label_from_user_co
         assert "官方" not in visible_text, f"{tavern['id']} should not expose official-style label"
 
 
-def test_default_public_welfare_rules_mode_copy_uses_neutral_label():
+def test_default_public_welfare_response_mode_uses_system_public_welfare_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
+        tavern = service.tavern_store.get_tavern("pw_lantern_helpdesk")
         llm_config = service.tavern_store.get_llm_config("pw_lantern_helpdesk")
-        response_mode = service._chat_response_mode(llm_config)
+        response_mode = service._chat_response_mode(llm_config, tavern=tavern)
         visible_text = "\n".join(_collect_strings(response_mode))
 
-        assert response_mode["kind"] == "built_in_rules"
-        assert "公益" not in visible_text
+        assert response_mode["kind"] == "system_public_welfare_llm"
+        assert "公益 LLM" in visible_text
         assert "官方" not in visible_text
 
 
@@ -119,7 +145,7 @@ def test_default_public_welfare_taverns_are_seeded_and_discoverable():
             assert tavern["access"] == "public"
             assert tavern["status"] == "open"
             assert tavern["owner_id"] == DEFAULT_PUBLIC_WELFARE_OWNER_ID
-            assert tavern["llm_config"]["backend"] == "rules"
+            _assert_public_welfare_visible_llm_config(tavern["llm_config"])
             assert tavern["llm_config"].get("api_key", "") == ""
             assert len(tavern["characters"]) >= 3
             assert tavern["world_info"]
@@ -165,7 +191,7 @@ def test_default_public_welfare_every_seeded_character_can_chat():
             )
             assert entered["ok"] is True
             assert entered["status"] == "open"
-            assert tavern["llm_config"]["backend"] == "rules"
+            _assert_public_welfare_visible_llm_config(tavern["llm_config"])
             assert len(tavern["characters"]) >= 3
 
             for character in tavern["characters"]:
@@ -184,6 +210,7 @@ def test_default_public_welfare_every_seeded_character_can_chat():
                 assert response["character_id"] == character["id"]
                 assert response["character_name"] == character["name"]
                 assert response["response"].strip(), f"{tavern_id}/{character['id']} must return chat text"
+                assert response["response_mode"]["kind"] == "system_public_welfare_llm"
 
                 sessions = service.tavern_store.list_chat_sessions(
                     tavern_id,
@@ -194,7 +221,7 @@ def test_default_public_welfare_every_seeded_character_can_chat():
                 assert len(sessions) == 1, f"{tavern_id}/{character['id']} must persist a chat session"
                 assert sessions[0]["message_count"] == 2
 
-            assert service.tavern_store.get_token_usage(tavern_id) == 0
+            assert service.tavern_store.get_token_usage(tavern_id) > 0
 
 
 def test_default_public_welfare_characters_have_direct_neutral_assets():
@@ -422,7 +449,7 @@ def test_third_shelf_observatory_contains_complete_alien_convenience_tavern():
         assert tavern["name"] == "第三货架秘密社"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
-        assert tavern["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(tavern["llm_config"])
         assert tavern["llm_config"].get("api_key", "") == ""
         assert len(tavern["characters"]) == 4
         assert len(tavern["world_info"]) >= 8
@@ -489,7 +516,7 @@ def test_midnight_commission_board_contains_text_adventure_tavern():
         assert tavern["name"] == "午夜小委托板"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
-        assert tavern["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(tavern["llm_config"])
         assert tavern["llm_config"].get("api_key", "") == ""
         assert len(tavern["characters"]) >= 3
         assert len(tavern["world_info"]) >= 6
@@ -519,7 +546,7 @@ def test_after_school_hero_supply_contains_emotional_hero_tavern():
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
         assert tavern["layout_style"] == "quest-play"
-        assert tavern["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(tavern["llm_config"])
         assert tavern["llm_config"].get("api_key", "") == ""
         assert "秋叶原" in tavern["address"]
         assert 35.68 < tavern["lat"] < 35.71
@@ -583,7 +610,7 @@ def test_jingan_catbell_refuge_contains_safe_original_catgirl_npc():
         assert tavern["name"] == "静安猫铃小馆"
         assert tavern["access"] == "public"
         assert tavern["status"] == "open"
-        assert tavern["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(tavern["llm_config"])
         assert tavern["llm_config"].get("api_key", "") == ""
         assert "静安寺" in tavern["address"]
         assert 31.20 < tavern["lat"] < 31.24
@@ -670,7 +697,7 @@ def test_hospital_night_care_contains_nurse_npc_and_medical_boundaries():
         assert tavern["status"] == "open"
         assert tavern["layout_style"] == "npc-chat"
         assert tavern["place_type"] == "hospital"
-        assert tavern["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(tavern["llm_config"])
         assert tavern["llm_config"].get("api_key", "") == ""
         assert "公共医院" in tavern["address"]
         assert len(tavern["characters"]) == 3
@@ -758,7 +785,7 @@ def test_hospital_night_care_contains_nurse_npc_and_medical_boundaries():
             assert forbidden not in combined_prompt
 
 
-def test_hospital_night_care_chat_uses_safe_triage_rules_response():
+def test_hospital_night_care_chat_uses_system_public_welfare_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = service.get_tavern_payload("pw_hospital_night_care", user_id="")
@@ -781,10 +808,9 @@ def test_hospital_night_care_chat_uses_safe_triage_rules_response():
 
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert "分诊" in response["response"]
-        assert "立即求助" in response["response"] or "记录信息" in response["response"]
-        assert "诊断结果" not in response["response"]
-        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+        assert response["response"] == "测试 LLM 回复。"
+        assert response["response_mode"]["kind"] == "system_public_welfare_llm"
+        assert service.tavern_store.get_token_usage(tavern["id"]) > 0
 
 
 def test_community_repair_includes_heguang_communication_npc():
@@ -799,7 +825,7 @@ def test_community_repair_includes_heguang_communication_npc():
 
         assert heguang is not None
         assert tavern["access"] == "public"
-        assert tavern["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(tavern["llm_config"])
         assert heguang["id"] == "char_pw_heguang"
         assert heguang["tavern_id"] == "pw_community_repair"
         for field in ("description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
@@ -907,7 +933,7 @@ def test_default_public_welfare_seed_is_readable_when_store_is_corrupt():
         assert set(DEFAULT_PUBLIC_WELFARE_TAVERN_IDS).issubset(seeded_ids)
         helpdesk = service.get_tavern_payload("pw_lantern_helpdesk", user_id="visitor_public_welfare")
         assert helpdesk["name"] == "小灯塔问路铺"
-        assert helpdesk["llm_config"]["backend"] == "rules"
+        _assert_public_welfare_visible_llm_config(helpdesk["llm_config"])
         assert taverns_file.read_text(encoding="utf-8") == corrupt_payload
 
 
@@ -978,7 +1004,7 @@ def test_default_public_welfare_seed_read_fallback_repairs_partial_seed_records(
         assert stored["pw_third_shelf_observatory"] == partial_seed_record
 
 
-def test_default_public_welfare_tavern_chat_uses_local_rules_backend():
+def test_default_public_welfare_tavern_chat_uses_system_public_welfare_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = service.get_tavern_payload("pw_lantern_helpdesk", user_id="")
@@ -1002,8 +1028,9 @@ def test_default_public_welfare_tavern_chat_uses_local_rules_backend():
 
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert "新手" in response["response"] or "开店" in response["response"]
-        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+        assert response["response"] == "测试 LLM 回复。"
+        assert response["response_mode"]["kind"] == "system_public_welfare_llm"
+        assert service.tavern_store.get_token_usage(tavern["id"]) > 0
 
         sessions = service.tavern_store.list_chat_sessions(
             tavern["id"],
@@ -1110,7 +1137,7 @@ def test_normal_tavern_without_config_still_closes_when_free_model_is_unconfigur
         assert updated["status"] == "closed"
 
 
-def test_third_shelf_observatory_chat_uses_alien_convenience_rules_response():
+def test_third_shelf_observatory_chat_uses_system_public_welfare_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = service.get_tavern_payload("pw_third_shelf_observatory", user_id="")
@@ -1134,9 +1161,9 @@ def test_third_shelf_observatory_chat_uses_alien_convenience_rules_response():
 
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert "随便" in response["response"]
-        assert "高危词" in response["response"] or "随机授权" in response["response"]
-        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+        assert response["response"] == "测试 LLM 回复。"
+        assert response["response_mode"]["kind"] == "system_public_welfare_llm"
+        assert service.tavern_store.get_token_usage(tavern["id"]) > 0
 
 
 def test_third_shelf_observatory_generic_chat_stays_in_character_voice():
@@ -1155,16 +1182,16 @@ def test_third_shelf_observatory_generic_chat_stays_in_character_voice():
 
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert response["response"].strip()
-        assert "便利店" in response["response"] or "人类" in response["response"]
+        assert response["response"] == "测试 LLM 回复。"
+        assert response["response_mode"]["kind"] == "system_public_welfare_llm"
         assert "这里的气味和灯光让我想到" not in response["response"]
         assert "氛围是" not in response["response"]
         assert "scene_prompt" not in response["response"]
         assert "我听见了——天气怎么样" not in response["response"]
-        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+        assert service.tavern_store.get_token_usage(tavern["id"]) > 0
 
 
-def test_midnight_commission_board_chat_uses_text_adventure_rules_response():
+def test_midnight_commission_board_chat_uses_system_public_welfare_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = service.get_tavern_payload("pw_midnight_commission_board", user_id="")
@@ -1187,12 +1214,12 @@ def test_midnight_commission_board_chat_uses_text_adventure_rules_response():
 
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert "线索" in response["response"]
-        assert "位置" in response["response"] or "可确认细节" in response["response"]
-        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+        assert response["response"] == "测试 LLM 回复。"
+        assert response["response_mode"]["kind"] == "system_public_welfare_llm"
+        assert service.tavern_store.get_token_usage(tavern["id"]) > 0
 
 
-def test_after_school_hero_supply_chat_uses_hero_dream_rules_response():
+def test_after_school_hero_supply_chat_uses_system_public_welfare_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = service.get_tavern_payload("pw_after_school_hero_supply", user_id="")
@@ -1215,8 +1242,8 @@ def test_after_school_hero_supply_chat_uses_hero_dream_rules_response():
 
         assert response["degraded"] is False
         assert response["tavern_status"] == "open"
-        assert "英雄名" in response["response"]
-        assert "旧英雄卡" in response["response"] or "贴纸" in response["response"]
-        assert service.tavern_store.get_token_usage(tavern["id"]) == 0
+        assert response["response"] == "测试 LLM 回复。"
+        assert response["response_mode"]["kind"] == "system_public_welfare_llm"
+        assert service.tavern_store.get_token_usage(tavern["id"]) > 0
 
 

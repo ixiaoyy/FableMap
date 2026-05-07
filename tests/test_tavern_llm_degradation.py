@@ -33,7 +33,7 @@ def _create_open_tavern(service: WebService) -> Tavern:
     return tavern
 
 
-def test_llm_failure_returns_degradation_payload_and_closes_tavern(monkeypatch):
+def test_llm_failure_returns_degradation_payload_without_local_npc_reply(monkeypatch):
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = _create_open_tavern(service)
@@ -58,12 +58,13 @@ def test_llm_failure_returns_degradation_payload_and_closes_tavern(monkeypatch):
         assert payload["degraded"] is True
         assert payload["degradation"]["reason"] == "llm_error"
         assert payload["degradation"]["technical_detail"] == "upstream timeout"
-        assert payload["tavern_status"] == "closed"
-        assert payload["response"]
-        assert service.tavern_store.get_tavern(tavern.id).status == "closed"
+        assert payload["tavern_status"] == "open"
+        assert payload["response"] == ""
+        assert payload["response_mode"]["kind"] == "llm_unavailable"
+        assert service.tavern_store.get_tavern(tavern.id).status == "open"
 
         history = service.tavern_store.get_chat_history(tavern.id, "visitor_degrade", "char_degrade")
-        assert [message.role for message in history] == ["user", "assistant"]
+        assert history == []
 
 
 def test_missing_llm_config_returns_friendly_degradation_and_closes_tavern():
@@ -86,7 +87,7 @@ def test_missing_llm_config_returns_friendly_degradation_and_closes_tavern():
         assert service.tavern_store.get_tavern(tavern.id).status == "closed"
 
 
-def test_rules_backend_returns_explicit_rules_response_mode():
+def test_rules_backend_is_not_treated_as_npc_llm():
     with TemporaryDirectory() as tmpdir:
         service = _service(tmpdir)
         tavern = _create_open_tavern(service)
@@ -102,12 +103,11 @@ def test_rules_backend_returns_explicit_rules_response_mode():
             visitor_id="visitor_rules",
         )
 
-        assert payload["degraded"] is False
-        assert payload["response_mode"]["kind"] == "built_in_rules"
-        assert payload["response_mode"]["requires_owner_llm"] is False
-        assert "规则模式" in payload["response_mode"]["label"]
-        assert "system_prompt" not in payload["response"]
-        assert "scene_prompt" not in payload["response"]
+        assert payload["degraded"] is True
+        assert payload["response"] == ""
+        assert payload["response_mode"]["kind"] == "llm_not_configured"
+        assert payload["response_mode"]["requires_owner_llm"] is True
+        assert "配置" in payload["response_mode"]["message"]
 
 
 def test_visitor_name_is_used_in_prompt_and_persisted(monkeypatch):

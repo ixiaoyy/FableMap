@@ -304,8 +304,9 @@ class OwnerConfigApplicationMixin:
                 model_status = "llm_not_configured"
                 model_error = "AI 后端还没配置；未调用模型。"
             elif str(llm_config.backend or "").strip().lower() in {"rules", "rule_based", "public_welfare"}:
-                assistant_message = self._rules_response(character.name, message, tavern)
-                model_status = "rules_backend"
+                degraded = True
+                model_status = "llm_not_configured"
+                model_error = "规则后端不是可用的 NPC LLM；未调用模型。"
             else:
                 try:
                     client = create_client(
@@ -320,6 +321,8 @@ class OwnerConfigApplicationMixin:
                         )
                     )
                     assistant_message = clean_text(client.complete(messages).content, max_length=2400)
+                    if not assistant_message:
+                        raise LLMError("LLM returned an empty response")
                     model_called = True
                     model_status = "called"
                 except LLMError as exc:

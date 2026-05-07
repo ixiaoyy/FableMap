@@ -1,9 +1,11 @@
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from fablemap_api.core.default_taverns import DEFAULT_PUBLIC_WELFARE_OWNER_ID
+from fablemap_api.core.llm_clients import LLMError
 from fablemap_api.infrastructure.settings import ApiSettings
 from fablemap_api.main import create_app
 
@@ -11,6 +13,24 @@ from fablemap_api.main import create_app
 OWNER_ID = "owner-runtime"
 VISITOR_ID = "visitor-runtime"
 OTHER_VISITOR_ID = "visitor-other"
+
+
+@pytest.fixture(autouse=True)
+def _stub_runtime_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    class StubResponse:
+        content = "测试 LLM 回复。"
+        model = "stub-model"
+        usage = {"total_tokens": 12}
+
+    class StubClient:
+        def __init__(self, config: Any) -> None:
+            self.config = config
+
+        def complete(self, messages: list[dict[str, Any]]) -> StubResponse:
+            return StubResponse()
+
+    monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: StubClient(cfg))
+    monkeypatch.setattr("fablemap_api.application.services.owner_config.create_client", lambda cfg: StubClient(cfg))
 
 
 def _client(tmp_path: Path) -> TestClient:
@@ -32,7 +52,7 @@ def _create_tavern(
             "lon": 121.4737,
             "access": "public",
             "scene_prompt": "吧台悬着蓝色灯牌。",
-            "llm_config": llm_config or {"backend": "rules", "model": "rules", "api_key": "owner-secret"},
+            "llm_config": llm_config or {"backend": "openai", "model": "gpt-test-runtime", "api_key": "sk-test-runtime"},
         },
     )
     assert response.status_code == 200
@@ -65,7 +85,8 @@ def test_v1_llm_probe_and_voice_config_endpoints(tmp_path: Path) -> None:
         json={"backend": "rules", "model": "rules"},
     )
     assert direct_probe.status_code == 200
-    assert direct_probe.json()["ok"] is True
+    assert direct_probe.json()["ok"] is False
+    assert "不是可用的 NPC LLM" in direct_probe.json()["message"]
     assert "api_key" not in direct_probe.text
 
     tavern_probe = client.post(
@@ -74,7 +95,8 @@ def test_v1_llm_probe_and_voice_config_endpoints(tmp_path: Path) -> None:
         json={"backend": "rules", "model": "rules"},
     )
     assert tavern_probe.status_code == 200
-    assert tavern_probe.json()["ok"] is True
+    assert tavern_probe.json()["ok"] is False
+    assert "不是可用的 NPC LLM" in tavern_probe.json()["message"]
 
     missing_secret = client.post("/api/v1/llm/test-config", json={"backend": "openai", "model": "gpt-test"})
     assert missing_secret.status_code == 200
@@ -117,16 +139,35 @@ def test_v1_llm_probe_and_voice_config_endpoints(tmp_path: Path) -> None:
     assert browser_stt.json()["error"] == "浏览器 STT 无需上传到后端"
 
 
-def test_v1_after_school_hero_supply_chat_uses_hero_dream_rules_response(tmp_path: Path) -> None:
+def test_v1_public_welfare_seed_chat_uses_system_public_welfare_llm(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_configs: list[Any] = []
+
+    class DummyResponse:
+        content = "系统公益 LLM：我会用小灯牌帮你把问题拆成一步。"
+        model = "kilo-auto/free"
+        usage = {"total_tokens": 19}
+
+    class DummyClient:
+        def __init__(self, config: Any) -> None:
+            captured_configs.append(config)
+
+        def complete(self, messages: list[dict[str, Any]]) -> DummyResponse:
+            return DummyResponse()
+
+    monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: DummyClient(cfg))
+
     client = _client(tmp_path)
 
     response = client.post(
-        "/api/v1/taverns/pw_after_school_hero_supply/chat",
-        headers={"X-User-Id": "visitor-v1-hero"},
+        "/api/v1/taverns/pw_lantern_helpdesk/chat",
+        headers={"X-User-Id": "visitor-v1-public-welfare-llm"},
         json={
-            "character_id": "char_pw_aheng",
-            "message": "我想找回小时候的英雄名，但现在说出来有点尴尬。",
-            "visitor_id": "visitor-v1-hero",
+            "character_id": "char_pw_xiaozhou",
+            "message": "你好，我是新手，怎么玩？",
+            "visitor_id": "visitor-v1-public-welfare-llm",
             "visitor_name": "测试旅人",
         },
     )
@@ -135,12 +176,19 @@ def test_v1_after_school_hero_supply_chat_uses_hero_dream_rules_response(tmp_pat
     payload = response.json()
     assert payload["degraded"] is False
     assert payload["tavern_status"] == "open"
-    assert "空白旧英雄卡推到灯下" in payload["response"]
-    assert "英雄名" in payload["response"]
-    assert "贴纸" in payload["response"]
+    assert payload["response"] == "系统公益 LLM：我会用小灯牌帮你把问题拆成一步。"
+    assert payload["response_mode"]["kind"] == "system_public_welfare_llm"
+    assert payload["response_mode"]["requires_owner_llm"] is False
+    assert "公益 LLM" in payload["response_mode"]["label"]
+    assert captured_configs
+    assert captured_configs[0].backend == "custom"
+    assert captured_configs[0].model == "kilo-auto/free"
+    assert captured_configs[0].base_url == "https://api.kilo.ai/api/gateway"
+    assert captured_configs[0].api_key
+    assert client.app.state.taverns.store.get_token_usage("pw_lantern_helpdesk") > 0
 
 
-def test_v1_third_shelf_generic_rules_chat_does_not_echo_scene_prompt(tmp_path: Path) -> None:
+def test_v1_public_welfare_default_rules_marker_is_not_reported_to_visitors(tmp_path: Path) -> None:
     client = _client(tmp_path)
 
     response = client.post(
@@ -159,45 +207,53 @@ def test_v1_third_shelf_generic_rules_chat_does_not_echo_scene_prompt(tmp_path: 
     assert payload["degraded"] is False
     assert payload["tavern_status"] == "open"
     assert payload["response"].strip()
-    assert "便利店" in payload["response"] or "人类" in payload["response"]
+    assert payload["response_mode"]["kind"] == "system_public_welfare_llm"
     assert "这里的气味和灯光让我想到" not in payload["response"]
     assert "氛围是" not in payload["response"]
     assert "我听见了——天气怎么样" not in payload["response"]
-    assert client.app.state.taverns.store.get_token_usage("pw_third_shelf_observatory") == 0
+    combined_text = f"{payload['response']}\n{payload['response_mode']}"
+    assert "built_in_rules" not in combined_text
+    assert "public-welfare-rules-v1" not in combined_text
+    assert "无 Key" not in combined_text
+    assert client.app.state.taverns.store.get_token_usage("pw_third_shelf_observatory") > 0
 
 
-def test_v1_public_welfare_rules_chat_reports_rules_mode_without_internal_fields(tmp_path: Path) -> None:
+def test_v1_llm_failure_does_not_return_local_rules_npc_reply(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FailingClient:
+        def __init__(self, config: Any) -> None:
+            self.config = config
+
+        def complete(self, messages: list[dict[str, Any]]) -> Any:
+            raise LLMError("upstream unavailable")
+
+    monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: FailingClient(cfg))
+
     client = _client(tmp_path)
+    tavern_id, character_ids = _create_tavern(client)
 
     response = client.post(
-        "/api/v1/taverns/pw_after_school_hero_supply/chat",
-        headers={"X-User-Id": "visitor-v1-rules-mode"},
+        f"/api/v1/taverns/{tavern_id}/chat",
+        headers={"X-User-Id": VISITOR_ID},
         json={
-            "character_id": "char_pw_aheng",
+            "character_id": character_ids[0],
             "message": "我想修补旧道具，也想知道怎么玩。",
-            "visitor_id": "visitor-v1-rules-mode",
+            "visitor_id": VISITOR_ID,
             "visitor_name": "测试旅人",
         },
     )
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["degraded"] is False
-    assert payload["tavern_status"] == "open"
-    assert payload["response_mode"]["kind"] == "built_in_rules"
-    assert payload["response_mode"]["requires_owner_llm"] is False
-    assert "规则模式" in payload["response_mode"]["label"]
-    assert "无 Key" in payload["response_mode"]["label"]
-
-    combined_text = f"{payload['response']}\n{payload['response_mode']}"
-    for internal_field in (
-        "system_prompt",
-        "scene_prompt",
-        "prompt_blocks",
-        "backend=rules",
-        "public-welfare-rules-v1",
-    ):
-        assert internal_field not in combined_text
+    assert payload["degraded"] is True
+    assert payload["degradation"]["reason"] == "llm_error"
+    assert payload["response"] == ""
+    assert payload["response_mode"]["kind"] == "llm_unavailable"
+    assert "规则" not in payload["response_mode"]["message"]
+    history = client.app.state.taverns.store.get_chat_history(tavern_id, VISITOR_ID, character_ids[0])
+    assert history == []
 
 
 def test_v1_user_tavern_without_llm_reports_configuration_mode(tmp_path: Path) -> None:
@@ -226,6 +282,7 @@ def test_v1_user_tavern_without_llm_reports_configuration_mode(tmp_path: Path) -
     assert payload["response_mode"]["requires_owner_llm"] is True
     assert "配置" in payload["response_mode"]["message"]
     assert "AI NPC" not in payload["response_mode"]["label"]
+    assert payload["response"] == ""
     assert payload["tavern_status"] == "closed"
 
 
@@ -454,7 +511,7 @@ def test_v1_group_chat_respects_response_cap_and_round_robin_across_turns(tmp_pa
     assert [message["role"] for message in history.json()["messages"]].count("assistant") == 2
 
 
-def test_v1_group_chat_rules_backend_creates_memory_and_respects_silent_character(tmp_path: Path) -> None:
+def test_v1_group_chat_llm_creates_memory_and_respects_silent_character(tmp_path: Path) -> None:
     client = _client(tmp_path)
     tavern_id, character_ids = _create_tavern(client)
 
@@ -516,7 +573,7 @@ def test_v1_group_chat_rules_backend_creates_memory_and_respects_silent_characte
         memory["scope"] == "visitor_tavern" and "蓝莓派" in memory["content"]
         for memory in memories.json()["memories"]
     )
-    assert client.app.state.taverns.store.get_token_usage(tavern_id) == 0
+    assert client.app.state.taverns.store.get_token_usage(tavern_id) > 0
 
 
 def test_v1_group_chat_rejects_cross_visitor_impersonation(tmp_path: Path) -> None:

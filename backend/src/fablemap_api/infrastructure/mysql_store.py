@@ -614,11 +614,20 @@ class MySQLTavernStore:
                 )
                 if config.is_configured():
                     return config
-                return _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id, token_used=config.token_used) or config
+                return _system_public_welfare_rules_fallback(
+                    tavern_model,
+                    tavern_id=tavern_id,
+                    token_used=config.token_used,
+                    include_api_key=False,
+                ) or config
 
             # 回退：从 tavern 表读取（内置规则配置）
             tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
-            fallback = _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id)
+            fallback = _system_public_welfare_rules_fallback(
+                tavern_model,
+                tavern_id=tavern_id,
+                include_api_key=False,
+            )
             if fallback:
                 return fallback
             if tavern_model and tavern_model.voice_config:
@@ -643,9 +652,18 @@ class MySQLTavernStore:
                 )
                 if config.is_configured():
                     return config
-                return _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id, token_used=config.token_used) or config
+                return _system_public_welfare_rules_fallback(
+                    tavern_model,
+                    tavern_id=tavern_id,
+                    token_used=config.token_used,
+                    include_api_key=True,
+                ) or config
             tavern_model = session.query(TavernModel).filter(TavernModel.id == tavern_id).first()
-            fallback = _system_public_welfare_rules_fallback(tavern_model, tavern_id=tavern_id)
+            fallback = _system_public_welfare_rules_fallback(
+                tavern_model,
+                tavern_id=tavern_id,
+                include_api_key=True,
+            )
             if fallback:
                 return fallback
             return None

@@ -27,8 +27,6 @@ import {
   getCharacterSprites,
   getExpressions,
   getGameplays,
-  getGroupChatHistory,
-  getTavernChatHistory,
   getVoiceConfig,
   inferExpression,
   listStateCards,
@@ -115,7 +113,7 @@ const EXPRESSION_LABELS = {
 
 const EXPRESSION_SOURCE_LABELS = {
   default: '默认表情',
-  fallback: '临时规则回应',
+  fallback: '服务提示',
   keyword: '关键词推断',
   llm: 'AI 推断',
   manual: '手动选择',
@@ -158,11 +156,20 @@ function getGroupStrategyLabel(strategy) {
 function getTavernResponseMode(tavern) {
   const llmConfig = tavern?.llm_config && typeof tavern.llm_config === 'object' ? tavern.llm_config : {}
   const backend = String(llmConfig.backend || '').trim().toLowerCase()
+  const ownerId = String(tavern?.owner_id || '').trim()
+  const tavernId = String(tavern?.id || '').trim()
+  if (ownerId === 'system_public_welfare' || ownerId.startsWith('system_') || tavernId.startsWith('pw_')) {
+    return {
+      label: '公益 LLM',
+      className: 'is-rules',
+      title: '公益空间',
+    }
+  }
   if (['rules', 'rule_based', 'public_welfare'].includes(backend)) {
     return {
-      label: '公共空间',
-      className: 'is-rules',
-      title: '欢迎来到完全开放的公共空间，NPC 会热情接待你。',
+      label: '需配置 LLM',
+      className: 'is-unconfigured',
+      title: '规则后端不能生成 NPC 回复；店主需要配置外部模型。',
     }
   }
   if (tavern?.status === 'closed' && !['rules', 'rule_based', 'public_welfare'].includes(backend)) {
@@ -270,11 +277,86 @@ function normalizeChatTimestamp(timestamp) {
   return Number.isNaN(parsed) ? Date.now() : parsed
 }
 
+function entranceReactionContent(character, roomName) {
+  const firstMessage = String(character?.first_mes || '').trim()
+  if (firstMessage) return firstMessage
+  const name = character?.name || '这里的 NPC'
+  return `你刚走进${roomName || '这间空间'}，${name}向你点了点头。`
+}
+
+function entranceReactionMessages(characters, roomName) {
+  const timestamp = Date.now()
+  return (Array.isArray(characters) ? characters : []).map((character, index) => ({
+    id: `entrance-${character?.id || index}-${timestamp}`,
+    role: 'assistant',
+    content: entranceReactionContent(character, roomName),
+    timestamp,
+    character,
+    expression: DEFAULT_EXPRESSION,
+    expressionSource: 'default',
+  }))
+}
+
+const SHOPKEEPER_CHARACTER = {
+  id: '__shopkeeper__',
+  name: '店长',
+  avatar: '',
+  sprites: {},
+}
+
+function hasTavernTasks(tavern) {
+  return Array.isArray(tavern?.gameplay_definitions) && tavern.gameplay_definitions.length > 0
+}
+
+function hostGuideMessage(tavern, characters = [], roomName = '') {
+  const timestamp = Date.now()
+  const hasTasks = hasTavernTasks(tavern)
+  const firstNpc = characters[0]
+  const mentionHint = firstNpc
+    ? `公共聊天支持 @NPC名，比如 @${firstNpc.name || firstNpc.id}。`
+    : '等店主添加 NPC 后，就可以直接找他们聊天。'
+  return {
+    id: `host-guide-${timestamp}`,
+    role: 'assistant',
+    content: hasTasks
+      ? `我是店长，欢迎来到${roomName || tavern?.name || '这间空间'}。可以先在公共频道和大家打招呼，${mentionHint} 这间空间现在有任务，可以从任务入口开始。`
+      : `我是店长，欢迎来到${roomName || tavern?.name || '这间空间'}。可以先在公共频道和大家打招呼，${mentionHint} 想私聊就点左侧某个 NPC。`,
+    timestamp,
+    character: SHOPKEEPER_CHARACTER,
+    expression: DEFAULT_EXPRESSION,
+    expressionSource: 'default',
+  }
+}
+
+function publicEntranceMessages(characters, tavern, roomName = '') {
+  return [...entranceReactionMessages(characters, roomName || tavern?.name), hostGuideMessage(tavern, characters, roomName)]
+}
+
+function normalizeMentionName(value = '') {
+  return String(value || '').trim().replace(/^@/, '').toLowerCase()
+}
+
+function parsePublicMentionTarget(message, characters = []) {
+  const match = String(message || '').trim().match(/^@([^\s，,：:]+)\s*[:：,，]?\s*(.*)$/)
+  if (!match) return null
+  const mentionName = normalizeMentionName(match[1])
+  const character = characters.find((candidate) => (
+    normalizeMentionName(candidate?.name) === mentionName ||
+    normalizeMentionName(candidate?.id) === mentionName
+  ))
+  if (!character) return null
+  const directMessage = String(match[2] || '').trim() || String(message || '').trim().replace(/^@[^\s，,：:]+/, '').trim()
+  return {
+    character,
+    message: directMessage || String(message || '').trim(),
+  }
+}
+
 // ─────────────────────────────────────────
 // Character Sidebar
 // ─────────────────────────────────────────
 
-function CharacterSidebar({ characters, selectedChar, onSelectChar }) {
+function CharacterSidebar({ characters, selectedChar, activeChatChannel = 'public', onSelectPublicChat, onSelectChar }) {
   const [expanded, setExpanded] = useState(false)
 
   if (!characters || characters.length === 0) {
@@ -301,11 +383,28 @@ function CharacterSidebar({ characters, selectedChar, onSelectChar }) {
         </button>
       </div>
 
+      <button
+        type="button"
+        data-public-chat-channel
+        className={`char-item ${activeChatChannel === 'public' ? 'active' : ''}`}
+        onClick={() => {
+          onSelectPublicChat()
+          setExpanded(false)
+        }}
+      >
+        <div className="char-avatar public-channel-icon">👥</div>
+        <div className="char-info">
+          <div className="char-name">公共聊天</div>
+          <div className="char-archetype muted">@NPC名 找指定角色</div>
+        </div>
+      </button>
+
       <div className="char-list">
         {characters.map((char) => (
           <div
             key={char.id}
-            className={`char-item ${selectedChar?.id === char.id ? 'active' : ''}`}
+            data-private-chat-channel
+            className={`char-item ${activeChatChannel === 'private' && selectedChar?.id === char.id ? 'active' : ''}`}
             onClick={() => {
               onSelectChar(char)
               setExpanded(false)
@@ -849,9 +948,9 @@ export default function TavernChatRoom({
 }) {
   const [selectedChar, setSelectedChar] = useState(characters[0] || null)
   const [messages, setMessages] = useState([])
+  const [activeChatChannel, setActiveChatChannel] = useState('public')
   const [sending, setSending] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [currentExpression, setCurrentExpression] = useState(DEFAULT_EXPRESSION)
   const [expressionSource, setExpressionSource] = useState('default')
   const [expressionBusy, setExpressionBusy] = useState(false)
@@ -879,6 +978,14 @@ export default function TavernChatRoom({
   const groupChatEnabled = Boolean(tavern?.group_chat_enabled && characters.length > 1)
   const groupChatConfig = tavern?.group_chat_config || {}
   const tavernResponseMode = getTavernResponseMode(tavern)
+  const characterSignature = useMemo(
+    () => characters.map((character) => [
+      character?.id || '',
+      character?.name || '',
+      character?.first_mes || '',
+    ].join(':')).join('|'),
+    [characters],
+  )
   const playMode = useMemo(
     () => inferTavernPlayMode(tavern || { characters }, selectedChar),
     [tavern, characters, selectedChar],
@@ -899,6 +1006,14 @@ export default function TavernChatRoom({
     if (!activeGameplaySession?.gameplay_id) return null
     return gameplays.find((gameplay) => gameplay?.id === activeGameplaySession.gameplay_id) || null
   }, [gameplays, activeGameplaySession?.gameplay_id])
+  const visibleMessages = useMemo(() => {
+    if (activeChatChannel === 'public') {
+      return messages.filter((message) => message.channel !== 'private')
+    }
+    return messages.filter((message) => (
+      message.channel === 'private' && message.character?.id === selectedChar?.id
+    ))
+  }, [messages, activeChatChannel, selectedChar?.id])
 
   // Auto-select first character
   useEffect(() => {
@@ -907,24 +1022,15 @@ export default function TavernChatRoom({
     }
   }, [characters])
 
-  // Load chat history when character changes
+  // Show fresh local entrance reactions for this visit only; backend history/memory stays persisted.
   useEffect(() => {
-    if (groupChatEnabled) return
-    if (selectedChar && roomId) {
-      loadHistory()
-    }
-  }, [selectedChar?.id, roomId, groupChatEnabled])
-
-  useEffect(() => {
-    if (!groupChatEnabled) return
     setGroupSessionError('')
-    loadGroupHistory()
-  }, [
-    roomId,
-    visitorId,
-    groupChatEnabled,
-    characters.map((character) => character.id).join('|'),
-  ])
+    setActiveChatChannel('public')
+    setMessages(publicEntranceMessages(characters, tavern, roomName).map((message) => ({
+      ...message,
+      channel: 'public',
+    })))
+  }, [roomId, roomName, characterSignature, tavern?.gameplay_definitions])
 
   useEffect(() => {
     setVisitorMemoryState(entryState)
@@ -951,22 +1057,6 @@ export default function TavernChatRoom({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  // Add opening message when character changes
-  useEffect(() => {
-    if (groupChatEnabled) return
-    if (selectedChar?.first_mes && messages.length === 0) {
-      setMessages([{
-        id: `init-${Date.now()}`,
-        role: 'assistant',
-        content: selectedChar.first_mes,
-        timestamp: Date.now(),
-        character: selectedChar,
-        expression: DEFAULT_EXPRESSION,
-        expressionSource: 'default',
-      }])
-    }
-  }, [selectedChar?.id, groupChatEnabled])
 
   // Load sprites and expressions when character changes
   useEffect(() => {
@@ -1034,7 +1124,7 @@ export default function TavernChatRoom({
     setExpressionSource('manual')
   }
 
-  function buildAssistantMessage({ id, content, timestamp = Date.now(), expression = DEFAULT_EXPRESSION, source = 'default', character = selectedChar }) {
+  function buildAssistantMessage({ id, content, timestamp = Date.now(), expression = DEFAULT_EXPRESSION, source = 'default', character = selectedChar, channel = activeChatChannel }) {
     return {
       id,
       role: 'assistant',
@@ -1043,17 +1133,8 @@ export default function TavernChatRoom({
       character,
       expression,
       expressionSource: source,
+      channel,
     }
-  }
-
-  function buildFallbackReply(id) {
-    const content = selectedChar?.first_mes || '对方没有回应。'
-    return buildAssistantMessage({
-      id,
-      content,
-      expression: DEFAULT_EXPRESSION,
-      source: 'fallback',
-    })
   }
 
   function findGroupCharacter(characterId, fallbackName = '', avatar = '') {
@@ -1065,22 +1146,6 @@ export default function TavernChatRoom({
       name: fallbackName || characterId || '群聊角色',
       avatar: avatar || '',
       sprites: {},
-    }
-  }
-
-  function mapGroupHistoryMessage(message, index = 0) {
-    const role = message.role === 'assistant' ? 'assistant' : (message.role === 'system' ? 'system' : 'user')
-    const character = role === 'assistant'
-      ? findGroupCharacter(message.character_id, message.character_name, message.avatar)
-      : null
-    return {
-      id: message.id || `group-hist-${Date.now()}-${index}`,
-      role,
-      content: message.content || '',
-      timestamp: normalizeChatTimestamp(message.timestamp),
-      character,
-      expression: message.expression || DEFAULT_EXPRESSION,
-      expressionSource: message.expression_source || 'default',
     }
   }
 
@@ -1116,59 +1181,6 @@ export default function TavernChatRoom({
     setExpressionSource('default')
     setExpressionBusy(false)
     setDegradationNotice(null)
-  }
-
-  async function loadGroupHistory() {
-    if (!roomId) return
-    setLoading(true)
-    try {
-      const result = await getGroupChatHistory(roomId, visitorId, visitorId, 80)
-      const historyMessages = Array.isArray(result.messages) ? result.messages : []
-      setMessages(historyMessages.map(mapGroupHistoryMessage))
-      setGroupSessionError('')
-    } catch (err) {
-      console.error('Load group history error:', err)
-      setMessages([])
-      setGroupSessionError(`群聊历史加载失败：${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function loadHistory() {
-    if (!roomId || !selectedChar) return
-    setLoading(true)
-    try {
-      const result = await getTavernChatHistory(roomId, visitorId, selectedChar.id)
-      if (result.messages && result.messages.length > 0) {
-        setMessages(result.messages.map((m) => ({
-          id: m.id || `hist-${Date.now()}-${Math.random()}`,
-          role: m.role === 'assistant' ? 'assistant' : 'user',
-          content: m.content,
-          timestamp: normalizeChatTimestamp(m.timestamp),
-          character: m.role === 'assistant' ? selectedChar : null,
-          expression: m.expression || DEFAULT_EXPRESSION,
-          expressionSource: m.expression_source || 'default',
-        })))
-      } else if (selectedChar.first_mes) {
-        // Add opening message if no history
-        setMessages([buildAssistantMessage({
-          id: `init-${Date.now()}`,
-          content: selectedChar.first_mes,
-        })])
-      }
-    } catch (err) {
-      console.error('Load history error:', err)
-      // Add opening message on error
-      if (selectedChar.first_mes) {
-        setMessages([buildAssistantMessage({
-          id: `init-${Date.now()}`,
-          content: selectedChar.first_mes,
-        })])
-      }
-    } finally {
-      setLoading(false)
-    }
   }
 
   async function loadGameplayState() {
@@ -1322,7 +1334,12 @@ export default function TavernChatRoom({
     const displayText = String(options.displayText || promptText).trim()
     if (!promptText || sending || !selectedChar) return
 
-    if (groupChatEnabled) {
+    const publicMention = activeChatChannel === 'public'
+      ? parsePublicMentionTarget(promptText, characters)
+      : null
+    const targetChar = publicMention?.character || selectedChar
+
+    if (activeChatChannel === 'public' && !publicMention && groupChatEnabled) {
       await handleGroupSend(promptText, { displayText })
       return
     }
@@ -1333,6 +1350,7 @@ export default function TavernChatRoom({
       content: displayText,
       timestamp: Date.now(),
       character: null,
+      channel: activeChatChannel,
     }
     setMessages((prev) => [...prev, userMsg])
     setSending(true)
@@ -1341,14 +1359,14 @@ export default function TavernChatRoom({
       const result = await sendTavernChat(
         roomId,
         {
-          character_id: selectedChar.id,
-          message: promptText,
+          character_id: targetChar.id,
+          message: publicMention?.message || promptText,
           visitor_id: visitorId,
           visitor_name: visitorNickname,
           visitor_gender: visitorMemoryState?.gender || entryState?.gender || 'unspecified',
         },
       )
-      const responseText = result.response || '...'
+      const responseText = String(result.response || '').trim()
       const replyId = `msg-${Date.now()}-r`
       const isDegraded = Boolean(result.degraded)
       const nextExpression = isDegraded ? DEFAULT_EXPRESSION : currentExpression
@@ -1363,27 +1381,33 @@ export default function TavernChatRoom({
         setStateCards((prev) => mergeStateCards(prev, result.state_card_candidates))
         setStateCardError('')
       }
-      const charMsg = {
-        ...buildAssistantMessage({
-          id: replyId,
-          content: responseText,
-          expression: nextExpression,
-          source: nextExpressionSource,
-        }),
+      if (responseText) {
+        const charMsg = {
+          ...buildAssistantMessage({
+            id: replyId,
+            content: responseText,
+            expression: nextExpression,
+            source: nextExpressionSource,
+            character: targetChar,
+            channel: activeChatChannel,
+          }),
+        }
+        setMessages((prev) => [...prev, charMsg])
       }
-      setMessages((prev) => [...prev, charMsg])
       if (isDegraded) {
         setCurrentExpression(DEFAULT_EXPRESSION)
         setExpressionSource('fallback')
         setDegradationNotice(result.degradation || {
           title: 'AI 服务暂时不可用',
-          message: '已切换为规则回应。',
-          action: '店主可以在 AI 配置里测试连接。',
+          message: '本轮没有生成 NPC 回复。',
+          action: '稍后重试；如果持续出现，请店主在 AI 配置里测试连接。',
         })
       } else {
         setDegradationNotice(null)
-        const expressionResult = await inferExpression(responseText)
-        applyExpressionToMessage(replyId, expressionResult)
+        if (responseText) {
+          const expressionResult = await inferExpression(responseText)
+          applyExpressionToMessage(replyId, expressionResult)
+        }
       }
     } catch (err) {
       console.error('Send error:', err)
@@ -1412,8 +1436,6 @@ export default function TavernChatRoom({
         action = '稍后重试；如果仍然失败，请店主检查服务状态。'
       }
 
-      const charMsg = buildFallbackReply(`msg-${Date.now()}-err`)
-      setMessages((prev) => [...prev, charMsg])
       setCurrentExpression(DEFAULT_EXPRESSION)
       setExpressionSource('fallback')
       setDegradationNotice({ title, message, action })
@@ -1433,6 +1455,7 @@ export default function TavernChatRoom({
       content: displayText,
       timestamp: Date.now(),
       character: null,
+      channel: 'public',
     }
     setMessages((prev) => [...prev, userMsg])
     setSending(true)
@@ -1531,18 +1554,24 @@ export default function TavernChatRoom({
   }
 
   function handleSelectChar(char) {
-    if (char.id === selectedChar?.id) return
+    if (char.id === selectedChar?.id && activeChatChannel === 'private') return
     setSelectedChar(char)
+    setActiveChatChannel('private')
     resetExpressionForCharacter(char)
     if (onCharacterSwitch) {
       onCharacterSwitch(char)
     }
-    if (groupChatEnabled) return
-    setMessages([])
+  }
+
+  function handleSelectPublicChat() {
+    setActiveChatChannel('public')
+    setDegradationNotice(null)
+    setGroupSessionError('')
   }
 
   function handleAvatarClick(char) {
     setSelectedChar(char)
+    setActiveChatChannel('private')
     setShowDetail(true)
   }
 
@@ -1614,6 +1643,8 @@ export default function TavernChatRoom({
         <CharacterSidebar
           characters={characters}
           selectedChar={selectedChar}
+          activeChatChannel={activeChatChannel}
+          onSelectPublicChat={handleSelectPublicChat}
           onSelectChar={handleSelectChar}
         />
 
@@ -1631,9 +1662,11 @@ export default function TavernChatRoom({
                   onClick={() => handleAvatarClick(selectedChar)}
                 />
                 <div className="char-bar-info">
-                  <div className="char-bar-name">{groupChatEnabled ? '多人群聊' : selectedChar.name}</div>
+                  <div className="char-bar-name">{activeChatChannel === 'public' ? '公共聊天' : selectedChar.name}</div>
                   <div className="char-bar-archetype muted">
-                    {groupChatEnabled
+                    {activeChatChannel === 'public'
+                      ? '默认入口，可 @NPC名 点名，也可点左侧 NPC 私聊'
+                      : groupChatEnabled
                       ? `${characters.length} 个角色会按${getGroupStrategyLabel(groupChatConfig.strategy)}接话`
                       : selectedChar.personality?.slice(0, 30) || selectedChar.archetype || ''}
                   </div>
@@ -1673,7 +1706,7 @@ export default function TavernChatRoom({
               {degradationNotice ? (
                 <div className="chat-degradation-banner" role="status" aria-live="polite">
                   <strong>{degradationNotice.title || 'AI 服务暂时不可用'}</strong>
-                  <span>{degradationNotice.message || '已切换为规则回应。'}</span>
+                  <span>{degradationNotice.message || '本轮没有生成 NPC 回复。'}</span>
                   {degradationNotice.action ? <small>{degradationNotice.action}</small> : null}
                 </div>
               ) : null}
@@ -1734,14 +1767,8 @@ export default function TavernChatRoom({
               />
 
               {/* Messages */}
-              <div className="chat-messages-area">
-                {loading && (
-                  <div className="chat-loading">
-                    <span>加载对话历史...</span>
-                  </div>
-                )}
-
-                {!loading && messages.length === 0 && (
+              <div className="chat-messages-area" data-entrance-reactions>
+                {visibleMessages.length === 0 && (
                   <div className="chat-empty">
                     <div className="chat-empty__hero">
                       <div className="empty-char-avatar">
@@ -1781,7 +1808,7 @@ export default function TavernChatRoom({
                   </div>
                 )}
 
-                {messages.map((msg) => (
+                {visibleMessages.map((msg) => (
                   <ChatMessage
                     key={msg.id}
                     message={msg}
@@ -1817,7 +1844,7 @@ export default function TavernChatRoom({
                 onSend={handleSend}
                 sending={sending}
                 character={selectedChar}
-                placeholder={groupChatEnabled ? '对群聊里的所有角色说...' : undefined}
+                placeholder={activeChatChannel === 'public' ? '公共聊天：直接发言，或 @NPC名 对指定 NPC 说...' : undefined}
                 voiceConfig={voiceConfig}
                 tavernId={roomId}
                 quickPrompts={quickPrompts}

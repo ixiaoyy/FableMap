@@ -259,7 +259,13 @@ export type VisitorStatePayload = {
 }
 
 export type ChatResponseMode = {
-  kind: "owner_llm" | "built_in_rules" | "llm_not_configured" | "local_fallback" | "unavailable" | string
+  kind:
+    | "owner_llm"
+    | "system_public_welfare_llm"
+    | "llm_not_configured"
+    | "llm_unavailable"
+    | "unavailable"
+    | string
   label: string
   message?: string
   requires_owner_llm?: boolean

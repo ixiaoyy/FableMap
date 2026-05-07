@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getTavernStatusColor, getTavernStatusLabel, getTavernAccessIcon } from './services/tavernService'
 import { resolveTavernAtmosphereImage } from './services/atmosphereAssets'
-import { enterTavern, getTavernChatHistory, sendTavernChat } from '../lib/taverns'
+import { enterTavern, sendTavernChat } from '../lib/taverns'
 
 /**
  * TavernInterior — 空间内部视图
@@ -38,6 +38,24 @@ const LAYOUT_BACKGROUNDS = {
 function getLayoutStyle(tavern) {
   const style = tavern?.layout_style || 'lobby'
   return LAYOUT_BACKGROUNDS[style] || LAYOUT_BACKGROUNDS.lobby
+}
+
+function entranceReactionContent(character, tavernName) {
+  const firstMessage = String(character?.first_mes || '').trim()
+  if (firstMessage) return firstMessage
+  const name = character?.name || '这里的 NPC'
+  return `你刚走进${tavernName || '这间空间'}，${name}向你点了点头。`
+}
+
+function entranceReactionMessages(characters, tavernName) {
+  const timestamp = Date.now()
+  return (Array.isArray(characters) ? characters : []).map((character, index) => ({
+    id: `entrance-${character?.id || index}-${timestamp}`,
+    role: 'assistant',
+    content: entranceReactionContent(character, tavernName),
+    timestamp,
+    character,
+  }))
 }
 
 // ─── Simple Character Avatar ─────────────────────────────────────────────────
@@ -94,6 +112,11 @@ export default function TavernInterior({
   const messagesEndRef = useRef(null)
 
   const characters = tavern?.characters || []
+  const characterSignature = characters.map((character) => [
+    character?.id || '',
+    character?.name || '',
+    character?.first_mes || '',
+  ].join(':')).join('|')
   const layoutStyle = getLayoutStyle(tavern)
   const atmosphereImage = resolveTavernAtmosphereImage(tavern)
 
@@ -116,27 +139,21 @@ export default function TavernInterior({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Load chat history when character changes
+  // Show fresh local entrance reactions for this visit only; backend history/memory stays persisted.
   useEffect(() => {
-    if (!selectedChar || !entered) return
-    loadHistory()
-  }, [selectedChar?.id])
+    if (!entered) {
+      setMessages([])
+      return
+    }
+    setMessages(entranceReactionMessages(characters, tavern?.name))
+  }, [entered, tavern?.id, tavern?.name, characterSignature])
 
   async function handleEnter(pwd = '') {
     setEntering(true)
     try {
-      const result = await enterTavern(tavern.id, pwd, visitorId)
+      await enterTavern(tavern.id, pwd, visitorId)
       setEntered(true)
       setPasswordRequired(false)
-      // Add first message from character
-      if (result.first_mes) {
-        setMessages([{
-          id: `init-${Date.now()}`,
-          role: 'assistant',
-          content: result.first_mes,
-          timestamp: Date.now(),
-        }])
-      }
     } catch (err) {
       if (err.message.includes('密码')) {
         setPasswordRequired(true)
@@ -145,22 +162,6 @@ export default function TavernInterior({
       }
     } finally {
       setEntering(false)
-    }
-  }
-
-  async function loadHistory() {
-    try {
-      const result = await getTavernChatHistory(tavern.id, visitorId, selectedChar?.id)
-      if (result.messages && result.messages.length > 0) {
-        setMessages(result.messages.map((m) => ({
-          id: m.id,
-          role: m.role === 'assistant' ? 'assistant' : 'user',
-          content: m.content,
-          timestamp: m.timestamp ? (m.timestamp > 1e12 ? m.timestamp : m.timestamp * 1000) : Date.now(),
-        })))
-      }
-    } catch (err) {
-      console.error('Load history error:', err)
     }
   }
 
@@ -185,15 +186,18 @@ export default function TavernInterior({
       const charMsg = {
         id: `msg-${Date.now() + 1}`,
         role: 'assistant',
-        content: result.response || '...',
+        content: result.response || '',
         timestamp: Date.now(),
+        character: selectedChar,
       }
-      setMessages((prev) => [...prev, charMsg])
+      if (charMsg.content.trim()) {
+        setMessages((prev) => [...prev, charMsg])
+      }
     } catch (err) {
       const charMsg = {
         id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: selectedChar?.first_mes || '对方没有回应。',
+        role: 'system',
+        content: err.message || 'AI 暂时没有回应，请稍后重试。',
         timestamp: Date.now(),
       }
       setMessages((prev) => [...prev, charMsg])
@@ -296,7 +300,7 @@ export default function TavernInterior({
                 )}
               </div>
 
-              <div className="chat-messages">
+              <div className="chat-messages" data-entrance-reactions>
                 {messages.length === 0 && (
                   <div className="chat-placeholder">
                     <p>和 {selectedChar.name} 开始对话吧。</p>
@@ -314,12 +318,15 @@ export default function TavernInterior({
                   >
                     <div className="message-avatar">
                       {msg.role === 'assistant' ? (
-                        <CharAvatar character={selectedChar} size={32} />
+                        <CharAvatar character={msg.character || selectedChar} size={32} />
                       ) : (
                         <div className="user-avatar-icon">👤</div>
                       )}
                     </div>
                     <div className="message-content">
+                      {msg.role === 'assistant' && (msg.character?.name || selectedChar?.name) && (
+                        <div className="message-sender">{msg.character?.name || selectedChar?.name}</div>
+                      )}
                       <div className="message-text">{msg.content}</div>
                       <div className="message-time">
                         {new Date(msg.timestamp).toLocaleTimeString('zh-CN', {

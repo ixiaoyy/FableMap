@@ -1,5 +1,5 @@
 import { Heart, History, Send } from "lucide-react"
-import { useMemo, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 
 import { buildRevisitCue, formatRevisitTime } from "../../lib/revisit-summary.js"
 import { formatRelationshipStage } from "../../lib/owner-summary.js"
@@ -11,6 +11,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 interface TavernChatProps {
   tavern: Tavern
   character?: TavernCharacter
+}
+
+function entranceReactionContent(character: TavernCharacter, tavernName: string) {
+  const firstMessage = String(character.first_mes || "").trim()
+  if (firstMessage) return firstMessage
+  const name = character.name || "这里的 NPC"
+  return `你刚走进${tavernName || "这间空间"}，${name}向你点了点头。`
+}
+
+function entranceReactionMessages(availableCharacters: TavernCharacter[], tavernName: string): ChatMessage[] {
+  const timestamp = new Date().toISOString()
+  return availableCharacters.map((npc, index) => ({
+    id: `entrance-${npc.id || index}-${timestamp}`,
+    role: "assistant",
+    content: entranceReactionContent(npc, tavernName),
+    character_id: npc.id,
+    timestamp,
+  }))
 }
 
 function RevisitCuePanel({ cue }: { cue: ReturnType<typeof buildRevisitCue> }) {
@@ -88,21 +106,42 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
   const [lines, setLines] = useState<ChatMessage[]>([])
   const [visitorState, setVisitorState] = useState<VisitorStatePayload | null>(null)
   const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState("")
   const [error, setError] = useState("")
+  const availableCharacters = useMemo(
+    () => {
+      if (Array.isArray(tavern.characters) && tavern.characters.length > 0) return tavern.characters
+      return character ? [character] : []
+    },
+    [character, tavern.characters],
+  )
+  const characterSignature = useMemo(
+    () => availableCharacters.map((npc) => [
+      npc.id || "",
+      npc.name || "",
+      npc.first_mes || "",
+    ].join(":")).join("|"),
+    [availableCharacters],
+  )
+  const characterNameById = useMemo(
+    () => new Map(availableCharacters.map((npc) => [npc.id, npc.name || npc.id || "NPC"])),
+    [availableCharacters],
+  )
   const revisitCue = useMemo(
     () => buildRevisitCue(visitorState, { tavernName: tavern.name, characterName: character?.name }),
     [character?.name, tavern.name, visitorState],
   )
 
+  useEffect(() => {
+    setLines(entranceReactionMessages(availableCharacters, tavern.name))
+  }, [availableCharacters, characterSignature, tavern.id, tavern.name])
+
   async function handleEnter() {
     setBusy(true)
     setError("")
-    setNotice("")
     try {
       const result = await enterTavern(tavern.id, "", visitorId, visitorGender)
       setVisitorState(result.visitor_state ?? null)
-      setNotice(result.first_mes || "已进入空间。")
+      setLines(entranceReactionMessages(availableCharacters, tavern.name))
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -128,12 +167,15 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
         visitor_gender: visitorGender,
         message: userLine.content,
       })
-      setLines((current) => [...current, { role: "assistant", content: result.response, character_id: character.id }])
+      const responseText = String(result.response || "").trim()
+      if (responseText) {
+        setLines((current) => [...current, { role: "assistant", content: responseText, character_id: character.id }])
+      }
       if (result.visitor_state !== undefined) {
         setVisitorState(result.visitor_state ?? null)
       }
       if (result.degradation?.message) {
-        setNotice(result.degradation.message)
+        setError(result.degradation.message)
       }
     } catch (err) {
       setError(errorMessage(err))
@@ -194,27 +236,32 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
         </Button>
         {visitorState ? <VisitorStateSummary state={visitorState} /> : null}
         <RevisitCuePanel cue={revisitCue} />
-        <div className="min-h-52 space-y-3 rounded-3xl border border-white/10 bg-slate-950/70 p-4">
+        <div className="min-h-52 space-y-3 rounded-3xl border border-white/10 bg-slate-950/70 p-4" data-entrance-reactions>
           {lines.length ? (
-            lines.map((line, index) => (
-              <div
-                key={`${line.role}-${index}`}
-                className={
-                  line.role === "user"
-                    ? "ml-auto max-w-[82%] rounded-3xl bg-cyan-300/16 p-3 text-sm text-cyan-50"
-                    : "max-w-[82%] rounded-3xl bg-white/8 p-3 text-sm text-violet-50"
-                }
-              >
-                {line.content}
-              </div>
-            ))
+            lines.map((line, index) => {
+              const speakerName = line.role === "user" ? visitorName : characterNameById.get(line.character_id || "") || character?.name
+              return (
+                <div
+                  key={`${line.role}-${index}`}
+                  className={
+                    line.role === "user"
+                      ? "ml-auto max-w-[82%] rounded-3xl bg-cyan-300/16 p-3 text-sm text-cyan-50"
+                      : "max-w-[82%] rounded-3xl bg-white/8 p-3 text-sm text-violet-50"
+                  }
+                >
+                  {speakerName ? (
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-violet-100/55">{speakerName}</p>
+                  ) : null}
+                  {line.content}
+                </div>
+              )
+            })
           ) : (
             <p className="text-sm text-violet-100/55">
               {character ? `向 ${character.name} 说第一句话。` : "暂无可对话 NPC。"}
             </p>
           )}
         </div>
-        {notice ? <p className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-sm text-cyan-100">{notice}</p> : null}
         {error ? <p className="rounded-2xl border border-red-300/30 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
         <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
           <input
