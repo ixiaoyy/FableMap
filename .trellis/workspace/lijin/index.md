@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
-- **Last Active**: 2026-05-06
+- **Total Sessions**: 21
+- **Last Active**: 2026-05-07
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1225 | Active |
+| `journal-1.md` | ~1100 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-05-07 | Conversation Beats Implementation | - | `codex-homepage-dynamic-entry-covers` |
 | 20 | 2026-05-06 | Owner dialogue preview prompt dry-run | - | `codex-homepage-dynamic-entry-covers` |
 | 19 | 2026-05-06 | Memory search adapter productization | - | `codex-homepage-dynamic-entry-covers` |
 | 18 | 2026-05-06 | Relationship graph API governance | - | `codex-homepage-dynamic-entry-covers` |
