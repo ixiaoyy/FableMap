@@ -90,6 +90,7 @@ export const SPECIAL_TAVERN_TYPES = [
     place_type: "tavern",
     keywords: ["修行", "问道", "洞府", "山门", "闭关", "心法", "灵台", "飞升", "仙门", "道友"],
     skillPackIds: ["cultivation-play-pack", "cultivation-retreat", "xiuxian-play-pack"],
+    playPackId: "cultivation-play-pack",
     draftSeed: {
       place_type: "tavern",
       layout_style: "quest-play",

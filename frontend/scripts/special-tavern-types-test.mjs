@@ -5,20 +5,28 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const sourcePath = resolve(__dirname, "../app/lib/special-tavern-types.js")
+const cultivationPlayPackPath = resolve(__dirname, "../app/lib/cultivation-play-pack.js")
 
 assert.equal(
   existsSync(sourcePath),
   true,
   "special tavern type helper should exist so thin-layer rules stay shared across create/discover/tavern pages",
 )
+assert.equal(
+  existsSync(cultivationPlayPackPath),
+  true,
+  "cultivation play pack helper should exist so owner-confirmed xiuxian defaults stay centralized",
+)
 
 const specialTypesModule = await import(pathToFileURL(sourcePath).href)
+const cultivationPlayPackModule = await import(pathToFileURL(cultivationPlayPackPath).href)
 
 assert.equal(typeof specialTypesModule.SPECIAL_TAVERN_TYPES, "object")
 assert.equal(typeof specialTypesModule.deriveSpecialTavernType, "function")
 assert.equal(typeof specialTypesModule.deriveSpecialTavernTypeDisplay, "function")
 assert.equal(typeof specialTypesModule.buildSpecialTavernTypeDraftSeed, "function")
 assert.equal(typeof specialTypesModule.specialTavernTypeMatchesTavern, "function")
+assert.equal(typeof cultivationPlayPackModule.CULTIVATION_PLAY_PACK, "object")
 
 const cultivationTavern = {
   name: "问道洞府",
@@ -32,6 +40,7 @@ const cultivationDisplay = specialTypesModule.deriveSpecialTavernTypeDisplay(cul
 assert.equal(cultivationDisplay.id, "cultivation-retreat")
 assert.equal(cultivationDisplay.label, "修行空间")
 assert.equal(cultivationDisplay.layoutStyle, "quest-play")
+assert.equal(cultivationDisplay.playPackId, cultivationPlayPackModule.CULTIVATION_PLAY_PACK.id)
 assert.equal(
   specialTypesModule.specialTavernTypeMatchesTavern(cultivationTavern, "cultivation-retreat"),
   true,
@@ -57,6 +66,17 @@ assert.equal(draftSeed.layout_style, "quest-play")
 assert.equal(draftSeed.place_type, "tavern")
 assert.equal(typeof draftSeed.scene_prompt, "string")
 assert.ok(draftSeed.scene_prompt.includes("修行"), "draft seed should provide owner-confirmable cultivation copy")
+
+const cultivationPack = cultivationPlayPackModule.CULTIVATION_PLAY_PACK
+assert.equal(cultivationPack.id, "cultivation-play-pack")
+assert.ok(cultivationPack.owner_confirmation_note.includes("店主"))
+assert.ok(cultivationPack.preview_receipt.progress_delta.includes("仅当前访客可见"))
+assert.ok(cultivationPack.preview_receipt.boundary_note.includes("公共排行"))
+assert.equal(cultivationPack.breakthrough_preview.status, "未达")
+assert.ok(Array.isArray(cultivationPack.breakthrough_preview.requirements))
+assert.equal(cultivationPack.breakthrough_preview.requirements.length >= 4, true)
+assert.ok(cultivationPack.breakthrough_preview.boundary_note.includes("公开 Tavern payload"))
+assert.ok(cultivationPack.gameplay_definitions[0].completion.reward_text.includes("修为 +24000"))
 
 const digitalHumanTavern = {
   name: "数字人制作酒馆",

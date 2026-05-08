@@ -1,12 +1,16 @@
-import { CheckCircle2, Send, ShieldCheck, UserCheck, XCircle } from "lucide-react"
+import { CheckCircle2, Send, ShieldCheck, UserCheck, XCircle, Sparkles, BookOpen, UserPlus, PlayCircle, Info } from "lucide-react"
 import { useState } from "react"
 
 import { PLACE_RELATIONSHIP_TYPES, normalizePlaceRelationshipDraft } from "../../lib/place-home.js"
 import { fallbackRoleplayState } from "../../lib/roleplay-state"
+import { CULTIVATION_PLAY_PACK } from "../../lib/cultivation-play-pack.js"
+import { deriveSpecialTavernTypeDisplay } from "../../lib/special-tavern-types.js"
 import {
   addHomeMember,
+  addCharacter,
   createPlaceRelationship,
   createSchoolEnrollment,
+  createWorldInfo,
   DEFAULT_OWNER_ID,
   DEFAULT_VISITOR_ID,
   deleteVisitorNote,
@@ -15,7 +19,9 @@ import {
   errorMessage,
   listVisitorNotes,
   requestRoleplayClaim,
+  saveGameplays,
   saveRoleplayConfig,
+  updateTavern,
   type HomeMember,
   type PlaceRelationship,
   type RoleplayClaim,
@@ -29,6 +35,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 
 function characterName(characters: TavernCharacter[], characterId: string) {
   return characters.find((character) => character.id === characterId)?.name || characterId
+}
+
+function worldInfoTemplateKey(entry: unknown) {
+  if (!entry || typeof entry !== "object") return ""
+  const record = entry as Record<string, unknown>
+  const keys = Array.isArray(record.keys)
+    ? record.keys.map((value) => String(value || "").trim()).filter(Boolean).sort()
+    : []
+  const content = typeof record.content === "string" ? record.content.trim() : ""
+  return `${keys.join("|")}::${content}`
+}
+
+function previewProgressPercent(current: unknown, target: unknown) {
+  const safeCurrent = Number(current)
+  const safeTarget = Number(target)
+  if (!Number.isFinite(safeCurrent) || !Number.isFinite(safeTarget) || safeTarget <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round((safeCurrent / safeTarget) * 100)))
 }
 
 function RoleplayPanel({
@@ -191,6 +214,235 @@ function RoleplayPanel({
         )}
 
         {message ? <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{message}</p> : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function PlayPackPanel({ tavern }: { tavern: Tavern }) {
+  const [ownerId, setOwnerId] = useState(tavern.owner_id || DEFAULT_OWNER_ID)
+  const [busy, setBusy] = useState("")
+  const [message, setMessage] = useState("")
+  const specialType = deriveSpecialTavernTypeDisplay(tavern)
+  const playPack = specialType?.playPackId === CULTIVATION_PLAY_PACK.id ? CULTIVATION_PLAY_PACK : null
+  const receiptPreview = playPack?.preview_receipt
+  const breakthroughPreview = playPack?.breakthrough_preview
+
+  if (!playPack) return null
+
+  async function handleApplyPack() {
+    if (!playPack) return
+    setBusy("apply")
+    setMessage("")
+    try {
+      // 1. Add Characters
+      for (const char of playPack.characters) {
+        const existing = (tavern.characters || []).find((c) => c.name === char.name)
+        if (!existing) {
+          await addCharacter(tavern.id, char, ownerId)
+        }
+      }
+
+      // 2. Add World Info
+      const existingWorldInfoKeys = new Set(
+        (Array.isArray(tavern.world_info) ? tavern.world_info : [])
+          .map((entry) => worldInfoTemplateKey(entry))
+          .filter(Boolean),
+      )
+      for (const wi of playPack.world_info) {
+        const templateKey = worldInfoTemplateKey(wi)
+        if (templateKey && existingWorldInfoKeys.has(templateKey)) continue
+        await createWorldInfo({ ...wi, tavern_id: tavern.id }, ownerId)
+        if (templateKey) existingWorldInfoKeys.add(templateKey)
+      }
+
+      // 3. Save Gameplays
+      if (Array.isArray(playPack.gameplay_definitions) && playPack.gameplay_definitions.length > 0) {
+        const existingGameplays = Array.isArray(tavern.gameplay_definitions)
+          ? tavern.gameplay_definitions.filter(
+              (existing): existing is Record<string, unknown> =>
+                Boolean(existing && typeof existing === "object"),
+            )
+          : []
+        const nextGameplays: Record<string, unknown>[] = [...existingGameplays]
+        for (const gp of playPack.gameplay_definitions) {
+          if (!nextGameplays.find((existing) => existing && typeof existing === "object" && "id" in existing && existing.id === gp.id)) {
+            nextGameplays.push(gp)
+          }
+        }
+        await saveGameplays(tavern.id, nextGameplays, ownerId)
+      }
+
+      // 4. Update Tavern Metadata
+      await updateTavern(tavern.id, { forbidden: playPack.forbidden }, ownerId)
+
+      setMessage(`「${playPack.name}」已按店主确认注入到当前空间。重复应用会跳过同名 NPC、同 ID 玩法和相同世界书模板。`)
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      setBusy("")
+    }
+  }
+
+  return (
+    <Card
+      data-cultivation-play-pack-panel
+      className="min-w-0 overflow-hidden border-amber-300/18 bg-[radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.12),transparent_34%),rgba(15,23,42,0.84)]"
+    >
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-400/10 text-amber-400">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-100/55">Recommended play pack</p>
+            <CardTitle className="mt-0.5">{playPack.name}</CardTitle>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm leading-6 text-amber-50/72">
+          检测到本空间属于 <span className="font-bold text-amber-200">{specialType?.label}</span> 类型。
+          你可以一键初始化默认内容，包括建议的 NPC、世界书设定、以及「{playPack.gameplay_definitions?.[0]?.title}」等互动玩法。
+        </p>
+        <p className="rounded-2xl border border-amber-300/16 bg-amber-300/[0.06] px-4 py-3 text-xs leading-6 text-amber-50/74">
+          {playPack.owner_confirmation_note}
+        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+              <UserPlus className="h-3.5 w-3.5" />
+              建议角色
+            </div>
+            <p className="mt-1 text-sm text-white">{playPack.characters?.[0]?.name}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+              <BookOpen className="h-3.5 w-3.5" />
+              核心设定
+            </div>
+            <p className="mt-1 text-sm text-white">{playPack.world_info?.length} 条世界书条目</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+              <PlayCircle className="h-3.5 w-3.5" />
+              互动玩法
+            </div>
+            <p className="mt-1 text-sm text-white">{playPack.gameplay_definitions?.[0]?.title}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+              <Info className="h-3.5 w-3.5" />
+              安全边界
+            </div>
+            <p className="mt-1 truncate text-sm text-white">{playPack.forbidden}</p>
+          </div>
+        </div>
+
+        {receiptPreview && breakthroughPreview ? (
+          <div className="grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
+            <section
+              data-cultivation-receipt-preview
+              className="rounded-[1.75rem] border border-amber-300/16 bg-[linear-gradient(180deg,rgba(251,191,36,0.08),rgba(15,23,42,0.34))] p-4"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-100/58">历练回执样例</p>
+                  <h3 className="mt-2 text-base font-black text-amber-50">{receiptPreview.title}</h3>
+                </div>
+                <span className="inline-flex w-fit rounded-full border border-amber-300/24 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
+                  {receiptPreview.action}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-amber-50/78">{receiptPreview.result_summary}</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-100/55">
+                    {receiptPreview.progress_label}
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-white">{receiptPreview.progress_delta}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-100/55">
+                    {receiptPreview.clue_label}
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-white">【{receiptPreview.clue}】</p>
+                </div>
+              </div>
+              <p className="mt-4 text-[11px] leading-5 text-amber-50/58">{receiptPreview.boundary_note}</p>
+            </section>
+
+            <section
+              data-cultivation-breakthrough-preview
+              className="rounded-[1.75rem] border border-cyan-300/14 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),rgba(15,23,42,0.34))] p-4"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-100/58">突破条件样例</p>
+                  <h3 className="mt-2 text-base font-black text-cyan-50">{breakthroughPreview.title}</h3>
+                  <p className="mt-1 text-xs text-cyan-50/66">目标：{breakthroughPreview.next_stage}</p>
+                </div>
+                <span
+                  data-cultivation-breakthrough-status={breakthroughPreview.status}
+                  className="inline-flex w-fit rounded-full border border-amber-300/24 bg-amber-300/10 px-3 py-1 text-xs font-black text-amber-100"
+                >
+                  {breakthroughPreview.status}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-cyan-50/78">{breakthroughPreview.summary}</p>
+              <div className="mt-4 space-y-3">
+                {breakthroughPreview.requirements.map((item) => {
+                  const percent = previewProgressPercent(item.current, item.target)
+                  return (
+                    <div key={item.id} className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="font-bold text-white">{item.label}</span>
+                        <span className="text-cyan-50/70">{item.current}/{item.target}</span>
+                      </div>
+                      <div className="mt-2 h-2 rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-[linear-gradient(90deg,rgba(251,191,36,0.95),rgba(34,211,238,0.92),rgba(167,139,250,0.9))]"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-[11px] leading-5 text-cyan-50/58">{item.note}</p>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-4 text-[11px] leading-5 text-cyan-50/58">{breakthroughPreview.boundary_note}</p>
+            </section>
+          </div>
+        ) : null}
+
+        <section className="mt-4 space-y-3 rounded-2xl border border-amber-300/12 bg-amber-300/[0.045] p-4">
+          <label className="min-w-0 space-y-1.5 text-sm">
+            <span className="text-amber-100/65">Owner ID (验证权限)</span>
+            <input
+              value={ownerId}
+              onChange={(event) => setOwnerId(event.target.value)}
+              className="w-full rounded-xl border border-white/12 bg-white/[0.06] px-4 py-2 text-white outline-none focus:border-amber-300/60"
+            />
+          </label>
+          <Button
+            type="button"
+            disabled={busy === "apply"}
+            className="w-full border-amber-400/50 bg-amber-400/20 text-amber-100 hover:bg-amber-400/30"
+            onClick={handleApplyPack}
+          >
+            {busy === "apply" ? "正在注入..." : "确认并注入玩法包内容"}
+          </Button>
+          <p className="text-[10px] text-amber-100/45">
+            * 上面的回执/要求只是待确认模板说明；点击注入后才会写入当前空间，不会引入战斗、等级、装备、交易或排行。
+          </p>
+        </section>
+
+        {message ? (
+          <p className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-50">
+            {message}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -520,6 +772,7 @@ export function TavernOwnerManagement({
         roleplay={effectiveRoleplay}
         onRoleplayChange={setRoleplayState}
       />
+      <PlayPackPanel tavern={tavern} />
       <PlaceHomePanel tavern={tavern} />
       <OwnerVisitorNotesPanel tavern={tavern} />
     </div>
