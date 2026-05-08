@@ -3,8 +3,8 @@
   "name": "special-tavern-type-thin-layer",
   "title": "Special Tavern Type Thin Layer",
   "description": "为 FableMap 设计薄特殊空间类型层：选择 place_type 扩展或 owner-confirmed metadata，定义创建页、发现页、空间页展示和测试/文档同步边界。",
-  "status": "planning",
-  "dev_type": null,
+  "status": "review",
+  "dev_type": "frontend",
   "scope": null,
   "package": null,
   "priority": "P1",
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,31 @@
   "subtasks": [],
   "children": [],
   "parent": "05-06-xiuxian-idle-text-image-game-brainstorm",
-  "relatedFiles": [],
-  "notes": "",
-  "meta": {}
+  "relatedFiles": [
+    "frontend/app/lib/special-tavern-types.js",
+    "frontend/app/routes/create.tsx",
+    "frontend/app/routes/discover.tsx",
+    "frontend/app/routes/tavern.tsx",
+    "frontend/scripts/special-tavern-types-test.mjs",
+    "frontend/scripts/special-tavern-type-ui-test.mjs",
+    "frontend/scripts/playwright-special-tavern-type-thin-layer-check.mjs",
+    "frontend/package.json"
+  ],
+  "notes": "2026-05-07: 实际完成薄特殊空间类型层前端实现。未扩展后端 place_type 枚举，也未新增 schema 字段；当前通过 owner-confirmed 的 place_type/layout_style/scene_prompt/world_info 组合识别 cultivation-retreat，并在创建页提供模板初始化、发现页提供专题体验筛选、空间页提供专题卡片展示。已补共享规则层、脚本测试与 Playwright 自验收产物。",
+  "meta": {
+    "verification": [
+      "npm --prefix .\\frontend run typecheck",
+      "npm --prefix .\\frontend run build",
+      "npm --prefix .\\frontend test",
+      "node .\\frontend\\scripts\\playwright-special-tavern-type-thin-layer-check.mjs"
+    ],
+    "artifacts": {
+      "playwright_report": "D:\\work\\ai-\\.trellis\\tasks\\05-06-special-tavern-type-thin-layer\\artifacts\\playwright\\report.md",
+      "screenshots": [
+        "D:\\work\\ai-\\.trellis\\tasks\\05-06-special-tavern-type-thin-layer\\artifacts\\playwright\\desktop-create-special-tavern-type.png",
+        "D:\\work\\ai-\\.trellis\\tasks\\05-06-special-tavern-type-thin-layer\\artifacts\\playwright\\desktop-discover-special-tavern-type.png",
+        "D:\\work\\ai-\\.trellis\\tasks\\05-06-special-tavern-type-thin-layer\\artifacts\\playwright\\mobile-tavern-special-tavern-type.png"
+      ]
+    }
+  }
 }

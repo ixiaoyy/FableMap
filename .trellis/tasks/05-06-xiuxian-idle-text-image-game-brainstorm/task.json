@@ -53,7 +53,11 @@
     "05-06-special-tavern-type-roadmap"
   ],
   "parent": null,
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    ".trellis/tasks/05-06-xiuxian-idle-text-image-game-brainstorm/prd.md",
+    ".trellis/tasks/05-06-cultivation-tavern-play-pack-mvp/prd.md",
+    ".trellis/tasks/05-06-cultivation-offline-return-loop/prd.md"
+  ],
+  "notes": "2026-05-08: Added user screenshot references for cultivation tavern: NPC wilderness-training receipt, private cultivation progress/reward clue, and trust-level-style requirement dashboard.",
   "meta": {}
 }

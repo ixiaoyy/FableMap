@@ -47,7 +47,6 @@
   "subtasks": [],
   "children": [
     "05-07-05-07-territory-map-claim-system",
-    "05-07-05-07-garden-tavern-farm-basics",
     "05-07-05-07-garden-tavern-exchange-system",
     "05-07-05-07-garden-tavern-stealing-mechanics",
     "05-07-05-07-garden-tavern-currency-economy"
@@ -89,11 +88,30 @@
         "priority": "P2"
       }
     ],
-    "crop_types": ["蓝莓", "玉米", "草莓", "南瓜", "西红柿", "胡萝卜", "芒果", "橙子", "西瓜"],
+    "crop_types": [
+      "蓝莓",
+      "玉米",
+      "草莓",
+      "南瓜",
+      "西红柿",
+      "胡萝卜",
+      "芒果",
+      "橙子",
+      "西瓜"
+    ],
     "currency": "黑钻（游戏币）",
     "territory_system": {
       "description": "酒馆申领地块关联真实坐标，方圆占用地图空间",
-      "types": ["tavern", "pet_tavern", "garden", "game_workshop", "gacha", "cultivation", "shop", "warehouse"]
+      "types": [
+        "tavern",
+        "pet_tavern",
+        "garden",
+        "game_workshop",
+        "gacha",
+        "cultivation",
+        "shop",
+        "warehouse"
+      ]
     }
   }
 }

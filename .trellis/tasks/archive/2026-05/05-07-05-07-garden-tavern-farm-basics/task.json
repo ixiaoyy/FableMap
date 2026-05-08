@@ -1,22 +1,21 @@
 {
-  "id": "05-07-territory-map-claim-system",
-  "name": "05-07-territory-map-claim-system",
-  "title": "territory-map-claim-system",
-  "description": "领地系统：酒馆申领地块关联真实坐标，方圆占用地图空间",
+  "id": "05-07-garden-tavern-farm-basics",
+  "name": "05-07-garden-tavern-farm-basics",
+  "title": "garden-tavern-farm-basics",
+  "description": "菜园酒馆基础功能：种植、浇水、收获",
   "status": "completed",
   "completedAt": "2026-05-08",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
-  "priority": "P1",
+  "priority": "P0",
   "creator": "lijin",
-  "assignee": "codex",
+  "assignee": "lijin",
   "createdAt": "2026-05-07",
-  "completedAt": null,
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
-  "current_phase": 6,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,
@@ -49,9 +48,6 @@
   "children": [],
   "parent": "05-07-05-07-new-features-pet-community-farming",
   "relatedFiles": [],
-  "notes": "Core feature: map filled with various territory types. Each territory has real coordinates, radius, and occupies space.",
-  "meta": {
-    "territory_types": ["tavern", "pet_shop", "garden", "game_workshop", "gacha", "cultivation", "shop", "warehouse"],
-    "key_features": ["坐标申领", "方圆占用", "碰撞检测", "地图可视化"]
-  }
+  "notes": "",
+  "meta": {}
 }

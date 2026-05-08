@@ -46,3 +46,5 @@
 - Screenshots:
   - `.trellis/tasks/05-06-system-public-welfare-kilo-test-config/artifacts/kilo-npc-chat-desktop.png`
   - `.trellis/tasks/05-06-system-public-welfare-kilo-test-config/artifacts/kilo-npc-chat-mobile.png`
+
+- 2026-05-07: Versioned system/public-welfare test config switched from Kilo Auto Free to Z.AI GLM-4.7-Flash per owner request; legacy kilo-auto/free markers are treated as a managed public-welfare alias and hydrated to the current GLM config.
