@@ -19,10 +19,16 @@ export function splitDraftItems(value, fallback = []) {
   return unique.length ? unique : [...fallback]
 }
 
-export function createAiCharacterDraftRequest({ styleTagsText = '', forbiddenText = '', tone = '' } = {}) {
+export function createAiCharacterDraftRequest({
+  styleTagsText = '',
+  forbiddenText = '',
+  tone = '',
+  defaultStyleTags = DEFAULT_AI_DRAFT_STYLE_TAGS,
+  defaultForbidden = DEFAULT_AI_DRAFT_FORBIDDEN,
+} = {}) {
   return {
-    style_tags: splitDraftItems(styleTagsText, DEFAULT_AI_DRAFT_STYLE_TAGS),
-    forbidden: splitDraftItems(forbiddenText, DEFAULT_AI_DRAFT_FORBIDDEN),
+    style_tags: splitDraftItems(styleTagsText, defaultStyleTags),
+    forbidden: splitDraftItems(forbiddenText, defaultForbidden),
     tone: cleanText(tone),
   }
 }

@@ -44,6 +44,7 @@ Frontend work must preserve:
 | [Tavern Skill Pack UI Boundary](./skill-pack-ui-boundary.md) | Owner-visible skill-pack service/UI contract | Current |
 | [Preset Import Preview UI Boundary](./preset-import-preview-ui-boundary.md) | Owner-only preview modal/service contract for community preset risk reports | Current |
 | [Character Prompt Risk Linter](./character-prompt-risk-linter.md) | Owner-facing NPC prompt linting before character save/import | Current |
+| [Digital Human Studio Boundary](./digital-human-studio-boundary.md) | Special tavern thin layer and portable digital-human/video-prompt adapter | Current |
 | [Map Anchor Emotional Copy](./map-anchor-copy.md) | Real-coordinate tavern entrance copy and marker/card wording | Current |
 | [Discovery Liveliness Signals](./discovery-liveliness-signals.md) | Discovery page rumor/feedback/activity labels without visitor social features | Current |
 | [Mobile Single-mainline Experience](./mobile-single-mainline.md) | Mobile dock and tavern first-screen contracts for the visitor-first entry path | Current |
@@ -67,11 +68,12 @@ Frontend work must preserve:
 12. For Tavern Skill Pack UI/service changes, read `skill-pack-ui-boundary.md`.
 13. For preset import preview UI/service changes, read `preset-import-preview-ui-boundary.md`.
 14. For character editor prompt risk checks, role-card import safety, or NPC prompt linter tests, read `character-prompt-risk-linter.md`.
-15. For map/discovery card copy that describes real coordinates, tavern markers, or street entrance wording, read `map-anchor-copy.md`.
-16. For discovery liveliness labels using rumor, guestbook/feedback, visits, or activity summaries, read `discovery-liveliness-signals.md`.
-17. For mobile dock order, mobile first-screen tavern entry, or collapsed tavern secondary panels, read `mobile-single-mainline.md`.
-18. For revisit-care, return-visit reminders, proactive notification copy, or notification scheduling previews, read `revisit-care-notification-boundary.md`.
-19. Run the right verification:
+15. For digital-human studio templates, portable identity packs, or video/short-drama prompt adapters, read `digital-human-studio-boundary.md`.
+16. For map/discovery card copy that describes real coordinates, tavern markers, or street entrance wording, read `map-anchor-copy.md`.
+17. For discovery liveliness labels using rumor, guestbook/feedback, visits, or activity summaries, read `discovery-liveliness-signals.md`.
+18. For mobile dock order, mobile first-screen tavern entry, or collapsed tavern secondary panels, read `mobile-single-mainline.md`.
+19. For revisit-care, return-visit reminders, proactive notification copy, or notification scheduling previews, read `revisit-care-notification-boundary.md`.
+20. Run the right verification:
    - UI/build change: `npm --prefix .\frontend run build`
    - Service/rule script change: `npm --prefix .\frontend test`
 

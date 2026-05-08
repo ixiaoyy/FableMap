@@ -6,7 +6,9 @@ import { Link, useLoaderData } from "react-router"
 import { TavernChatWorkbench } from "../features/tavern-chat-workbench"
 import { NeighborhoodRumorBubble } from "../components/NeighborhoodRumorBubble"
 import { buildCreatorConversionLink } from "../lib/creator-conversion.js"
+import { DIGITAL_HUMAN_STUDIO_TYPE_ID } from "../lib/digital-human-studio.js"
 import { fallbackRoleplayState } from "../lib/roleplay-state"
+import { deriveSpecialTavernTypeDisplay } from "../lib/special-tavern-types.js"
 import { buildTavernShareDisplay, buildTavernSharePayload } from "../lib/tavern-share.js"
 import {
   createVisitorNote,
@@ -117,7 +119,7 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5 text-cyan-200" />
+              <Share2 className="h-5 w-5 text-theme-accent-text" />
               邀请链接
             </CardTitle>
             <CardDescription className="mt-2">
@@ -131,15 +133,15 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-          <p className="text-sm font-bold text-white">{sharePayload.title}</p>
+        <div className="rounded-3xl border border-theme-border bg-theme-card p-4">
+          <p className="text-sm font-bold text-theme-primary">{sharePayload.title}</p>
           <p className="mt-2 text-sm leading-6 text-violet-50/70">{sharePayload.summary}</p>
           {sharePayload.characters ? (
-            <p className="mt-2 text-sm font-bold text-cyan-100">
-              <span className="text-violet-100/55">NPC：</span>{sharePayload.characters}
+            <p className="mt-2 text-sm font-bold text-theme-accent-text">
+              <span className="text-theme-muted">NPC：</span>{sharePayload.characters}
             </p>
           ) : null}
-          <p className="mt-3 break-all rounded-2xl bg-slate-950/45 px-3 py-2 text-xs text-cyan-100">
+          <p className="mt-3 break-all rounded-2xl bg-theme-card px-3 py-2 text-xs text-theme-accent-text">
             {sharePayload.url}
           </p>
         </div>
@@ -147,11 +149,11 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
           readOnly
           value={sharePayload.copyText}
           rows={4}
-          className="w-full resize-none rounded-2xl border border-white/12 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-violet-50 outline-none focus:border-cyan-300/60"
+          className="w-full resize-none rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-sm leading-6 text-violet-50 outline-none focus:border-theme-accent-border"
           aria-label="空间邀请文案"
         />
-        {shareStatus ? <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm text-violet-50/64">{shareStatus}</p> : null}
-        {copyStatus ? <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{copyStatus}</p> : null}
+        {shareStatus ? <p className="rounded-2xl border border-theme-border bg-theme-card p-3 text-sm text-violet-50/64">{shareStatus}</p> : null}
+        {copyStatus ? <p className="rounded-2xl border border-theme-accent-border bg-theme-accent-bg p-3 text-sm text-theme-accent-text">{copyStatus}</p> : null}
       </CardContent>
     </Card>
   )
@@ -161,7 +163,7 @@ function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
   const createLink = useMemo(() => buildCreatorConversionLink(tavern), [tavern])
 
   return (
-    <Card className="min-w-0 overflow-hidden border-cyan-300/18 bg-cyan-300/8">
+    <Card className="min-w-0 overflow-hidden border-theme-accent-border bg-theme-accent-bg">
       <CardHeader>
         <CardTitle>也在附近开一间自己的空间</CardTitle>
         <CardDescription className="mt-2">
@@ -169,7 +171,7 @@ function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="rounded-2xl border border-white/10 bg-slate-950/45 p-3 text-sm leading-6 text-violet-50/72">
+        <p className="rounded-2xl border border-theme-border bg-theme-card p-3 text-sm leading-6 text-violet-50/72">
           如果这间空间让你有了灵感，可以用同一片现实区域开一间属于自己的空间；内容仍由你自己确认。
         </p>
         <Button asChild>
@@ -178,6 +180,48 @@ function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SpecialTavernTypeCard({ tavern }: { tavern: Tavern }) {
+  const specialTavernType = deriveSpecialTavernTypeDisplay(tavern)
+
+  if (!specialTavernType) return null
+  const isDigitalHumanStudio = specialTavernType.id === DIGITAL_HUMAN_STUDIO_TYPE_ID
+
+  return (
+    <Card data-special-tavern-type-card={specialTavernType.id} className="min-w-0 overflow-hidden border-amber-300/18 bg-amber-300/8">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span aria-hidden="true">{specialTavernType.icon}</span>
+          {specialTavernType.label}
+        </CardTitle>
+        <CardDescription className="mt-2">
+          {specialTavernType.summary}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="rounded-2xl border border-theme-border bg-theme-card p-3 text-sm leading-6 text-violet-50/72">
+          {specialTavernType.description}
+        </p>
+        <div className="flex flex-wrap gap-2 text-xs font-bold">
+          <span className={`rounded-full border px-2.5 py-1 ${specialTavernType.badgeClass}`}>
+            layout_style={specialTavernType.layoutStyle}
+          </span>
+          <span className="rounded-full border border-theme-border bg-theme-card px-2.5 py-1 text-theme-muted">
+            place_type={tavern.place_type || "tavern"}
+          </span>
+        </div>
+        {isDigitalHumanStudio ? (
+          <div className="rounded-2xl border border-cyan-300/18 bg-cyan-300/8 p-3 text-sm leading-6 text-cyan-50/78">
+            <p className="font-bold text-cyan-50">可迁移数字人档案</p>
+            <p className="mt-1">
+              这里的 NPC 会辅助整理身份、口吻、外观风格和授权边界；确认后可映射为 FableMap / SillyTavern 角色卡，也可复制为视频 / 短剧出镜 prompt。
+            </p>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -215,22 +259,22 @@ function VisitorFeedbackCard({ tavern }: { tavern: Tavern }) {
       <CardContent className="space-y-3">
         <div className="grid gap-3 md:grid-cols-2">
           <label className="space-y-1.5 text-sm">
-            <span className="text-violet-100/65">Visitor ID</span>
-            <input value={visitorId} onChange={(event) => setVisitorId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+            <span className="text-theme-muted">Visitor ID</span>
+            <input value={visitorId} onChange={(event) => setVisitorId(event.target.value)} className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-theme-primary outline-none focus:border-theme-accent-border" />
           </label>
           <label className="space-y-1.5 text-sm">
-            <span className="text-violet-100/65">昵称</span>
-            <input value={nickname} onChange={(event) => setNickname(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+            <span className="text-theme-muted">昵称</span>
+            <input value={nickname} onChange={(event) => setNickname(event.target.value)} className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-theme-primary outline-none focus:border-theme-accent-border" />
           </label>
         </div>
         <label className="space-y-1.5 text-sm">
-          <span className="text-violet-100/65">反馈内容</span>
-          <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={3} maxLength={500} placeholder="告诉店主这次回访的感受，或希望下次看到什么。" className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
+          <span className="text-theme-muted">反馈内容</span>
+          <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={3} maxLength={500} placeholder="告诉店主这次回访的感受，或希望下次看到什么。" className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-theme-primary outline-none focus:border-theme-accent-border" />
         </label>
         <Button type="button" disabled={!content.trim() || busy} className="w-full" onClick={handleSubmitNote}>
           发送给店主
         </Button>
-        {message ? <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{message}</p> : null}
+        {message ? <p className="rounded-2xl border border-theme-accent-border bg-theme-accent-bg p-3 text-sm text-theme-accent-text">{message}</p> : null}
       </CardContent>
     </Card>
   )
@@ -253,6 +297,7 @@ export default function TavernRoute() {
             isOwner={isOwner}
             publicPanel={
               <div className="space-y-4">
+                <SpecialTavernTypeCard tavern={tavern} />
                 <TavernShareCard tavern={tavern} />
                 <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
                 <CreatorConversionCard tavern={tavern} />
@@ -269,7 +314,7 @@ export default function TavernRoute() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-violet-50/70">
+              <p className="rounded-2xl border border-theme-border bg-theme-card p-4 text-sm leading-6 text-violet-50/70">
                 请确认空间链接、访问权限或当前用户身份。店主可从管理页进入并携带 owner_id。
               </p>
             </CardContent>

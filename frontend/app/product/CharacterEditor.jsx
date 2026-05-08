@@ -24,6 +24,7 @@ import {
   compilePromptStyleDialLines,
   normalizePromptStyleDials,
 } from './promptStyleDials.js'
+import { buildDigitalHumanIdentityPack } from '../lib/digital-human-studio.js'
 
 const SPRITE_FIELDS = [
   ['neutral', '中性'],
@@ -173,11 +174,13 @@ export default function CharacterEditor({
   const [activeTemplateCategory, setActiveTemplateCategory] = useState('推荐')
   const [templateQuery, setTemplateQuery] = useState('')
   const [styleDials, setStyleDials] = useState(() => normalizePromptStyleDials(DEFAULT_PROMPT_STYLE_DIALS))
+  const [digitalHumanCopyStatus, setDigitalHumanCopyStatus] = useState('')
 
   useEffect(() => {
     setDraft(normalizeCharacterDraft(value))
     setError('')
     setStyleDials(normalizePromptStyleDials(DEFAULT_PROMPT_STYLE_DIALS))
+    setDigitalHumanCopyStatus('')
   }, [value])
 
   const configuredSpriteCount = useMemo(() => Object.keys(cleanSpriteMap(draft.sprites)).length, [draft.sprites])
@@ -194,6 +197,7 @@ export default function CharacterEditor({
   const promptRiskReport = useMemo(() => analyzeCharacterPromptRisk(draft), [draft])
   const styleDialLines = useMemo(() => compilePromptStyleDialLines(styleDials), [styleDials])
   const promptLayerPreview = useMemo(() => buildPromptLayerPreview(draft, styleDials), [draft, styleDials])
+  const digitalHumanPack = useMemo(() => buildDigitalHumanIdentityPack(draft), [draft])
   const completion = useMemo(() => {
     const checks = [
       { label: '名称', done: Boolean(draft.name.trim()) },
@@ -306,6 +310,20 @@ export default function CharacterEditor({
   function handleApplyStyleDials() {
     setDraft((prev) => applyPromptStyleDialsToDraft(prev, styleDials))
     setError('')
+  }
+
+  async function handleCopyDigitalHumanPrompt() {
+    setDigitalHumanCopyStatus('')
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        setDigitalHumanCopyStatus('当前浏览器不支持自动复制，请手动选中文本复制。')
+        return
+      }
+      await navigator.clipboard.writeText(digitalHumanPack.videoPrompt)
+      setDigitalHumanCopyStatus('已复制视频 / 短剧出镜 prompt。')
+    } catch {
+      setDigitalHumanCopyStatus('复制失败，请手动选中文本复制。')
+    }
   }
 
   function handleSave() {
@@ -516,6 +534,61 @@ export default function CharacterEditor({
           </div>
         </section>
       </details>
+
+      <section className="character-digital-human-pack" aria-label="可迁移数字人档案">
+        <div className="character-digital-human-pack__header">
+          <div>
+            <span className="mini-label">Portable identity package</span>
+            <strong>数字人档案 / 视频短剧出镜 Prompt</strong>
+            <p>
+              这不是保存动作，也不会调用视频或语音工具；它把当前角色草稿编译成可复制到 FableMap、SillyTavern、视频脚本或短剧工具的人设说明。
+            </p>
+          </div>
+          <button
+            type="button"
+            className="secondary"
+            onClick={handleCopyDigitalHumanPrompt}
+            disabled={disabled}
+          >
+            复制出镜 Prompt
+          </button>
+        </div>
+        <div className="character-digital-human-pack__grid">
+          <article>
+            <span>一句话定位</span>
+            <p>{digitalHumanPack.oneLine}</p>
+          </article>
+          <article>
+            <span>外观 / 服化道</span>
+            <p>{digitalHumanPack.visualStyle}</p>
+          </article>
+          <article>
+            <span>口吻 / 节奏</span>
+            <p>{digitalHumanPack.voiceStyle}</p>
+          </article>
+          <article>
+            <span>禁忌与授权</span>
+            <p>{digitalHumanPack.boundary}</p>
+          </article>
+        </div>
+        <label className="character-editor-full">
+          <span>视频 / 短剧出镜 prompt（可复制到外部工具）</span>
+          <textarea
+            readOnly
+            value={digitalHumanPack.videoPrompt}
+            rows={10}
+            className="character-digital-human-pack__prompt"
+          />
+        </label>
+        <div className="character-digital-human-pack__adapters">
+          <span>FableMap / SillyTavern 适配：使用下方角色卡字段保存</span>
+          <span>视频 / 短剧适配：复制出镜 prompt 到外部脚本或生成工具</span>
+          <span>安全边界：不直接生成真人影像、语音克隆或未授权肖像</span>
+        </div>
+        {digitalHumanCopyStatus ? (
+          <p className="character-digital-human-pack__status">{digitalHumanCopyStatus}</p>
+        ) : null}
+      </section>
 
       <section className="character-preview-card" aria-label="NPC 对话预览">
         <div className="character-preview-card__header">

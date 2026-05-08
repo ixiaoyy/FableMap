@@ -1,6 +1,12 @@
 import { useRef, useState } from 'react'
 import { parseCharacterCard, extractCharacterCardFromPng } from './services/tavernService'
 import { buildAiDraftLifecycle } from '../lib/ai-draft-lifecycle.js'
+import {
+  DIGITAL_HUMAN_DRAFT_FORBIDDEN,
+  DIGITAL_HUMAN_DRAFT_STYLE_TAGS,
+  DIGITAL_HUMAN_STUDIO_TYPE_ID,
+} from '../lib/digital-human-studio.js'
+import { deriveSpecialTavernTypeDisplay } from '../lib/special-tavern-types.js'
 import { addCharacter, deleteCharacter, generateCharacterDraft, importCharacterCard, listCharacters, updateCharacter } from '../lib/taverns'
 import CharacterEditor, { createEmptyCharacterDraft, normalizeCharacterPayload } from './CharacterEditor'
 import CharacterAvatar from './CharacterAvatar'
@@ -35,6 +41,10 @@ import {
  * @param {Function} onCharactersChanged - (characters) => void 角色变动回调（用于更新父组件）
  */
 export default function CharacterManagementModal({ tavern, ownerId, onClose, onCharactersChanged }) {
+  const specialTavernType = deriveSpecialTavernTypeDisplay(tavern || {})
+  const isDigitalHumanStudio = specialTavernType?.id === DIGITAL_HUMAN_STUDIO_TYPE_ID
+  const defaultAiDraftStyleTags = isDigitalHumanStudio ? DIGITAL_HUMAN_DRAFT_STYLE_TAGS : DEFAULT_AI_DRAFT_STYLE_TAGS
+  const defaultAiDraftForbidden = isDigitalHumanStudio ? DIGITAL_HUMAN_DRAFT_FORBIDDEN : DEFAULT_AI_DRAFT_FORBIDDEN
   const [characters, setCharacters] = useState(tavern?.characters || [])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -58,9 +68,9 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
   const [drafting, setDrafting] = useState(false)
   const [draftError, setDraftError] = useState('')
   const [draftStatus, setDraftStatus] = useState('')
-  const [aiDraftStyleText, setAiDraftStyleText] = useState(DEFAULT_AI_DRAFT_STYLE_TAGS.join(', '))
-  const [aiDraftForbiddenText, setAiDraftForbiddenText] = useState(DEFAULT_AI_DRAFT_FORBIDDEN.join(', '))
-  const [aiDraftTone, setAiDraftTone] = useState('温暖、短句、有空间陪伴感')
+  const [aiDraftStyleText, setAiDraftStyleText] = useState(defaultAiDraftStyleTags.join(', '))
+  const [aiDraftForbiddenText, setAiDraftForbiddenText] = useState(defaultAiDraftForbidden.join(', '))
+  const [aiDraftTone, setAiDraftTone] = useState(isDigitalHumanStudio ? '访谈式、清晰、尊重授权、适合视频出镜' : '温暖、短句、有空间陪伴感')
   const characterDraftLifecycle = buildAiDraftLifecycle('character')
 
   // 批量背景 NPC：先预览，店主确认后才逐个走现有 addCharacter API
@@ -166,6 +176,8 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
           styleTagsText: aiDraftStyleText,
           forbiddenText: aiDraftForbiddenText,
           tone: aiDraftTone,
+          defaultStyleTags: defaultAiDraftStyleTags,
+          defaultForbidden: defaultAiDraftForbidden,
         }),
         ownerId,
       )
@@ -482,9 +494,24 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
 
                 <section className="char-mgmt-ai-draft">
                   <div className="character-editor-section-heading">
-                    <span>生成 AI 草稿</span>
-                    <small>优先使用店主默认 LLM；无可用配置时只返回本地模板草稿。只放进右侧编辑器，店主保存后才会成为正式角色。</small>
+                    <span>{isDigitalHumanStudio ? '制作数字人档案草稿' : '生成 AI 草稿'}</span>
+                    <small>
+                      {isDigitalHumanStudio
+                        ? 'NPC 档案师会把访谈结果整理成可迁移数字人档案：可保存为角色卡，也可复制视频/短剧出镜 prompt。保存前仍是待确认草稿。'
+                        : '优先使用店主默认 LLM；无可用配置时只返回本地模板草稿。只放进右侧编辑器，店主保存后才会成为正式角色。'}
+                    </small>
                   </div>
+                  {isDigitalHumanStudio ? (
+                    <div className="ai-draft-lifecycle">
+                      <strong>Digital human adapter</strong>
+                      <p>第一版只输出文本档案与视频 / 短剧出镜 prompt，不直接生成视频、语音克隆或真人影像。</p>
+                      <ul>
+                        <li>先确认数字人是本人、虚构角色还是已授权品牌人格。</li>
+                        <li>再整理身份定位、口吻节奏、外观风格、示例台词和禁忌边界。</li>
+                        <li>最后由店主/用户在编辑器中确认，才保存为角色卡或复制到外部工具。</li>
+                      </ul>
+                    </div>
+                  ) : null}
                   <div className="ai-draft-lifecycle" aria-label="AI 草稿生命周期">
                     <strong>{characterDraftLifecycle.title}</strong>
                     <p>{characterDraftLifecycle.summary}</p>
@@ -509,7 +536,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                         value={aiDraftStyleText}
                         onChange={(event) => setAiDraftStyleText(event.target.value)}
                         disabled={drafting || saving || importing || deleting}
-                        placeholder="猫娘, 傲娇, 酒保"
+                        placeholder={isDigitalHumanStudio ? '数字人档案, 视频出镜, 短剧角色' : '猫娘, 傲娇, 酒保'}
                       />
                     </label>
                     <label>
@@ -518,7 +545,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                         value={aiDraftTone}
                         onChange={(event) => setAiDraftTone(event.target.value)}
                         disabled={drafting || saving || importing || deleting}
-                        placeholder="温暖、短句、有空间陪伴感"
+                        placeholder={isDigitalHumanStudio ? '访谈式、清晰、尊重授权、适合视频出镜' : '温暖、短句、有空间陪伴感'}
                       />
                     </label>
                   </div>
@@ -529,7 +556,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                       onChange={(event) => setAiDraftForbiddenText(event.target.value)}
                       disabled={drafting || saving || importing || deleting}
                       rows={2}
-                      placeholder="不要露骨，不要现实名人，不要真实私人地址"
+                      placeholder={isDigitalHumanStudio ? '不要现实名人或他人肖像复刻，不要直接生成真人视频或语音克隆' : '不要露骨，不要现实名人，不要真实私人地址'}
                     />
                   </label>
                   <button
@@ -538,7 +565,7 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                     onClick={handleGenerateAiDraft}
                     disabled={drafting || saving || importing || deleting}
                   >
-                    {drafting ? '生成中...' : '生成 AI 草稿'}
+                    {drafting ? '生成中...' : isDigitalHumanStudio ? '生成数字人档案草稿' : '生成 AI 草稿'}
                   </button>
                   {draftStatus && <div className="char-mgmt-batch-status">{draftStatus}</div>}
                   {draftError && <div className="char-mgmt-error">{draftError}</div>}

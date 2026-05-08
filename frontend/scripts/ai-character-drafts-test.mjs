@@ -26,6 +26,15 @@ assert.deepEqual(fallbackRequest.style_tags, DEFAULT_AI_DRAFT_STYLE_TAGS)
 assert.deepEqual(fallbackRequest.forbidden, DEFAULT_AI_DRAFT_FORBIDDEN)
 assert.equal(fallbackRequest.tone, '')
 
+const customFallbackRequest = createAiCharacterDraftRequest({
+  styleTagsText: '',
+  forbiddenText: '',
+  defaultStyleTags: ['数字人档案', '视频出镜'],
+  defaultForbidden: ['不要直接生成真人视频'],
+})
+assert.deepEqual(customFallbackRequest.style_tags, ['数字人档案', '视频出镜'])
+assert.deepEqual(customFallbackRequest.forbidden, ['不要直接生成真人视频'])
+
 const editorDraft = draftResponseToEditorDraft(
   {
     source: 'local_template_fallback',
