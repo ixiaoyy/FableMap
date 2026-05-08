@@ -3,7 +3,7 @@
   "name": "05-07-garden-tavern-stealing-mechanics",
   "title": "garden-tavern-stealing-mechanics",
   "description": "菜园酒馆偷菜：访客间互偷、NPC通知",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-07",
-  "completedAt": null,
+  "completedAt": "2026-05-08",
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
-  "current_phase": 1,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,13 @@
   "subtasks": [],
   "children": [],
   "parent": "05-07-05-07-new-features-pet-community-farming",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "frontend/app/product/tavernFarmModes.js",
+    "frontend/app/product/GardenFarmPanel.jsx",
+    "frontend/app/product/TavernChatRoom.jsx",
+    "frontend/app/product/styles.css",
+    "frontend/scripts/tavern-farm-modes-test.mjs"
+  ],
+  "notes": "Implemented local daily steal limit, deterministic neighbor plots, same-target lockout, private inventory gain, NPC notification prompt boundary, tests/build/Playwright evidence. Typecheck blocked by unrelated territory component inline-style errors.",
   "meta": {}
 }

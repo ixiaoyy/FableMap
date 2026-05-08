@@ -3,7 +3,7 @@
   "name": "05-07-05-07-new-features-pet-community-farming",
   "title": "brainstorm: 养宠、社区、种菜偷菜等新玩法",
   "description": "新增功能脑暴：养宠、社区、种菜偷菜、小游戏工厂，所有玩法需与酒馆 NPC AI 系统贴合，不是纯游戏",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -11,49 +11,23 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-07",
-  "completedAt": null,
+  "completedAt": "2026-05-08",
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
-  "current_phase": 1,
-  "next_action": [
-    {
-      "phase": 1,
-      "action": "brainstorm"
-    },
-    {
-      "phase": 2,
-      "action": "research"
-    },
-    {
-      "phase": 3,
-      "action": "implement"
-    },
-    {
-      "phase": 4,
-      "action": "check"
-    },
-    {
-      "phase": 5,
-      "action": "update-spec"
-    },
-    {
-      "phase": 6,
-      "action": "record-session"
-    }
-  ],
+  "current_phase": 6,
+  "next_action": [],
   "commit": null,
   "pr_url": null,
   "subtasks": [],
   "children": [
     "05-07-05-07-territory-map-claim-system",
-    "05-07-05-07-garden-tavern-exchange-system",
     "05-07-05-07-garden-tavern-stealing-mechanics",
     "05-07-05-07-garden-tavern-currency-economy"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Brainstorm based on farm game screenshots. Garden tavern with: crop planting, farm manager NPC, exchange/trading system, stealing mechanics. All tied to NPC AI system.",
+  "notes": "All 3 child tasks completed: territory-map-claim-system (codex), garden-tavern-stealing-mechanics (lijin), garden-tavern-currency-economy (lijin).",
   "meta": {
     "reference": "farm game exchange screenshots",
     "features": [

@@ -1098,3 +1098,34 @@ Completed all 6 child tasks for Conversation Beats feature. Created conversation
 ### Next Steps
 
 - None - task complete
+
+
+## Session 22: Garden Tavern Currency Economy
+
+**Date**: 2026-05-08
+**Task**: Garden Tavern Currency Economy
+**Branch**: `codex-homepage-dynamic-entry-covers`
+
+### Summary
+
+Implemented black-diamond currency economy: seed costs, daily bonus, local visitor stats, shop purchases, premium seed unlocks, tavern-local self-rank prompts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
