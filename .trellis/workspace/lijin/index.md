@@ -57,6 +57,7 @@
 
 ## Notes
 
+- 2026-05-09 visual QA preference: before running Playwright/browser self-acceptance for UI work, ask whether the user can perform manual visual inspection; if yes, skip Playwright unless a current hard project requirement still explicitly requires it, and explain any constraint first.
 - Sessions are appended to journal files
 - New journal file created when current exceeds 2000 lines
 - Use `add_session.py` to record sessions

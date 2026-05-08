@@ -30,8 +30,8 @@ const bottomDockLabels = Array.from(bottomDockSection.matchAll(/label: "([^"]+)"
 
 assert.deepEqual(
   bottomDockLabels,
-  ["首页", "发现", "进店", "清单", "管理"],
-  "mobile bottom dock should follow one visitor-first line: 首页 / 发现 / 进店 / 清单 / 管理",
+  ["首页", "发现", "进店", "指南", "管理"],
+  "mobile bottom dock should follow one visitor-first line: 首页 / 发现 / 进店 / 指南 / 管理",
 )
 assert.ok(bottomDockSection.includes('{ to: "/create", label: "进店"'), "mobile /create dock label should be visitor-facing 进店")
 assert.ok(!bottomDockSection.includes("创建空间"), "mobile bottom dock should not expose the owner/create wording in first-line navigation")

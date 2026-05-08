@@ -5,6 +5,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
+from fablemap_api.core.cultivation_logic import is_cultivation_tavern, update_cultivation_chat_count, get_progression_status
 
 from fastapi import HTTPException
 
@@ -54,6 +55,7 @@ from fablemap_api.core.tavern import (
     _is_system_or_public_welfare_tavern_data,
     _normalize_gender,
 )
+from fablemap_api.core.continuity_validator import ContinuityValidator, ConflictReport
 
 from ...domain.group_chat_policy import (
     clamp_chat_history_limit,
@@ -290,6 +292,26 @@ class RuntimeApplicationMixin:
         except Exception:
             created_memories = []
 
+        conflicts: list[dict[str, Any]] = []
+        try:
+            confirmed_cards = [
+                c for c in self.store.list_state_cards(tavern_id)
+                if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
+            ]
+            validator = ContinuityValidator()
+            reports = validator.validate_reply(response_text, confirmed_cards)
+            conflicts = [
+                {
+                    "card_id": r.card_id,
+                    "card_title": r.card_title,
+                    "reason": r.contradiction_reason,
+                    "severity": r.severity
+                }
+                for r in reports
+            ]
+        except Exception as exc:
+            logger.warning("Continuity validation failed: %s", exc)
+
         state_card_candidates: list[dict[str, Any]] = []
         try:
             state_card_candidates = self.create_state_card_candidates_from_chat(
@@ -322,6 +344,7 @@ class RuntimeApplicationMixin:
             "affinity": affinity_result.get("affinity"),
             "created_memories": created_memories,
             "state_card_candidates": state_card_candidates,
+            "conflicts": conflicts,
             "timestamp": now,
         }
 
@@ -631,6 +654,26 @@ class RuntimeApplicationMixin:
         except Exception:
             created_memories = []
 
+        conflicts: list[dict[str, Any]] = []
+        try:
+            confirmed_cards = [
+                c for c in self.store.list_state_cards(tavern_id)
+                if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
+            ]
+            validator = ContinuityValidator()
+            reports = validator.validate_reply(assistant_text, confirmed_cards)
+            conflicts = [
+                {
+                    "card_id": r.card_id,
+                    "card_title": r.card_title,
+                    "reason": r.contradiction_reason,
+                    "severity": r.severity
+                }
+                for r in reports
+            ]
+        except Exception as exc:
+            logger.warning("Group chat continuity validation failed: %s", exc)
+
         state_card_candidates: list[dict[str, Any]] = []
         try:
             state_card_candidates = self.create_state_card_candidates_from_chat(
@@ -655,6 +698,7 @@ class RuntimeApplicationMixin:
             "affinity": affinity_result.get("affinity"),
             "created_memories": created_memories,
             "state_card_candidates": state_card_candidates,
+            "conflicts": conflicts,
         }
 
     def get_group_chat_history(self, tavern_id: str, visitor_id: str = "", user_id: str = "", limit: int = 50) -> dict[str, Any]:
@@ -941,6 +985,8 @@ class RuntimeApplicationMixin:
                 temperature=llm_config.temperature,
                 max_tokens=llm_config.max_tokens,
                 top_p=llm_config.top_p,
+                frequency_penalty=getattr(llm_config, "frequency_penalty", 0.0),
+                presence_penalty=getattr(llm_config, "presence_penalty", 0.0),
             )
         )
         system_content = f"你是 FableMap 空间「{tavern.name}」里的 NPC {character_name}。{character_prompt}"
@@ -1114,7 +1160,15 @@ class RuntimeApplicationMixin:
         state.relationship_strength = result.current_strength
         state.relationship_stage = result.new_stage.value
         self.store.update_visitor_state(tavern_id, state)
-        return {"visitor_state": state, "affinity": result.to_dict()}
+        # 修行空间对话统计
+        progression = None
+        tavern = self.store.get_tavern(tavern_id)
+        if tavern and is_cultivation_tavern(tavern):
+            update_cultivation_chat_count(state)
+            progression = get_progression_status(state)
+
+        self.store.update_visitor_state(tavern_id, state)
+        return {"visitor_state": state, "affinity": result.to_dict(), "progression": progression}
 
     def _touch_visitor_state(
         self,

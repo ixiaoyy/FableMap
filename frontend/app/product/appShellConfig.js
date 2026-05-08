@@ -116,6 +116,7 @@ export const DEFAULT_VISIBLE_MAP_LAYERS = {
   labels: true,
   legend: true,
   ghostTraces: true,
+  territories: true,
 }
 
 export const MAP_LAYER_OPTIONS = [
@@ -126,6 +127,7 @@ export const MAP_LAYER_OPTIONS = [
   { key: 'labels', label: '地点标签', hint: '显示地点名与空间说明' },
   { key: 'legend', label: '图例', hint: '显示右下角图例与阵营色板' },
   { key: 'ghostTraces', label: '回访痕迹', hint: '显示玩家残影与回访痕迹' },
+  { key: 'territories', label: '领地', hint: '显示领地边界圆圈与名称' },
 ]
 
 export const MAP_LAYER_PRESETS = [
@@ -141,6 +143,7 @@ export const MAP_LAYER_PRESETS = [
       labels: true,
       legend: true,
       ghostTraces: true,
+      territories: true,
     },
   },
   {
@@ -155,6 +158,7 @@ export const MAP_LAYER_PRESETS = [
       labels: true,
       legend: false,
       ghostTraces: false,
+      territories: true,
     },
   },
   {
@@ -169,6 +173,7 @@ export const MAP_LAYER_PRESETS = [
       labels: true,
       legend: true,
       ghostTraces: true,
+      territories: true,
     },
   },
 ]

@@ -21,6 +21,11 @@ import { buildDiscoveryLiveliness, getDiscoveryLivelinessSearchText } from "../l
 import { resolveHomepageTavernCover, resolveUniqueHomepageTavernCovers } from "../lib/homepage-taverns"
 import { DISCOVERABLE_PLACE_TYPES, derivePlaceTypeDisplay, placeTypeMatchesTavern } from "../lib/place-types.js"
 import { buildShortDramaTeaser, getShortDramaTeaserSearchText } from "../lib/short-drama-teasers.js"
+import {
+  deriveSpecialTavernTypeDisplay,
+  SPECIAL_TAVERN_TYPES,
+  specialTavernTypeMatchesTavern,
+} from "../lib/special-tavern-types.js"
 import { buildTavernIntentTags, getTavernIntentTagsSearchText } from "../lib/tavern-intent-tags.js"
 import { errorMessage, listTaverns, type Tavern, type TavernCharacter, type TavernListResponse } from "../lib/taverns"
 import { buildMapAnchorCardCopy, formatTavernAnchorLocation } from "../product/mapAnchorCopy.js"
@@ -48,6 +53,7 @@ type TavernWithTimeStatus = Tavern & {
 type FilterState = {
   search: string
   activePlaceTypes: Set<string>
+  activeSpecialTypes: Set<string>
   activeCategories: Set<string>
   publicOnly: boolean
   openOnly: boolean
@@ -69,7 +75,7 @@ type EntryStatusDisplay = {
 const CATEGORIES: Category[] = [
   { label: "异星街角", tags: ["外星人", "便利店"], color: "text-green-300 border-green-300/30 bg-green-300/10" },
   { label: "委托故事", tags: ["文游", "委托板"], color: "text-amber-300 border-amber-300/30 bg-amber-300/10" },
-  { label: "社区据点", tags: ["社区"], color: "text-cyan-300 border-cyan-300/30 bg-cyan-300/10" },
+  { label: "社区据点", tags: ["社区"], color: "text-cyan-300 border-cyan-300/30 bg-theme-accent-bg" },
   { label: "陪伴树洞", tags: ["陪伴", "树洞"], color: "text-rose-300 border-rose-300/30 bg-rose-300/10" },
 ]
 
@@ -77,6 +83,12 @@ const previewCards = [
   { image: discoverRadarSurfaceImage, title: "雷达地表", text: "真实坐标上的区域会在开放时段亮起。" },
   { image: discoverNeonAlleyImage, title: "隐藏入口", text: "进入后遇见主人配置的 AI 角色与记忆线索。" },
 ]
+
+const DISCOVER_DESKTOP_BOARD_FRAME =
+  "lg:sticky lg:top-28 lg:h-[min(960px,calc(100dvh-8rem))] lg:overflow-hidden"
+
+const DISCOVER_DESKTOP_BOARD_SCROLL =
+  "lg:min-h-0 lg:overflow-y-auto lg:pr-2 lg:[scrollbar-gutter:stable]"
 
 function characterAvatar(character: TavernCharacter) {
   if (!character) return ""
@@ -137,7 +149,7 @@ function entryStatusDisplay(tavern: TavernWithTimeStatus | Tavern): EntryStatusD
     return {
       label: "今日熄灯",
       helper: "可预览，稍后再入店",
-      className: "border-white/10 bg-white/[0.04] text-white/52",
+      className: "border-theme-border bg-theme-card text-theme-primary/52",
     }
   }
 
@@ -160,7 +172,7 @@ function entryStatusDisplay(tavern: TavernWithTimeStatus | Tavern): EntryStatusD
   return {
     label: "公开入店",
     helper: "可直接进入和 NPC 对话",
-    className: "border-cyan-300/24 bg-cyan-300/10 text-cyan-50",
+    className: "border-theme-accent-border bg-theme-accent-bg text-theme-accent-text",
   }
 }
 
@@ -180,13 +192,13 @@ function buildEntrySignals(tavern: TavernWithTimeStatus | Tavern, placeType: Ret
       label: "氛围",
       value: placeType.shortLabel || placeType.label || "空间",
       helper: compactDisplayText(placeType.tone, placeType.description || "真实坐标上的空间入口"),
-      className: placeType.cardClass || "border-cyan-300/24 bg-cyan-300/10 text-cyan-50",
+      className: placeType.cardClass || "border-theme-accent-border bg-theme-accent-bg text-theme-accent-text",
     },
     {
       label: "角色",
       value: characterCount ? `${characterCount} 位 NPC` : "待配置 NPC",
       helper: characterCount ? "已有角色驻场" : "先看坐标氛围",
-      className: "border-fuchsia-300/22 bg-fuchsia-300/10 text-fuchsia-50",
+      className: "border-theme-border bg-theme-bg text-theme-primary",
     },
     {
       label: "回访",
@@ -238,6 +250,11 @@ function tavernMatchesFilter(tavern: TavernListResponse["taverns"][number], filt
     if (!matches) return false
   }
 
+  if (filters.activeSpecialTypes.size > 0) {
+    const matches = Array.from(filters.activeSpecialTypes).some((specialTypeId) => specialTavernTypeMatchesTavern(tavern, specialTypeId))
+    if (!matches) return false
+  }
+
   if (filters.publicOnly && tavern.access !== "public") return false
   if (filters.openOnly && tavern.status !== "open") return false
   return true
@@ -245,7 +262,7 @@ function tavernMatchesFilter(tavern: TavernListResponse["taverns"][number], filt
 
 function CharacterStack({ characters = [], muted = false }: { characters?: TavernCharacter[]; muted?: boolean }) {
   if (!characters.length) {
-    return <span className="text-xs text-violet-100/42">暂无角色信号</span>
+    return <span className="text-xs text-theme-muted">暂无角色信号</span>
   }
 
   return (
@@ -260,7 +277,7 @@ function CharacterStack({ characters = [], muted = false }: { characters?: Taver
           </span>
         ) : null}
       </div>
-      <span className={`truncate text-xs ${muted ? "text-white/28" : "text-violet-100/55"}`}>
+      <span className={`truncate text-xs ${muted ? "text-theme-primary/28" : "text-theme-muted"}`}>
         {characters.slice(0, 2).map((character) => character.name || "未命名").join(" · ")}
         {characters.length > 2 ? " · ..." : ""}
       </span>
@@ -273,8 +290,8 @@ function CharacterInitialBadge({ name, muted = false }: { name?: string; muted?:
     <span
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-950 bg-gradient-to-br text-xs font-bold ${
         muted
-          ? "from-white/8 to-white/4 text-white/42"
-          : "from-cyan-300/20 to-fuchsia-300/20 text-white"
+          ? "from-white/8 to-white/4 text-theme-primary/42"
+          : "from-cyan-300/20 to-fuchsia-300/20 text-theme-primary"
       }`}
       aria-label={`${name || "角色"} 头像占位`}
       title={name || "角色"}
@@ -354,15 +371,15 @@ function RadarSignalSummary({
             key={item.label}
             className={`min-w-0 rounded-2xl border px-3 py-2 ${
               muted
-                ? "border-white/8 bg-white/[0.025] text-white/34"
-                : "border-cyan-300/14 bg-cyan-300/[0.055] text-cyan-50"
+                ? "border-theme-border bg-theme-card text-theme-primary/34"
+                : "border-theme-accent-border bg-theme-accent-bg text-theme-accent-text"
             }`}
           >
-            <p className={`flex items-center gap-1.5 text-[0.62rem] font-black uppercase tracking-[0.16em] ${muted ? "text-white/24" : "text-cyan-100/54"}`}>
+            <p className={`flex items-center gap-1.5 text-[0.62rem] font-black uppercase tracking-[0.16em] ${muted ? "text-theme-primary/24" : "text-theme-accent-text"}`}>
               <Icon className="h-3 w-3" />
               {item.label}
             </p>
-            <p className={`mt-1 truncate text-xs font-bold ${muted ? "text-white/38" : "text-violet-50/72"}`}>
+            <p className={`mt-1 truncate text-xs font-bold ${muted ? "text-theme-primary/38" : "text-violet-50/72"}`}>
               {item.value}
             </p>
           </div>
@@ -391,14 +408,14 @@ function EntrySignalGrid({
         <div
           key={signal.label}
           className={`min-w-0 rounded-2xl border px-3 py-2 ${
-            muted ? "border-white/10 bg-white/[0.025] text-white/42" : signal.className
+            muted ? "border-theme-border bg-theme-card text-theme-primary/42" : signal.className
           }`}
         >
-          <p className={`text-[0.62rem] font-black uppercase tracking-[0.18em] ${muted ? "text-white/24" : "text-white/45"}`}>
+          <p className={`text-[0.62rem] font-black uppercase tracking-[0.18em] ${muted ? "text-theme-primary/24" : "text-theme-primary/45"}`}>
             {signal.label}
           </p>
-          <p className={`mt-1 truncate text-xs font-black ${muted ? "text-white/42" : "text-white"}`}>{signal.value}</p>
-          <p className={`mt-0.5 truncate text-[0.68rem] ${muted ? "text-white/26" : "text-white/55"}`}>{signal.helper}</p>
+          <p className={`mt-1 truncate text-xs font-black ${muted ? "text-theme-primary/42" : "text-theme-primary"}`}>{signal.value}</p>
+          <p className={`mt-0.5 truncate text-[0.68rem] ${muted ? "text-theme-primary/26" : "text-theme-primary/55"}`}>{signal.helper}</p>
         </div>
       ))}
     </div>
@@ -420,20 +437,20 @@ function ShortDramaTeaserCard({
     <div
       className={`rounded-2xl border p-3 ${
         muted
-          ? "border-white/10 bg-white/[0.025] text-white/42"
-          : "border-fuchsia-300/22 bg-fuchsia-300/10 text-fuchsia-50"
+          ? "border-theme-border bg-theme-card text-theme-primary/42"
+          : "border-theme-border bg-theme-bg text-theme-primary"
       }`}
       aria-label="短剧入口卡"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <span className={`text-[0.62rem] font-black uppercase tracking-[0.18em] ${muted ? "text-white/28" : "text-fuchsia-100/70"}`}>
+          <span className={`text-[0.62rem] font-black uppercase tracking-[0.18em] ${muted ? "text-theme-primary/28" : "text-theme-primary"}`}>
             {teaser.kicker}
           </span>
-          <p className={`mt-1 font-black ${compact ? "text-sm" : "text-base"} ${muted ? "text-white/48" : "text-white"}`}>
+          <p className={`mt-1 font-black ${compact ? "text-sm" : "text-base"} ${muted ? "text-theme-primary/48" : "text-theme-primary"}`}>
             {teaser.conflictTitle}
           </p>
-          <p className={`mt-1 line-clamp-2 text-xs leading-5 ${muted ? "text-white/30" : "text-fuchsia-50/70"}`}>
+          <p className={`mt-1 line-clamp-2 text-xs leading-5 ${muted ? "text-theme-primary/30" : "text-theme-primary/70"}`}>
             {teaser.summary}
           </p>
         </div>
@@ -442,8 +459,8 @@ function ShortDramaTeaserCard({
             to={`/tavern/${teaser.tavernId}`}
             className={`inline-flex min-h-11 shrink-0 touch-manipulation items-center justify-center gap-1 rounded-full border px-3 py-2 text-xs font-black transition ${
               muted
-                ? "border-white/10 text-white/38"
-                : "border-fuchsia-200/30 bg-fuchsia-200/10 text-fuchsia-50 hover:bg-fuchsia-200/18"
+                ? "border-theme-border text-theme-primary/38"
+                : "border-fuchsia-200/30 bg-fuchsia-200/10 text-theme-primary hover:bg-fuchsia-200/18"
             }`}
           >
             {teaser.ctaLabel}
@@ -452,11 +469,11 @@ function ShortDramaTeaserCard({
         ) : null}
       </div>
       {!compact && teaser.sceneHook ? (
-        <p className={`mt-2 rounded-xl border px-3 py-2 text-xs leading-5 ${muted ? "border-white/8 text-white/28" : "border-white/10 text-fuchsia-50/62"}`}>
+        <p className={`mt-2 rounded-xl border px-3 py-2 text-xs leading-5 ${muted ? "border-theme-border text-theme-primary/28" : "border-theme-border text-theme-primary/62"}`}>
           {teaser.sceneHook}
         </p>
       ) : null}
-      <p className={`mt-2 text-[0.68rem] leading-4 ${muted ? "text-white/24" : "text-fuchsia-50/45"}`}>
+      <p className={`mt-2 text-[0.68rem] leading-4 ${muted ? "text-theme-primary/24" : "text-theme-primary/45"}`}>
         {teaser.guardrail}
       </p>
     </div>
@@ -465,7 +482,7 @@ function ShortDramaTeaserCard({
 
 function ViewModeToggle({ activeViewMode, onChange }: { activeViewMode: DiscoverViewMode; onChange: (mode: DiscoverViewMode) => void }) {
   return (
-    <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-white/[0.045] p-1" aria-label="探索视图切换">
+    <div className="grid grid-cols-2 rounded-2xl border border-theme-border bg-theme-card p-1" aria-label="探索视图切换">
       {([
         { mode: "radar" as const, label: "雷达视图", icon: Radar },
         { mode: "cards" as const, label: "卡片视图", icon: LayoutGrid },
@@ -480,8 +497,8 @@ function ViewModeToggle({ activeViewMode, onChange }: { activeViewMode: Discover
             onClick={() => onChange(item.mode)}
             className={`inline-flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition ${
               active
-                ? "bg-cyan-300/16 text-cyan-100 shadow-[0_0_22px_rgba(0,214,201,0.16)]"
-                : "text-violet-100/54 hover:bg-white/8 hover:text-white"
+                ? "bg-cyan-300/16 text-theme-accent-text shadow-[0_0_22px_rgba(0,214,201,0.16)]"
+                : "text-theme-muted hover:bg-theme-card hover:text-theme-primary"
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -496,12 +513,14 @@ function ViewModeToggle({ activeViewMode, onChange }: { activeViewMode: Discover
 function FilterPanel({
   search,
   activePlaceTypes,
+  activeSpecialTypes,
   activeCategories,
   publicOnly,
   openOnly,
   hasFilters,
   onSearchChange,
   onTogglePlaceType,
+  onToggleSpecialType,
   onToggleCategory,
   onPublicOnlyChange,
   onOpenOnlyChange,
@@ -510,6 +529,7 @@ function FilterPanel({
   hasFilters: boolean
   onSearchChange: (value: string) => void
   onTogglePlaceType: (placeTypeId: string) => void
+  onToggleSpecialType: (specialTypeId: string) => void
   onToggleCategory: (label: string) => void
   onPublicOnlyChange: (value: boolean) => void
   onOpenOnlyChange: (value: boolean) => void
@@ -518,6 +538,7 @@ function FilterPanel({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const activeFilterCount =
     activePlaceTypes.size +
+    activeSpecialTypes.size +
     activeCategories.size +
     (publicOnly ? 1 : 0) +
     (openOnly ? 1 : 0)
@@ -526,10 +547,10 @@ function FilterPanel({
   return (
     <div
       data-discover-filter-shell="mobile-lifted"
-      className="space-y-4 rounded-[2rem] border border-cyan-300/18 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.14),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.075),rgba(139,92,246,0.05))] p-5 shadow-[0_0_36px_rgba(34,211,238,0.08)]"
+      className="space-y-4 rounded-[2rem] border border-theme-accent-border bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.14),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.075),rgba(139,92,246,0.05))] p-5 shadow-[0_0_36px_rgba(34,211,238,0.08)]"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-cyan-100/60">
+        <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-theme-accent-text">
           <Search className="h-3.5 w-3.5" />
           查找信号
         </span>
@@ -539,7 +560,7 @@ function FilterPanel({
             onClick={() => setFiltersOpen((open) => !open)}
             aria-expanded={filtersOpen}
             aria-controls={advancedFiltersId}
-            className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-cyan-300/22 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-50 transition hover:border-cyan-300/45 hover:bg-cyan-300/16 md:hidden"
+            className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-theme-accent-border bg-theme-accent-bg px-3 py-2 text-xs font-bold text-theme-accent-text transition hover:border-cyan-300/45 hover:bg-cyan-300/16 md:hidden"
           >
             <Radar className="h-3.5 w-3.5" />
             {filtersOpen ? "收起调谐" : "展开调谐"}
@@ -548,7 +569,7 @@ function FilterPanel({
             <button
               type="button"
               onClick={onClear}
-              className="flex min-h-11 touch-manipulation items-center gap-1 rounded-full border border-white/10 px-3 py-2 text-xs text-violet-100/70 transition hover:border-rose-300/40 hover:text-rose-300"
+              className="flex min-h-11 touch-manipulation items-center gap-1 rounded-full border border-theme-border px-3 py-2 text-xs text-theme-muted transition hover:border-rose-300/40 hover:text-rose-300"
             >
               <X className="h-3 w-3" />
               清空
@@ -559,23 +580,23 @@ function FilterPanel({
 
       <label className="relative block">
         <span className="sr-only">搜索坐标、区域、角色或记忆线索</span>
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-100/40" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-theme-muted" />
         <input
           type="text"
           placeholder="搜索坐标、区域、角色或记忆线索…"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          className="flex h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-9 py-2 text-sm text-white placeholder:text-violet-100/40 focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+          className="flex h-11 w-full rounded-2xl border border-theme-border bg-theme-card px-9 py-2 text-sm text-theme-primary placeholder:text-theme-muted focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
         />
       </label>
 
-      <div className="rounded-2xl border border-cyan-300/22 bg-cyan-300/[0.085] px-3 py-2 text-xs leading-5 text-cyan-50/78 md:hidden">
+      <div className="rounded-2xl border border-theme-accent-border bg-cyan-300/[0.085] px-3 py-2 text-xs leading-5 text-theme-accent-text/78 md:hidden">
         {activeFilterCount ? `已锁定 ${activeFilterCount} 个高级信号条件；展开后可继续调谐。` : "移动端默认保留搜索入口；地点类型、标签与开灯状态可展开调谐。"}
       </div>
 
       <div id={advancedFiltersId} className={`${filtersOpen ? "space-y-4" : "hidden"} md:block md:space-y-4`}>
         <div className="space-y-2">
-          <p className="text-xs font-bold text-violet-100/48">场所类型</p>
+          <p className="text-xs font-bold text-theme-muted">场所类型</p>
           <div className="flex flex-wrap gap-2">
             {DISCOVERABLE_PLACE_TYPES.map((type) => {
               const active = activePlaceTypes.has(type.id)
@@ -586,8 +607,8 @@ function FilterPanel({
                   onClick={() => onTogglePlaceType(type.id)}
                   className={`inline-flex min-h-11 touch-manipulation items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition ${
                     active
-                      ? "border-cyan-300/40 bg-cyan-300/12 text-cyan-100"
-                      : "border-white/10 text-violet-100/60 hover:border-cyan-300/30 hover:text-cyan-100"
+                      ? "border-cyan-300/40 bg-theme-accent-bg text-theme-accent-text"
+                      : "border-theme-border text-theme-muted hover:border-cyan-300/30 hover:text-theme-accent-text"
                   }`}
                   title={type.description}
                 >
@@ -600,7 +621,32 @@ function FilterPanel({
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-bold text-violet-100/48">内容标签</p>
+          <p className="text-xs font-bold text-theme-muted">专题体验</p>
+          <div className="flex flex-wrap gap-2">
+            {SPECIAL_TAVERN_TYPES.map((specialType) => {
+              const active = activeSpecialTypes.has(specialType.id)
+              return (
+                <button
+                  key={specialType.id}
+                  type="button"
+                  onClick={() => onToggleSpecialType(specialType.id)}
+                  className={`inline-flex min-h-11 touch-manipulation items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition ${
+                    active
+                      ? specialType.filterClass
+                      : "border-theme-border text-theme-muted hover:border-amber-300/30 hover:text-amber-100"
+                  }`}
+                  title={specialType.summary}
+                >
+                  <span aria-hidden="true">{specialType.icon}</span>
+                  {specialType.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-theme-muted">内容标签</p>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((category) => {
               const active = activeCategories.has(category.label)
@@ -612,7 +658,7 @@ function FilterPanel({
                   className={`inline-flex min-h-11 touch-manipulation items-center rounded-full border px-3 py-2 text-xs font-bold transition ${
                     active
                       ? category.color
-                      : "border-white/10 text-violet-100/60 hover:border-white/25 hover:text-white/80"
+                      : "border-theme-border text-theme-muted hover:border-theme-border hover:text-theme-primary/80"
                   }`}
                 >
                   {category.label}
@@ -623,7 +669,7 @@ function FilterPanel({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <label className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-2 text-xs text-violet-100/70">
+          <label className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-2 text-xs text-theme-muted">
             <input
               type="checkbox"
               checked={publicOnly}
@@ -632,7 +678,7 @@ function FilterPanel({
             />
             仅公开
           </label>
-          <label className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-2 text-xs text-violet-100/70">
+          <label className="flex min-h-11 cursor-pointer touch-manipulation items-center gap-2 text-xs text-theme-muted">
             <input
               type="checkbox"
               checked={openOnly}
@@ -649,16 +695,16 @@ function FilterPanel({
 
 function PreviewTile({ image, title, text }: { image: string; title: string; text: string }) {
   return (
-    <article className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.035]">
+    <article className="overflow-hidden rounded-[1.75rem] border border-theme-border bg-theme-card">
       <div
-        className="h-36 w-full bg-slate-950 bg-cover bg-center"
+        className="h-36 w-full bg-theme-bg bg-cover bg-center"
         style={{ backgroundImage: previewBackgroundImage(image) }}
         role="img"
         aria-label={`${title} 视觉预览`}
       />
       <div className="p-4">
-        <h2 className="font-black text-white">{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-violet-100/58">{text}</p>
+        <h2 className="font-black text-theme-primary">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-theme-muted">{text}</p>
       </div>
     </article>
   )
@@ -668,21 +714,22 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
   const tavernWithTimeStatus = tavern as TavernWithTimeStatus
   const isClosed = tavernWithTimeStatus.is_open === false
   const placeType = derivePlaceTypeDisplay(tavern)
+  const specialType = deriveSpecialTavernTypeDisplay(tavern)
   const entry = entryStatusDisplay(tavernWithTimeStatus)
   const strength = signalStrength(tavern, index)
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-[1.75rem] border bg-slate-950/78 p-5 transition hover:-translate-y-0.5 ${
+      className={`group relative overflow-hidden rounded-[1.75rem] border bg-theme-card p-5 transition hover:-translate-y-0.5 ${
         isClosed
-          ? "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
-          : "border-white/10 hover:border-cyan-300/55 hover:bg-cyan-300/10"
+          ? "border-theme-border hover:border-theme-border hover:bg-theme-card"
+          : "border-theme-border hover:border-cyan-300/55 hover:bg-theme-accent-bg"
       }`}
     >
       {isClosed ? <div className="pointer-events-none absolute inset-0 z-10 bg-black/45" /> : null}
-      <div className="absolute right-5 top-5 text-5xl font-black text-white/[0.025]">{String(index + 1).padStart(2, "0")}</div>
+      <div className="absolute right-5 top-5 text-5xl font-black text-theme-primary/[0.025]">{String(index + 1).padStart(2, "0")}</div>
       <div className="relative flex items-start gap-4">
-        <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border ${isClosed ? "border-white/10 bg-white/5 text-white/30" : "border-cyan-300/20 bg-cyan-300/12 text-cyan-100"}`}>
+        <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border ${isClosed ? "border-theme-border bg-theme-card text-theme-primary/30" : "border-theme-accent-border bg-theme-accent-bg text-theme-accent-text"}`}>
           <MapPinned className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -690,7 +737,7 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
             <button
               type="button"
               onClick={() => onPreview(tavern)}
-              className={`min-h-11 min-w-0 touch-manipulation text-left font-black transition group-hover:text-cyan-100 ${isClosed ? "text-white/50" : "text-white"}`}
+              className={`min-h-11 min-w-0 touch-manipulation text-left font-black transition group-hover:text-theme-accent-text ${isClosed ? "text-theme-primary/50" : "text-theme-primary"}`}
             >
               {tavern.name}
             </button>
@@ -698,36 +745,47 @@ function RadarSignalCard({ tavern, index, onPreview }: { tavern: Tavern; index: 
               <span
                 className={`inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${
                   isClosed
-                    ? "border-white/10 bg-white/5 text-white/40"
-                    : "border-cyan-300/18 bg-cyan-300/10 text-cyan-100"
+                    ? "border-theme-border bg-theme-card text-theme-primary/40"
+                    : "border-theme-accent-border bg-theme-accent-bg text-theme-accent-text"
                 }`}
                 title={placeType.description}
               >
                 <span aria-hidden="true">{placeType.icon}</span>
                 {placeType.shortLabel || placeType.label}
               </span>
+              {specialType ? (
+                <span className={`inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${isClosed ? "border-theme-border bg-theme-card text-theme-primary/40" : specialType.badgeClass}`}>
+                  <span aria-hidden="true">{specialType.icon}</span>
+                  {specialType.label}
+                </span>
+              ) : null}
               <span
                 className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${
-                  isClosed ? "border-white/10 bg-white/5 text-white/40" : entry.className
+                  isClosed ? "border-theme-border bg-theme-card text-theme-primary/40" : entry.className
                 }`}
               >
                 {entry.label}
               </span>
-              <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${isClosed ? "border-white/10 bg-white/5 text-white/40" : "border-fuchsia-300/18 bg-fuchsia-300/10 text-fuchsia-100"}`}>
+              <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${isClosed ? "border-theme-border bg-theme-card text-theme-primary/40" : "border-theme-border bg-theme-bg text-theme-primary"}`}>
                 Signal {strength}%
               </span>
             </div>
           </div>
-          <p className={`mt-2 line-clamp-2 text-sm leading-6 ${isClosed ? "text-white/25" : "text-violet-100/65"}`}>
+          <p className={`mt-2 line-clamp-2 text-sm leading-6 ${isClosed ? "text-theme-primary/25" : "text-theme-muted"}`}>
             {tavern.description || "这个区域还没有公开简介，但坐标已经亮起。"}
           </p>
+          {specialType ? (
+            <p className={`mt-2 text-xs leading-5 ${isClosed ? "text-theme-primary/28" : "text-amber-100/72"}`}>
+              专题体验：{specialType.summary}
+            </p>
+          ) : null}
           <RadarSignalSummary tavern={tavernWithTimeStatus} placeType={placeType} strength={strength} muted={isClosed} />
-          <div className={`mt-4 flex flex-wrap items-center gap-2 text-xs ${isClosed ? "text-white/24" : "text-violet-100/48"}`}>
+          <div className={`mt-4 flex flex-wrap items-center gap-2 text-xs ${isClosed ? "text-theme-primary/24" : "text-theme-muted"}`}>
             <span>{locationLabel(tavern)}</span>
             {tavernWithTimeStatus.local_time_display ? (
               <span>{isClosed ? "已熄灯" : "亮起中"} · {tavernWithTimeStatus.local_time_display}</span>
             ) : null}
-            <Link to={`/tavern/${tavern.id}`} className="ml-auto inline-flex min-h-11 touch-manipulation items-center gap-1 rounded-full border border-cyan-300/22 px-4 py-2 font-bold text-cyan-100 transition hover:bg-cyan-300/12">
+            <Link to={`/tavern/${tavern.id}`} className="ml-auto inline-flex min-h-11 touch-manipulation items-center gap-1 rounded-full border border-theme-accent-border px-4 py-2 font-bold text-theme-accent-text transition hover:bg-theme-accent-bg">
               进入
               <ArrowRight className="h-3 w-3" />
             </Link>
@@ -751,13 +809,14 @@ function ResultCard({
 }) {
   const tavernWithTimeStatus = tavern as TavernWithTimeStatus
   const placeType = derivePlaceTypeDisplay(tavern)
+  const specialType = deriveSpecialTavernTypeDisplay(tavern)
   const entry = entryStatusDisplay(tavernWithTimeStatus)
   const isClosed = tavernWithTimeStatus.is_open === false
   const shortDramaTeaser = buildShortDramaTeaser(tavern)
   const intentTags = buildTavernIntentTags(tavern)
 
   return (
-    <article className="group overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950/78 transition hover:-translate-y-0.5 hover:border-cyan-300/45">
+    <article className="group overflow-hidden rounded-[1.75rem] border border-theme-border bg-theme-card transition hover:-translate-y-0.5 hover:border-cyan-300/45">
       <button type="button" onClick={() => onPreview(tavern)} className="relative block h-52 w-full touch-manipulation overflow-hidden text-left sm:h-60">
         <img
           src={coverImage}
@@ -767,15 +826,20 @@ function ResultCard({
           decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-        <span className="absolute left-4 top-4 rounded-full border border-white/16 bg-slate-950/68 px-3 py-1 text-xs font-bold text-cyan-100 backdrop-blur-md">
+        <span className="absolute left-4 top-4 rounded-full border border-theme-border bg-theme-card px-3 py-1 text-xs font-bold text-theme-accent-text backdrop-blur-md">
           {locationLabel(tavern)}
         </span>
-        <span className="absolute right-4 top-4 rounded-full border border-fuchsia-300/22 bg-fuchsia-300/12 px-3 py-1 text-xs font-bold text-fuchsia-100 backdrop-blur-md">
+        <span className="absolute right-4 top-4 rounded-full border border-theme-border bg-theme-bg px-3 py-1 text-xs font-bold text-theme-primary backdrop-blur-md">
           {placeType.shortLabel || placeType.label}
         </span>
+        {specialType ? (
+          <span className={`absolute right-4 top-14 rounded-full border px-3 py-1 text-xs font-bold backdrop-blur-md ${specialType.badgeClass}`}>
+            {specialType.icon} {specialType.label}
+          </span>
+        ) : null}
         <span
-          className={`absolute left-4 top-14 rounded-full border px-3 py-1 text-xs font-bold backdrop-blur-md ${
-            isClosed ? "border-white/10 bg-slate-950/68 text-white/45" : entry.className
+          className={`absolute left-4 ${specialType ? "top-24" : "top-14"} rounded-full border px-3 py-1 text-xs font-bold backdrop-blur-md ${
+            isClosed ? "border-theme-border bg-theme-card text-theme-primary/45" : entry.className
           }`}
         >
           {entry.label}
@@ -786,20 +850,25 @@ function ResultCard({
       </button>
       <div className="space-y-4 p-5">
         <div>
-          <h3 className="text-xl font-black text-white">{tavern.name}</h3>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-violet-100/62">
+          <h3 className="text-xl font-black text-theme-primary">{tavern.name}</h3>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-theme-muted">
             {tavern.description || "这个区域还没有公开简介，但坐标已经亮起。"}
           </p>
-          <p className="mt-2 line-clamp-1 text-xs font-bold text-cyan-100/68">
+          <p className="mt-2 line-clamp-1 text-xs font-bold text-theme-accent-text">
             氛围线索：{compactDisplayText(placeType.tone, tavern.scene_prompt || "真实坐标上的入口", 42)}
           </p>
+          {specialType ? (
+            <p className="mt-2 line-clamp-2 text-xs leading-5 text-amber-100/72">
+              专题体验：{specialType.summary}
+            </p>
+          ) : null}
         </div>
         <EntrySignalGrid tavern={tavernWithTimeStatus} placeType={placeType} muted={isClosed} />
         <DiscoveryLivelinessStrip tavern={tavernWithTimeStatus} muted={isClosed} />
         {intentTags.length ? (
           <div className="flex flex-wrap gap-2" aria-label="经营意图">
             {intentTags.map((tag) => (
-              <span key={tag.id} className="rounded-full border border-fuchsia-300/22 bg-fuchsia-300/10 px-2.5 py-1 text-[0.7rem] font-bold text-fuchsia-50" title={tag.helper}>
+              <span key={tag.id} className="rounded-full border border-theme-border bg-theme-bg px-2.5 py-1 text-[0.7rem] font-bold text-theme-primary" title={tag.helper}>
                 {tag.label}
               </span>
             ))}
@@ -809,8 +878,8 @@ function ResultCard({
           <ShortDramaTeaserCard teaser={shortDramaTeaser} muted={isClosed} />
         ) : null}
         <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-          <span className="rounded-full border border-cyan-300/18 bg-cyan-300/10 px-2.5 py-1 text-cyan-100">Signal {signalStrength(tavern, index)}%</span>
-          <span className={`rounded-full border px-2.5 py-1 ${isClosed ? "border-white/10 bg-white/[0.04] text-violet-100/42" : entry.className}`}>{entry.label}</span>
+          <span className="rounded-full border border-theme-accent-border bg-theme-accent-bg px-2.5 py-1 text-theme-accent-text">Signal {signalStrength(tavern, index)}%</span>
+          <span className={`rounded-full border px-2.5 py-1 ${isClosed ? "border-theme-border bg-theme-card text-theme-muted" : entry.className}`}>{entry.label}</span>
           {tavernWithTimeStatus.local_time_display ? (
             <span className="rounded-full border border-emerald-300/18 bg-emerald-300/10 px-2.5 py-1 text-emerald-100">
               {isClosed ? "已熄灯" : "亮起中"} · {tavernWithTimeStatus.local_time_display}
@@ -835,11 +904,11 @@ function ResultCard({
 
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   return (
-    <div className="grid min-h-80 place-items-center rounded-[1.75rem] border border-white/10 bg-white/[0.04] text-center">
+    <div className="grid min-h-80 place-items-center rounded-[1.75rem] border border-theme-border bg-theme-card text-center">
       <div className="max-w-sm space-y-3 px-6">
-        <RadioTower className="mx-auto h-10 w-10 text-violet-100/60" />
-        <p className="font-bold text-white">暂时没有亮起的区域</p>
-        <p className="text-sm leading-6 text-violet-100/60">
+        <RadioTower className="mx-auto h-10 w-10 text-theme-muted" />
+        <p className="font-bold text-theme-primary">暂时没有亮起的区域</p>
+        <p className="text-sm leading-6 text-theme-muted">
           {hasFilters ? "换一个关键词或清空筛选，看看别的坐标。" : "先创建一个真实坐标锚点，发现层就会亮起第一盏灯。"}
         </p>
       </div>
@@ -862,10 +931,10 @@ function DesktopRadarTelemetry({ taverns }: { taverns: Tavern[] }) {
         { label: "Operated nearby", value: `${activeOperationCount}`, helper: "有人经营" },
         { label: "Avg strength", value: `${averageSignal}%`, helper: "平均强度" },
       ].map((item) => (
-        <div key={item.label} className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl">
-          <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-100/55">{item.label}</p>
-          <p className="mt-2 text-2xl font-black text-white">{item.value}</p>
-          <p className="mt-1 text-xs text-violet-100/48">{item.helper}</p>
+        <div key={item.label} className="rounded-3xl border border-theme-border bg-theme-card p-4 backdrop-blur-xl">
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-theme-accent-text">{item.label}</p>
+          <p className="mt-2 text-2xl font-black text-theme-primary">{item.value}</p>
+          <p className="mt-1 text-xs text-theme-muted">{item.helper}</p>
         </div>
       ))}
     </div>
@@ -874,7 +943,10 @@ function DesktopRadarTelemetry({ taverns }: { taverns: Tavern[] }) {
 
 function RadarBoard({ taverns, hasFilters, onPreview }: { taverns: Tavern[]; hasFilters: boolean; onPreview: (tavern: Tavern) => void }) {
   return (
-    <section className="relative min-h-[620px] overflow-hidden rounded-[2.2rem] border border-white/12 bg-slate-950/72 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl lg:min-h-[680px]">
+    <section
+      data-discover-board="radar"
+      className={`relative min-h-[620px] overflow-hidden rounded-[2.2rem] border border-theme-border bg-theme-card p-5 shadow-2xl shadow-black/30 backdrop-blur-xl ${DISCOVER_DESKTOP_BOARD_FRAME}`}
+    >
       <img
         src={discoverRadarSurfaceImage}
         alt=""
@@ -884,33 +956,35 @@ function RadarBoard({ taverns, hasFilters, onPreview }: { taverns: Tavern[]; has
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,5,18,0.88),rgba(3,5,18,0.50)_45%,rgba(3,5,18,0.82)),radial-gradient(circle_at_52%_42%,rgba(0,214,201,0.18),transparent_20rem)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_28%,rgba(0,214,201,0.24),transparent_17rem),radial-gradient(circle_at_74%_68%,rgba(217,70,239,0.20),transparent_20rem)]" />
-      <div className="absolute inset-5 rounded-[1.8rem] border border-cyan-300/10 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
+      <div className="absolute inset-5 rounded-[1.8rem] border border-theme-accent-border bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
       <div className="absolute left-1/2 top-44 hidden h-80 w-80 -translate-x-1/2 rounded-full border border-cyan-300/16 shadow-[0_0_120px_rgba(0,214,201,0.14)] lg:block" />
       <div className="absolute left-1/2 top-52 hidden h-48 w-48 -translate-x-1/2 rounded-full border border-fuchsia-300/14 lg:block" />
 
-      <div className="relative flex flex-col gap-5">
-        <div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-[#050615]/76 p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative flex flex-col gap-5 lg:h-full lg:min-h-0">
+        <div className="flex flex-col gap-4 rounded-[1.75rem] border border-theme-border bg-theme-card p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-100/70">Live coordinate radar</p>
-            <h2 className="mt-2 text-3xl font-black text-white">发光坐标流</h2>
-            <p className="mt-1 text-sm text-violet-100/56">用雷达视角感受附近的区域氛围；查找时可切成卡片结果。</p>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-theme-accent-text">Live coordinate radar</p>
+            <h2 className="mt-2 text-3xl font-black text-theme-primary">发光坐标流</h2>
+            <p className="mt-1 text-sm text-theme-muted">用雷达视角感受附近的区域氛围；查找时可切成卡片结果。</p>
           </div>
-          <span className="grid h-14 w-14 place-items-center rounded-full border border-cyan-300/28 bg-cyan-300/10 text-cyan-100">
+          <span className="grid h-14 w-14 place-items-center rounded-full border border-cyan-300/28 bg-theme-accent-bg text-theme-accent-text">
             <Waves className="h-7 w-7" />
           </span>
         </div>
 
         <DesktopRadarTelemetry taverns={taverns} />
 
-        <div className="grid gap-4">
-          {taverns.length ? (
-            taverns.map((tavern, index) => (
+        {taverns.length ? (
+          <div data-discover-board-scroll="radar-results" className={`grid flex-1 content-start gap-4 ${DISCOVER_DESKTOP_BOARD_SCROLL}`}>
+            {taverns.map((tavern, index) => (
               <RadarSignalCard key={tavern.id} tavern={tavern} index={index} onPreview={onPreview} />
-            ))
-          ) : (
+            ))}
+          </div>
+        ) : (
+          <div className={`flex-1 ${DISCOVER_DESKTOP_BOARD_SCROLL}`}>
             <EmptyState hasFilters={hasFilters} />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   )
@@ -920,33 +994,40 @@ function CardsBoard({ taverns, hasFilters, onPreview }: { taverns: Tavern[]; has
   const coversByTavernId = resolveUniqueHomepageTavernCovers(taverns)
 
   return (
-    <section className="rounded-[2.2rem] border border-white/12 bg-slate-950/72 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
-      <div className="mb-5 flex flex-col gap-3 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-fuchsia-100/70">Card results</p>
-          <h2 className="mt-2 text-3xl font-black text-white">按卡片浏览区域</h2>
-          <p className="mt-1 text-sm text-violet-100/56">搜索和筛选时优先展示更高效的图片卡片。</p>
+    <section
+      data-discover-board="cards"
+      className={`rounded-[2.2rem] border border-theme-border bg-theme-card p-5 shadow-2xl shadow-black/30 backdrop-blur-xl ${DISCOVER_DESKTOP_BOARD_FRAME}`}
+    >
+      <div className="flex flex-col gap-5 lg:h-full lg:min-h-0">
+        <div className="flex flex-col gap-3 rounded-[1.75rem] border border-theme-border bg-theme-card p-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-theme-primary">Card results</p>
+            <h2 className="mt-2 text-3xl font-black text-theme-primary">按卡片浏览区域</h2>
+            <p className="mt-1 text-sm text-theme-muted">搜索和筛选时优先展示更高效的图片卡片。</p>
+          </div>
+          <span className="rounded-full border border-theme-accent-border bg-theme-accent-bg px-4 py-2 text-xs font-black text-theme-accent-text">
+            {taverns.length} 个结果
+          </span>
         </div>
-        <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black text-cyan-100">
-          {taverns.length} 个结果
-        </span>
-      </div>
 
-      {taverns.length ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {taverns.map((tavern, index) => (
-            <ResultCard
-              key={tavern.id}
-              tavern={tavern}
-              index={index}
-              coverImage={coversByTavernId[tavern.id] || coverForTavern(tavern, index)}
-              onPreview={onPreview}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyState hasFilters={hasFilters} />
-      )}
+        {taverns.length ? (
+          <div data-discover-board-scroll="card-results" className={`grid flex-1 content-start gap-5 md:grid-cols-2 xl:grid-cols-3 ${DISCOVER_DESKTOP_BOARD_SCROLL}`}>
+            {taverns.map((tavern, index) => (
+              <ResultCard
+                key={tavern.id}
+                tavern={tavern}
+                index={index}
+                coverImage={coversByTavernId[tavern.id] || coverForTavern(tavern, index)}
+                onPreview={onPreview}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className={`flex-1 ${DISCOVER_DESKTOP_BOARD_SCROLL}`}>
+            <EmptyState hasFilters={hasFilters} />
+          </div>
+        )}
+      </div>
     </section>
   )
 }
@@ -964,25 +1045,26 @@ export default function DiscoverRoute() {
 
   const [search, setSearch] = useState("")
   const [activePlaceTypes, setActivePlaceTypes] = useState<Set<string>>(new Set())
+  const [activeSpecialTypes, setActiveSpecialTypes] = useState<Set<string>>(new Set())
   const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set())
   const [publicOnly, setPublicOnly] = useState(false)
   const [openOnly, setOpenOnly] = useState(false)
   const [manualViewMode, setManualViewMode] = useState<DiscoverViewMode | null>(null)
   const [previewTavern, setPreviewTavern] = useState<Tavern | null>(null)
 
-  const hasFilters = Boolean(search.trim()) || activePlaceTypes.size > 0 || activeCategories.size > 0 || publicOnly || openOnly
+  const hasFilters = Boolean(search.trim()) || activePlaceTypes.size > 0 || activeSpecialTypes.size > 0 || activeCategories.size > 0 || publicOnly || openOnly
   const activeViewMode: DiscoverViewMode = manualViewMode ?? (hasFilters ? "cards" : "radar")
 
   const filteredTaverns = useMemo(() => {
     return result.taverns.filter((tavern) =>
-      tavernMatchesFilter(tavern, { search, activePlaceTypes, activeCategories, publicOnly, openOnly }),
+      tavernMatchesFilter(tavern, { search, activePlaceTypes, activeSpecialTypes, activeCategories, publicOnly, openOnly }),
     )
-  }, [result.taverns, search, activePlaceTypes, activeCategories, publicOnly, openOnly])
+  }, [result.taverns, search, activePlaceTypes, activeSpecialTypes, activeCategories, publicOnly, openOnly])
 
   function switchToCardsForSearch(value: string) {
     setSearch(value)
     if (value.trim()) setManualViewMode("cards")
-    if (!value.trim() && activePlaceTypes.size === 0 && activeCategories.size === 0 && !publicOnly && !openOnly) {
+    if (!value.trim() && activePlaceTypes.size === 0 && activeSpecialTypes.size === 0 && activeCategories.size === 0 && !publicOnly && !openOnly) {
       setManualViewMode(null)
     }
   }
@@ -992,6 +1074,15 @@ export default function DiscoverRoute() {
     setActivePlaceTypes((prev) => {
       const next = new Set(prev)
       next.has(placeTypeId) ? next.delete(placeTypeId) : next.add(placeTypeId)
+      return next
+    })
+  }
+
+  function toggleSpecialType(specialTypeId: string) {
+    setManualViewMode("cards")
+    setActiveSpecialTypes((prev) => {
+      const next = new Set(prev)
+      next.has(specialTypeId) ? next.delete(specialTypeId) : next.add(specialTypeId)
       return next
     })
   }
@@ -1008,6 +1099,7 @@ export default function DiscoverRoute() {
   function clearFilters() {
     setSearch("")
     setActivePlaceTypes(new Set())
+    setActiveSpecialTypes(new Set())
     setActiveCategories(new Set())
     setPublicOnly(false)
     setOpenOnly(false)
@@ -1023,25 +1115,25 @@ export default function DiscoverRoute() {
     <ProductShell eyebrow="Discover">
       <section id="discover-mainline" className="grid scroll-mt-28 gap-6 lg:grid-cols-[0.62fr_1.38fr] lg:items-start">
         <aside className="space-y-5 lg:sticky lg:top-28">
-          <div className="rounded-[2rem] border border-cyan-300/24 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_34%),linear-gradient(160deg,rgba(15,23,42,0.84),rgba(30,27,75,0.62))] p-6 shadow-[0_0_42px_rgba(34,211,238,0.08)] backdrop-blur-xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">
+          <div className="rounded-[2rem] border border-theme-accent-border bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_34%),linear-gradient(160deg,rgba(15,23,42,0.84),rgba(30,27,75,0.62))] p-6 shadow-[0_0_42px_rgba(34,211,238,0.08)] backdrop-blur-xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-black text-theme-primary">
               <Compass className="h-3.5 w-3.5" />
               Real coordinates. Live signals.
             </div>
-            <h1 className="text-4xl font-black leading-tight text-white sm:text-5xl">
+            <h1 className="text-4xl font-black leading-tight text-theme-primary sm:text-5xl">
               <span className="block">附近坐标</span>
               <span className="block">正在发光</span>
             </h1>
-            <p className="mt-4 text-sm leading-7 text-violet-100/66">
+            <p className="mt-4 text-sm leading-7 text-theme-muted">
               默认用雷达扫过城市，感受哪里有区域正在亮起；开始搜索或筛选时，自动切到更方便浏览的卡片结果。
             </p>
-            <div className="mt-6 grid gap-3 text-sm text-violet-100/70">
-              <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/14 bg-cyan-300/[0.055] p-3">
-                <MapPinned className="h-5 w-5 text-cyan-200" />
+            <div className="mt-6 grid gap-3 text-sm text-theme-muted">
+              <div className="flex items-center gap-3 rounded-2xl border border-theme-accent-border bg-theme-accent-bg p-3">
+                <MapPinned className="h-5 w-5 text-theme-accent-text" />
                 <span>{filteredTaverns.length} 个坐标{hasFilters ? "符合查找" : "接入发现流"}</span>
               </div>
               <div className="flex items-center gap-3 rounded-2xl border border-violet-300/14 bg-violet-300/[0.055] p-3">
-                <UsersRound className="h-5 w-5 text-fuchsia-100" />
+                <UsersRound className="h-5 w-5 text-theme-primary" />
                 <span>角色、传闻和店主可见回访反馈都汇入同一条信号流</span>
               </div>
             </div>
@@ -1064,12 +1156,14 @@ export default function DiscoverRoute() {
           <FilterPanel
             search={search}
             activePlaceTypes={activePlaceTypes}
+            activeSpecialTypes={activeSpecialTypes}
             activeCategories={activeCategories}
             publicOnly={publicOnly}
             openOnly={openOnly}
             hasFilters={hasFilters}
             onSearchChange={switchToCardsForSearch}
             onTogglePlaceType={togglePlaceType}
+            onToggleSpecialType={toggleSpecialType}
             onToggleCategory={toggleCategory}
             onPublicOnlyChange={(value) => setBooleanFilter(setPublicOnly, value)}
             onOpenOnlyChange={(value) => setBooleanFilter(setOpenOnly, value)}

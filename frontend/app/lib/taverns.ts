@@ -104,6 +104,36 @@ export type SchoolMemberSummary = {
   avatar?: string
 }
 
+export type RelationshipNodeType = "tavern" | "character"
+export type RelationshipBehaviorType = "friendly" | "allied" | "neutral" | "rival" | "hostile"
+export type RelationshipStrengthPreset = "weak" | "normal" | "strong"
+export type RelationshipGovernanceMode = "manual" | "assisted" | "delegated_ai" | "system_ai"
+export type RelationshipEdgeStatus = "pending" | "confirmed" | "rejected" | "disabled"
+
+export type RelationshipEdge = {
+  id: string
+  source_owner_id?: string
+  source_tavern_id: string
+  source_node_type: RelationshipNodeType | string
+  source_node_id: string
+  target_owner_id?: string
+  target_tavern_id: string
+  target_node_type: RelationshipNodeType | string
+  target_node_id: string
+  behavior_type: RelationshipBehaviorType | string
+  display_name?: string
+  description?: string
+  strength_preset: RelationshipStrengthPreset | string
+  status: RelationshipEdgeStatus | string
+  governance_mode: RelationshipGovernanceMode | string
+  confirmed_by?: string
+  confirmed_by_type?: string
+  perspective_scope?: string
+  created_at?: string
+  updated_at?: string
+  metadata?: Record<string, unknown>
+}
+
 // Time context types
 export type OperatingHoursMode = "always_open" | "scheduled"
 
@@ -210,6 +240,25 @@ export type ChatMessage = {
   visitor_name?: string
   visitor_gender?: Gender | string
   timestamp?: string
+  progress_signals?: ConversationProgressSignal[]
+  conflicts?: ConflictReport[]
+}
+
+export type ConversationProgressSignal = {
+  type?: string
+  message?: string
+  details?: Record<string, unknown>
+  id?: string
+  label?: string
+  detail?: string
+  tone?: string
+}
+
+export type ConflictReport = {
+  card_id: string
+  card_title: string
+  reason: string
+  severity: "warning" | "error" | string
 }
 
 export type VisitorRelationshipPayload = {
@@ -287,6 +336,7 @@ export type ChatResponse = {
   affinity?: AffinityResult | null
   created_memories?: unknown[]
   state_card_candidates?: StateCard[]
+  conflicts?: ConflictReport[]
 }
 
 export type LLMConfigTestResponse = {
@@ -337,6 +387,7 @@ export type GroupChatResponse = {
   affinity?: AffinityResult | null
   created_memories?: unknown[]
   state_card_candidates?: StateCard[]
+  conflicts?: ConflictReport[]
 }
 
 export type VoiceConfig = {
@@ -937,6 +988,78 @@ export function decidePlaceRelationship(
   )
 }
 
+export function listRelationshipEdges(tavernId: string, userId = DEFAULT_OWNER_ID) {
+  return readApiJson<{ edges: RelationshipEdge[]; count: number }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationship-edges`,
+    { userId },
+  )
+}
+
+export function createRelationshipEdge(
+  tavernId: string,
+  data: {
+    source_tavern_id?: string
+    source_node_type?: RelationshipNodeType | string
+    source_node_id?: string
+    target_tavern_id: string
+    target_node_type?: RelationshipNodeType | string
+    target_node_id?: string
+    behavior_type: RelationshipBehaviorType | string
+    display_name?: string
+    description?: string
+    strength_preset?: RelationshipStrengthPreset | string
+    status?: RelationshipEdgeStatus | string
+    governance_mode?: RelationshipGovernanceMode | string
+    confirmed_by_type?: string
+    metadata?: Record<string, unknown>
+  },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; edge: RelationshipEdge }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationship-edges`,
+    jsonInit("POST", data, userId),
+  )
+}
+
+export function updateRelationshipEdge(
+  tavernId: string,
+  edgeId: string,
+  data: {
+    source_tavern_id?: string
+    source_node_type?: RelationshipNodeType | string
+    source_node_id?: string
+    target_tavern_id?: string
+    target_node_type?: RelationshipNodeType | string
+    target_node_id?: string
+    behavior_type?: RelationshipBehaviorType | string
+    display_name?: string
+    description?: string
+    strength_preset?: RelationshipStrengthPreset | string
+    status?: RelationshipEdgeStatus | string
+    governance_mode?: RelationshipGovernanceMode | string
+    confirmed_by_type?: string
+    metadata?: Record<string, unknown>
+  },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; edge: RelationshipEdge }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationship-edges/${encodeURIComponent(edgeId)}`,
+    jsonInit("PUT", data, userId),
+  )
+}
+
+export function decideRelationshipEdge(
+  tavernId: string,
+  edgeId: string,
+  data: { status: RelationshipEdgeStatus | string; note?: string; confirmed_by_type?: string; metadata?: Record<string, unknown> },
+  userId = DEFAULT_OWNER_ID,
+) {
+  return readApiJson<{ ok: boolean; edge: RelationshipEdge }>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/relationship-edges/${encodeURIComponent(edgeId)}/decision`,
+    jsonInit("POST", data, userId),
+  )
+}
+
 export function listSchoolMembers(tavernId: string, userId = DEFAULT_VISITOR_ID) {
   return readApiJson<{ tavern_id: string; members: SchoolMemberSummary[]; count: number }>(
     `/api/v1/taverns/${encodeURIComponent(tavernId)}/school-members`,
@@ -1036,6 +1159,8 @@ export function sendTavernChat(
     visitor_id: string
     visitor_name?: string
     visitor_gender?: Gender | string
+    display_message?: string
+    extra_context?: Array<Record<string, unknown>>
   },
 ) {
   return readApiJson<ChatResponse>(

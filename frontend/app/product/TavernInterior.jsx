@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { getTavernStatusColor, getTavernStatusLabel, getTavernAccessIcon } from './services/tavernService'
 import { resolveTavernAtmosphereImage } from './services/atmosphereAssets'
 import { enterTavern, sendTavernChat } from '../lib/taverns'
+import './tavernGameplay.css'
+import CultivationProgressPanel from './CultivationProgressPanel'
 
 /**
  * TavernInterior — 空间内部视图
@@ -109,6 +111,9 @@ export default function TavernInterior({
   const [password, setPassword] = useState('')
   const [entering, setEntering] = useState(false)
   const [entered, setEntered] = useState(false)
+  const [receipt, setReceipt] = useState(null)
+  const [showProgress, setShowProgress] = useState(false)
+  const [progression, setProgression] = useState(null)
   const messagesEndRef = useRef(null)
 
   const characters = tavern?.characters || []
@@ -151,9 +156,12 @@ export default function TavernInterior({
   async function handleEnter(pwd = '') {
     setEntering(true)
     try {
-      await enterTavern(tavern.id, pwd, visitorId)
+      const result = await enterTavern(tavern.id, pwd, visitorId)
       setEntered(true)
       setPasswordRequired(false)
+      if (result.cultivation_receipt) {
+        setReceipt(result.cultivation_receipt)
+      }
     } catch (err) {
       if (err.message.includes('密码')) {
         setPasswordRequired(true)
@@ -192,6 +200,9 @@ export default function TavernInterior({
       }
       if (charMsg.content.trim()) {
         setMessages((prev) => [...prev, charMsg])
+      }
+      if (result.progression) {
+        setProgression(result.progression)
       }
     } catch (err) {
       const charMsg = {
@@ -239,6 +250,33 @@ export default function TavernInterior({
       data-layout-style={tavern?.layout_style || 'lobby'}
       data-atmosphere-image={atmosphereImage}
     >
+      {/* Cultivation Receipt Overlay */}
+      {receipt && (
+        <div className="cultivation-receipt-overlay">
+          <div className="cultivation-receipt-card">
+            <h3>{receipt.title}</h3>
+            <div className="cultivation-receipt-content">
+              {receipt.summary}
+            </div>
+            <div className="cultivation-receipt-stats">
+              <div className="cultivation-stat-item">
+                <span className="cultivation-stat-label">离线时长</span>
+                <span className="cultivation-stat-value">{receipt.hours} 小时</span>
+              </div>
+              <div className="cultivation-stat-item">
+                <span className="cultivation-stat-label">修为增长</span>
+                <span className="cultivation-stat-value">+{receipt.progress_delta}</span>
+              </div>
+            </div>
+            <div className="cultivation-receipt-footer">
+              <button className="btn-cultivation-confirm" onClick={() => setReceipt(null)}>
+                悟道完成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scene atmosphere banner */}
       {tavern?.scene_prompt && (
         <div className="tavern-scene-atmosphere">
@@ -251,6 +289,11 @@ export default function TavernInterior({
       <div className="tavern-interior-header" style={{ borderBottomColor: layoutStyle.accent }}>
         <div className="tavern-info">
           <h3>{tavern?.name}</h3>
+          {progression && (
+            <button className="btn-show-progress" onClick={() => setShowProgress(true)}>
+              修为: {progression.current_stage} ({progression.percent}%)
+            </button>
+          )}
           <div className="tavern-meta">
             <span
               className="status-badge"
@@ -374,6 +417,14 @@ export default function TavernInterior({
           )}
         </div>
       </div>
+
+      {/* Cultivation Progress Panel */}
+      {showProgress && (
+        <CultivationProgressPanel 
+          progression={progression} 
+          onClose={() => setShowProgress(false)} 
+        />
+      )}
     </div>
   )
 }

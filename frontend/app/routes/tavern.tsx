@@ -5,6 +5,7 @@ import { Link, useLoaderData } from "react-router"
 
 import { TavernChatWorkbench } from "../features/tavern-chat-workbench"
 import { NeighborhoodRumorBubble } from "../components/NeighborhoodRumorBubble"
+import { TavernEngagementPanel } from "../components/TavernEngagementPanel"
 import { buildCreatorConversionLink } from "../lib/creator-conversion.js"
 import { DIGITAL_HUMAN_STUDIO_TYPE_ID } from "../lib/digital-human-studio.js"
 import { fallbackRoleplayState } from "../lib/roleplay-state"
@@ -298,6 +299,7 @@ export default function TavernRoute() {
             publicPanel={
               <div className="space-y-4">
                 <SpecialTavernTypeCard tavern={tavern} />
+                <TavernEngagementPanel tavern={tavern} currentUserId={currentUserId} />
                 <TavernShareCard tavern={tavern} />
                 <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
                 <CreatorConversionCard tavern={tavern} />

@@ -70,11 +70,11 @@ export default function TavernManageRoute() {
       <section data-tavern-owner-management="dedicated-route" className="scroll-mt-28 space-y-6">
         {tavern && isOwner ? (
           <>
-            <Card className="overflow-hidden border-cyan-300/18 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.9),rgba(30,27,75,0.62))]">
+            <Card className="overflow-hidden border-theme-accent-border bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.9),rgba(30,27,75,0.62))]">
               <CardHeader>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                    <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-100">
+                    <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-theme-accent-border bg-theme-accent-bg px-3 py-1.5 text-xs font-black text-theme-accent-text">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       Owner-only management
                     </div>
@@ -101,14 +101,14 @@ export default function TavernManageRoute() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
-                  <span className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-violet-50/72">
-                    Owner ID：<span className="font-bold text-white">{currentUserId || "未提供"}</span>
+                  <span className="rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-violet-50/72">
+                    Owner ID：<span className="font-bold text-theme-primary">{currentUserId || "未提供"}</span>
                   </span>
-                  <span className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-violet-50/72">
-                    访问：<span className="font-bold text-white">{tavern.access || "public"}</span>
+                  <span className="rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-violet-50/72">
+                    访问：<span className="font-bold text-theme-primary">{tavern.access || "public"}</span>
                   </span>
-                  <span className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-violet-50/72">
-                    NPC：<span className="font-bold text-white">{tavern.characters?.length || 0}</span>
+                  <span className="rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-violet-50/72">
+                    NPC：<span className="font-bold text-theme-primary">{tavern.characters?.length || 0}</span>
                   </span>
                 </div>
               </CardContent>

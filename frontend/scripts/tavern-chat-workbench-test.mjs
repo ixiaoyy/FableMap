@@ -73,6 +73,13 @@ for (const snippet of [
   "当前场景",
   "你正在和",
   'data-chat-log-compact',
+  'data-conversation-intent-chips',
+  'aria-label="对话意图"',
+  "对话意图",
+  'data-selected-conversation-intent',
+  'data-conversation-progress-card',
+  "本轮有推进",
+  "progress_signals",
   'data-chat-composer="fast-entry"',
   'data-visitor-identity-settings',
   "发言身份",
@@ -189,6 +196,20 @@ assert.ok(
     workbenchSource.includes('setActiveChatChannel("private")') &&
     workbenchSource.includes('setActiveChatChannel("public")'),
   "native tavern workbench should support public chat @mentions and switch NPC clicks into private chat",
+)
+assert.ok(
+  workbenchSource.includes("progressSignalsFromChatResult") &&
+    workbenchSource.includes("data-conversation-progress-card") &&
+    workbenchSource.includes("本轮有推进") &&
+    workbenchSource.includes("line.progress_signals.length > 0"),
+  "assistant replies should render inline progress cards based on backend-provided signals",
+)
+assert.ok(
+  workbenchSource.includes("const intentForTurn = selectedIntent") &&
+    workbenchSource.includes("clearConversationIntent()") &&
+    workbenchSource.includes("buildConversationIntentContext(intentForTurn)") &&
+    workbenchSource.includes("buildMessageWithConversationIntent(cleanMessage, intentForTurn)"),
+  "conversation intent selection should be bound to submit and converted into model-facing context",
 )
 assert.ok(
   workbenchSource.includes("hostGuideMessage") &&

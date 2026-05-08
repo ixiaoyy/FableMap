@@ -444,7 +444,7 @@ Updated:
 
 - Created and started .trellis/tasks/04-29-04-29-npc-expression-art-quality-rebuild/.
 - Wrote PRD and added image/npc-art guidelines to task context.
-- Marked rejected public-welfare NPC assets with path, hash, and reason in 
+- Marked rejected public-welfare NPC assets with path, hash, and reason in
 ejected-public-welfare-npc-assets.json.
 - Root cause: old tests accepted file existence + hash difference, so tint/icon-only variants passed.
 - Next: regenerate true expression sprites and add rejected-hash regression checks.
@@ -1129,3 +1129,9 @@ Implemented black-diamond currency economy: seed costs, daily bonus, local visit
 ### Next Steps
 
 - None - task complete
+
+## Memory Note: Visual QA Preference
+
+**Date**: 2026-05-09
+
+User preference for frontend visual work: before running Playwright/browser self-acceptance, first pause and confirm whether the user can do manual visual inspection. If the user confirms manual inspection is available, do not run Playwright self-check unless the current repository/task hard requirement explicitly still requires it; in that case, explain the constraint before running.

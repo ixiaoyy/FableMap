@@ -7,6 +7,7 @@ MySQL TavernStore 实现
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import uuid
 from copy import deepcopy
@@ -14,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from fablemap_api.core.tavern import (
@@ -45,6 +46,8 @@ from .models import (
     StateCardModel,
     TerritoryModel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now_iso() -> str:
@@ -124,6 +127,7 @@ class MySQLTavernStore:
             prompt_blocks=deepcopy(model.prompt_blocks) if model.prompt_blocks else [],
             runtime_presets=deepcopy(model.runtime_presets) if model.runtime_presets else [],
             skill_packs=deepcopy(model.skill_packs) if model.skill_packs else [],
+            engagement_config=deepcopy(model.engagement_config) if model.engagement_config else {},
             active_preset_id=model.active_preset_id or "",
             memory_policy=deepcopy(model.memory_policy) if model.memory_policy else {},
             scene_prompt=model.scene_prompt or "",
@@ -226,6 +230,7 @@ class MySQLTavernStore:
             last_visit=model.last_visit.strftime("%Y-%m-%dT%H:%M:%SZ") if model.last_visit else None,
             relationship_strength=model.relationship_strength or 0.0,
             relationship_stage=model.relationship_stage or "stranger",
+            metadata=deepcopy(model.metadata_) if isinstance(model.metadata_, dict) else {},
         )
 
     def _to_chat_message(self, model: ChatMessageModel) -> ChatMessage:
@@ -346,6 +351,7 @@ class MySQLTavernStore:
                 prompt_blocks=tavern.prompt_blocks,
                 runtime_presets=tavern.runtime_presets,
                 skill_packs=tavern.skill_packs,
+                engagement_config=tavern.engagement_config,
                 active_preset_id=tavern.active_preset_id,
                 memory_policy=tavern.memory_policy,
                 voice_config=tavern.voice_config.to_dict() if hasattr(tavern.voice_config, "to_dict") else {},
@@ -432,6 +438,7 @@ class MySQLTavernStore:
             model.prompt_blocks = tavern.prompt_blocks
             model.runtime_presets = tavern.runtime_presets
             model.skill_packs = tavern.skill_packs
+            model.engagement_config = tavern.engagement_config
             model.active_preset_id = tavern.active_preset_id
             model.memory_policy = tavern.memory_policy
             model.voice_config = tavern.voice_config.to_dict() if hasattr(tavern.voice_config, "to_dict") else {}
@@ -720,6 +727,7 @@ class MySQLTavernStore:
                 model.last_visit = _parse_datetime(state.last_visit)
                 model.relationship_strength = state.relationship_strength
                 model.relationship_stage = state.relationship_stage
+                model.metadata_ = deepcopy(state.metadata) if isinstance(state.metadata, dict) else {}
             else:
                 model = VisitorModel(
                     id=f"visitor_{uuid.uuid4().hex[:12]}",
@@ -731,6 +739,7 @@ class MySQLTavernStore:
                     last_visit=_parse_datetime(state.last_visit),
                     relationship_strength=state.relationship_strength,
                     relationship_stage=state.relationship_stage,
+                    metadata_=deepcopy(state.metadata) if isinstance(state.metadata, dict) else {},
                 )
                 session.add(model)
 
@@ -1205,3 +1214,35 @@ class MySQLTavernStore:
 def create_mysql_tables(database: Database) -> None:
     """创建所有 MySQL 表"""
     database.create_tables()
+    _ensure_runtime_compat_columns(database)
+
+
+def _ensure_runtime_compat_columns(database: Database) -> None:
+    """Best-effort dev/runtime compatibility for additive columns on existing DBs."""
+
+    inspector = inspect(database.engine)
+    dialect = (database.engine.dialect.name or "").lower()
+    statements: list[str] = []
+
+    def has_column(table_name: str, column_name: str) -> bool:
+        try:
+            return any(column.get("name") == column_name for column in inspector.get_columns(table_name))
+        except Exception:
+            return False
+
+    def add_column_sql(table_name: str, column_name: str) -> str:
+        column_type = "JSON NULL" if dialect.startswith("mysql") else "JSON"
+        return f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
+
+    if not has_column("taverns", "engagement_config"):
+        statements.append(add_column_sql("taverns", "engagement_config"))
+    if not has_column("visitors", "metadata"):
+        statements.append(add_column_sql("visitors", "metadata"))
+
+    if not statements:
+        return
+
+    with database.engine.begin() as connection:
+        for statement in statements:
+            logger.info("Applying additive runtime schema patch: %s", statement)
+            connection.execute(text(statement))

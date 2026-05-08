@@ -29,16 +29,24 @@ assert.ok(
   "home route should not keep fixed featured entry cards as the source of truth",
 )
 assert.ok(
-  homeSource.includes("text-[1.72rem]") && homeSource.includes("lg:text-[2.4rem]"),
-  "home hero title should use a compact editorial scale instead of a poster-sized text block",
+  homeSource.includes("LightReferenceHome") && homeSource.includes("lightHomeSlices"),
+  "home light theme should use the approved coarse-sliced 1:1 bright reference artboard",
 )
 assert.ok(
-  !homeSource.includes("lg:text-[2.75rem]") && !homeSource.includes("lg:text-[3.2rem]") && !homeSource.includes("lg:text-[4rem]"),
-  "home hero title should not use oversized desktop text",
+  homeSource.includes("cardTargets") && homeSource.includes("featuredCitySlices[0]?.id"),
+  "home light theme card hotspots should still derive entry links from real featured tavern IDs",
 )
 assert.ok(
-  homeSource.includes("font-bold") && homeSource.includes("leading-[1.24]") && !homeSource.includes("tracking-[-0.045em]"),
-  "home hero title should use lighter weight, roomier line-height, and avoid tight Chinese letter spacing",
+  homeSource.includes('label: "进入第一个发光区域"') && homeSource.includes('label: "进入第二个发光区域"'),
+  "home light theme should preserve accessible featured-entry hotspots over the artboard",
+)
+assert.ok(
+  homeSource.includes('label: "进入推荐坐标云湖图书馆"') && homeSource.includes('label: "查看更多记忆"'),
+  "home light theme should add accessible hotspots for lower-page recommended coordinate and memory sections",
+)
+assert.ok(
+  !homeSource.includes('data-home-light-reference="componentized-index-light"'),
+  "home light theme should not use the rejected approximate componentized redraw",
 )
 assert.ok(
   homeSource.includes("真实坐标，") && homeSource.includes("藏着会回应的世界") && !homeSource.includes("都可能藏着"),

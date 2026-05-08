@@ -27,6 +27,7 @@ from fablemap_api.core.default_taverns import (
 from fablemap_api.core.memory import MemoryAtom
 from fablemap_api.core.skill_packs import normalize_skill_pack_settings
 from fablemap_api.core.time_context import build_time_context
+from fablemap_api.core.cultivation_logic import is_cultivation_tavern, calculate_cultivation_receipt_with_card
 
 # ─────────────────────────────────────────
 # 类型别名
@@ -534,6 +535,7 @@ class VisitorState:
     last_visit: str | None = None
     relationship_strength: float = 0.0
     relationship_stage: str = "stranger"
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -547,6 +549,7 @@ class VisitorState:
                 "strength": self.relationship_strength,
                 "stage": self.relationship_stage,
             },
+            "metadata": self.metadata,
         }
 
     @classmethod
@@ -561,6 +564,7 @@ class VisitorState:
             last_visit=d.get("last_visit"),
             relationship_strength=rel.get("strength", 0.0),
             relationship_stage=rel.get("stage", "stranger"),
+            metadata=d.get("metadata", {}),
         )
 
 
@@ -592,6 +596,7 @@ class Tavern:
     prompt_blocks: list[dict[str, Any]] = field(default_factory=list)
     runtime_presets: list[dict[str, Any]] = field(default_factory=list)
     skill_packs: list[dict[str, Any]] = field(default_factory=list)
+    engagement_config: dict[str, Any] = field(default_factory=dict)
     active_preset_id: str = ""
     memory_policy: dict[str, Any] = field(default_factory=dict)
     scene_prompt: str = ""
@@ -615,6 +620,7 @@ class Tavern:
         self.home_members = _normalize_home_members(self.home_members, self.id)
         self.place_relationships = _normalize_place_relationships(self.place_relationships)
         self.skill_packs = normalize_skill_pack_settings(self.skill_packs)
+        self.engagement_config = deepcopy(self.engagement_config) if isinstance(self.engagement_config, dict) else {}
 
     def to_dict(self) -> dict[str, Any]:
         visible_llm_config = _hydrate_system_public_welfare_llm_config(
@@ -649,6 +655,7 @@ class Tavern:
             "prompt_blocks": deepcopy(self.prompt_blocks),
             "runtime_presets": deepcopy(self.runtime_presets),
             "skill_packs": deepcopy(self.skill_packs),
+            "engagement_config": deepcopy(self.engagement_config),
             "active_preset_id": self.active_preset_id,
             "memory_policy": deepcopy(self.memory_policy),
             "scene_prompt": self.scene_prompt,
@@ -677,6 +684,7 @@ class Tavern:
         result = self.to_dict()
         result.pop("password_hash", None)
         result.pop("voice_config", None)
+        result.pop("engagement_config", None)
         result["character_claims"] = [
             deepcopy(claim)
             for claim in self.character_claims
@@ -718,6 +726,7 @@ class Tavern:
             prompt_blocks=_normalize_metadata_list(d.get("prompt_blocks", [])),
             runtime_presets=_normalize_metadata_list(d.get("runtime_presets", [])),
             skill_packs=normalize_skill_pack_settings(d.get("skill_packs", [])),
+            engagement_config=deepcopy(d.get("engagement_config", {})) if isinstance(d.get("engagement_config"), dict) else {},
             active_preset_id=str(d.get("active_preset_id") or ""),
             memory_policy=deepcopy(d.get("memory_policy", {})) if isinstance(d.get("memory_policy"), dict) else {},
             scene_prompt=d.get("scene_prompt", ""),
@@ -2183,6 +2192,11 @@ class TavernService:
                 visitor_id=user_id,
                 tavern_id=tavern_id,
             )
+
+            # 修行空间离线结算逻辑
+            if is_cultivation_tavern(tavern):
+                cultivation_receipt = calculate_cultivation_receipt_with_card(tavern, visitor_state, now)
+
             visitor_state.visit_count += 1
             if not visitor_state.first_visit:
                 visitor_state.first_visit = now
@@ -2205,6 +2219,7 @@ class TavernService:
             "visitor_id": user_id,
             "visit_count": visitor_state.visit_count if visitor_state else 0,
             "visitor_state": visitor_state.to_dict() if visitor_state else None,
+            "cultivation_receipt": cultivation_receipt if 'cultivation_receipt' in locals() else None,
             "status": tavern.status,
             "characters": [c.to_dict() for c in tavern.characters],
             "scene_prompt": tavern.scene_prompt,

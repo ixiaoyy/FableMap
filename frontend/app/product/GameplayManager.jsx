@@ -12,6 +12,11 @@ import {
   createShortDramaGameplayFromTemplate,
   SHORT_DRAMA_GAMEPLAY_TEMPLATES,
 } from './shortDramaGameplayTemplates'
+import {
+  STORY_GAMEPLAY_CATEGORIES,
+  createStoryGameplayFromTemplate,
+  filterStoryGameplayTemplates,
+} from './storyMicrogameTemplates'
 import './tavernGameplay.css'
 
 const STATUS_LABEL = {
@@ -37,6 +42,8 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
   const [error, setError] = useState('')
   const [templateQuery, setTemplateQuery] = useState('')
   const [templateCategory, setTemplateCategory] = useState('全部')
+  const [storyQuery, setStoryQuery] = useState('')
+  const [storyCategory, setStoryCategory] = useState('全部')
   const [assistantConflictHook, setAssistantConflictHook] = useState('')
   const [assistantTone, setAssistantTone] = useState('短剧主持感、节奏清楚、克制、不羞辱任何人')
 
@@ -46,6 +53,10 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
   const ownerTemplates = useMemo(
     () => filterOwnerGameplayTemplates({ query: templateQuery, category: templateCategory }),
     [templateCategory, templateQuery],
+  )
+  const storyTemplates = useMemo(
+    () => filterStoryGameplayTemplates({ query: storyQuery, category: storyCategory }),
+    [storyCategory, storyQuery],
   )
   const gameplayDraftLifecycle = buildAiDraftLifecycle('gameplay')
 
@@ -102,7 +113,15 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
     if (!next) return
     setGameplays((prev) => [next, ...prev])
     setSelectedId(next.id)
-    setStatus('玩法模板已生成本地草稿；店主检查并点击“保存玩法”后才会写入空间，发布状态为 draft。')
+    setStatus('玩法模板已生成本地草稿；店主检查并点击”保存玩法”后才会写入空间，发布状态为 draft。')
+  }
+
+  function addStoryGameplay(template) {
+    const next = createStoryGameplayFromTemplate(template, gameplays.length + 1)
+    if (!next) return
+    setGameplays((prev) => [next, ...prev])
+    setSelectedId(next.id)
+    setStatus('剧情微玩法模板已生成本地草稿；请检查内容、按本空间调整，并保存/发布后访客才可见。')
   }
 
   function updateGameplay(nextGameplay) {
@@ -271,6 +290,51 @@ export default function GameplayManager({ tavern, ownerId = '', onUpdated, onClo
                     <small>{template.duration} · {template.bestFor}</small>
                   </button>
                 ))}
+              </div>
+            </section>
+            <section className="story-template-panel" aria-label="剧情微玩法模板">
+              <div className="story-template-panel__header">
+                <span className="mini-label">剧情微玩法</span>
+                <small>叙事型轻量玩法模板（3–5 步），基于现有 GameplayDefinition，不改 schema。</small>
+              </div>
+              <label className="story-template-search">
+                <span>搜索模板</span>
+                <input
+                  type="search"
+                  value={storyQuery}
+                  onChange={(event) => setStoryQuery(event.target.value)}
+                  placeholder="剧情、故事、目标、抉择..."
+                />
+              </label>
+              <div className="story-template-filters" aria-label="剧情模板分类">
+                {STORY_GAMEPLAY_CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={storyCategory === category ? 'is-active' : ''}
+                    onClick={() => setStoryCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              <div className="story-template-grid">
+                {storyTemplates.length > 0 ? storyTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className="story-template-card"
+                    onClick={() => addStoryGameplay(template)}
+                    title={template.bestFor}
+                  >
+                    <span>{template.badge}</span>
+                    <strong>{template.title}</strong>
+                    <small>{template.duration} · {template.bestFor}</small>
+                    <em>{template.summary}</em>
+                  </button>
+                )) : (
+                  <p className="note muted">没有匹配模板。换个关键词或切回"全部"。</p>
+                )}
               </div>
             </section>
             {gameplays.length === 0 ? (

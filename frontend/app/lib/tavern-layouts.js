@@ -35,10 +35,10 @@ export const TAVERN_LAYOUTS = [
   {
     id: "quest-play",
     title: "探索 / 玩法型",
-    navLabel: "清单",
+    navLabel: "指南",
     eyebrow: "Exploration checklist layout",
     icon: "clipboard",
-    description: "突出探索清单、线索、推理分支和下一步行动，适合轻文字玩法。",
+    description: "突出探索指南、线索、推理分支和下一步行动，适合轻文字玩法。",
     accent: "violet",
     actions: [
       { title: "询问老板", text: "了解更多情况", icon: "message", targetLayout: "npc-chat" },
@@ -57,7 +57,7 @@ export const TAVERN_LAYOUTS = [
     accent: "emerald",
     actions: [
       { title: "切到聊天", text: "回到 NPC 对话", icon: "message", targetLayout: "npc-chat" },
-      { title: "查看清单", text: "检查委托记录", icon: "clipboard", targetLayout: "quest-play" },
+      { title: "查看指南", text: "检查线索方向", icon: "clipboard", targetLayout: "quest-play" },
       { title: "写入记忆", text: "保存当前发现", icon: "pen" },
     ],
   },

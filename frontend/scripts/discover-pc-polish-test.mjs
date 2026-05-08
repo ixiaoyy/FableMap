@@ -9,7 +9,14 @@ const discoverSource = readFileSync(resolve(__dirname, "../app/routes/discover.t
 assert.ok(discoverSource.includes("DesktopRadarTelemetry"), "discover PC radar should include a desktop telemetry strip")
 assert.ok(discoverSource.includes("lg:grid-cols-[0.62fr_1.38fr]"), "discover PC layout should give the radar board stronger width dominance")
 assert.ok(discoverSource.includes("lg:sticky lg:top-28"), "discover PC control column should stay stable while scanning results")
-assert.ok(discoverSource.includes("lg:min-h-[680px]"), "discover PC radar board should have a stronger desktop poster scale")
+assert.ok(
+  discoverSource.includes('lg:h-[min(960px,calc(100dvh-8rem))]'),
+  "discover PC boards should use a capped desktop height instead of stretching with long result lists",
+)
+assert.ok(
+  discoverSource.includes('data-discover-board-scroll="radar-results"') && discoverSource.includes('data-discover-board-scroll="card-results"'),
+  "discover PC boards should expose dedicated scroll containers for long result lists",
+)
 assert.ok(
   !discoverSource.includes("grid gap-3 xl:grid-cols-2"),
   "discover radar signals should stay in a breathable single scan column instead of crowding two dense cards per row",

@@ -24,6 +24,14 @@ import {
   type TavernCharacter,
 } from "../../lib/taverns"
 import { Button } from "../../ui/button"
+import {
+  CONVERSATION_INTENT_CHIPS,
+  buildConversationIntentContext,
+  buildMessageWithConversationIntent,
+  progressSignalsFromChatResult,
+  findConversationIntent,
+} from "./conversation-beats.js"
+import { SpaceCapabilityHubPanel } from "../../components/SpaceCapabilityHubPanel"
 
 type ChatChannel = "public" | "private"
 
@@ -377,10 +385,15 @@ export function TavernChatWorkbench({
     () => characters.find((character) => character.id === selectedCharacterId) || characters[0],
     [characters, selectedCharacterId],
   )
+  const [selectedIntentId, setSelectedIntentId] = useState("")
   const [visitorId] = useState(currentUserId)
   const [visitorName, setVisitorName] = useState(isOwner ? "店主" : "旅人")
   const [visitorGender, setVisitorGender] = useState("unspecified")
   const [message, setMessage] = useState("")
+  const [mentionQuery, setMentionQuery] = useState("")
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const mentionRef = useRef<HTMLDivElement | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [activeChatChannel, setActiveChatChannel] = useState<ChatChannel>("public")
   const [publicMessages, setPublicMessages] = useState<ChatMessage[]>([])
   const [privateMessagesByCharacterId, setPrivateMessagesByCharacterId] = useState<Record<string, ChatMessage[]>>({})
@@ -397,6 +410,13 @@ export function TavernChatWorkbench({
     : privateMessagesByCharacterId[selectedCharacter?.id || ""] || []
   const roleplayMode = roleplay?.roleplay_mode || tavern.roleplay_mode || "ai_only"
   const responseMode = responseModeLabel(tavern)
+
+  const mentionMatches = useMemo(() => {
+    if (!mentionQuery) return characters
+    const query = mentionQuery.toLowerCase()
+    return characters.filter((char) => (char.name || char.id || "").toLowerCase().includes(query))
+  }, [characters, mentionQuery])
+  const selectedIntent = useMemo(() => findConversationIntent(selectedIntentId), [selectedIntentId])
 
   useEffect(() => {
     if (characters.length && !characters.some((character) => character.id === selectedCharacterId)) {
@@ -440,6 +460,10 @@ export function TavernChatWorkbench({
     chatLogRef.current?.scrollTo({ top: chatLogRef.current.scrollHeight, behavior: "smooth" })
   }, [visibleMessages.length, busy])
 
+  useEffect(() => {
+    setMentionIndex(0)
+  }, [mentionMatches])
+
   async function handlePasswordEnter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!password.trim()) return
@@ -477,7 +501,11 @@ export function TavernChatWorkbench({
     }
   }
 
-  function buildAssistantLine(content: string, characterId?: string): ChatMessage {
+  function buildAssistantLine(
+    content: string,
+    characterId: string | undefined,
+    result?: Parameters<typeof progressSignalsFromChatResult>[0],
+  ): ChatMessage {
     const now = new Date().toISOString()
     return {
       id: `local-assistant-${now}`,
@@ -485,12 +513,14 @@ export function TavernChatWorkbench({
       content,
       character_id: characterId,
       visitor_id: visitorId,
+      progress_signals: result ? progressSignalsFromChatResult(result) : [],
       timestamp: now,
     }
   }
 
   function mapGroupResponseMessages(result: Awaited<ReturnType<typeof sendGroupChat>>): ChatMessage[] {
-    return (Array.isArray(result.messages) ? result.messages : [])
+    const progress_signals = progressSignalsFromChatResult(result)
+    const lines = (Array.isArray(result.messages) ? result.messages : [])
       .map((groupMessage, index) => ({
         id: groupMessage.id || `local-group-${Date.now()}-${index}`,
         role: groupMessage.role || "assistant",
@@ -500,9 +530,22 @@ export function TavernChatWorkbench({
         timestamp: groupMessage.timestamp || new Date().toISOString(),
       }))
       .filter((groupMessage) => groupMessage.content)
+    return lines.map((line, index) =>
+      index === lines.length - 1 ? { ...line, progress_signals } : line,
+    )
   }
 
-  async function sendPrivateChat(cleanMessage: string) {
+  function toggleConversationIntent(intentId: string) {
+    const next = String(intentId || "").trim()
+    if (!next) return
+    setSelectedIntentId((current) => (current === next ? "" : next))
+  }
+
+  function clearConversationIntent() {
+    setSelectedIntentId("")
+  }
+
+  async function sendPrivateChat(cleanMessage: string, intentForTurn = selectedIntent) {
     if (!selectedCharacter) return
     const userLine = buildUserLine(cleanMessage, selectedCharacter.id)
     appendPrivateMessages(selectedCharacter.id, [userLine])
@@ -513,16 +556,18 @@ export function TavernChatWorkbench({
       visitor_name: visitorName,
       visitor_gender: visitorGender,
       message: cleanMessage,
+      display_message: cleanMessage,
+      extra_context: buildConversationIntentContext(intentForTurn),
     })
     const responseText = String(result.response || "").trim()
     if (responseText) {
-      appendPrivateMessages(selectedCharacter.id, [buildAssistantLine(responseText, selectedCharacter.id)])
+        appendPrivateMessages(selectedCharacter.id, [buildAssistantLine(responseText, selectedCharacter.id, result)])
     } else if (result.degradation?.message) {
       setError(result.degradation.message)
     }
   }
 
-  async function sendPublicChat(cleanMessage: string) {
+  async function sendPublicChat(cleanMessage: string, intentForTurn = selectedIntent) {
     const mention = parsePublicMentionTarget(cleanMessage, characters)
     const targetCharacter = mention?.character || selectedCharacter
     setPublicMessages((current) => [...current, buildUserLine(cleanMessage, mention?.character.id)])
@@ -534,10 +579,12 @@ export function TavernChatWorkbench({
         visitor_name: visitorName,
         visitor_gender: visitorGender,
         message: mention.message,
+        display_message: cleanMessage,
+        extra_context: buildConversationIntentContext(intentForTurn),
       })
       const responseText = String(result.response || "").trim()
       if (responseText) {
-        setPublicMessages((current) => [...current, buildAssistantLine(responseText, mention.character.id)])
+        setPublicMessages((current) => [...current, buildAssistantLine(responseText, mention.character.id, result)])
       } else if (result.degradation?.message) {
         setError(result.degradation.message)
       }
@@ -546,10 +593,11 @@ export function TavernChatWorkbench({
 
     if (characters.length > 1 && Boolean((tavern as { group_chat_enabled?: unknown }).group_chat_enabled)) {
       const result = await sendGroupChat(tavern.id, {
-        message: cleanMessage,
+        message: buildMessageWithConversationIntent(cleanMessage, intentForTurn),
         visitor_id: visitorId,
         visitor_name: visitorName,
         visitor_gender: visitorGender,
+        display_message: cleanMessage,
       })
       const replyLines = mapGroupResponseMessages(result)
       if (replyLines.length) {
@@ -568,10 +616,12 @@ export function TavernChatWorkbench({
         visitor_name: visitorName,
         visitor_gender: visitorGender,
         message: cleanMessage,
+        display_message: cleanMessage,
+        extra_context: buildConversationIntentContext(intentForTurn),
       })
       const responseText = String(result.response || "").trim()
       if (responseText) {
-        setPublicMessages((current) => [...current, buildAssistantLine(responseText, targetCharacter.id)])
+        setPublicMessages((current) => [...current, buildAssistantLine(responseText, targetCharacter.id, result)])
       } else if (result.degradation?.message) {
         setError(result.degradation.message)
       }
@@ -586,13 +636,15 @@ export function TavernChatWorkbench({
 
     setMessage("")
     setBusy("send")
+    const intentForTurn = selectedIntent
+    clearConversationIntent()
     setError("")
 
     try {
       if (activeChatChannel === "public") {
-        await sendPublicChat(cleanMessage)
+        await sendPublicChat(cleanMessage, intentForTurn)
       } else {
-        await sendPrivateChat(cleanMessage)
+        await sendPrivateChat(cleanMessage, intentForTurn)
       }
     } catch (err) {
       setError(errorMessage(err))
@@ -602,9 +654,45 @@ export function TavernChatWorkbench({
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionMatches.length) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault()
+        setMentionIndex((i) => Math.min(i + 1, mentionMatches.length - 1))
+        return
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault()
+        setMentionIndex((i) => Math.max(i - 1, 0))
+        return
+      }
+      if (event.key === "Tab" || (event.key === "Enter" && !event.shiftKey)) {
+        event.preventDefault()
+        insertMention(mentionIndex)
+        return
+      }
+      if (event.key === "Escape") {
+        setMentionQuery("")
+        return
+      }
+    }
     if (event.key !== "Enter" || event.shiftKey) return
     event.preventDefault()
     void handleSubmit()
+  }
+
+  function insertMention(index: number) {
+    const char = mentionMatches[index]
+    if (!char) return
+    const name = char.name || char.id || ""
+    // Replace the @query part with @name
+    const atIndex = message.lastIndexOf("@")
+    if (atIndex === -1) return
+    const before = message.slice(0, atIndex)
+    const after = message.slice(atIndex + mentionQuery.length + 1)
+    setMessage(`${before}@${name} ${after}`)
+    setMentionQuery("")
+    setMentionIndex(0)
+    textareaRef.current?.focus()
   }
 
   function selectCharacter(characterId: string) {
@@ -837,6 +925,27 @@ export function TavernChatWorkbench({
                         {formatChatTime(line.timestamp) ? <span className="ml-2 font-semibold normal-case tracking-normal">{formatChatTime(line.timestamp)}</span> : null}
                       </p>
                       <p className="whitespace-pre-wrap break-words">{line.content}</p>
+                      {isUser
+                        ? null
+                        : Array.isArray(line.progress_signals) &&
+                          line.progress_signals.length > 0 && (
+                            <div
+                              data-conversation-progress-card
+                              className="mt-3 rounded-2xl border border-emerald-200/25 bg-emerald-200/6 px-3 py-2 text-[0.76rem] leading-5 text-emerald-100/85"
+                            >
+                              <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-100/90">本轮有推进</p>
+                              <div className="space-y-1">
+                                {line.progress_signals.map((signal, signalIndex) => (
+                                  <p
+                                    key={signal.message || `${signal.type}-${signalIndex}`}
+                                    className="text-violet-50/84"
+                                  >
+                                    {signal.message || signal.label || ""}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                     </div>
                   </div>
                 )
@@ -857,6 +966,48 @@ export function TavernChatWorkbench({
             ) : null}
 
             <form onSubmit={handleSubmit} data-chat-composer="fast-entry" className="border-t border-white/10 bg-slate-950/80 p-3 sm:p-4">
+              <section
+                aria-label="对话意图"
+                data-conversation-intent-chips
+                className="mb-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5"
+              >
+                <div className="mb-2 flex items-center justify-between text-xs text-violet-100/68">
+                  <span>对话意图</span>
+                  <button
+                    type="button"
+                    onClick={clearConversationIntent}
+                    className="text-violet-100/58 transition hover:text-cyan-100"
+                  >
+                    清除
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CONVERSATION_INTENT_CHIPS.map((intent) => {
+                    const isSelected = selectedIntentId === intent.id
+                    return (
+                      <button
+                        key={intent.id}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => toggleConversationIntent(intent.id)}
+                        data-selected-conversation-intent={isSelected ? "true" : "false"}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                          isSelected
+                            ? "border-cyan-300/65 bg-cyan-300/20 text-cyan-50"
+                            : "border-white/20 bg-white/[0.03] text-violet-50/72 hover:border-white/35"
+                        }`}
+                      >
+                        {intent.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-[0.7rem] text-violet-100/62">
+                  {selectedIntent
+                    ? `已选择「${selectedIntent.label}」，仍需你自己输入发言内容后点击发送。`
+                    : "未选择意图：仍需你输入自己的发言内容后再发送。"}
+                </p>
+              </section>
               <details data-visitor-identity-settings className="mb-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-bold text-violet-100/64">
                   <span className="truncate">发言身份：{visitorName || visitorId} · {genderLabel(visitorGender)}</span>
@@ -889,16 +1040,51 @@ export function TavernChatWorkbench({
                 </div>
               </details>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
-                <textarea
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  onKeyDown={handleComposerKeyDown}
-                  disabled={(activeChatChannel === "private" && !selectedCharacter) || characters.length === 0 || busy === "send" || passwordLocked}
-                  rows={2}
-                  maxLength={1600}
-                  placeholder={activeChatChannel === "public" ? "公共频道：直接发言，或 @NPC名 对指定 NPC 说话" : `Type a message，和 ${selectedCharacter?.name || "NPC"} 私聊；Shift+Enter 换行`}
-                  className="min-h-14 flex-1 resize-none rounded-3xl border border-white/12 bg-white/[0.06] px-5 py-3 text-sm leading-6 text-white outline-none placeholder:text-violet-100/35 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-55"
-                />
+                <div ref={mentionRef} className="relative min-w-0 flex-1">
+                  <textarea
+                    ref={textareaRef}
+                    value={message}
+                    onChange={(event) => {
+                      setMessage(event.target.value)
+                      // Detect @ mention
+                      const value = event.target.value
+                      const cursor = event.target.selectionStart ?? value.length
+                      const beforeCursor = value.slice(0, cursor)
+                      const atMatch = beforeCursor.match(/@([^@]*)$/)
+                      if (atMatch) {
+                        setMentionQuery(atMatch[1] || "")
+                      } else {
+                        setMentionQuery("")
+                      }
+                    }}
+                    onKeyDown={handleComposerKeyDown}
+                    disabled={(activeChatChannel === "private" && !selectedCharacter) || characters.length === 0 || busy === "send" || passwordLocked}
+                    rows={2}
+                    maxLength={1600}
+                    placeholder={activeChatChannel === "public" ? "公共频道：直接发言，或 @NPC名 对指定 NPC 说话" : `Type a message，和 ${selectedCharacter?.name || "NPC"} 私聊；Shift+Enter 换行`}
+                    className="min-h-14 w-full resize-none rounded-3xl border border-white/12 bg-white/[0.06] px-5 py-3 text-sm leading-6 text-white outline-none placeholder:text-violet-100/35 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-55"
+                  />
+                  {mentionQuery !== undefined && mentionMatches.length > 0 && activeChatChannel === "public" && (
+                    <div className="absolute bottom-full left-0 right-0 mb-2 max-h-60 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/98 shadow-xl shadow-black/40">
+                      {mentionMatches.map((char, index) => (
+                        <button
+                          key={char.id}
+                          type="button"
+                          onClick={() => insertMention(index)}
+                          className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition ${
+                            index === mentionIndex ? "bg-cyan-300/18 text-cyan-50" : "text-violet-50 hover:bg-white/[0.06]"
+                          }`}
+                        >
+                          {char.name || char.id}
+                          <span className="ml-auto text-xs text-violet-100/45">{char.description?.slice(0, 30) || "可对话角色"}</span>
+                        </button>
+                      ))}
+                      <div className="border-t border-white/10 px-4 py-1.5 text-center text-xs text-violet-100/45">
+                        Tab/Enter 选中 · 方向键切换 · Esc 关闭
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <Button type="submit" disabled={(activeChatChannel === "private" && !selectedCharacter) || characters.length === 0 || busy === "send" || passwordLocked || !message.trim()} className="min-h-14 sm:w-28">
                   <Send className="h-4 w-4" />
                   发送
@@ -913,11 +1099,7 @@ export function TavernChatWorkbench({
                 </DetailSection>
 
                 <DetailSection title="更多空间功能" description="分享、公开扩展和回访入口折叠收纳">
-                  {publicPanel || (
-                    <p className="rounded-2xl border border-white/10 bg-slate-950/35 p-3 text-sm leading-6 text-violet-50/62">
-                      暂无额外公开功能。
-                    </p>
-                  )}
+                  {publicPanel || <SpaceCapabilityHubPanel tavern={tavern} />}
                 </DetailSection>
               </div>
             </section>

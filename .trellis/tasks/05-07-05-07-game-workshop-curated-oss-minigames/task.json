@@ -1,21 +1,21 @@
 {
   "id": "05-07-game-workshop-curated-oss-minigames",
-  "name": "05-07-game-workshop-curated-oss-minigames",
+  "name": "05-07-05-07-game-workshop-curated-oss-minigames",
   "title": "Game workshop curated OSS mini-games MVP",
-  "description": "",
-  "status": "planning",
+  "description": "落地“小游戏工坊”：先集成几个白名单自研/开源小游戏（猜数字、打坐等），支持在对话中一键开启并 sandbox 运行。",
+  "status": "done",
   "dev_type": "frontend",
-  "scope": null,
+  "scope": "mini-game workshop content",
   "package": null,
   "priority": "P2",
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-07",
-  "completedAt": null,
+  "completedAt": "2026-05-08",
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,10 @@
   "subtasks": [],
   "children": [],
   "parent": "05-07-05-07-embedded-story-minigames-game-workshop-brainstorm",
-  "relatedFiles": [],
-  "notes": "承接 Approach B1/C1：先做白名单 OSS 小游戏工作台（非全量上传制）。",
+  "relatedFiles": [
+    "frontend/app/lib/mini-game-workshop.ts",
+    "frontend/app/components/MiniGameWorkshopPanel.tsx"
+  ],
+  "notes": "Claimed for adding 'Meditation' mini-game and polishing the workshop UI.",
   "meta": {}
 }

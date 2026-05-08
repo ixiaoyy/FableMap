@@ -1,5 +1,6 @@
 import type { LinksFunction, MetaFunction } from "react-router"
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router"
+import { ThemeProvider } from "./hooks/useTheme"
 
 import "./styles.css"
 
@@ -34,7 +35,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function Root() {
-  return <Outlet />
+  return (
+    <ThemeProvider>
+      <Outlet />
+    </ThemeProvider>
+  )
 }
 
 export function HydrateFallback() {

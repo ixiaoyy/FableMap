@@ -1,3 +1,5 @@
+import { FARM_PROMPTS } from './tavernFarmModes.js'
+
 const DEFAULT_PROMPTS = [
   '你好，我第一次来，这里怎么玩？',
   '请用三句话介绍这间空间。',
@@ -316,6 +318,17 @@ export function inferTavernPlayMode(tavern = {}, character = null) {
   ])
   const isMystery = hasAny(text, ['线索', '调查', '档案', '失物', '谜题', '悬疑', '推理', '异常', '真相'])
   const isTextGame = hasAny(text, ['文字游戏', '轻文字游戏', '选择', '目标', '探索', '委托', '线索'])
+  const isFarm = hasAny(text, ['菜园', '农场', '种菜', '偷菜', '作物', '浇水', '收获', 'farm', 'garden'])
+
+  if (isFarm) {
+    return {
+      id: 'farm',
+      label: '菜园农场',
+      icon: '🌱',
+      summary: '这间空间可以体验菜园种植：种植、浇水、收获并和管家交流。',
+      prompts: FARM_PROMPTS,
+    }
+  }
 
   if (isGuild) {
     return {

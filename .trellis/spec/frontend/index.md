@@ -49,6 +49,7 @@ Frontend work must preserve:
 | [Discovery Liveliness Signals](./discovery-liveliness-signals.md) | Discovery page rumor/feedback/activity labels without visitor social features | Current |
 | [Mobile Single-mainline Experience](./mobile-single-mainline.md) | Mobile dock and tavern first-screen contracts for the visitor-first entry path | Current |
 | [Revisit-care Notification Boundary](./revisit-care-notification-boundary.md) | Preview-only proactive revisit notification policy with opt-in/quiet-hours/rate-limit/unsubscribe guardrails | Current |
+| [Engagement UI Boundary](./engagement-ui-boundary.md) | Tavern-local soft currency, gift, and bonus-voucher visitor UI/service contract | Current |
 
 ---
 

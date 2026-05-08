@@ -67,10 +67,10 @@ export default function HomeMePage() {
               </span>
             </div>
 
-            <h1 className="mt-6 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl">
+            <h1 className="mt-6 max-w-3xl text-4xl font-black leading-tight text-theme-primary sm:text-5xl">
               Home 已并入真实坐标 Place/Home 主线
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-violet-100/72">
+            <p className="mt-4 max-w-2xl text-base leading-8 text-theme-muted">
               旧的个人小窝页面不再作为独立产品入口。新的 Home 是一种带真实坐标、默认私密、由店主确认内容的
               <span className="font-semibold text-lime-50"> place_type=home </span>
               空间：创建、NPC 接待、成员关系、留言与权限都回到同一套 Tavern / Place 主链路，避免半成品的双轨体验。
@@ -111,19 +111,19 @@ export default function HomeMePage() {
                 text: "访客通过具体 Tavern/Home 链接进入，不在此页进行聊天或留言。",
               },
             ].map((item) => (
-              <Card key={item.title} className="border-white/10 bg-white/[0.04]">
+              <Card key={item.title} className="border-theme-border bg-theme-card">
                 <CardHeader>
                   <item.icon className="h-6 w-6 text-lime-100" />
                   <CardTitle className="text-lg">{item.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm leading-6 text-violet-100/64">{item.text}</CardContent>
+                <CardContent className="text-sm leading-6 text-theme-muted">{item.text}</CardContent>
               </Card>
             ))}
           </div>
         </div>
 
         <aside className="space-y-5">
-          <Card className="border-cyan-300/16 bg-cyan-300/[0.055]">
+          <Card className="border-theme-accent-border bg-theme-accent-bg">
             <CardHeader>
               <CardTitle>{isOwnerView ? "主人入口" : "访客入口"}</CardTitle>
               <CardDescription>
@@ -132,7 +132,7 @@ export default function HomeMePage() {
                   : "访客不会在兼容页看到旧 Home 数据、成员聊天或第二套留言入口。"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-6 text-violet-100/68">
+            <CardContent className="space-y-4 text-sm leading-6 text-theme-muted">
               {isOwnerView ? (
                 <>
                   <p>继续创建或管理 Home 时，请使用主线页面；后端仍会在真实 API 上验证 owner 身份。</p>
@@ -158,19 +158,19 @@ export default function HomeMePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-white/10 bg-white/[0.04]">
+          <Card className="border-theme-border bg-theme-card">
             <CardHeader>
               <CardTitle>本页不再承载的能力</CardTitle>
               <CardDescription>避免与 Tavern/Home 主链路出现两套互相不一致的数据面。</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3 text-sm leading-6 text-violet-100/64">
+              <ul className="space-y-3 text-sm leading-6 text-theme-muted">
                 <li>• 不在兼容页创建独立 Home 存储。</li>
                 <li>• 不提供占位成员聊天；可对话角色必须绑定正式 TavernCharacter。</li>
                 <li>• 不提供公开留言墙或访客间互动入口。</li>
                 <li>• 不用前端参数当作真实授权；所有写操作回到后端 owner 校验。</li>
               </ul>
-              <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/55 p-3 text-xs leading-5 text-violet-100/52">
+              <div className="mt-5 rounded-2xl border border-theme-border bg-theme-card p-3 text-xs leading-5 text-theme-muted">
                 当前参数：owner_id={ownerId || "未提供"} · user_id={viewerId || "未提供"} · view={viewerRole}
               </div>
             </CardContent>

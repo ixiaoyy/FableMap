@@ -3,9 +3,9 @@
   "name": "tavern-soft-currency-gifts-design",
   "title": "brainstorm: 设计空间软货币与礼物系统",
   "description": "",
-  "status": "planning",
-  "dev_type": null,
-  "scope": null,
+  "status": "in_progress",
+  "dev_type": "fullstack",
+  "scope": "engagement wallet gifts vouchers mvp",
   "package": null,
   "priority": "P2",
   "creator": "lijin",
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 5,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,19 @@
   "subtasks": [],
   "children": [],
   "parent": null,
-  "relatedFiles": [],
-  "notes": "",
-  "meta": {}
+  "relatedFiles": [
+    ".trellis/tasks/05-06-tavern-soft-currency-gifts-design/prd.md",
+    ".trellis/tasks/05-06-tavern-soft-currency-gifts-design/implementation-plan.md",
+    ".trellis/tasks/05-06-tavern-soft-currency-gifts-design/artifacts/playwright/report.md",
+    ".trellis/spec/backend/engagement-api-contract.md",
+    ".trellis/spec/frontend/engagement-ui-boundary.md",
+    "docs/WORLD_SCHEMA.md"
+  ],
+  "notes": "2026-05-09: Codex claimed implementation. Added tavern-local engagement config + visitor private progress persistence, v1 engagement API/service/store wiring, gameplay-completion reward claim, gift send, voucher redeem, tavern-route visitor engagement panel, service normalization for backend gift icon fields, and Playwright self-acceptance report at .trellis/tasks/05-06-tavern-soft-currency-gifts-design/artifacts/playwright/report.md. Validation passed with backend compile + focused pytest, frontend typecheck + build, engagement-panel regression script, and desktop/mobile Playwright.",
+  "meta": {
+    "deferred_not_done": [
+      "Bonus-voucher consumption is not yet wired into the gacha draw pipeline; this slice stops at voucher issuance.",
+      "Owner-side custom engagement config editor UI is not included in this slice."
+    ]
+  }
 }

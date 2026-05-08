@@ -59,6 +59,8 @@ class StateCard:
     created_at: str = ""
     updated_at: str = ""
     fixed_canon: bool = False
+    entity_id: str = ""  # For grouping related cards
+    supersedes_id: str = ""  # ID of the card this one replaces
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -79,6 +81,8 @@ class StateCard:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "fixed_canon": bool(self.fixed_canon),
+            "entity_id": self.entity_id,
+            "supersedes_id": self.supersedes_id,
             "metadata": dict(self.metadata),
         }
 
@@ -101,6 +105,8 @@ class StateCard:
             created_at=_text(data.get("created_at"), max_length=80),
             updated_at=_text(data.get("updated_at"), max_length=80),
             fixed_canon=bool(data.get("fixed_canon", False)),
+            entity_id=_text(data.get("entity_id"), max_length=120),
+            supersedes_id=_text(data.get("supersedes_id"), max_length=120),
             metadata=_metadata(data.get("metadata")),
         )
 

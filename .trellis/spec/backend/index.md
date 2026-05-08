@@ -41,6 +41,7 @@ Backend work must preserve these principles:
 | [Tavern Skill Pack API Contract](./skill-pack-api-contract.md) | Owner-enabled NPC skill-pack API, runtime boundaries, permissions, and tests | Current |
 | [Preset Import Preview API Contract](./preset-import-preview-contract.md) | Draft-only community preset preview parser, risk report, permissions, and no-persistence boundary | Current |
 | [Territory API Contract](./territory-api-contract.md) | Territory CRUD, collision detection, map visualization API, permissions, and tests | Current |
+| [Engagement API Contract](./engagement-api-contract.md) | Tavern-local soft currency, gift, and bonus-voucher storage/API contract | Current |
 
 ---
 

@@ -1,6 +1,10 @@
-import { CheckCircle2, Send, ShieldCheck, UserCheck, XCircle, Sparkles, BookOpen, UserPlus, PlayCircle, Info } from "lucide-react"
+import { CheckCircle2, Send, ShieldCheck, UserCheck, XCircle, Plus, Settings, Sparkles, BookOpen, UserPlus, PlayCircle, Info } from "lucide-react"
 import { useState } from "react"
 
+import { RelationshipGraphPanel } from "../relationship-graph"
+import { SpaceCapabilityHubPanel } from "../../components/SpaceCapabilityHubPanel"
+import TerritoryManagementPanel from "../../components/TerritoryManagementPanel"
+import TerritoryClaimPanel from "../../components/TerritoryClaimPanel"
 import { PLACE_RELATIONSHIP_TYPES, normalizePlaceRelationshipDraft } from "../../lib/place-home.js"
 import { fallbackRoleplayState } from "../../lib/roleplay-state"
 import { CULTIVATION_PLAY_PACK } from "../../lib/cultivation-play-pack.js"
@@ -735,6 +739,77 @@ function PlaceHomePanel({ tavern }: { tavern: Tavern }) {
   )
 }
 
+function TerritoryOwnerPanel({ tavern }: { tavern: Tavern }) {
+  const [activeTab, setActiveTab] = useState<"manage" | "claim">("manage")
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  function handleClaimSuccess() {
+    setActiveTab("manage")
+    setRefreshKey((k) => k + 1)
+  }
+
+  return (
+    <Card className="min-w-0 overflow-hidden border-emerald-300/18 bg-emerald-300/8">
+      <CardHeader>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-100/62">Territory management</p>
+            <CardTitle>领地管理</CardTitle>
+            <CardDescription className="mt-2">
+              申领和管理你的领地。领地占用地图空间，同类型领地不可重叠。
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab("manage")}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold transition-colors ${
+                activeTab === "manage"
+                  ? "border-emerald-400/60 bg-emerald-400/20 text-emerald-100"
+                  : "border-white/20 bg-white/5 text-emerald-100/60 hover:border-emerald-400/40"
+              }`}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              管理
+            </button>
+            <button
+              onClick={() => setActiveTab("claim")}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold transition-colors ${
+                activeTab === "claim"
+                  ? "border-emerald-400/60 bg-emerald-400/20 text-emerald-100"
+                  : "border-white/20 bg-white/5 text-emerald-100/60 hover:border-emerald-400/40"
+              }`}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              申领
+            </button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {activeTab === "manage" ? (
+          <TerritoryManagementPanel
+            key={refreshKey}
+            userId={tavern.owner_id || DEFAULT_OWNER_ID}
+            onTerritoryChange={(territory) => {
+              // Territory changed, could trigger map refresh
+              console.log("Territory changed:", territory)
+            }}
+          />
+        ) : (
+          <TerritoryClaimPanel
+            userId={tavern.owner_id || DEFAULT_OWNER_ID}
+            tavernId={tavern.id}
+            initialLat={tavern.lat}
+            initialLon={tavern.lon}
+            onClaimSuccess={handleClaimSuccess}
+            onCancel={() => setActiveTab("manage")}
+          />
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function TavernOwnerManagement({
   tavern,
   roleplay,
@@ -774,6 +849,11 @@ export function TavernOwnerManagement({
       />
       <PlayPackPanel tavern={tavern} />
       <PlaceHomePanel tavern={tavern} />
+      <TerritoryOwnerPanel tavern={tavern} />
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <SpaceCapabilityHubPanel tavern={tavern} />
+      </div>
+      <RelationshipGraphPanel tavern={tavern} characters={characters} />
       <OwnerVisitorNotesPanel tavern={tavern} />
     </div>
   )

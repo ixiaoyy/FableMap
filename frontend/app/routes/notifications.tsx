@@ -20,7 +20,7 @@ export default function NotificationsRoute() {
         <aside className="space-y-5">
           <Card>
             <CardHeader>
-              <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">
+              <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-black text-theme-primary">
                 <BellRing className="h-3.5 w-3.5" />
                 持久化通知中心
               </div>
@@ -32,11 +32,11 @@ export default function NotificationsRoute() {
             <CardContent className="space-y-5">
               <form className="space-y-3" method="get">
                 <label className="space-y-1.5 text-sm">
-                  <span className="text-violet-100/65">当前身份 ID</span>
+                  <span className="text-theme-muted">当前身份 ID</span>
                   <input
                     name="user_id"
                     defaultValue={userId}
-                    className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-theme-primary outline-none focus:border-theme-accent-border"
                   />
                 </label>
                 <Button type="submit" className="w-full">
@@ -60,9 +60,9 @@ export default function NotificationsRoute() {
                 </Button>
               </div>
 
-              <div className="rounded-3xl border border-cyan-300/16 bg-cyan-300/[0.07] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/70">边界</p>
-                <p className="mt-2 text-sm leading-7 text-violet-100/72">
+              <div className="rounded-3xl border border-theme-accent-border bg-theme-accent-bg p-4">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-theme-accent-text">边界</p>
+                <p className="mt-2 text-sm leading-7 text-theme-muted">
                   通知只围绕空间访问、owner-visible 反馈、审批和个人探索状态；不会变成公开社交流，也不会用于广告复活。
                 </p>
               </div>

@@ -61,6 +61,7 @@ class TavernModel(Base):
     prompt_blocks = Column(JSON, default=list)
     runtime_presets = Column(JSON, default=list)
     skill_packs = Column(JSON, default=list)
+    engagement_config = Column(JSON, default=dict)
     active_preset_id = Column(String(64), default="")
     memory_policy = Column(JSON, default=dict)
     voice_config = Column(JSON, default=dict)
@@ -156,6 +157,7 @@ class VisitorModel(Base):
     last_visit = Column(DateTime, nullable=True)
     relationship_strength = Column(Float, default=0.0)
     relationship_stage = Column(String(32), default="stranger")
+    metadata_ = Column("metadata", JSON, default=dict)
 
     # 关系
     tavern = relationship("TavernModel", back_populates="visitors")

@@ -2546,6 +2546,8 @@ class WebService:
                 temperature=float(llm_config_data.get("temperature", 0.8)),
                 max_tokens=int(llm_config_data.get("max_tokens", 256)),
                 top_p=float(llm_config_data.get("top_p", 1.0)),
+                frequency_penalty=float(llm_config_data.get("frequency_penalty", 0.0)),
+                presence_penalty=float(llm_config_data.get("presence_penalty", 0.0)),
             )
 
             if str(cfg.backend or "").strip().lower() in {"rules", "rule_based", "public_welfare"}:
@@ -2586,6 +2588,8 @@ class WebService:
                 temperature=float(llm_config_data.get("temperature", 0.8)),
                 max_tokens=int(llm_config_data.get("max_tokens", 256)),
                 top_p=float(llm_config_data.get("top_p", 1.0)),
+                frequency_penalty=float(llm_config_data.get("frequency_penalty", 0.0)),
+                presence_penalty=float(llm_config_data.get("presence_penalty", 0.0)),
             )
 
             if str(cfg.backend or "").strip().lower() in {"rules", "rule_based", "public_welfare"}:

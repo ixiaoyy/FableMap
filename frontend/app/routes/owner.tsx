@@ -14,6 +14,7 @@ import {
   UserRoundCheck,
   UsersRound,
   Zap,
+  Compass,
 } from "lucide-react"
 import { Link, useLoaderData } from "react-router"
 
@@ -175,11 +176,11 @@ function MetricCard({ label, value, helper, icon: Icon }: MetricCardProps) {
     <Card className="min-w-0 p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/62">{label}</p>
-          <p className="mt-3 text-3xl font-black text-white">{value}</p>
-          <p className="mt-2 text-sm leading-6 text-violet-100/58">{helper}</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-theme-accent-text">{label}</p>
+          <p className="mt-3 text-3xl font-black text-theme-primary">{value}</p>
+          <p className="mt-2 text-sm leading-6 text-theme-muted">{helper}</p>
         </div>
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-cyan-300/22 bg-cyan-300/10 text-cyan-100">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-theme-accent-border bg-theme-accent-bg text-theme-accent-text">
           <Icon className="h-5 w-5" />
         </span>
       </div>
@@ -224,7 +225,7 @@ export default function OwnerRoute() {
         <aside className="space-y-5">
           <Card className="overflow-hidden">
             <CardHeader>
-              <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">
+              <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-black text-theme-primary">
                 <Sparkles className="h-3.5 w-3.5" />
                 Operating feedback
               </div>
@@ -236,11 +237,11 @@ export default function OwnerRoute() {
             <CardContent className="space-y-5">
               <form className="space-y-3" method="get">
                 <label className="space-y-1.5 text-sm">
-                  <span className="text-violet-100/65">店主 ID</span>
+                  <span className="text-theme-muted">店主 ID</span>
                   <input
                     name="owner_id"
                     defaultValue={ownerId}
-                    className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60"
+                    className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-theme-primary outline-none focus:border-theme-accent-border"
                   />
                 </label>
                 <Button type="submit" className="w-full">
@@ -262,15 +263,21 @@ export default function OwnerRoute() {
                     查看发现页入口
                   </Link>
                 </Button>
+                <Button asChild size="lg" variant="secondary" className="sm:col-span-2">
+                  <Link to={`/territory?owner_id=${encodeURIComponent(ownerId)}`}>
+                    <Compass className="h-4 w-4" />
+                    领地地图申领
+                  </Link>
+                </Button>
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.045] p-4">
+              <div className="flex items-center justify-between gap-3 rounded-3xl border border-theme-border bg-theme-card p-4">
                 <div className="min-w-0">
-                  <p className="flex items-center gap-2 text-sm font-bold text-white">
-                    <Bell className="h-4 w-4 text-cyan-100" />
+                  <p className="flex items-center gap-2 text-sm font-bold text-theme-primary">
+                    <Bell className="h-4 w-4 text-theme-accent-text" />
                     通知入口
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-violet-100/55">
+                  <p className="mt-1 text-xs leading-5 text-theme-muted">
                     用于查看店主侧待处理事件；这里不生成公开社交动态。
                   </p>
                 </div>
@@ -285,9 +292,9 @@ export default function OwnerRoute() {
                 </div>
               ) : null}
 
-              <div className="rounded-3xl border border-cyan-300/16 bg-cyan-300/[0.07] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100/70">当前判断</p>
-                <p className="mt-2 text-sm leading-7 text-violet-100/72">
+              <div className="rounded-3xl border border-theme-accent-border bg-theme-accent-bg p-4">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-theme-accent-text">当前判断</p>
+                <p className="mt-2 text-sm leading-7 text-theme-muted">
                   {metrics.taverns === 0
                     ? "还没有空间。第一步是创建一个真实坐标锚定入口。"
                     : metrics.returningVisitors > 0
@@ -296,12 +303,12 @@ export default function OwnerRoute() {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-fuchsia-300/16 bg-fuchsia-300/[0.07] p-4">
-                <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-100/70">
+              <div className="rounded-3xl border border-theme-border bg-fuchsia-300/[0.07] p-4">
+                <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-theme-primary">
                   <KeyRound className="h-3.5 w-3.5" />
                   AI / LLM
                 </p>
-                <p className="mt-2 text-sm leading-7 text-violet-100/72">
+                <p className="mt-2 text-sm leading-7 text-theme-muted">
                   {metrics.llmConfigured
                     ? `店主默认 AI 已配置：${llmHelperText}。AI 草稿仍只会填充待确认表单。`
                     : "默认 AI 尚未配置或暂不可确认；可进入创建页配置后再使用 AI 草稿辅助。"}
@@ -317,9 +324,9 @@ export default function OwnerRoute() {
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.nextActions.map((action) => (
-                <article key={action.kind} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
-                  <p className="font-bold text-white">{action.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-violet-100/62">{action.detail}</p>
+                <article key={action.kind} className="rounded-2xl border border-theme-border bg-theme-card p-4">
+                  <p className="font-bold text-theme-primary">{action.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-theme-muted">{action.detail}</p>
                   {"to" in action && action.to ? (
                     <Button asChild size="sm" variant="ghost" className="mt-3">
                       <Link to={action.to}>
@@ -426,24 +433,24 @@ export default function OwnerRoute() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {summary.returningHighlights.length ? summary.returningHighlights.map((visitor) => (
-                  <article key={`${visitor.tavernId}-${visitor.visitorId}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+                  <article key={`${visitor.tavernId}-${visitor.visitorId}`} className="rounded-2xl border border-theme-border bg-theme-card p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="font-black text-white">{visitor.visitorLabel}</p>
-                        <p className="mt-1 text-sm text-violet-100/58">{visitor.tavernName} · {visitor.relationshipLabel}</p>
+                        <p className="font-black text-theme-primary">{visitor.visitorLabel}</p>
+                        <p className="mt-1 text-sm text-theme-muted">{visitor.tavernName} · {visitor.relationshipLabel}</p>
                       </div>
-                      <span className="w-fit rounded-full border border-cyan-300/22 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
+                      <span className="w-fit rounded-full border border-theme-accent-border bg-theme-accent-bg px-3 py-1 text-xs font-black text-theme-accent-text">
                         {visitor.visitCount} 次访问
                       </span>
                     </div>
                     <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                      <span className="rounded-xl border border-white/8 bg-slate-950/45 px-3 py-2">消息 {visitor.messageCount}</span>
-                      <span className="rounded-xl border border-white/8 bg-slate-950/45 px-3 py-2">关系 {Math.round(visitor.relationshipStrength * 100)}%</span>
-                      <span className="rounded-xl border border-white/8 bg-slate-950/45 px-3 py-2">{formatOwnerSummaryTime(visitor.lastVisit)}</span>
+                      <span className="rounded-xl border border-theme-border bg-theme-card px-3 py-2">消息 {visitor.messageCount}</span>
+                      <span className="rounded-xl border border-theme-border bg-theme-card px-3 py-2">关系 {Math.round(visitor.relationshipStrength * 100)}%</span>
+                      <span className="rounded-xl border border-theme-border bg-theme-card px-3 py-2">{formatOwnerSummaryTime(visitor.lastVisit)}</span>
                     </div>
                   </article>
                 )) : (
-                  <div className="grid min-h-40 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
+                  <div className="grid min-h-40 place-items-center rounded-2xl border border-theme-border bg-theme-card p-6 text-center text-sm leading-6 text-theme-muted">
                     暂无回访者。访客第二次进入同一空间后，这里会开始显示关系线索。
                   </div>
                 )}
@@ -457,20 +464,20 @@ export default function OwnerRoute() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {summary.recentSessions.length ? summary.recentSessions.map((session) => (
-                  <article key={`${session.tavernId}-${session.visitorId}-${session.characterId}-${session.updatedAt}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+                  <article key={`${session.tavernId}-${session.visitorId}-${session.characterId}-${session.updatedAt}`} className="rounded-2xl border border-theme-border bg-theme-card p-4">
                     <div className="flex items-start gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-theme-border bg-theme-bg text-theme-primary">
                         <Clock3 className="h-4 w-4" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-white">{session.tavernName} · {session.characterName}</p>
-                        <p className="mt-1 text-xs text-violet-100/45">{session.visitorLabel} · {formatOwnerSummaryTime(session.updatedAt)}</p>
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-violet-100/68">{session.lastMessage || "暂无最近消息"}</p>
+                        <p className="font-bold text-theme-primary">{session.tavernName} · {session.characterName}</p>
+                        <p className="mt-1 text-xs text-theme-muted">{session.visitorLabel} · {formatOwnerSummaryTime(session.updatedAt)}</p>
+                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-theme-muted">{session.lastMessage || "暂无最近消息"}</p>
                       </div>
                     </div>
                   </article>
                 )) : (
-                  <div className="grid min-h-40 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
+                  <div className="grid min-h-40 place-items-center rounded-2xl border border-theme-border bg-theme-card p-6 text-center text-sm leading-6 text-theme-muted">
                     暂无会话记录。先从发现页进入空间测试一次 NPC 对话。
                   </div>
                 )}
@@ -485,17 +492,17 @@ export default function OwnerRoute() {
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.latestFeedback.length ? summary.latestFeedback.map((note) => (
-                <article key={`${note.tavernId}-${note.noteId}-${note.createdAt}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+                <article key={`${note.tavernId}-${note.noteId}-${note.createdAt}`} className="rounded-2xl border border-theme-border bg-theme-card p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="font-black text-white">{note.visitorLabel}</p>
-                      <p className="mt-1 text-sm text-violet-100/58">{note.tavernName} · {formatOwnerSummaryTime(note.createdAt)}</p>
+                      <p className="font-black text-theme-primary">{note.visitorLabel}</p>
+                      <p className="mt-1 text-sm text-theme-muted">{note.tavernName} · {formatOwnerSummaryTime(note.createdAt)}</p>
                     </div>
-                    <span className="w-fit rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-xs font-black text-fuchsia-100">
+                    <span className="w-fit rounded-full border border-theme-border bg-theme-bg px-3 py-1 text-xs font-black text-theme-primary">
                       {note.visibility}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-violet-100/72">{note.content || "访客未留下文字内容"}</p>
+                  <p className="mt-3 text-sm leading-6 text-theme-muted">{note.content || "访客未留下文字内容"}</p>
                   {note.tavernId ? (
                     <Button asChild size="sm" variant="ghost" className="mt-3">
                       <Link to={ownerTavernManagePath(note.tavernId, ownerId)}>
@@ -506,7 +513,7 @@ export default function OwnerRoute() {
                   ) : null}
                 </article>
               )) : (
-                <div className="grid min-h-36 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
+                <div className="grid min-h-36 place-items-center rounded-2xl border border-theme-border bg-theme-card p-6 text-center text-sm leading-6 text-theme-muted">
                   暂无访客反馈。访客在空间内提交给店主的私密反馈会出现在这里，不会展示给其他访客。
                 </div>
               )}
@@ -525,19 +532,19 @@ export default function OwnerRoute() {
                     <Link
                       key={item.tavernId}
                       to={ownerTavernManagePath(item.tavernId, ownerId)}
-                      className="group grid gap-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 transition hover:border-cyan-300/45 hover:bg-cyan-300/10 sm:grid-cols-[minmax(0,1fr)_auto]"
+                      className="group grid gap-4 rounded-2xl border border-theme-border bg-theme-card p-4 transition hover:border-theme-accent-border hover:bg-theme-accent-bg sm:grid-cols-[minmax(0,1fr)_auto]"
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <DoorOpen className="h-4 w-4 text-cyan-200" />
-                          <p className="font-black text-white group-hover:text-cyan-100">{item.tavernName}</p>
-                          <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-violet-100/55">{item.status}</span>
+                          <DoorOpen className="h-4 w-4 text-theme-accent-text" />
+                          <p className="font-black text-theme-primary group-hover:text-theme-accent-text">{item.tavernName}</p>
+                          <span className="rounded-full border border-theme-border px-2 py-0.5 text-xs text-theme-muted">{item.status}</span>
                         </div>
-                        <p className="mt-2 text-sm text-violet-100/58">
+                        <p className="mt-2 text-sm text-theme-muted">
                           {formatNumber(item.visitorCount)} 位访客 · {formatNumber(item.returningVisitorCount)} 位回访 · {formatNumber(item.messageCount)} 条消息
                         </p>
                       </div>
-                      <span className="flex w-fit items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
+                      <span className="flex w-fit items-center gap-2 rounded-full border border-theme-accent-border bg-theme-accent-bg px-3 py-1 text-xs font-black text-theme-accent-text">
                         <BarChart3 className="h-3.5 w-3.5" />
                         经营分 {item.score.toFixed(1)}
                       </span>
@@ -545,7 +552,7 @@ export default function OwnerRoute() {
                   ))}
                 </div>
               ) : (
-                <div className="grid min-h-40 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm leading-6 text-violet-100/60">
+                <div className="grid min-h-40 place-items-center rounded-2xl border border-theme-border bg-theme-card p-6 text-center text-sm leading-6 text-theme-muted">
                   暂无空间。创建第一间空间后，这里会显示经营表现。
                 </div>
               )}

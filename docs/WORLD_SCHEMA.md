@@ -537,6 +537,91 @@ interface GameplayEvent {
 
 ---
 
+## 十一-A、Engagement（空间纪念币 / 礼物 / 抽奖券）
+
+Engagement 是绑定 **当前访客 × 当前空间** 的轻量回访循环，不是平台钱包、付费补抽或可交易库存系统。
+
+```typescript
+interface EngagementConfig {
+  coin_label: string; // 默认“纪念币”
+  earn_limits: {
+    daily_per_visitor: number;
+    weekly_per_visitor: number;
+  };
+  reward_rules: Array<{
+    source_type: 'gameplay_completion' | string;
+    source_id: string;          // 通常为 GameplayDefinition.id
+    amount: number;
+    daily_claim_limit: number;
+  }>;
+  gift_catalog: Array<{
+    id: string;
+    name: string;
+    icon?: string;
+    price: number;
+    affinity_delta: number;
+    cooldown_hours: number;
+    status?: 'published' | string;
+  }>;
+  bonus_draw: {
+    enabled: boolean;
+    voucher_price: number;
+    daily_limit: number;
+    weekly_limit: number;
+    hidden_unlock_allowed: boolean;
+  };
+}
+
+interface VisitorEngagementProgress {
+  wallet: {
+    balance: number;
+    lifetime_earned: number;
+    lifetime_spent: number;
+  };
+  ledger: Array<{
+    id: string;
+    type: 'earn' | 'spend';
+    source_type: string;
+    source_id: string;
+    amount: number;
+    created_at: string;
+  }>;
+  daily_counters: Record<string, {
+    earned: number;
+    gift_affinity_by_character: Record<string, number>;
+    bonus_draws_used: number;
+  }>;
+  gift_history: Array<{
+    id: string;
+    gift_id: string;
+    character_id: string;
+    amount: number;
+    affinity_delta: number;
+    cap_applied: boolean;
+    narration: string;
+    created_at: string;
+  }>;
+  bonus_draw_vouchers: Array<{
+    id: string;
+    earned_at: string;
+    redeemed: boolean;
+    redeemed_at?: string;
+  }>;
+  claimed_session_ids: string[];
+}
+```
+
+约束：
+
+- `EngagementConfig` 由店主维护，但 **不进入公开 Tavern payload**；访客通过专用 engagement API 读取安全子集。
+- 没有显式店主配置时，可从已发布 `GameplayDefinition` 推导默认 `reward_rules`；默认奖励仍是每空间、每访客的非付费纪念币。
+- `VisitorEngagementProgress` 是访客私有运行时数据；当前实现挂在 `VisitorState.metadata._engagement_progress`，不得作为公开 Tavern 内容导出。
+- 纪念币不能充值、提现、转让、跨空间流通，也不得与店主或平台结算。
+- bonus draw voucher 只能由纪念币兑换，且必须受每日 / 每周限额约束；它不是付费补抽，也不是平台级抽卡经济。
+- 礼物目录必须来自店主确认的配置或默认模板；平台不能绕过店主自动发布礼物内容。
+
+---
+
 ## 十二、Tavern Skill Packs（空间技能包）
 
 Tavern Skill Packs 是店主显式启用的 NPC 能力包：它让 NPC “可以做某类被允许的事”，但不改变 TavernCharacter 身份、世界书、访问规则、LLM 配置或 StateCard 正史。MVP 只内置 `local-rumor`（环境传闻）技能包。

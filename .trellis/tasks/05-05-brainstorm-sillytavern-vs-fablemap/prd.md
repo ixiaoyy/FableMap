@@ -1,308 +1,65 @@
-# SillyTavern vs FableMap 架构对比头脑风暴
-
-## 一、背景
-
-用户要求使用 Trellis 进行头脑风暴，对比"项目参考"目录中的项目和当前项目（FableMap）的真实情况。
-
-参考项目：`项目参考/SillyTavern/`
-当前项目：FableMap（空间 UGC 平台）
-
----
-
-## 二、SillyTavern 参考项目分析
-
-### 2.1 核心定位
-- **一句话**：LLM Frontend for Power Users
-- **定位**：本地运行的 LLM 对话前端
-- **许可**：AGPL-3.0（开源）
-
-### 2.2 技术架构
-
-```
-┌─────────────────────────────────────────┐
-│           SillyTavern (Node.js)          │
-├─────────────────────────────────────────┤
-│  Frontend: Vanilla JS + 模板渲染         │
-│  Backend: Express.js                     │
-│  Data: Local JSON/文件存储              │
-│  LLM: 多后端支持 (OpenAI, Claude, etc.) │
-│  Character Cards: V1/V2 格式             │
-│  Extensions: 插件系统                    │
-└─────────────────────────────────────────┘
-```
-
-### 2.3 核心功能模块
-
-| 模块 | SillyTavern 实现 | 说明 |
-|------|------------------|------|
-| 角色卡 | SillyTavern Character Card V2 | JSON + PNG 元数据 |
-| Prompt 构建 | Prompt Manager 分层注入 | 场景/系统/角色/世界书 |
-| 世界书 | World Info (Keyword 触发) | 背景信息注入 |
-| 对话历史 | Chat Log 持久化 | JSONL 格式 |
-| 记忆 | Imported via prompt | 无独立记忆系统 |
-| 多角色 | Group Chat | 群聊模式 |
-| 插件 | Plugin API | 扩展机制 |
-
-### 2.4 优势分析
-
-1. **成熟的角色卡生态**：SillyTavern 角色卡已成为社区标准
-2. **灵活的 Prompt 注入**：分层、选择性注入
-3. **插件系统**：允许深度定制
-4. **多后端支持**：统一的 LLM 调用接口
-5. **活跃社区**：Discord + Reddit 生态
-
----
-
-## 三、FableMap 当前项目分析
-
-### 3.1 核心定位
-- **一句话**：空间 UGC 平台
-- **定位**：地图 + 空间 + AI NPC 对话
-- **愿景**：每个人都可以在真实地图上开空间
-
-### 3.2 技术架构
-
-```
-┌─────────────────────────────────────────────────┐
-│              FableMap (已实现 + 规划中)           │
-├─────────────────────────────────────────────────┤
-│  Frontend: React (Vite) + 高德地图               │
-│  Backend: FastAPI (Python)                       │
-│  Data: JSON + SQLite (fablemap_data/)           │
-│  LLM: 多后端支持 (规划中)                        │
-│  Character Cards: SillyTavern 兼容               │
-│  特色: 地图锚点 + 空间 + WorldInfo              │
-└─────────────────────────────────────────────────┘
-```
-
-### 3.3 已实现功能
-
-| 模块 | 状态 | 说明 |
-|------|------|------|
-| 地图展示 | ✅ | 高德地图 + 空间标记 |
-| 空间 CRUD | ✅ | 创建/编辑/删除 |
-| 角色卡导入 | ✅ | SillyTavern V2 兼容 |
-| 对话系统 | ✅ | ChatPanel |
-| 访客状态 | ✅ | visit_count, relationship |
-| 写回协议 | ✅ | writeback-state.json |
-| 公开空间 | ✅ | 公益空间 |
-| WorldInfo | ✅ | 关键词注入 |
-| 玩法系统 | ✅ | GameplayDefinition |
-| 状态卡 | ✅ | StateCard 台账 |
-| 多 NPC 房间 | ✅ | 群聊模式 |
-
-### 3.4 规划中/未完成功能
-
-| 模块 | 状态 | 优先级 |
-|------|------|--------|
-| LLM Client Factory | 规划中 | P1 |
-| Token 统计面板 | 规划中 | P2 |
-| API Key 加密存储 | 规划中 | P1 |
-| 移动端适配 | 进行中 | P2 |
-| 角色立绘自动生成 | 规划中 | P3 |
-| 语音问候 TTS | 规划中 | P3 |
+# PRD: FableMap Continuity 2.0 (StateCard Maturity)
 
----
-
-## 四、对比分析矩阵
+**Status**: Implemented
+**Version**: 1.0.0
 
-### 4.1 功能维度对比
+## Goal
 
-| 维度 | SillyTavern | FableMap | 差距 |
-|------|-------------|----------|------|
-| **地图锚点** | ❌ 无 | ✅ 真实坐标 | +FableMap 独特 |
-| **空间概念** | ❌ 无 | ✅ 核心 | +FableMap 独特 |
-| **空间发现** | ❌ 无 | ✅ 地图浏览 | +FableMap 独特 |
-| **角色卡兼容** | ✅ 原生 | ✅ 兼容 | 持平 |
-| **Prompt 注入** | ✅ 分层 | ✅ 分层 | 持平 |
-| **世界书** | ✅ Keyword | ✅ Keyword | 持平 |
-| **群聊** | ✅ 支持 | ✅ 支持 | 持平 |
-| **插件系统** | ✅ 成熟 | ❌ 无 | -差距 |
-| **多后端 LLM** | ✅ 成熟 | ⚠️ 规划中 | -差距 |
-| **本地运行** | ✅ 是 | ❌ 云端 | 架构差异 |
-| **UGC 平台** | ❌ 否 | ✅ 是 | +FableMap 独特 |
+在 FableMap 已实现的 SillyTavern 兼容层基础上，深化独有的 `StateCard`（状态台账）连续性机制。目标是实现从“静态注入”到“动态维护与矛盾检测”的跨越，解决长线叙事中 AI 容易遗忘或违反已确认事实（正史）的痛点。
 
-### 4.2 技术架构对比
-
-| 维度 | SillyTavern | FableMap | 说明 |
-|------|-------------|----------|------|
-| 前端框架 | Vanilla JS | React | FableMap 更现代 |
-| 后端框架 | Express.js | FastAPI | FableMap 更类型安全 |
-| 数据存储 | Local Files | JSON + DB | 取决于规模 |
-| 部署方式 | 本地 | 云端/SaaS | 定位不同 |
-| 插件架构 | Plugin API | 无 | SillyTavern 优势 |
-
----
+## What I already know
 
-## 五、FableMap 可借鉴 SillyTavern 的点
+* **现有能力**：
+    * `PromptBuilder` 已支持注入 `confirmed` 且 `fixed_canon` 的 `StateCard`。
+    * `StateCard` 包含 `category` (character/task/resource/conflict/event_log)、`title`、`summary` 等字段。
+    * 访客可确认自己的 `visitor` scope 卡，店主维护 `tavern` scope 卡。
+* **技术现状**：注入方式是简单的文本拼接（见 `prompt_builder.py:318-329`），缺乏与当前对话内容的实时校验。
 
-### 5.1 高优先级（可立即实施）
+## Requirements (evolving)
 
-#### 1. **Prompt 模板系统**
-- SillyTavern 的 Prompt Manager 是其核心优势
-- FableMap 已有分层注入，可借鉴其"模板变量"机制
-- 建议：为 System Prompt 提供 `{{variable}}` 插值语法
+### 1. 矛盾检测 (Contradiction Detection)
+* **场景**：如果 AI 在回复中说“张三已经离开了”，但 `StateCard` 中有一张 `confirmed` 的卡显示“张三正在禁闭室”，系统应能识别。
+* **机制**：在 `writeback` 流程中，除了生成 `pending` 状态卡，还需要对比已有的 `confirmed` 状态卡。
+* **UI/UX**：在访客/店主看到 AI 回复的同时，如果检测到矛盾，前端应给予“逻辑冲突”提示。
 
-#### 2. **角色卡编辑器 UX**
-- SillyTavern 的角色卡编辑界面非常直观
-- FableMap 可借鉴其 JSON/PNG 导入预览功能
-- 建议：增加角色卡导入向导
+### 2. 状态卡演进 (Card Evolution)
+* **场景**：一个任务状态从“进行中”变为“已完成”。
+* **机制**：新生成的 `pending` 卡如果指向同一个实体（如同一个任务 ID），应标记为 `supersedes` 旧卡。
+* **自动化**：利用 AI 提取 content 中的“实体 ID”或“标签”，自动关联相关卡片。
 
-#### 3. **插件化 API 架构**
-- SillyTavern 的插件系统允许第三方扩展
-- FableMap 可考虑轻量级插件机制
-- 建议：API 中间件模式
+### 3. 分层权重 (Layered Weighting)
+* **场景**：随着卡片增多，Prompt 长度会爆炸。
+* **机制**：根据当前对话的关键词触发相关的 `StateCard` 注入（类似 WorldInfo 的 Keyword 触发，但对象是 StateCard）。
 
-#### 4. **多后端统一接口**
-- SillyTavern 已经实现了多种 LLM 后端的统一调用
-- FableMap 规划中的 LLM Client Factory 可直接参考
-- 建议：适配器模式 + 统一 Response 接口
+## Acceptance Criteria (evolving)
 
-### 5.2 中优先级（需要规划）
+* [ ] **设计方案**：完成一套基于 LLM 提取实体的“状态卡关联与矛盾检测”协议方案。
+* [ ] **Prototype**：在 `backend` 中实现一个实验性的 `validate_consistency(response, confirmed_cards)` 端点。
+* [ ] **UI 适配**：在 `ChatPanel` 中预留矛盾提示的视觉锚点。
 
-#### 5. **聊天格式化增强**
-- SillyTavern 支持 Markdown 渲染、图片、语音
-- FableMap 已有气泡 UI，可增强富文本
-- 建议：Markdown 支持 + 语音消息
+## Technical Approach
 
-#### 6. **快捷设定系统**
-- SillyTavern 的 "Author's Note" 允许动态注入上下文
-- FableMap 的 WorldInfo 可结合此机制
-- 建议：临时注入 (Temporary Injection)
+### 矛盾检测逻辑
+1.  **Extract**: 在 AI 发言后，异步调用一个小模型（或在 writeback 流程中）提取当前回合涉及的关键状态（人物位置、物品归属、任务进度）。
+2.  **Compare**: 将提取出的状态与 `db.state_cards` 中 `confirmed` 的卡片进行语义匹配。
+3.  **Signal**: 如果匹配度高但内容冲突，生成一个 `system_notice` 或标记当前 `StateCard` 候选为 `contradictory`。
 
-#### 7. **对话导出格式**
-- SillyTavern 支持多种导出格式（JSON, Markdown, HTML）
-- FableMap 的 Episode Export API 可借鉴
-- 建议：增加 HTML 导出格式
+## Decision (ADR-lite)
 
-### 5.3 低优先级（长期演进）
+* **Context**: 为什么不做类似 ST 的“Long-term memory”向量检索？
+* **Decision**: FableMap 选择“结构化台账（StateCard）”是因为它具有“主人主权”和“确定性”。向量检索不可控，而经过确认的状态卡是“正史”。
+* **Consequences**: 需要更多的 LLM 调用来维护一致性，但能极大地提升长线互动的逻辑严密性。
 
-#### 8. **变量替换引擎**
-- SillyTavern 的 `{{raw_text}}` 等变量机制
-- 可用于 FableMap 的 NPC 动态生成
+## Out of Scope
 
-#### 9. **社区角色卡市场**
-- SillyTavern 社区有大量角色卡资源
-- FableMap 可考虑"空间市场"功能
+* 全自动的正史改写（必须保留确认流程）。
+* 复杂的逻辑推理机（如 Prolog 等硬逻辑规则）。
 
-#### 10. **协作编辑**
-- SillyTavern 支持多用户共享角色卡
-- FableMap 可考虑家庭成员/协作场景
+## Technical Notes
 
----
-
-## 六、FableMap 独特价值（需要强化）
-
-### 6.1 地图锚点 → 真实地点叙事
-
-**SillyTavern 无法做到**：
-- 在真实地图上发现空间
-- 基于真实地点的氛围设定
-- 空间邻近的空间发现
-
-**建议强化**：
-- 空间发现雷达 UI（已规划）
-- 基于位置的空间推荐
-- 地点标签系统
-
-### 6.2 空间即内容 → UGC 生态
-
-**SillyTavern 是单人工具**：
-- 本地使用
-- 无分享机制
-- 无创作者生态
-
-**FableMap 的机会**：
-- 空间分享与发现
-- 角色卡市场
-- 空间排名与推荐
-- 访客反馈系统
-
-### 6.3 玩法系统 → 结构化叙事
-
-**FableMap 已有 GameplayDefinition**：
-- 轻量玩法节点
-- 访客进度追踪
-- AI Director Fallback
-
-**可进一步探索**：
-- 剧本市场
-- 玩法模板库
-- 连续剧式叙事
-
----
-
-## 七、头脑风暴结论
-
-### 7.1 FableMap 的核心差异化
-
-| 差异化点 | SillyTavern | FableMap | 战略价值 |
-|----------|-------------|----------|----------|
-| 地图锚点 | ❌ | ✅ | 高 - 创造独特体验 |
-| 空间 UGC | ❌ | ✅ | 高 - 构建护城河 |
-| 真实地点叙事 | ❌ | ✅ | 中 - 差异化叙事 |
-| 云端协作 | ⚠️ 有限 | ✅ | 中 - 社交价值 |
-
-### 7.2 短期行动项（1-2 周）
-
-1. **LLM Client Factory 实现**
-   - 参考 SillyTavern 的多后端适配器
-   - 统一 Response 接口
-
-2. **角色卡导入增强**
-   - 导入预览
-   - 字段映射确认
-
-3. ** Prompt 模板系统**
-   - 支持变量插值
-   - 模板版本管理
-
-### 7.3 中期行动项（1-2 月）
-
-4. **API Key 安全存储**
-   - 加密存储
-   - Key Vault 实现
-
-5. **Token 统计面板**
-   - 消耗追踪
-   - 成本预估
-
-6. **空间发现系统**
-   - 雷达 UI
-   - 位置推荐
-
-### 7.4 长期愿景
-
-7. **UGC 生态**
-   - 空间市场
-   - 角色卡市场
-   - 玩法模板库
-
-8. **社区建设**
-   - 创作者激励
-   - 社区排行
-
----
-
-## 八、开放问题
-
-1. **是否需要插件系统？**
-   - 复杂性 vs 灵活性
-   - MVP 阶段可能不需要
-
-2. **本地运行 vs 云端？**
-   - 当前是云端架构
-   - 未来可能支持本地部署
-
-3. **Token 计费模式？**
-   - 当前是店主自付
-   - 未来是否引入平台补贴？
-
-4. **多语言支持？**
-   - 当前主要中文
-   - 国际化规划？
-
----
-
-*创建时间: 2026-05-05*
-*状态: Phase 1 - 头脑风暴*
+* 涉及文件：
+    * `backend/src/fablemap_api/core/state_cards.py`
+    * `backend/src/fablemap_api/core/writeback.py`
+    * `backend/src/fablemap_api/core/prompt_builder.py`
+* 参考：
+    * SillyTavern 的 WorldInfo 注入逻辑（用于借鉴 Keyword 触发状态卡）。

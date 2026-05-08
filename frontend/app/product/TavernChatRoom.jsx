@@ -7,6 +7,18 @@ import TavernMiniGamePanel from './TavernMiniGamePanel'
 import TavernGameplayLauncher from './TavernGameplayLauncher'
 import GameplaySessionPanel from './GameplaySessionPanel'
 import StateCardReviewPanel from './StateCardReviewPanel'
+import GardenFarmPanel from './GardenFarmPanel'
+import {
+  buildFarmActionPrompt,
+  buildFarmActionPromptExtended,
+  calculatePlanting,
+  calculateFarmSale,
+  calculateFarmSteal,
+  loadFarmProgress,
+  saveFarmProgress,
+  normalizeFarmProgressExtended,
+  updateFarmProgressExtended,
+} from './tavernFarmModes'
 import {
   buildGuildActionPrompt,
   GUILD_REPUTATION_TIERS,
@@ -991,7 +1003,9 @@ export default function TavernChatRoom({
     [tavern, characters, selectedChar],
   )
   const guildEnabled = playMode.id === 'guild'
+  const farmEnabled = playMode.id === 'farm'
   const [guildProgress, setGuildProgress] = useState(() => loadGuildProgress(roomId, visitorId))
+  const [farmProgress, setFarmProgress] = useState(() => loadFarmProgress(roomId, visitorId))
   const quickPrompts = playMode.prompts || []
   const miniGameTemplates = useMemo(
     () => getMiniGameTemplates({ playModeId: playMode.id, tavern, character: selectedChar }),
@@ -1052,6 +1066,11 @@ export default function TavernChatRoom({
     if (!guildEnabled) return
     setGuildProgress(loadGuildProgress(roomId, visitorId))
   }, [guildEnabled, roomId, visitorId])
+
+  useEffect(() => {
+    if (!farmEnabled) return
+    setFarmProgress(loadFarmProgress(roomId, visitorId))
+  }, [farmEnabled, roomId, visitorId])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -1539,6 +1558,39 @@ export default function TavernChatRoom({
     handleSend(buildGuildActionPrompt(action, quest, nextTier))
   }
 
+  function handleFarmAction(action, payload = null) {
+    if (!farmEnabled || sending) return
+    let promptPayload = payload
+    if (action === 'plant') {
+      promptPayload = {
+        ...payload,
+        planting: calculatePlanting(farmProgress, payload?.cropId),
+      }
+    } else if (action === 'harvest') {
+      const plot = farmProgress.plots.find((item) => item.id === payload?.plotId)
+      promptPayload = { ...payload, cropId: plot?.cropId }
+    } else if (action === 'sell') {
+      promptPayload = {
+        ...payload,
+        sale: calculateFarmSale(farmProgress, payload?.cropId, payload?.quantity),
+      }
+    } else if (action === 'steal') {
+      promptPayload = {
+        ...payload,
+        theft: calculateFarmSteal(farmProgress, payload?.plotId),
+      }
+    }
+
+    const readOnlyActions = ['status', 'market', 'steal-status', 'shop', 'rank']
+    if (!readOnlyActions.includes(action)) {
+      const baseProgress = normalizeFarmProgressExtended(farmProgress)
+      const nextProgress = updateFarmProgressExtended(baseProgress, action, payload)
+      const savedProgress = saveFarmProgress(roomId, visitorId, nextProgress)
+      setFarmProgress(savedProgress)
+    }
+    handleSend(buildFarmActionPromptExtended(action, promptPayload, farmProgress))
+  }
+
   function handleMiniGameStart(template) {
     if (!selectedChar || sending) return
     const prompt = buildMiniGameStartPrompt(template, {
@@ -1732,6 +1784,13 @@ export default function TavernChatRoom({
                 tier={guildTier}
                 sending={sending}
                 onAction={handleGuildAction}
+              />
+
+              <GardenFarmPanel
+                enabled={farmEnabled}
+                progress={farmProgress}
+                sending={sending}
+                onAction={handleFarmAction}
               />
 
               {gameplayError ? (

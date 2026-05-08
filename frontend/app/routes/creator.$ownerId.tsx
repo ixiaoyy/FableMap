@@ -69,24 +69,24 @@ export default function CreatorRoute() {
         {/* Sidebar */}
         <aside className="space-y-5">
           {/* Creator profile card */}
-          <div className="rounded-[2rem] border border-cyan-300/18 bg-slate-950/72 p-6 shadow-2xl shadow-black/25 backdrop-blur-xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">
+          <div className="rounded-[2rem] border border-theme-accent-border bg-theme-card p-6 shadow-2xl shadow-black/25 backdrop-blur-xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-black text-theme-primary">
               <Sparkles className="h-3.5 w-3.5" />
               Public profile
             </div>
 
             {/* Creator avatar */}
             <div className="mb-5 flex items-center gap-4">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-cyan-300/30 bg-gradient-to-br from-cyan-300/20 to-fuchsia-300/20 text-3xl font-black text-white">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-theme-accent-border bg-gradient-to-br from-cyan-300/20 to-fuchsia-300/20 text-3xl font-black text-theme-primary">
                 {ownerId.trim().slice(0, 1).toUpperCase() || "?"}
               </div>
               <div>
-                <h1 className="text-2xl font-black text-white">创作者 #{ownerId.slice(0, 8)}</h1>
-                <p className="mt-1 text-sm text-violet-100/55">在 FableMap 创作空间</p>
+                <h1 className="text-2xl font-black text-theme-primary">创作者 #{ownerId.slice(0, 8)}</h1>
+                <p className="mt-1 text-sm text-theme-muted">在 FableMap 创作空间</p>
               </div>
             </div>
 
-            <p className="text-sm leading-7 text-violet-100/66">
+            <p className="text-sm leading-7 text-theme-muted">
               这位创作者在 FableMap 平台开设了 {stats.tavernCount} 间空间，
               创作了 {stats.characterCount} 位 NPC，
               累计接待了 {stats.visitorCount} 位访客。
@@ -94,21 +94,21 @@ export default function CreatorRoute() {
 
             {/* Stats */}
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
-                <p className="text-2xl font-black text-white">{stats.tavernCount}</p>
-                <p className="mt-1 text-xs text-violet-100/55">空间</p>
+              <div className="rounded-2xl border border-theme-border bg-theme-card p-3 text-center">
+                <p className="text-2xl font-black text-theme-primary">{stats.tavernCount}</p>
+                <p className="mt-1 text-xs text-theme-muted">空间</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
-                <p className="text-2xl font-black text-white">{stats.characterCount}</p>
-                <p className="mt-1 text-xs text-violet-100/55">NPC</p>
+              <div className="rounded-2xl border border-theme-border bg-theme-card p-3 text-center">
+                <p className="text-2xl font-black text-theme-primary">{stats.characterCount}</p>
+                <p className="mt-1 text-xs text-theme-muted">NPC</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
-                <p className="text-2xl font-black text-white">{stats.visitorCount}</p>
-                <p className="mt-1 text-xs text-violet-100/55">访客</p>
+              <div className="rounded-2xl border border-theme-border bg-theme-card p-3 text-center">
+                <p className="text-2xl font-black text-theme-primary">{stats.visitorCount}</p>
+                <p className="mt-1 text-xs text-theme-muted">访客</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center">
-                <p className="text-2xl font-black text-white">{stats.openCount}</p>
-                <p className="mt-1 text-xs text-violet-100/55">营业中</p>
+              <div className="rounded-2xl border border-theme-border bg-theme-card p-3 text-center">
+                <p className="text-2xl font-black text-theme-primary">{stats.openCount}</p>
+                <p className="mt-1 text-xs text-theme-muted">营业中</p>
               </div>
             </div>
 
@@ -128,11 +128,11 @@ export default function CreatorRoute() {
               { image: tavernNightImage, title: "探索空间", text: "从真实坐标进入店主创作的空间，和 NPC 对话。" },
               { image: tavernNeonImage, title: "成为创作者", text: "在地图上开设自己的空间，创作独特的角色和故事。" },
             ].map((card) => (
-              <article key={card.title} className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.035]">
+              <article key={card.title} className="overflow-hidden rounded-[1.75rem] border border-theme-border bg-theme-card">
                 <img src={card.image} alt="" className="h-36 w-full object-cover" loading="lazy" decoding="async" />
                 <div className="p-4">
-                  <h2 className="font-black text-white">{card.title}</h2>
-                  <p className="mt-1 text-sm leading-6 text-violet-100/58">{card.text}</p>
+                  <h2 className="font-black text-theme-primary">{card.title}</h2>
+                  <p className="mt-1 text-sm leading-6 text-theme-muted">{card.text}</p>
                 </div>
               </article>
             ))}
@@ -140,19 +140,19 @@ export default function CreatorRoute() {
         </aside>
 
         {/* Main content */}
-        <section className="relative min-h-[620px] overflow-hidden rounded-[2.2rem] border border-white/12 bg-slate-950/72 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
+        <section className="relative min-h-[620px] overflow-hidden rounded-[2.2rem] border border-theme-border bg-theme-card p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_28%,rgba(0,214,201,0.24),transparent_17rem),radial-gradient(circle_at_74%_68%,rgba(217,70,239,0.20),transparent_20rem)]" />
-          <div className="absolute inset-5 rounded-[1.8rem] border border-cyan-300/10 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px]" />
+          <div className="absolute inset-5 rounded-[1.8rem] border border-theme-accent-border bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px]" />
           <div className="relative flex flex-col gap-5">
-            <div className="flex flex-col gap-4 rounded-[1.75rem] border border-white/10 bg-[#050615]/76 p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 rounded-[1.75rem] border border-theme-border bg-theme-card p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-100/70">Creator's taverns</p>
-                <h2 className="mt-2 text-3xl font-black text-white">创作者的空间</h2>
-                <p className="mt-1 text-sm text-violet-100/56">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-theme-accent-text">Creator's taverns</p>
+                <h2 className="mt-2 text-3xl font-black text-theme-primary">创作者的空间</h2>
+                <p className="mt-1 text-sm text-theme-muted">
                   {result.count} 间空间 · 点击预览 · 进入对话
                 </p>
               </div>
-              <span className="grid h-14 w-14 place-items-center rounded-full border border-cyan-300/28 bg-cyan-300/10 text-cyan-100">
+              <span className="grid h-14 w-14 place-items-center rounded-full border border-theme-accent-border bg-theme-accent-bg text-theme-accent-text">
                 <Store className="h-7 w-7" />
               </span>
             </div>
@@ -164,23 +164,23 @@ export default function CreatorRoute() {
                     key={tavern.id}
                     type="button"
                     onClick={() => setPreviewTavern(tavern)}
-                    className="group relative w-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950/78 p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/55 hover:bg-cyan-300/10"
+                    className="group relative w-full overflow-hidden rounded-[1.75rem] border border-theme-border bg-theme-card p-4 text-left transition hover:-translate-y-0.5 hover:border-theme-accent-border hover:bg-theme-accent-bg"
                   >
-                    <div className="absolute right-5 top-5 text-5xl font-black text-white/[0.025]">
+                    <div className="absolute right-5 top-5 text-5xl font-black text-theme-primary/[0.025]">
                       {String(index + 1).padStart(2, "0")}
                     </div>
                     <div className="relative flex items-start gap-4">
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/12 text-cyan-100">
+                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-theme-accent-border bg-theme-accent-bg text-theme-accent-text">
                         <Store className="h-5 w-5" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <h3 className="font-black text-white group-hover:text-cyan-100">{tavern.name}</h3>
-                          <span className="w-fit rounded-full border border-fuchsia-300/18 bg-fuchsia-300/10 px-2.5 py-1 text-xs font-bold text-fuchsia-100">
+                          <h3 className="font-black text-theme-primary group-hover:text-theme-accent-text">{tavern.name}</h3>
+                          <span className="w-fit rounded-full border border-theme-border bg-theme-bg px-2.5 py-1 text-xs font-bold text-theme-primary">
                             {tavern.access || "public"}
                           </span>
                         </div>
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-violet-100/65">
+                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-theme-muted">
                           {tavern.description || "店主还没有写下空间简介。"}
                         </p>
 
@@ -202,7 +202,7 @@ export default function CreatorRoute() {
                                 ) : (
                                   <span
                                     key={character.id || charIndex}
-                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-950 bg-gradient-to-br from-cyan-300/20 to-fuchsia-300/20 text-xs font-bold text-white"
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-950 bg-gradient-to-br from-cyan-300/20 to-fuchsia-300/20 text-xs font-bold text-theme-primary"
                                   >
                                     {initialFor(character.name)}
                                   </span>
@@ -214,19 +214,19 @@ export default function CreatorRoute() {
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-violet-100/55">
+                            <span className="text-xs text-theme-muted">
                               {tavern.characters.slice(0, 2).map((c) => c.name || "未命名").join(" · ")}
                               {tavern.characters.length > 2 ? " · ..." : ""}
                             </span>
                           </div>
                         )}
 
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-violet-100/45">
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-theme-muted">
                           <span className="inline-flex items-center gap-1">
                             <MapPinned className="h-3 w-3" />
                             {Number(tavern.lat).toFixed(4)}, {Number(tavern.lon).toFixed(4)}
                           </span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
+                          <span className="rounded-full border border-theme-border bg-theme-card px-2 py-0.5">
                             {tavern.status || "unknown"}
                           </span>
                           <span className="inline-flex items-center gap-1">
@@ -239,11 +239,11 @@ export default function CreatorRoute() {
                   </button>
                 ))
               ) : (
-                <div className="grid min-h-80 place-items-center rounded-[1.75rem] border border-white/10 bg-white/[0.04] text-center">
+                <div className="grid min-h-80 place-items-center rounded-[1.75rem] border border-theme-border bg-theme-card text-center">
                   <div className="max-w-sm space-y-3 px-6">
-                    <Store className="mx-auto h-10 w-10 text-violet-100/60" />
-                    <p className="font-bold text-white">这位创作者还没有空间</p>
-                    <p className="text-sm leading-6 text-violet-100/60">
+                    <Store className="mx-auto h-10 w-10 text-theme-muted" />
+                    <p className="font-bold text-theme-primary">这位创作者还没有空间</p>
+                    <p className="text-sm leading-6 text-theme-muted">
                       可能是新创作者，或者空间正在准备中。
                     </p>
                   </div>

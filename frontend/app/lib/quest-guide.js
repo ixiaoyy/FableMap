@@ -10,55 +10,60 @@ export const PLATFORM_QUEST_GUIDES = [
     id: 'visit-first-open-tavern',
     title: '记录第一间营业空间',
     type: 'exploration',
-    targetCount: 1,
     icon: '🧭',
     description: '从真实坐标锚定的公开空间开始，记录一次安全入场体验。',
     ctaLabel: '去发现页找空间',
     ctaTo: '/discover',
+    signalLabel: '当前开放空间',
+    helperText: '进入一间开放空间后，可以把对话和回访提示留在空间体验里；本页不保存个人进度。',
     measure: ({ openTaverns }) => openTaverns,
   },
   {
     id: 'tour-three-open-taverns',
     title: '巡礼三间开放空间',
     type: 'exploration',
-    targetCount: 3,
     icon: '🍻',
     description: '比较不同店主设定的氛围、NPC 和开场白，而不是做地图打卡排行。',
     ctaLabel: '查看开放空间',
     ctaTo: '/discover',
+    signalLabel: '可比较空间',
+    helperText: '把它当作路线建议：多看几间空间的风格差异，并把回访提示留在各自空间里，不形成排行榜或完成率。',
     measure: ({ openTaverns }) => openTaverns,
   },
   {
     id: 'meet-three-npcs',
     title: '认识三位空间 NPC',
     type: 'npc',
-    targetCount: 3,
     icon: '💬',
     description: '优先体验店主配置的角色、表情和第一句话，感受 NPC 是否记得场景。',
     ctaLabel: '进入空间对话',
     ctaTo: '/discover',
+    signalLabel: '可认识 NPC',
+    helperText: 'NPC 对话由空间主人设定与模型配置驱动；回访提示应来自真实聊天上下文。',
     measure: ({ npcCount }) => npcCount,
   },
   {
     id: 'try-quest-play-tavern',
     title: '试一间探索玩法空间',
     type: 'gameplay',
-    targetCount: 1,
     icon: '📜',
     description: '体验店主发布的轻量文本玩法；只记录完成与回访提示，不引入战斗、数值成长或竞赛榜单。',
     ctaLabel: '寻找玩法空间',
     ctaTo: '/discover',
+    signalLabel: '玩法空间',
+    helperText: '玩法入口只做轻量文本互动和回访提示，不做等级、装备、奖励或访客竞争。',
     measure: ({ questPlayTaverns }) => questPlayTaverns,
   },
   {
     id: 'create-real-anchor',
     title: '创建自己的真实坐标锚点',
     type: 'creation',
-    targetCount: 1,
     icon: '✨',
     description: '创建一间由店主确认内容的空间；AI 草稿只能辅助填写，不能自动发布。',
     ctaLabel: '创建空间',
     ctaTo: '/create',
+    signalLabel: '你的空间',
+    helperText: '创建从真实坐标开始，内容仍由店主确认；本指南只提示下一步，不替你发布空间。',
     measure: ({ ownerTaverns }) => ownerTaverns,
   },
 ]
@@ -89,8 +94,6 @@ export function buildQuestGuideSummary({ taverns = [], ownerId = '' } = {}) {
 
   const quests = PLATFORM_QUEST_GUIDES.map((quest) => {
     const current = Math.max(0, Number(quest.measure(metrics)) || 0)
-    const target = Math.max(1, Number(quest.targetCount) || 1)
-    const completed = current >= target
     return {
       id: quest.id,
       title: quest.title,
@@ -100,20 +103,18 @@ export function buildQuestGuideSummary({ taverns = [], ownerId = '' } = {}) {
       description: quest.description,
       ctaLabel: quest.ctaLabel,
       ctaTo: quest.ctaTo,
-      current: Math.min(current, target),
-      rawCurrent: current,
-      target,
-      progress: Math.min(1, current / target),
-      status: completed ? 'completed' : current > 0 ? 'in_progress' : 'available',
-      statusLabel: completed ? '可记录' : current > 0 ? '进行中' : '可开始',
-      rewardText: completed ? '可获得一段文字纪念章和下一步探索建议' : '完成后显示温和文字反馈与回访提示',
+      signalLabel: quest.signalLabel,
+      signalCount: current,
+      availability: current > 0 ? 'ready' : 'guide',
+      availabilityLabel: current > 0 ? '已有可参考入口' : '建议从这里开始',
+      helperText: quest.helperText,
     }
   })
 
   return {
     metrics,
     quests,
-    completedCount: quests.filter((quest) => quest.status === 'completed').length,
-    activeCount: quests.filter((quest) => quest.status !== 'completed').length,
+    guideCount: quests.length,
+    readyGuideCount: quests.filter((quest) => quest.availability === 'ready').length,
   }
 }

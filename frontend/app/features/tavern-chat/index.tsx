@@ -169,7 +169,12 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
       })
       const responseText = String(result.response || "").trim()
       if (responseText) {
-        setLines((current) => [...current, { role: "assistant", content: responseText, character_id: character.id }])
+        setLines((current) => [...current, { 
+          role: "assistant", 
+          content: responseText, 
+          character_id: character.id,
+          conflicts: result.conflicts
+        }])
       }
       if (result.visitor_state !== undefined) {
         setVisitorState(result.visitor_state ?? null)
@@ -253,6 +258,19 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
                     <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-violet-100/55">{speakerName}</p>
                   ) : null}
                   {line.content}
+                  {line.conflicts && line.conflicts.length > 0 && (
+                    <div className="mt-2 space-y-1 border-t border-red-500/20 pt-2 text-[10px] text-red-300">
+                      <p className="flex items-center gap-1 font-bold uppercase tracking-wider">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                        正史矛盾预警
+                      </p>
+                      {line.conflicts.map((c, i) => (
+                        <p key={i} className="opacity-80">
+                          {c.reason}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })
