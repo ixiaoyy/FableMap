@@ -1135,3 +1135,34 @@ Implemented black-diamond currency economy: seed costs, daily bonus, local visit
 **Date**: 2026-05-09
 
 User preference for frontend visual work: before running Playwright/browser self-acceptance, first pause and confirm whether the user can do manual visual inspection. If the user confirms manual inspection is available, do not run Playwright self-check unless the current repository/task hard requirement explicitly still requires it; in that case, explain the constraint before running.
+
+
+## Session 23: Terminate Cobuddy Test
+
+**Date**: 2026-05-09
+**Task**: Terminate Cobuddy Test
+**Branch**: `main`
+
+### Summary
+
+User reported Baidu Cobuddy model as not useful after testing. Updated task to abandoned and archived it. Config remains at kilo-auto:free.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
