@@ -1236,14 +1236,29 @@ def _ensure_runtime_compat_columns(database: Database) -> None:
         except Exception:
             return False
 
-    def add_column_sql(table_name: str, column_name: str) -> str:
+    def add_json_column_sql(table_name: str, column_name: str) -> str:
         column_type = "JSON NULL" if dialect.startswith("mysql") else "JSON"
         return f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
 
+    def add_string_column_sql(
+        table_name: str,
+        column_name: str,
+        *,
+        length: int = 32,
+        default: str = "",
+    ) -> str:
+        escaped_default = default.replace("'", "''")
+        return (
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} "
+            f"VARCHAR({length}) NOT NULL DEFAULT '{escaped_default}'"
+        )
+
+    if not has_column("taverns", "special_type"):
+        statements.append(add_string_column_sql("taverns", "special_type"))
     if not has_column("taverns", "engagement_config"):
-        statements.append(add_column_sql("taverns", "engagement_config"))
+        statements.append(add_json_column_sql("taverns", "engagement_config"))
     if not has_column("visitors", "metadata"):
-        statements.append(add_column_sql("visitors", "metadata"))
+        statements.append(add_json_column_sql("visitors", "metadata"))
 
     if not statements:
         return

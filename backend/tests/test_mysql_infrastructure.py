@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("sqlalchemy", reason="optional MySQL infrastructure dependency")
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 
 # 添加 src 到 path
@@ -94,6 +94,87 @@ class TestDatabase:
         with db.session_scope() as session:
             result = session.query(TavernModel).filter(TavernModel.id == "test_002").first()
             assert result is None
+
+
+def test_create_mysql_tables_backfills_legacy_sqlite_special_type(tmp_path: Path):
+    """旧 SQLite taverns 表缺少 special_type 时，初始化应幂等补列。"""
+
+    db_path = tmp_path / "legacy.sqlite3"
+    engine = create_engine(f"sqlite:///{db_path.as_posix()}", echo=False)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE taverns (
+                    id VARCHAR(64) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    lat FLOAT NOT NULL,
+                    lon FLOAT NOT NULL,
+                    address VARCHAR(500),
+                    owner_id VARCHAR(64) NOT NULL DEFAULT 'system_public_welfare',
+                    created_at DATETIME NOT NULL,
+                    access VARCHAR(8) DEFAULT 'public',
+                    password_hash VARCHAR(128),
+                    status VARCHAR(6) DEFAULT 'closed',
+                    roleplay_mode VARCHAR(32) DEFAULT 'ai_only',
+                    layout_style VARCHAR(32) NOT NULL DEFAULT 'lobby',
+                    place_type VARCHAR(32) NOT NULL DEFAULT 'tavern',
+                    scene_prompt TEXT,
+                    visit_count INTEGER,
+                    group_chat_enabled BOOLEAN,
+                    group_chat_config JSON,
+                    groups JSON,
+                    bookmarks JSON,
+                    chat_templates JSON,
+                    character_claims JSON,
+                    gameplay_definitions JSON,
+                    output_rules JSON,
+                    prompt_blocks JSON,
+                    runtime_presets JSON,
+                    skill_packs JSON,
+                    engagement_config JSON,
+                    active_preset_id VARCHAR(64),
+                    memory_policy JSON,
+                    voice_config JSON,
+                    home_members JSON,
+                    place_relationships JSON,
+                    timezone VARCHAR(64),
+                    operating_hours JSON
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO taverns (id, name, lat, lon, created_at)
+                VALUES ('legacy_tavern', 'Legacy Tavern', 35.0, 139.0, '2026-05-11 00:00:00.000000')
+                """
+            )
+        )
+
+    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db_instance = Database.__new__(Database)
+    db_instance.engine = engine
+    db_instance.SessionLocal = session_local
+    db_instance.url = f"sqlite:///{db_path.as_posix()}"
+
+    create_mysql_tables(db_instance)
+    create_mysql_tables(db_instance)
+
+    columns = {column.get("name") for column in inspect(engine).get_columns("taverns")}
+    assert "special_type" in columns
+
+    with engine.connect() as connection:
+        row = connection.execute(
+            text("SELECT special_type FROM taverns WHERE id = 'legacy_tavern'")
+        ).mappings().one()
+    assert row["special_type"] == ""
+
+    tavern = MySQLTavernStore(db_instance).get_tavern("legacy_tavern")
+    assert tavern is not None
+    assert tavern.special_type == ""
 
 
 class TestTavernCRUD:

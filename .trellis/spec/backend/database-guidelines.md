@@ -451,6 +451,44 @@ There is no formal migration runner. Compatibility is handled by:
 
 If a change cannot be handled by backward-compatible readers, stop and design an explicit migration plan with the user.
 
+### Additive SQLAlchemy column compatibility
+
+When adding a new SQLAlchemy column to an existing runtime table, remember that
+`Base.metadata.create_all(...)` creates missing tables but does **not** add
+missing columns to a local SQLite database that already has the table.
+
+Required contract for additive runtime columns:
+
+- Register an idempotent patch in
+  `backend/src/fablemap_api/infrastructure/mysql_store.py::_ensure_runtime_compat_columns`.
+- The `ALTER TABLE ... ADD COLUMN ...` statement must use the same default and
+  nullability as the domain/model fallback. Example:
+  `taverns.special_type` uses `VARCHAR(32) NOT NULL DEFAULT ''`.
+- Add a focused regression test in `backend/tests/test_mysql_infrastructure.py`
+  that creates a legacy SQLite table missing the column, calls
+  `create_mysql_tables(...)` twice, verifies the column/default, and reads the
+  row through `MySQLTavernStore`.
+
+| Case | Expected |
+|------|----------|
+| Existing SQLite table lacks a newly mapped nullable JSON column | Startup adds the column once and remains idempotent |
+| Existing SQLite `taverns` table lacks `special_type` | Startup adds `special_type` with empty-string default and `MySQLTavernStore.get_tavern(...)` does not raise `OperationalError` |
+| Existing table already has the column | Compatibility patch performs no duplicate `ALTER TABLE` |
+
+Wrong:
+
+```python
+Base.metadata.create_all(bind=engine)
+# Assuming existing SQLite tables now have every new ORM column.
+```
+
+Correct:
+
+```python
+database.create_tables()
+_ensure_runtime_compat_columns(database)
+```
+
 ---
 
 ## Scenario: Default Public-Welfare Tavern Seed Runtime Contract

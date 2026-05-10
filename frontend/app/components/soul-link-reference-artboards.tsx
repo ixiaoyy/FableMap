@@ -1,5 +1,13 @@
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react"
 import { Link } from "react-router"
+import {
+  Bell,
+  Info,
+  ArrowUpRight,
+  ChevronDown,
+  Play,
+  Search,
+} from "lucide-react"
 
 import discoverBlackMain from "../assets/soul-link-05-10/discover-black/main.png"
 import discoverBlackMain2x from "../assets/soul-link-05-10/discover-black/main-2x.png"
@@ -13,10 +21,25 @@ import homeBlackMain from "../assets/soul-link-05-10/home-black/main.png"
 import homeBlackMain2x from "../assets/soul-link-05-10/home-black/main-2x.png"
 import homeBlackRightRail from "../assets/soul-link-05-10/home-black/right-rail.png"
 import homeBlackRightRail2x from "../assets/soul-link-05-10/home-black/right-rail-2x.png"
+import homeBlackInviteCard from "../assets/soul-link-05-10/home-black/invite-card.png"
+import homeBlackInviteCard2x from "../assets/soul-link-05-10/home-black/invite-card-2x.png"
+import homeBlackSidePanel from "../assets/soul-link-05-10/home-black/sidebar.png"
+import homeBlackSidePanel2x from "../assets/soul-link-05-10/home-black/sidebar-2x.png"
 import homeLightMain from "../assets/soul-link-05-10/home-light/main.png"
 import homeLightMain2x from "../assets/soul-link-05-10/home-light/main-2x.png"
 import homeLightRightRail from "../assets/soul-link-05-10/home-light/right-rail.png"
 import homeLightRightRail2x from "../assets/soul-link-05-10/home-light/right-rail-2x.png"
+import homeLightInviteCard from "../assets/soul-link-05-10/home-light/invite-card.png"
+import homeLightInviteCard2x from "../assets/soul-link-05-10/home-light/invite-card-2x.png"
+import homeLightSidePanel from "../assets/soul-link-05-10/home-light/sidebar.png"
+import homeLightSidePanel2x from "../assets/soul-link-05-10/home-light/sidebar-2x.png"
+import navAnchorsIcon from "../assets/soul-link-05-10/icons/nav-anchors.png"
+import navCreateIcon from "../assets/soul-link-05-10/icons/nav-create.png"
+import navDiscoverIcon from "../assets/soul-link-05-10/icons/nav-discover.png"
+import navEchoesIcon from "../assets/soul-link-05-10/icons/nav-echoes.png"
+import navHomeIcon from "../assets/soul-link-05-10/icons/nav-home.png"
+import navMemoryIcon from "../assets/soul-link-05-10/icons/nav-memory.png"
+import navSavedIcon from "../assets/soul-link-05-10/icons/nav-saved.png"
 import soulLinkUserAvatar from "../assets/npc-style-cast/portraits-hd/commission-zhideng.png"
 import type { Tavern } from "../lib/taverns"
 
@@ -202,7 +225,6 @@ const DISCOVER_BLACK: Artboard = {
   ],
 }
 
-const SHARED_SIDEBAR = { x: 0, y: 0, w: 220, h: 1024 } as const
 const SHARED_USER_CLUSTER = { x: 1234, y: 26, w: 286, h: 72 } as const
 const HOME_RIGHT_RAIL = {
   worldPulse: { x: 1248, y: 118, w: 240, h: 316 },
@@ -220,14 +242,31 @@ const DISCOVER_RIGHT_RAIL = {
 } as const
 
 const SHARED_SIDEBAR_NAV_ITEMS = [
-  { id: "home", label: "首页", eyebrow: "HOME", to: "/", icon: "⌂" },
-  { id: "discover", label: "探索", eyebrow: "EXPLORE", to: "/discover", icon: "◌" },
-  { id: "echoes", label: "回响", eyebrow: "ECHOES", to: "/home-me", icon: "▣" },
-  { id: "memory", label: "记忆", eyebrow: "MEMORY", to: "/home-me", icon: "▤" },
-  { id: "saved", label: "收藏", eyebrow: "SAVED", to: "/home-me", icon: "◇" },
-  { id: "anchors", label: "锚点", eyebrow: "ANCHORS", to: "/home-me", icon: "⌖" },
-  { id: "create", label: "创建坐标", eyebrow: "CREATE", to: "/create", icon: "+" },
+  { id: "home", label: "首页", eyebrow: "HOME", to: "/", x: 42, y: 143, w: 158, h: 46 },
+  { id: "discover", label: "探索", eyebrow: "EXPLORE", to: "/discover", x: 42, y: 207, w: 158, h: 46 },
+  { id: "echoes", label: "回响", eyebrow: "ECHOES", to: "/home-me", x: 42, y: 273, w: 158, h: 46, badge: "12" },
+  { id: "memory", label: "记忆", eyebrow: "MEMORY", to: "/home-me", x: 42, y: 340, w: 158, h: 46 },
+  { id: "saved", label: "收藏", eyebrow: "SAVED", to: "/home-me", x: 42, y: 407, w: 158, h: 46 },
+  { id: "anchors", label: "我的锚点", eyebrow: "ANCHORS", to: "/home-me", x: 42, y: 474, w: 158, h: 46 },
+  { id: "create", label: "创建坐标", eyebrow: "CREATE", to: "/create", x: 42, y: 541, w: 158, h: 46 },
 ] as const
+
+const SHARED_SIDEBAR_INVITE = { x: 46, y: 712, w: 151, h: 170 } as const
+const SHARED_SIDEBAR_BOTTOM_ACTIONS = [
+  { label: "切换主题", x: 53, y: 938, w: 34, h: 34, action: "theme" },
+  { label: "打开回响", x: 103, y: 938, w: 34, h: 34, to: "/home-me" },
+  { label: "打开事务所", x: 154, y: 938, w: 34, h: 34, to: "/owner" },
+] as const
+
+const SIDEBAR_REFERENCE_PANELS = {
+  light: { src: homeLightSidePanel, src2x: homeLightSidePanel2x, x: 0, y: 0, w: 220, h: 1024 },
+  black: { src: homeBlackSidePanel, src2x: homeBlackSidePanel2x, x: 0, y: 0, w: 236, h: 1024 },
+} as const
+
+const SIDEBAR_INVITE_CARDS = {
+  light: { src: homeLightInviteCard, src2x: homeLightInviteCard2x },
+  black: { src: homeBlackInviteCard, src2x: homeBlackInviteCard2x },
+} as const
 
 const homeSharedCardBoxes = [
   [242, 598, 218, 222],
@@ -293,6 +332,15 @@ function boxStyle(artboard: Artboard, x: number, y: number, w: number, h: number
   }
 }
 
+function panelBoxStyle(panel: { w: number; h: number }, x: number, y: number, w: number, h: number): CSSProperties {
+  return {
+    left: pct(x, panel.w),
+    top: pct(y, panel.h),
+    width: pct(w, panel.w),
+    height: pct(h, panel.h),
+  }
+}
+
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(" ")
 }
@@ -303,6 +351,65 @@ function targetFor(id?: string) {
 
 function suppressMouseFocus(event: MouseEvent<HTMLElement>) {
   event.preventDefault()
+}
+
+const SIDEBAR_NAV_ICON_IMAGES: Record<string, string> = {
+  home: navHomeIcon,
+  discover: navDiscoverIcon,
+  echoes: navEchoesIcon,
+  memory: navMemoryIcon,
+  saved: navSavedIcon,
+  anchors: navAnchorsIcon,
+  create: navCreateIcon,
+}
+
+function SidebarNavIcon({ id, className }: { id: string; className?: string }) {
+  return (
+    <img
+      src={SIDEBAR_NAV_ICON_IMAGES[id] || navCreateIcon}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      decoding="async"
+      className={cx("select-none object-contain", className)}
+    />
+  )
+}
+
+function SidebarBottomIcon({ id, className }: { id: "theme" | "echoes" | "owner"; className?: string }) {
+  const common = {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+    className,
+  }
+
+  if (id === "theme") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="3.4" />
+        <path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18" />
+      </svg>
+    )
+  }
+  if (id === "echoes") {
+    return (
+      <svg {...common}>
+        <path d="M5.2 6.8h13.6v9.5H9l-3.8 2.5V6.8Z" />
+        <path d="M8.5 10.2h.01M11.9 10.2h.01M15.3 10.2h.01" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3.8v2.1M12 18.1v2.1M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M3.8 12h2.1M18.1 12h2.1M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5" />
+    </svg>
+  )
 }
 
 function SoulLinkSidebar({
@@ -316,40 +423,49 @@ function SoulLinkSidebar({
   active: "home" | "discover"
   onToggleTheme: () => void
 }) {
+  const panel = SIDEBAR_REFERENCE_PANELS[variant]
+  const inviteCard = SIDEBAR_INVITE_CARDS[variant]
   const isBlack = variant === "black"
   const panelClass = isBlack
-    ? "border-cyan-300/20 bg-[#020710]/96 text-cyan-50 shadow-[inset_-1px_0_0_rgba(34,211,238,0.2),0_0_34px_rgba(0,255,255,0.08)]"
-    : "border-white/70 bg-white/92 text-slate-800 shadow-[24px_0_70px_rgba(104,126,190,0.16),inset_-1px_0_0_rgba(148,163,184,0.16)] backdrop-blur-xl"
-  const logoMarkClass = isBlack
-    ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,0.18)]"
-    : "border-violet-200 bg-violet-50 text-violet-500 shadow-[0_10px_26px_rgba(120,104,255,0.16)]"
-  const logoSubClass = isBlack ? "text-cyan-100/58" : "text-slate-400"
-  const inactiveClass = isBlack
-    ? "text-cyan-50/58 hover:border-cyan-300/18 hover:bg-cyan-300/8 hover:text-cyan-50"
-    : "text-slate-500 hover:border-violet-100 hover:bg-violet-50/70 hover:text-violet-600"
-  const activeClass = isBlack
-    ? "border-cyan-300/42 bg-cyan-300/16 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.22),inset_3px_0_0_rgba(34,211,238,0.95)]"
-    : "border-violet-100 bg-[#f2efff] text-violet-600 shadow-[0_12px_26px_rgba(126,111,255,0.14)]"
-  const bottomControlClass = isBlack
-    ? "border-cyan-300/18 bg-cyan-300/6 text-cyan-100/70 hover:text-cyan-100"
-    : "border-slate-200 bg-white/72 text-slate-500 hover:text-violet-600"
+    ? "border-cyan-300/20 bg-[#020710] shadow-[inset_-1px_0_0_rgba(34,211,238,0.2),0_0_34px_rgba(0,255,255,0.08)]"
+    : "border-white/70 bg-gradient-to-b from-white via-white to-white/95 shadow-[24px_0_70px_rgba(104,126,190,0.16),inset_-1px_0_0_rgba(148,163,184,0.16)] backdrop-blur-xl"
+  const activeItemClass = variant === "black"
+    ? "bg-cyan-300/14 text-cyan-100"
+    : "bg-[#f0edff] text-[#7b66ff]"
+  const inactiveItemClass = variant === "black"
+    ? "text-cyan-100/58 hover:bg-cyan-300/8 hover:text-cyan-100"
+    : "text-[#8b98b4] hover:bg-[#f6f4ff] hover:text-[#7b66ff]"
 
   return (
     <aside
       data-soul-link-sidebar="shared"
       data-soul-link-sidebar-active={active}
-      className={cx("absolute z-30 flex flex-col rounded-r-[1.45rem] border-r px-5 pb-6 pt-8", panelClass)}
-      style={boxStyle(artboard, SHARED_SIDEBAR.x, SHARED_SIDEBAR.y, SHARED_SIDEBAR.w, SHARED_SIDEBAR.h)}
+      className={cx("absolute z-30 overflow-hidden rounded-r-[1.45rem] border-r", panelClass)}
+      style={boxStyle(artboard, panel.x, panel.y, panel.w, panel.h)}
     >
-      <Link to="/" onMouseDown={suppressMouseFocus} className="flex touch-manipulation items-center gap-3 rounded-2xl outline-none transition focus:ring-4 focus:ring-violet-400/45">
-        <span className={cx("grid h-11 w-11 place-items-center rounded-2xl border text-2xl font-black", logoMarkClass)}>✦</span>
-        <span className="min-w-0">
-          <span className="block text-[clamp(1rem,1.25vw,1.35rem)] font-black leading-tight tracking-tight">SoulLink</span>
-          <span className={cx("mt-1 block text-[clamp(0.58rem,0.68vw,0.72rem)] font-bold", logoSubClass)}>连接另一个灵魂坐标</span>
-        </span>
+      <div aria-hidden="true" className="absolute overflow-hidden" style={panelBoxStyle(panel, 0, 0, panel.w, 126)}>
+        <img
+          src={panel.src}
+          srcSet={`${panel.src} 1x, ${panel.src2x} 2x`}
+          alt=""
+          decoding="async"
+          draggable={false}
+          className="absolute left-0 top-0 w-full select-none object-fill"
+          style={{ height: `${(panel.h / 126) * 100}%` }}
+        />
+      </div>
+
+      <Link
+        to="/"
+        aria-label="SoulLink"
+        onMouseDown={suppressMouseFocus}
+        className="absolute touch-manipulation rounded-2xl outline-none focus:ring-4 focus:ring-violet-400/45"
+        style={panelBoxStyle(panel, 48, 48, 134, 52)}
+      >
+        <span className="sr-only">SoulLink 连接另一个灵魂坐标</span>
       </Link>
 
-      <nav aria-label="SoulLink navigation" className="mt-11 space-y-2">
+      <nav aria-label="SoulLink navigation" className="absolute inset-0">
         {SHARED_SIDEBAR_NAV_ITEMS.map((item) => {
           const selected = item.id === active
           return (
@@ -357,17 +473,24 @@ function SoulLinkSidebar({
               key={item.id}
               to={item.to}
               aria-current={selected ? "page" : undefined}
+              aria-label={item.label}
               onMouseDown={suppressMouseFocus}
               className={cx(
-                "group flex min-h-11 touch-manipulation items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-sm font-black outline-none transition focus:ring-4 focus:ring-violet-400/45",
-                selected ? activeClass : inactiveClass,
+                "absolute flex min-h-11 touch-manipulation items-center rounded-2xl px-[18px] text-sm font-semibold outline-none transition focus:ring-4 focus:ring-violet-400/45",
+                selected ? activeItemClass : inactiveItemClass,
               )}
+              style={panelBoxStyle(panel, item.x, item.y, item.w, item.h)}
             >
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-current/20 text-base leading-none">{item.icon}</span>
-              <span className="min-w-0">
-                <span className="block leading-tight">{item.label}</span>
-                <span className="mt-0.5 block text-[0.58rem] font-black uppercase tracking-[0.12em] opacity-55">{item.eyebrow}</span>
-              </span>
+              <SidebarNavIcon id={item.id} className="h-[22px] w-[22px] shrink-0" />
+              <span className="ml-[15px] leading-none">{item.label}</span>
+              {"badge" in item && (
+                <span className={cx(
+                  "ml-auto rounded-full px-2 py-1 text-xs font-bold leading-none",
+                  variant === "black" ? "bg-cyan-300/16 text-cyan-100" : "bg-[#efecff] text-[#8d79ff]",
+                )}>
+                  {item.badge}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -376,38 +499,56 @@ function SoulLinkSidebar({
       <Link
         to="/create"
         data-soul-link-sidebar-cta="shared"
+        aria-label="邀请朋友"
         onMouseDown={suppressMouseFocus}
-        className={cx(
-          "mt-auto rounded-3xl border p-4 text-sm font-black outline-none transition focus:ring-4 focus:ring-violet-400/45",
-          isBlack
-            ? "border-cyan-300/18 bg-cyan-300/6 text-cyan-50 hover:border-cyan-300/34"
-            : "border-violet-100 bg-violet-50/72 text-violet-700 hover:border-violet-200",
-        )}
+        className="absolute touch-manipulation overflow-hidden rounded-[1.55rem] outline-none focus:ring-4 focus:ring-violet-400/45"
+        style={panelBoxStyle(panel, SHARED_SIDEBAR_INVITE.x, SHARED_SIDEBAR_INVITE.y, SHARED_SIDEBAR_INVITE.w, SHARED_SIDEBAR_INVITE.h)}
       >
-        <span className="block text-xs uppercase tracking-[0.18em] opacity-60">CREATE NODE</span>
-        <span className="mt-2 flex items-center justify-between">
-          创建新的坐标
-          <span aria-hidden="true">↗</span>
-        </span>
+        <img
+          data-soul-link-sidebar-invite="fixed-image"
+          src={inviteCard.src}
+          srcSet={`${inviteCard.src} 1x, ${inviteCard.src2x} 2x`}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          decoding="async"
+          className="h-full w-full select-none opacity-85"
+        />
+        <span className="sr-only">邀请朋友，一起探索更多坐标，立即邀请</span>
       </Link>
 
-      <div className="mt-6 grid grid-cols-3 gap-3" aria-label="SoulLink sidebar actions">
-        <button
-          type="button"
-          aria-label="切换主题"
-          onClick={onToggleTheme}
-          onMouseDown={suppressMouseFocus}
-          className={cx("grid h-10 touch-manipulation place-items-center rounded-2xl border text-lg outline-none transition focus:ring-4 focus:ring-violet-400/45", bottomControlClass)}
-        >
-          ☼
-        </button>
-        <Link to="/home-me" aria-label="打开回响" onMouseDown={suppressMouseFocus} className={cx("grid h-10 touch-manipulation place-items-center rounded-2xl border text-lg outline-none transition focus:ring-4 focus:ring-violet-400/45", bottomControlClass)}>
-          ◌
-        </Link>
-        <Link to="/owner" aria-label="打开事务所" onMouseDown={suppressMouseFocus} className={cx("grid h-10 touch-manipulation place-items-center rounded-2xl border text-lg outline-none transition focus:ring-4 focus:ring-violet-400/45", bottomControlClass)}>
-          ⚙
-        </Link>
-      </div>
+      {SHARED_SIDEBAR_BOTTOM_ACTIONS.map((item) =>
+        "action" in item && item.action === "theme" ? (
+          <button
+            key={item.label}
+            type="button"
+            aria-label={item.label}
+            onClick={onToggleTheme}
+            onMouseDown={suppressMouseFocus}
+            className={cx(
+              "absolute grid touch-manipulation place-items-center rounded-full outline-none transition focus:ring-4 focus:ring-violet-400/45",
+              isBlack ? "text-cyan-100/70 hover:text-cyan-100" : "text-[#8491ad] hover:text-[#7b66ff]",
+            )}
+            style={panelBoxStyle(panel, item.x, item.y, item.w, item.h)}
+          >
+            <SidebarBottomIcon id="theme" className="h-[22px] w-[22px]" />
+          </button>
+        ) : (
+          <Link
+            key={item.label}
+            to={"to" in item ? item.to : "/"}
+            aria-label={item.label}
+            onMouseDown={suppressMouseFocus}
+            className={cx(
+              "absolute grid touch-manipulation place-items-center rounded-full outline-none transition focus:ring-4 focus:ring-violet-400/45",
+              isBlack ? "text-cyan-100/70 hover:text-cyan-100" : "text-[#8491ad] hover:text-[#7b66ff]",
+            )}
+            style={panelBoxStyle(panel, item.x, item.y, item.w, item.h)}
+          >
+            <SidebarBottomIcon id={"to" in item && item.to === "/owner" ? "owner" : "echoes"} className="h-[22px] w-[22px]" />
+          </Link>
+        ),
+      )}
     </aside>
   )
 }
@@ -427,10 +568,7 @@ function SoulLinkNotificationBell({ variant }: { variant: Variant }) {
           : "border-slate-200/70 bg-white/82 text-slate-600 shadow-[0_10px_24px_rgba(88,106,160,0.1)] hover:text-violet-600",
       )}
     >
-      <svg aria-hidden="true" className="h-[44%] w-[44%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
+      <Bell size={18} strokeWidth={2.4} />
       <span className={cx("absolute right-[18%] top-[18%] h-[22%] w-[22%] rounded-full", isBlack ? "bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.75)]" : "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]")} />
     </button>
   )
@@ -475,7 +613,7 @@ function SoulLinkUserCluster({
     <div
       data-soul-link-user-cluster="shared"
       className={cx(
-        "absolute z-30 flex items-center gap-[4%] rounded-[1.75rem] border p-[0.55%] pr-[0.75%]",
+        "absolute z-30 flex items-center gap-[4%] rounded-[1.75rem] border p-[0.55%] pr-[0.75%] opacity-0",
         isBlack
           ? "border-cyan-300/16 bg-[#020710]/96 shadow-[0_0_30px_rgba(0,255,255,0.1)]"
           : "border-white/80 bg-white/92 shadow-[0_14px_36px_rgba(83,103,166,0.13)] backdrop-blur-xl",
@@ -491,9 +629,7 @@ function SoulLinkUserCluster({
       >
         <SoulLinkUserAvatar avatar={profile.avatar} name={profile.name} variant={variant} />
         <SoulLinkUserIdentity name={profile.name} meta={profile.meta} variant={variant} />
-        <svg aria-hidden="true" className={cx("h-[32%] w-[10%] shrink-0", isBlack ? "text-cyan-300" : "text-slate-500")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ChevronDown size={14} strokeWidth={3} className={cx("shrink-0 opacity-60", isBlack ? "text-cyan-300" : "text-slate-500")} />
       </Link>
     </div>
   )
@@ -536,13 +672,13 @@ function fallbackRecentMemoriesFromHome(featuredCitySlices: HomeReferenceProps["
   const sourceItems = featuredCitySlices.length
     ? featuredCitySlices
     : [
-        {
-          id: "fallback-memory",
-          name: "云上图书馆",
-          description: "在这里，我第一次不再害怕黑夜。",
-          image: soulLinkUserAvatar,
-        },
-      ]
+      {
+        id: "fallback-memory",
+        name: "云上图书馆",
+        description: "在这里，我第一次不再害怕黑夜。",
+        image: soulLinkUserAvatar,
+      },
+    ]
 
   return sourceItems.slice(0, 2).map((slice, index) => ({
     id: `memory-${slice.id || index}`,
@@ -571,7 +707,7 @@ function SoulLinkPanelShell({
   return (
     <section
       className={cx(
-        "absolute z-30 rounded-[1.55rem] border p-[1.55%]",
+        "absolute z-30 rounded-[1.55rem] border p-[1.55%] opacity-0",
         isBlack
           ? "border-cyan-300/16 bg-[#020710] text-cyan-50 shadow-[0_0_28px_rgba(0,255,255,0.08)]"
           : "border-white/80 bg-white text-slate-700 shadow-[0_18px_44px_rgba(85,103,160,0.13)]",
@@ -591,17 +727,16 @@ function SoulLinkOnlineStatus({ status, variant }: { status: string; variant: Va
     <span
       data-soul-link-online-status="real-text"
       className={cx(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.65rem] font-black leading-none",
+        "inline-flex shrink-0 items-center gap-1 text-[10px] font-bold leading-none",
         isOnline
           ? isBlack
-            ? "bg-emerald-300/10 text-emerald-300"
-            : "bg-emerald-50 text-emerald-500"
+            ? "text-emerald-300"
+            : "text-emerald-400"
           : isBlack
-            ? "bg-cyan-300/8 text-cyan-100/48"
-            : "bg-slate-50 text-slate-400",
+            ? "text-cyan-100/48"
+            : "text-slate-400",
       )}
     >
-      {isOnline ? <span className={cx("h-1.5 w-1.5 rounded-full", isBlack ? "bg-emerald-300" : "bg-emerald-400")} /> : null}
       {status}
     </span>
   )
@@ -611,20 +746,19 @@ function SoulLinkOnlineEntityRow({ entity, variant }: { entity: SoulLinkOnlineEn
   const isBlack = variant === "black"
   const content = (
     <>
-      <span className="relative h-11 w-11 shrink-0">
+      <span className="relative h-9 w-9 shrink-0">
         <img
           data-soul-link-online-avatar="real-image"
           src={entity.avatar}
           alt={`${entity.name} 头像`}
-          className={cx("h-11 w-11 rounded-full border object-cover", isBlack ? "border-cyan-300/18" : "border-violet-100")}
+          className={cx("h-9 w-9 rounded-full border object-cover", isBlack ? "border-cyan-300/18" : "border-violet-100")}
           loading="lazy"
           decoding="async"
         />
-        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span data-soul-link-online-name="real-text" className={cx("block truncate text-sm font-black", isBlack ? "text-cyan-50" : "text-slate-700")}>{entity.name}</span>
-        <span data-soul-link-online-location="real-text" className={cx("mt-1 block truncate text-xs font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>{entity.location}</span>
+        <span data-soul-link-online-name="real-text" className={cx("block truncate text-xs font-black leading-4", isBlack ? "text-cyan-50" : "text-slate-700")}>{entity.name}</span>
+        <span data-soul-link-online-location="real-text" className={cx("mt-0.5 block truncate text-[10px] font-bold leading-4", isBlack ? "text-cyan-100/48" : "text-slate-400")}>{entity.location}</span>
       </span>
       <SoulLinkOnlineStatus status={entity.status} variant={variant} />
     </>
@@ -632,13 +766,13 @@ function SoulLinkOnlineEntityRow({ entity, variant }: { entity: SoulLinkOnlineEn
 
   if (entity.to) {
     return (
-      <Link to={entity.to} onMouseDown={suppressMouseFocus} className={cx("flex min-h-14 touch-manipulation items-center gap-3 rounded-2xl outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70")}>
+      <Link to={entity.to} onMouseDown={suppressMouseFocus} className={cx("flex min-h-[52px] touch-manipulation items-center gap-3 rounded-xl outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70")}>
         {content}
       </Link>
     )
   }
 
-  return <div className="flex min-h-14 items-center gap-3 rounded-2xl">{content}</div>
+  return <div className="flex min-h-[52px] items-center gap-3 rounded-xl">{content}</div>
 }
 
 function SoulLinkOnlineEntitiesPanel({
@@ -655,13 +789,10 @@ function SoulLinkOnlineEntitiesPanel({
   const isBlack = variant === "black"
   const visibleEntities = entities.slice(0, 3)
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} className="flex flex-col gap-4">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} className="flex flex-col gap-3 p-4">
       <header className="flex items-center justify-between gap-3">
-        <span>
-          <span className={cx("block text-[clamp(0.78rem,0.96vw,1.02rem)] font-black leading-tight", isBlack ? "text-cyan-50" : "text-slate-800")}>在线的灵魂</span>
-          <span className={cx("mt-1 block text-[clamp(0.5rem,0.62vw,0.68rem)] font-black uppercase tracking-[0.1em]", isBlack ? "text-cyan-100/45" : "text-slate-400")}>Live Entities</span>
-        </span>
-        <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("text-xs font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-violet-400")}>
+        <span className={cx("block text-sm font-black leading-none", isBlack ? "text-cyan-50" : "text-slate-800")}>在线的灵魂</span>
+        <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("text-[10px] font-black leading-none outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-violet-300")}>
           查看全部 →
         </Link>
       </header>
@@ -948,7 +1079,7 @@ function SoulLinkWorldStatsPanel({ artboard, variant, stats }: { artboard: Artbo
       <div data-soul-link-world-stats="real-data" className="relative z-10 flex h-full flex-col">
         <header className="flex items-center gap-1.5">
           <h2 className={cx("text-[0.9rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>今日世界统计</h2>
-          <span className={cx("grid h-4 w-4 place-items-center rounded-full border text-[0.62rem] font-black", isBlack ? "border-cyan-300/25 text-cyan-100/56" : "border-slate-300 text-slate-400")}>i</span>
+          <Info size={12} strokeWidth={3} className={cx("shrink-0", isBlack ? "text-cyan-100/56" : "text-slate-400")} />
         </header>
         <div className="mt-auto grid grid-cols-4 divide-x divide-slate-200/70">
           {visibleStats.map((stat) => (
@@ -1040,7 +1171,7 @@ function OverlayText({ artboard, children, x, y, w, h }: { artboard: Artboard; c
 }
 
 function OverlayMask({ artboard, className, x, y, w, h }: { artboard: Artboard; className: string; x: number; y: number; w: number; h: number }) {
-  return <span aria-hidden="true" className={cx("pointer-events-none absolute z-[12]", className)} style={boxStyle(artboard, x, y, w, h)} />
+  return <span aria-hidden="true" className={cx("pointer-events-none absolute z-[12] opacity-0", className)} style={boxStyle(artboard, x, y, w, h)} />
 }
 
 function OverlayInput({
@@ -1088,14 +1219,11 @@ function OverlayInput({
   return (
     <label
       data-soul-link-search={onChange ? "real-input" : undefined}
-      className={cx("absolute z-20 flex min-h-11 cursor-text touch-manipulation items-center rounded-full border transition focus-within:ring-2", shellToneClass)}
+      className={cx("absolute z-20 flex min-h-11 cursor-text touch-manipulation items-center rounded-full border opacity-0 transition focus-within:opacity-100 focus-within:ring-2", shellToneClass)}
       style={boxStyle(artboard, x, y, w, h)}
     >
       <span className="sr-only">搜索地点、角色、记忆或关键词</span>
-      <svg aria-hidden="true" className="pointer-events-none absolute left-[7.5%] h-[42%] w-[8%]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="7" />
-        <path d="m16.5 16.5 4 4" />
-      </svg>
+      <Search size={18} strokeWidth={2.6} className="pointer-events-none absolute left-[7.5%] opacity-60" />
       <input
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
@@ -1129,20 +1257,22 @@ function HomeHeroActions({ artboard, variant }: { artboard: Artboard; variant: V
         to="/discover"
         aria-label="开始探索"
         onMouseDown={suppressMouseFocus}
-        className={cx("absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black transition hover:-translate-y-0.5 focus:outline-none focus:ring-4", primaryClass)}
+        className={cx("absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black opacity-0 transition hover:-translate-y-0.5 focus:opacity-100 focus:outline-none focus:ring-4", primaryClass)}
         style={boxStyle(artboard, HOME_LAYOUT.heroActions.primary.x, HOME_LAYOUT.heroActions.primary.y, HOME_LAYOUT.heroActions.primary.w, HOME_LAYOUT.heroActions.primary.h)}
       >
         <span>开始探索</span>
-        <span aria-hidden="true">↗</span>
+        <ArrowUpRight size={16} strokeWidth={3} className="opacity-70" />
       </Link>
       <Link
         to="/discover"
         aria-label="观看世界介绍"
         onMouseDown={suppressMouseFocus}
-        className={cx("absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black transition hover:-translate-y-0.5 focus:outline-none focus:ring-4", secondaryClass)}
+        className={cx("absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black opacity-0 transition hover:-translate-y-0.5 focus:opacity-100 focus:outline-none focus:ring-4", secondaryClass)}
         style={boxStyle(artboard, HOME_LAYOUT.heroActions.secondary.x, HOME_LAYOUT.heroActions.secondary.y, HOME_LAYOUT.heroActions.secondary.w, HOME_LAYOUT.heroActions.secondary.h)}
       >
-        <span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full border border-current/35 text-xs">▶</span>
+        <div aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full border border-current/30">
+          <Play size={12} fill="currentColor" className="ml-0.5" />
+        </div>
         <span>观看世界介绍</span>
       </Link>
     </>
