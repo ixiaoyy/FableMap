@@ -60,6 +60,7 @@ Frontend work must preserve:
 3. Keep API calls in `frontend/app/lib/` for new routes or `frontend/app/product/services/` for product parity source unless there is a strong existing pattern otherwise.
 4. For UI work, check narrow-screen behavior and avoid desktop-only layouts.
 5. For any AI-generated bitmap or image replacement, read `image-asset-guidelines.md`; a deliverable image is not complete while it only exists in `.codex/generated_images`, a temp folder, or a chat preview.
+   - If owner design drafts are provided for page/component reproduction, treat them as the source of truth: no free redesign, no unapproved style changes, and no `1:1` claim without fresh viewport screenshots and recorded deviations.
 6. For any new formal NPC role, NPC portrait, expression sprites, or tavern interior visual work, read `npc-art-guidelines.md`; a shipped NPC is not implementation-complete without a project/owner `avatar` or `sprites.neutral`, required expression semantics, and payload/file-existence tests.
 7. For Canon Ledger / state-card UI changes, read `state-card-ui-boundary.md`.
 8. For GM Layer preview UI/service changes, read `gm-layer-preview-boundary.md`.

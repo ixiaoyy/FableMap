@@ -23,6 +23,7 @@ export type TavernCharacter = {
   appearance?: Record<string, unknown>
   talkativeness?: number
   tags?: string[]
+  hobbies?: string[]
 }
 
 export type RoleplayMode = "ai_only" | "hybrid"
@@ -2179,6 +2180,7 @@ export type TavernDraftCharacter = {
   first_mes?: string
   mes_example?: string
   tags?: string[]
+  hobbies?: string[]
 }
 
 export type TavernDraft = {

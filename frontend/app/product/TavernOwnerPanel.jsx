@@ -1965,6 +1965,7 @@ function TavernEditModal({ tavern, onSave, onClose }) {
     description: tavern.description,
     access: tavern.access,
     scene_prompt: tavern.scene_prompt,
+    special_type: tavern.special_type || '',
     llm_config: tavern.llm_config || {},
   })
 
@@ -2018,6 +2019,17 @@ function TavernEditModal({ tavern, onSave, onClose }) {
                   rows={4}
                   placeholder="描述空间的环境、气氛，帮助 AI 更好入戏"
                 />
+              </div>
+              <div className="form-group">
+                <label>特殊功能</label>
+                <select
+                  value={form.special_type}
+                  onChange={e => setForm(f => ({...f, special_type: e.target.value}))}
+                >
+                  <option value="">无特殊类型</option>
+                  <option value="cultivation">修行空间 — 启用离线收益与境界</option>
+                  <option value="divination">占卜空间 — 启用塔罗、星象与术数互动</option>
+                </select>
               </div>
             </div>
 

@@ -14,16 +14,12 @@ import {
   Sun,
   type LucideIcon,
 } from "lucide-react"
-import { Link, useLoaderData } from "react-router"
+import { Link, useLoaderData, useNavigate } from "react-router"
+import { useState } from "react"
 
-import discoverRadarSurfaceImage from "../assets/discover/reference/discover-radar-surface.png"
-import memoryModuleImage from "../assets/homepage/reference/modules/memory-module.png"
-import npcDialogueImage from "../assets/homepage/reference/modules/npc-dialogue.png"
-import lightSkyBg from "../assets/homepage/light/light-sky-bg.png"
-import lightNpcHero from "../assets/homepage/light/light-npc-hero.png"
-import lightRadarSurface from "../assets/homepage/light/light-radar-surface.png"
-import { HomeBlackReference } from "../components/home-black-reference"
-import { HomeLightRealDom } from "../components/home-light-real-dom"
+import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover-black/main-2x.png"
+import lightRadarSurface from "../assets/soul-link-05-10/home-light/main-2x.png"
+import { SoulLinkHomeReference } from "../components/soul-link-reference-artboards"
 import { HOMEPAGE_NPC_PREVIEW_PORTRAITS } from "../features/tavern-npc-stage/portraitCatalogConfig"
 import { buildHomepageView, type HomepageMetric, type HomepageMetricId } from "../lib/homepage-taverns"
 import { errorMessage, listTaverns, type TavernListResponse } from "../lib/taverns"
@@ -326,11 +322,76 @@ export default function HomeRoute() {
   const homepage = buildHomepageView(result, error)
   const metrics = withMetricIcons(homepage.metrics)
   const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
+  const [homeSearch, setHomeSearch] = useState("")
   const isDark = theme === "dark"
+  const worldPulseItems = homepage.featuredCitySlices.slice(0, 3).map((slice, index) => ({
+    id: slice.id,
+    title: slice.name,
+    subtitle: slice.tags[index % Math.max(1, slice.tags.length)] || slice.location || "新的坐标记忆正在浮现",
+    meta: `${index * 3 + 2} 分钟前`,
+    image: slice.image,
+    to: `/tavern/${encodeURIComponent(slice.id)}`,
+  }))
+  const recentMemories = homepage.featuredCitySlices.slice(0, 2).map((slice, index) => ({
+    id: `recent-memory-${slice.id}`,
+    title: `“${index === 0 ? "在这里，我第一次不再害怕黑夜。" : "谢谢你，陪我等到了黎明。"}”`,
+    source: `来自 ${slice.name}`,
+    meta: `${index * 3 + 2} 小时前`,
+    image: slice.image,
+    to: `/tavern/${encodeURIComponent(slice.id)}`,
+  }))
+  const guideCards = [
+    { id: "starter", title: "新手指南", text: "如何开始你的旅程", to: "/quests", accent: "violet" as const },
+    { id: "worldbook", title: "坐标百科", text: "了解这个世界的规则", to: "/discover", accent: "blue" as const },
+    { id: "safety", title: "安全指引", text: "让探索更安心", to: "/create", accent: "rose" as const },
+  ]
+  const metricValue = (id: HomepageMetricId, fallback = "0") => homepage.metrics.find((metric) => metric.id === id)?.value || fallback
+  const worldStats = [
+    { id: "coordinates", label: "新增坐标", value: metricValue("coordinates") },
+    { id: "characters", label: "在线灵魂", value: metricValue("characters") },
+    { id: "encounters", label: "回响记录", value: metricValue("encounters") },
+    { id: "open", label: "探索次数", value: metricValue("open") },
+  ]
+  const dailyQuote = {
+    title: "每日一句",
+    quote: "世界很大，而我们在某个坐标相遇。",
+  }
+  const onlineEntities = result.taverns
+    .flatMap((tavern, tavernIndex) =>
+      (Array.isArray(tavern.characters) ? tavern.characters : []).slice(0, 1).map((character, characterIndex) => ({
+        id: `${tavern.id}-${character.id || characterIndex}`,
+        name: character.name || `灵魂 ${tavernIndex + 1}`,
+        location: `在 ${tavern.name || "某个坐标"}`,
+        status: tavernIndex < 2 ? "在线" : `${tavernIndex * 5 + 5} 分钟前`,
+        avatar: character.avatar || portraits[(tavernIndex + characterIndex) % portraits.length],
+        to: `/tavern/${encodeURIComponent(tavern.id)}`,
+      })),
+    )
+    .slice(0, 3)
 
-  if (isDark) {
-    return <HomeBlackReference featuredCitySlices={homepage.featuredCitySlices} onToggleTheme={toggleTheme} />
+  function submitHomeSearch() {
+    const query = homeSearch.trim()
+    navigate(query ? `/discover?search=${encodeURIComponent(query)}` : "/discover")
   }
 
-  return <HomeLightRealDom featuredCitySlices={homepage.featuredCitySlices} onToggleTheme={toggleTheme} />
+  const referenceProps = {
+    featuredCitySlices: homepage.featuredCitySlices,
+    worldPulseItems,
+    dailyQuote,
+    onlineEntities,
+    recentMemories,
+    guideCards,
+    worldStats,
+    search: homeSearch,
+    onSearchChange: setHomeSearch,
+    onSearchSubmit: submitHomeSearch,
+    onToggleTheme: toggleTheme,
+  }
+
+  if (isDark) {
+    return <SoulLinkHomeReference variant="black" {...referenceProps} />
+  }
+
+  return <SoulLinkHomeReference variant="light" {...referenceProps} />
 }

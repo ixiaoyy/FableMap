@@ -28,35 +28,35 @@ function pngDimensions(path) {
 }
 
 for (const file of expectedAtmospheres) {
-  const fullPath = join(projectRoot, 'public', 'place-atmosphere', file)
+  const fullPath = join(projectRoot, 'public', 'place-atmosphere-hd', file)
   const stat = statSync(fullPath)
-  assert.ok(stat.size > 4096, `${file} should be a real atmosphere illustration, not a tiny placeholder`)
-  assert.deepEqual(pngDimensions(fullPath), { width: 512, height: 288 }, `${file} dimensions`)
+  assert.ok(stat.size > 32768, `${file} should be a high-definition atmosphere illustration, not a tiny placeholder`)
+  assert.deepEqual(pngDimensions(fullPath), { width: 1024, height: 576 }, `${file} HD dimensions`)
 }
 
 const knownAtmospheres = getKnownAtmosphereImages()
 for (const expected of expectedAtmospheres) {
   assert.ok(
-    knownAtmospheres.includes(`/place-atmosphere/${expected}`),
+    knownAtmospheres.includes(`/place-atmosphere-hd/${expected}`),
     `resolver should expose ${expected}`,
   )
 }
 
 assert.equal(
   resolveTavernAtmosphereImage({ fantasy_type: 'healing_sanctum' }),
-  '/place-atmosphere/atmosphere-healing.png',
+  '/place-atmosphere-hd/atmosphere-healing.png',
 )
 assert.equal(
   resolveTavernAtmosphereImage({ place: { fantasy_type: 'market_hall' } }),
-  '/place-atmosphere/atmosphere-market.png',
+  '/place-atmosphere-hd/atmosphere-market.png',
 )
 assert.equal(
   resolveTavernAtmosphereImage({ layout_style: 'quest-play' }),
-  '/place-atmosphere/atmosphere-supply.png',
+  '/place-atmosphere-hd/atmosphere-supply.png',
 )
 assert.equal(
   resolveTavernAtmosphereImage({ fantasy_type: 'unknown_type' }),
-  '/place-atmosphere/atmosphere-ember.png',
+  '/place-atmosphere-hd/atmosphere-ember.png',
 )
 
 const expectedEmblems = [

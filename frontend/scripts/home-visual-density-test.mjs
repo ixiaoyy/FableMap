@@ -4,122 +4,89 @@ import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const repoRoot = resolve(__dirname, "..", "..")
 const homeRouteSource = readFileSync(resolve(__dirname, "../app/routes/home.tsx"), "utf8")
-const homeLightSource = readFileSync(resolve(__dirname, "../app/components/home-light-real-dom.tsx"), "utf8")
-const homeLayoutSource = readFileSync(resolve(__dirname, "../app/components/home-reference-layout.ts"), "utf8")
-const sharedNavSource = readFileSync(resolve(__dirname, "../app/components/light-reference-top-nav.tsx"), "utf8")
-const combinedHomeSource = `${homeRouteSource}\n${homeLightSource}`
-const homeTemplateSource = `${homeLightSource}\n${homeLayoutSource}`
-const radarAssetPath = resolve(__dirname, "../app/assets/discover/reference/discover-radar-surface.png")
-const lightSliceDir = resolve(__dirname, "../app/assets/homepage/light/slices")
-const lightElementDir = resolve(__dirname, "../app/assets/homepage/light/elements")
+const soulLinkSource = readFileSync(resolve(__dirname, "../app/components/soul-link-reference-artboards.tsx"), "utf8")
+const portraitConfigSource = readFileSync(resolve(__dirname, "../app/features/tavern-npc-stage/portraitCatalogConfig.ts"), "utf8")
+const assetRoot = resolve(repoRoot, "frontend/app/assets/soul-link-05-10")
 
 function readPngInfo(path) {
   const buffer = readFileSync(path)
-  return {
-    width: buffer.readUInt32BE(16),
-    height: buffer.readUInt32BE(20),
-    colorType: buffer[25],
-  }
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
+}
+function assertPng(rel, width, height) {
+  const path = resolve(repoRoot, rel)
+  assert.ok(existsSync(path), `${rel} should exist`)
+  assert.deepEqual(readPngInfo(path), { width, height }, `${rel} should preserve reference crop dimensions`)
+  assert.ok(statSync(path).size > 1024, `${rel} should contain a real image payload`)
 }
 
-function assertPngAssetWith2x(dir, name, width, height) {
-  const imagePath = resolve(dir, name)
-  const image2xPath = resolve(dir, name.replace(".png", "-2x.png"))
-  assert.ok(existsSync(imagePath), `${name} should exist as a project-local image`)
-  assert.ok(existsSync(image2xPath), `${name} should have a 2x HD sibling`)
-  const imageInfo = readPngInfo(imagePath)
-  const image2xInfo = readPngInfo(image2xPath)
-  assert.deepEqual({ width: imageInfo.width, height: imageInfo.height }, { width, height }, `${name} should preserve its runtime dimensions`)
-  assert.deepEqual({ width: image2xInfo.width, height: image2xInfo.height }, { width: width * 2, height: height * 2 }, `${name} 2x should preserve retina dimensions`)
-  if (name.includes("nav-bar")) {
-    assert.equal(imageInfo.colorType, 6, `${name} should be a transparent chrome layer, not a baked text screenshot`)
-    assert.equal(image2xInfo.colorType, 6, `${name} 2x should be a transparent chrome layer`)
-  }
-  assert.ok(statSync(image2xPath).size > statSync(imagePath).size, `${name} 2x should contain a higher-resolution payload`)
-}
+assert.ok(existsSync(assetRoot), "new SoulLink 05-10 runtime asset root should exist")
+assert.ok(!existsSync(resolve(repoRoot, "frontend/app/assets/homepage")), "old homepage design asset directory should be deleted")
+assert.ok(!existsSync(resolve(repoRoot, "frontend/app/assets/discover")), "old discover/search design asset directory should be deleted")
+assertPng("frontend/app/assets/soul-link-05-10/home-light/sidebar.png", 220, 1024)
+assertPng("frontend/app/assets/soul-link-05-10/home-light/sidebar-2x.png", 440, 2048)
+assertPng("frontend/app/assets/soul-link-05-10/home-light/main.png", 1000, 1024)
+assertPng("frontend/app/assets/soul-link-05-10/home-light/main-2x.png", 2000, 2048)
+assertPng("frontend/app/assets/soul-link-05-10/home-light/right-rail.png", 316, 1024)
+assertPng("frontend/app/assets/soul-link-05-10/home-light/right-rail-2x.png", 632, 2048)
+assertPng("frontend/app/assets/soul-link-05-10/home-black/sidebar.png", 236, 1024)
+assertPng("frontend/app/assets/soul-link-05-10/home-black/sidebar-2x.png", 472, 2048)
+assertPng("frontend/app/assets/soul-link-05-10/home-black/main.png", 992, 1024)
+assertPng("frontend/app/assets/soul-link-05-10/home-black/main-2x.png", 1984, 2048)
+assertPng("frontend/app/assets/soul-link-05-10/home-black/right-rail.png", 308, 1024)
+assertPng("frontend/app/assets/soul-link-05-10/home-black/right-rail-2x.png", 616, 2048)
+assertPng("frontend/public/place-atmosphere-hd/atmosphere-lore.png", 1024, 576)
+assertPng("frontend/app/assets/npc-style-cast/portraits-hd/commission-zhideng.png", 512, 512)
 
-const lightElements = [
-  ["home-light-hero-stage.png", 688, 398],
-  ["home-light-hero-avatar-coordinate.png", 62, 56],
-  ["home-light-hero-avatar-role.png", 62, 56],
-  ["home-light-hero-avatar-memory.png", 62, 56],
-  ["home-light-hero-avatar-explore.png", 62, 56],
-  ["home-light-featured-cover-01.png", 270, 112],
-  ["home-light-featured-cover-02.png", 270, 112],
-  ["home-light-featured-cover-03.png", 270, 112],
-  ["home-light-role-portrait-01.png", 92, 112],
-  ["home-light-role-portrait-02.png", 92, 112],
-  ["home-light-role-portrait-03.png", 92, 112],
-  ["home-light-role-portrait-04.png", 92, 112],
-  ["home-light-memory-thumb-01.png", 80, 87],
-  ["home-light-memory-thumb-02.png", 80, 87],
-  ["home-light-memory-thumb-03.png", 80, 87],
-  ["home-light-memory-thumb-04.png", 80, 87],
-  ["home-light-recommend-cover-01.png", 270, 113],
-  ["home-light-recommend-cover-02.png", 270, 113],
-  ["home-light-recommend-cover-03.png", 270, 113],
-  ["home-light-section-bunny.png", 77, 73],
-  ["home-light-cta-compass.png", 151, 82],
-  ["home-light-cta-bunny.png", 100, 94],
-  ["home-light-footer-city.png", 180, 124],
-]
-
-assert.ok(existsSync(radarAssetPath), "dark homepage hero should retain the project-local high-quality radar/city asset")
-assert.ok(homeRouteSource.includes("discoverRadarSurfaceImage"), "dark homepage hero should still import the high-quality radar surface asset")
-assert.ok(homeRouteSource.includes("HomeLightRealDom"), "light homepage should render the real-DOM component from the route")
-assert.ok(homeRouteSource.includes("featuredCitySlices={homepage.featuredCitySlices}"), "light homepage should receive dynamic featured tavern data from the route")
-assert.ok(homeRouteSource.includes("onToggleTheme={toggleTheme}"), "light homepage should receive the route theme toggle")
-
-assertPngAssetWith2x(lightSliceDir, "home-light-slice-01a-nav-bar.png", 958, 72)
-for (const [name, width, height] of lightElements) {
-  assertPngAssetWith2x(lightElementDir, name, width, height)
-}
-
-assert.ok(homeLightSource.includes('data-home-light-reference="index-light-hybrid-dom"'), "light homepage should expose the real-DOM reference contract marker")
-assert.ok(homeLightSource.includes('data-home-light-artboard="index-light-958x1642"'), "light homepage should preserve the measured artboard marker")
-assert.ok(homeLightSource.includes('data-home-light-slice-count={TOTAL_RUNTIME_SLICE_COUNT}'), "light homepage should expose the runtime slice count")
-assert.ok(homeLightSource.includes("const TOTAL_RUNTIME_SLICE_COUNT = 2"), "light homepage runtime should keep nav plus the full Hero backing slice to avoid stitched seams")
-assert.ok(homeLightSource.includes('data-home-light-dom-complete="hybrid-hero-backed"'), "light homepage should mark body decomposition as hybrid Hero-backed DOM")
-assert.ok(homeLightSource.includes('data-home-light-body="hero-image-backed-real-dom-sections"'), "light homepage body should be a complete DOM replacement rather than screenshot slices")
-assert.ok(homeLightSource.includes('mode="image-backed-reference"'), "Hero should use the full Hero backing image instead of stitched left/right fragments")
-assert.ok(homeLightSource.includes('"real-dom-replacement" | "image-backed-reference"'), "body sections should expose whether each section is real-DOM or image-backed")
-assert.ok(homeLightSource.includes('data-home-light-section-hotspots="owned"'), "body hotspots should be owned by their real page sections")
-assert.ok(homeLightSource.includes("const BODY_SECTION_COUNT = 6"), "light homepage body should keep six first-class sections")
-for (const sectionId of ["hero", "featured-regions", "ai-roles", "memory-echoes", "recommended-coordinates", "cta-footer"]) {
-  assert.ok(homeTemplateSource.includes(`id: "${sectionId}"`), `complete light page should include ${sectionId} as a first-class page section`)
-}
-for (const label of ["开始探索真实坐标", "进入第一个发光区域", "查看全部角色", "查看更多记忆", "进入推荐坐标云湖图书馆", "创建我的空间并邀请角色与记忆"]) {
-  assert.ok(homeLightSource.includes(label), `real-DOM homepage should expose accessible hotspot/text for ${label}`)
-}
-assert.ok(homeLightSource.includes("cardTargets") && homeLightSource.includes("featuredCitySlices[index]?.id"), "light homepage card targets should derive entry links from real featured tavern IDs")
-assert.ok(homeLightSource.includes("srcSet") && homeLightSource.includes("image2x"), "light homepage should expose HD srcSet sources for extracted element images")
-assert.ok(homeLightSource.includes("max-w-[958px]"), "real-DOM artboard should preserve the approved source width")
-
-assert.ok(homeLightSource.includes("LightReferenceTopNav") && sharedNavSource.includes('"data-home-light-nav": backing.id'), "navigation should use the shared light reference nav component")
-assert.ok(sharedNavSource.includes('"data-home-light-section": "nav"') && sharedNavSource.includes('"data-home-light-section-boundary": "real-page-section"'), "navigation should participate in the complete page section boundary model")
-assert.ok(sharedNavSource.includes("lightReferenceTopNavLayouts"), "navigation layout data should live with the shared nav component")
-assert.ok(sharedNavSource.includes("lightReferenceTopNavHotspotStyle"), "navigation hotspots should use local nav-section coordinates")
-assert.ok(sharedNavSource.includes("data-home-light-nav-controls") && sharedNavSource.includes("data-home-light-nav-control"), "navigation controls should render as real links/buttons")
-assert.ok(sharedNavSource.includes("data-home-light-nav-text-layer"), "navigation text should be rendered as a real DOM/SVG text layer")
-assert.ok(sharedNavSource.includes('data-reference-top-nav-logo-mark="real-svg"'), "navigation logo mark should be rendered as editable SVG")
-assert.ok(sharedNavSource.includes('alt=""') && sharedNavSource.includes('aria-hidden="true"'), "navigation backing image should be decorative transparent chrome only")
-assert.ok(!sharedNavSource.includes("opacity-0"), "navigation DOM/SVG text and chrome layers must be visible instead of hidden behind baked screenshot text")
-for (const marker of ["data-home-light-nav-search", "data-home-light-nav-theme-toggle", "data-home-light-nav-manager", "data-home-light-nav-cta"]) {
-  assert.ok(sharedNavSource.includes(marker), `navigation chrome should expose ${marker}`)
-}
-for (const label of ["FableMap", "搜索附近坐标、角色、记忆线索", "管理入口", "开始探索", "探索", "区域", "角色", "记忆", "创建空间"]) {
-  assert.ok(sharedNavSource.includes(label), `navigation should expose real text for ${label}`)
-}
-
-assert.ok(!combinedHomeSource.includes('data-home-light-reference="componentized-index-light"'), "light theme homepage should not use the rejected approximate componentized redraw")
-assert.ok(!combinedHomeSource.includes("homeLightIndexReference"), "homepage should not import the full-page artboard at runtime")
-assert.ok(!combinedHomeSource.includes("lightHomeBodySlices"), "homepage should not keep a body slice manifest after real-DOM replacement")
-assert.ok(!combinedHomeSource.includes("LightReferencePageSection"), "homepage should not keep old body-slice page section renderer after real-DOM replacement")
-assert.ok(!combinedHomeSource.includes("data-home-light-fragment"), "homepage should not keep hero screenshot fragments after real-DOM replacement")
-assert.ok(combinedHomeSource.includes("homeLightSliceHeroMain"), "homepage should intentionally import the full Hero parent image to avoid the stitched split seam")
-assert.ok(!combinedHomeSource.includes("heroReferenceImage"), "homepage hero should not keep using the old low-resolution screenshot-like reference")
-assert.ok(!combinedHomeSource.includes("neon-cyber-tavern-reference.png"), "homepage hero should not reference the old blurry homepage image")
-assert.ok(!combinedHomeSource.includes("min-h-[calc(100vh-88px)]"), "homepage hero section should not force a viewport-height layout that creates large blank space")
+assert.ok(homeRouteSource.includes("SoulLinkHomeReference"), "home route should render the locked 1:1 SoulLink component")
+assert.ok(
+  homeRouteSource.includes("featuredCitySlices={homepage.featuredCitySlices}") ||
+    homeRouteSource.includes("featuredCitySlices: homepage.featuredCitySlices"),
+  "home route should pass dynamic featured tavern data",
+)
+assert.ok(
+  homeRouteSource.includes("onToggleTheme={toggleTheme}") ||
+    homeRouteSource.includes("onToggleTheme: toggleTheme"),
+  "home route should pass theme toggle",
+)
+assert.ok(soulLinkSource.includes("HOME_LIGHT") && soulLinkSource.includes("HOME_BLACK"), "component should define both home artboards")
+assert.ok(soulLinkSource.includes("home-light-real-dom-1536x1024"), "light home should expose the 1536x1024 marker")
+assert.ok(soulLinkSource.includes("home-black-real-dom-1536x1024"), "black home should expose the 1536x1024 marker")
+assert.ok(soulLinkSource.includes("function SoulLinkSidebar"), "home should use the shared visible sidebar component")
+assert.ok(soulLinkSource.includes('active="home"'), "home should mark the shared sidebar home item active")
+assert.ok(soulLinkSource.includes("SHARED_SIDEBAR_NAV_ITEMS.map"), "sidebar items should come from one shared menu list")
+assert.ok(!soulLinkSource.includes("homeSharedNavHotspots"), "home should not keep a page-specific sidebar hotspot list")
+assert.ok(soulLinkSource.includes("function SoulLinkUserCluster"), "home should use the shared top-right user cluster component")
+assert.ok(soulLinkSource.includes("SoulLinkUserAvatar") && soulLinkSource.includes("SoulLinkUserIdentity"), "user cluster should split avatar and text into subcomponents")
+assert.ok(soulLinkSource.includes('data-soul-link-notification="real-button"'), "notification bell should be a real button, not baked pixels")
+assert.ok(soulLinkSource.includes("function SoulLinkFeedPanel"), "home right-rail feed should be a reusable component")
+assert.ok(soulLinkSource.includes("function SoulLinkDailyQuotePanel"), "home quote card should be a reusable component")
+assert.ok(homeRouteSource.includes("worldPulseItems") && homeRouteSource.includes("dailyQuote"), "home route should pass editable right-rail data")
+assert.ok(homeRouteSource.includes("onlineEntities"), "home route should pass editable online-entity data")
+assert.ok(homeRouteSource.includes("recentMemories"), "home route should pass editable recent-memory data")
+assert.ok(homeRouteSource.includes("guideCards"), "home route should pass editable guide-card data")
+assert.ok(homeRouteSource.includes("worldStats"), "home route should pass editable world-stat data")
+assert.ok(soulLinkSource.includes('data-soul-link-feed-title="real-text"'), "home feed rows should render real text")
+assert.ok(soulLinkSource.includes('data-soul-link-daily-quote="real-text"'), "home quote should render real text")
+assert.ok(soulLinkSource.includes("function SoulLinkOnlineEntitiesPanel"), "home online souls should be a reusable component")
+assert.ok(soulLinkSource.includes('data-soul-link-online-name="real-text"'), "home online rows should render real names")
+assert.ok(soulLinkSource.includes('data-soul-link-online-avatar="real-image"'), "home online rows should render real avatars")
+assert.ok(soulLinkSource.includes("function SoulLinkRecentMemoriesPanel"), "home recent memories should be a reusable component")
+assert.ok(soulLinkSource.includes('data-soul-link-memory-thumb="real-image"'), "home recent memories should render real thumbnail images")
+assert.ok(soulLinkSource.includes('data-soul-link-memory-title="real-text"'), "home recent memories should render real text")
+assert.ok(soulLinkSource.includes("function SoulLinkGuidePanel"), "home guide cards should be a reusable component")
+assert.ok(soulLinkSource.includes('data-soul-link-guide-title="real-text"'), "home guide cards should render real title text")
+assert.ok(soulLinkSource.includes('data-soul-link-guide-image="real'), "home guide cards should render separate visual assets")
+assert.ok(soulLinkSource.includes("function SoulLinkWorldStatsPanel"), "home world stats should be a reusable component")
+assert.ok(soulLinkSource.includes('data-soul-link-world-stat-value="real-text"'), "home world stats should render real values")
+assert.ok(soulLinkSource.includes('data-soul-link-world-stat-label="real-text"'), "home world stats should render real labels")
+assert.ok(soulLinkSource.includes("../assets/soul-link-05-10/home-light/main.png"), "home light should import the new locked asset")
+assert.ok(soulLinkSource.includes("../assets/soul-link-05-10/home-light/main-2x.png"), "home light should import a retina 2x locked asset")
+assert.ok(soulLinkSource.includes("../assets/npc-style-cast/portraits-hd/commission-zhideng.png"), "SoulLink avatar fallback should use the HD portrait catalog")
+assert.ok(soulLinkSource.includes('srcSet={`${slice.src} 1x, ${slice.src2x} 2x`}'), "SoulLink design slices should render with 2x srcSet")
+assert.ok(portraitConfigSource.includes("portraits-hd"), "home route should receive HD portrait fallbacks from the shared portrait catalog")
+assert.ok(!soulLinkSource.includes("../assets/homepage/"), "runtime home component must not import deleted old homepage assets")
+assert.ok(!soulLinkSource.includes("homeLightIndexReference"), "homepage should not import a full-page artboard at runtime")
 
 console.log("home-visual-density-test: ok")

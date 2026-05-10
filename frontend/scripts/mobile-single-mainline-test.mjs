@@ -4,12 +4,16 @@ import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const routesSource = readFileSync(resolve(__dirname, "../app/routes.ts"), "utf8")
-const shellSource = readFileSync(resolve(__dirname, "../app/shell/product-shell.tsx"), "utf8")
-const tavernSource = readFileSync(resolve(__dirname, "../app/routes/tavern.tsx"), "utf8")
-const manageRouteSource = readFileSync(resolve(__dirname, "../app/routes/tavern-manage.tsx"), "utf8")
-const ownerSource = readFileSync(resolve(__dirname, "../app/routes/owner.tsx"), "utf8")
-const workbenchSource = readFileSync(resolve(__dirname, "../app/features/tavern-chat-workbench/index.tsx"), "utf8")
+function readSource(filePath) {
+  return readFileSync(filePath, "utf8").replace(/\r\n/g, "\n")
+}
+
+const routesSource = readSource(resolve(__dirname, "../app/routes.ts"))
+const shellSource = readSource(resolve(__dirname, "../app/shell/product-shell.tsx"))
+const tavernSource = readSource(resolve(__dirname, "../app/routes/tavern.tsx"))
+const manageRouteSource = readSource(resolve(__dirname, "../app/routes/tavern-manage.tsx"))
+const ownerSource = readSource(resolve(__dirname, "../app/routes/owner.tsx"))
+const workbenchSource = readSource(resolve(__dirname, "../app/features/tavern-chat-workbench/index.tsx"))
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf8"))
 
 function sectionBetween(source, startMarker, endMarker, label) {

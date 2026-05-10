@@ -42,6 +42,8 @@ Backend work must preserve these principles:
 | [Preset Import Preview API Contract](./preset-import-preview-contract.md) | Draft-only community preset preview parser, risk report, permissions, and no-persistence boundary | Current |
 | [Territory API Contract](./territory-api-contract.md) | Territory CRUD, collision detection, map visualization API, permissions, and tests | Current |
 | [Engagement API Contract](./engagement-api-contract.md) | Tavern-local soft currency, gift, and bonus-voucher storage/API contract | Current |
+| [Special Tavern Types API Contract](./special-tavern-types.md) | Thin layer for specialized gameplay (e.g., cultivation) without polluting place_type | Current |
+| [NPC Dynamic Responses](./npc-dynamic-responses.md) | Guidelines for hobby and state card context injection | Current |
 
 ---
 

@@ -46,6 +46,7 @@ class TavernModel(Base):
     roleplay_mode = Column(String(32), default="ai_only")
     layout_style = Column(String(32), nullable=False, default="lobby")
     place_type = Column(String(32), nullable=False, default="tavern")
+    special_type = Column(String(32), nullable=False, default="")
     scene_prompt = Column(Text, default="")
     visit_count = Column(Integer, default=0)
     group_chat_enabled = Column(Boolean, default=False)

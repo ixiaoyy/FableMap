@@ -75,10 +75,10 @@ def test_character_hobbies_injection_in_runtime(tmp_path: Path, monkeypatch: pyt
     assert response.status_code == 200
     assert len(captured_messages) > 0
     
-    # Check system prompt content
-    system_prompt = captured_messages[0][0]["content"]
-    assert "Astronomy" in system_prompt
-    assert "Baking" in system_prompt
+    # Check system prompt content (join all system messages for robust assertion)
+    all_system_content = "\n".join([m["content"] for m in captured_messages[0] if m["role"] == "system"])
+    assert "Astronomy" in all_system_content
+    assert "Baking" in all_system_content
 
 
 def test_state_cards_injection_in_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -149,9 +149,9 @@ def test_state_cards_injection_in_runtime(tmp_path: Path, monkeypatch: pytest.Mo
     )
     
     assert len(captured_messages) > 0
-    system_prompt = captured_messages[0][0]["content"]
-    assert "The Golden Key" in system_prompt
-    assert "mysterious key" in system_prompt
+    all_system_content = "\n".join([m["content"] for m in captured_messages[0] if m["role"] == "system"])
+    assert "The Golden Key" in all_system_content
+    assert "mysterious key" in all_system_content
 
 
 def test_rules_backend_hobby_injection(tmp_path: Path) -> None:
@@ -197,3 +197,59 @@ def test_rules_backend_hobby_injection(tmp_path: Path) -> None:
     payload = response.json()
     # Rules backend with hobby should inject the hobby into the response prefix
     assert "Mixology" in payload["response"]
+
+
+def test_rules_backend_state_card_awareness(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    
+    # 1. Create tavern with rules backend
+    client.post(
+        "/api/v1/taverns",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "id": "t4",
+            "name": "State Rules Tavern",
+            "llm_config": {"backend": "rules", "model": "rules"},
+        },
+    )
+    
+    # 2. Create character
+    client.post(
+        "/api/v1/taverns/t4/characters",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "id": "c4",
+            "name": "Guard",
+            "personality": "Strict",
+            "first_mes": "Stop!",
+        },
+    )
+    
+    # 3. Create confirmed StateCard
+    client.post(
+        "/api/v1/taverns/t4/state-cards",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "title": "Dragon Sighting",
+            "summary": "A dragon was seen over the mountain.",
+            "status": "confirmed",
+            "canon_scope": "tavern",
+        },
+    )
+    
+    # 4. Chat
+    response = client.post(
+        "/api/v1/taverns/t4/chat",
+        headers={"X-User-Id": VISITOR_ID},
+        json={
+            "character_id": "c4",
+            "message": "Is it safe?",
+            "visitor_id": VISITOR_ID,
+            "visitor_name": "Traveler",
+        },
+    )
+    
+    assert response.status_code == 200
+    payload = response.json()
+    # Rules backend should mention the state card title
+    assert "Dragon Sighting" in payload["response"]

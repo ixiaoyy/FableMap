@@ -64,6 +64,7 @@ PLACE_RELATIONSHIP_TYPES = {
 }
 PLACE_RELATIONSHIP_STATUSES = {"pending", "approved", "rejected", "revoked"}
 GENDER_VALUES = {"unspecified", "female", "male", "nonbinary", "other"}
+SPECIAL_TYPES = {"", "cultivation", "divination"}
 SYSTEM_TAVERN_OWNER_PREFIX = "system_"
 SYSTEM_PUBLIC_WELFARE_LLM_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "system_public_welfare_llm.json"
 logger = logging.getLogger(__name__)
@@ -590,6 +591,7 @@ class Tavern:
     roleplay_mode: str = "ai_only"  # 'ai_only' | 'hybrid'
     layout_style: str = "lobby"  # 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'
     place_type: str = "tavern"  # 'tavern' | 'cafe' | ... | 'hospital' | 'home'
+    special_type: str = ""  # '' | 'cultivation'
     characters: list[TavernCharacter] = field(default_factory=list)
     character_claims: list[dict[str, Any]] = field(default_factory=list)
     world_info: list[WorldInfoEntry] = field(default_factory=list)
@@ -620,6 +622,7 @@ class Tavern:
         self.roleplay_mode = _normalize_roleplay_mode(self.roleplay_mode)
         self.layout_style = _normalize_tavern_layout_style(self.layout_style)
         self.place_type = _normalize_place_type(self.place_type)
+        self.special_type = _normalize_special_type(self.special_type)
         if self.place_type == "home":
             self.access = _normalize_home_access(self.access)
         self.home_members = _normalize_home_members(self.home_members, self.id)
@@ -649,6 +652,7 @@ class Tavern:
             "roleplay_mode": self.roleplay_mode,
             "layout_style": self.layout_style,
             "place_type": self.place_type,
+            "special_type": self.special_type,
             "characters": [c.to_dict() for c in self.characters],
             "character_claims": deepcopy(self.character_claims),
             "world_info": [w.to_dict() for w in self.world_info],
@@ -720,6 +724,7 @@ class Tavern:
             roleplay_mode=_normalize_roleplay_mode(d.get("roleplay_mode", "ai_only")),
             layout_style=_normalize_tavern_layout_style(d.get("layout_style", "lobby")),
             place_type=_normalize_place_type(d.get("place_type", "tavern")),
+            special_type=_normalize_special_type(d.get("special_type", "")),
             characters=characters,
             character_claims=_normalize_character_claims(d.get("character_claims", [])),
             world_info=world_info,
@@ -1779,6 +1784,7 @@ class TavernService:
             roleplay_mode=_normalize_roleplay_mode(data.get("roleplay_mode", "ai_only")),
             layout_style=_normalize_tavern_layout_style(data.get("layout_style", "lobby")),
             place_type=place_type,
+            special_type=_normalize_special_type(data.get("special_type", "")),
             character_claims=_normalize_character_claims(data.get("character_claims", [])),
             gameplay_definitions=_normalize_metadata_list(data.get("gameplay_definitions", [])),
             output_rules=_normalize_metadata_list(data.get("output_rules", [])),
@@ -1864,6 +1870,8 @@ class TavernService:
             tavern.place_type = _require_valid_place_type(data.get("place_type"))
             if tavern.place_type == "home":
                 tavern.access = _normalize_home_access(tavern.access)
+        if "special_type" in data:
+            tavern.special_type = _normalize_special_type(data.get("special_type"))
         if "access" in data:
             tavern.access = _normalize_home_access(data["access"]) if tavern.place_type == "home" else data["access"]
         if "character_claims" in data:
@@ -2613,6 +2621,11 @@ def _normalize_roleplay_mode(value: Any) -> str:
 def _normalize_tavern_layout_style(value: Any) -> str:
     layout_style = str(value or "lobby").strip().lower()
     return layout_style if layout_style in TAVERN_LAYOUT_STYLES else "lobby"
+
+
+def _normalize_special_type(value: Any) -> str:
+    s = str(value or "").strip().lower()
+    return s if s in SPECIAL_TYPES else ""
 
 
 def _normalize_place_type(value: Any) -> str:

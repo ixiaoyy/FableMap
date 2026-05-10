@@ -36,6 +36,13 @@ const GUILD_PROMPTS = [
   '我完成清单项目了，帮我记录。',
 ]
 
+const DIVINATION_PROMPTS = [
+  '帮我解读今日星象，看看这个坐标的运势。',
+  '进行三牌塔罗占卜：过去、现在、未来。',
+  '我想抽一支灵签，询问当下困惑。',
+  '请结合这里的地理坐标和我的星座给出指引。',
+]
+
 export const GUILD_REPUTATION_TIERS = [
   {
     id: 'first-visit',
@@ -319,6 +326,17 @@ export function inferTavernPlayMode(tavern = {}, character = null) {
   const isMystery = hasAny(text, ['线索', '调查', '档案', '失物', '谜题', '悬疑', '推理', '异常', '真相'])
   const isTextGame = hasAny(text, ['文字游戏', '轻文字游戏', '选择', '目标', '探索', '委托', '线索'])
   const isFarm = hasAny(text, ['菜园', '农场', '种菜', '偷菜', '作物', '浇水', '收获', 'farm', 'garden'])
+  const isDivination = tavern.special_type === 'divination' || hasAny(text, ['占卜', '塔罗', '星象', '星盘', '命理', '测算', '神秘学', '灵签', 'tarot', 'oracle'])
+
+  if (isDivination) {
+    return {
+      id: 'divination',
+      label: '占卜玄学',
+      icon: '🔮',
+      summary: '这间空间支持占卜互动：星象、塔罗或灵签，探索坐标背后的玄学指引。',
+      prompts: DIVINATION_PROMPTS,
+    }
+  }
 
   if (isFarm) {
     return {

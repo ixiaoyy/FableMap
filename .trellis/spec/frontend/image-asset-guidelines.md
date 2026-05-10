@@ -131,6 +131,38 @@ Get-ChildItem "$env:USERPROFILE\.codex\generated_images" -Recurse -File |
 
 Then compare those files with the intended project paths by hash, dimensions, or explicit source-to-target mapping.
 
+
+## Scenario: Owner Design Draft 1:1 Reproduction
+
+### 1. Scope / Trigger
+
+Trigger this contract whenever the owner provides UI/page design drafts, screenshots, Figma exports, or image references and asks for reproduction, polish, or replacement of an existing frontend surface.
+
+### 2. Contracts
+
+- The provided design draft is the visual source of truth. Do **not** reinterpret, beautify, simplify, re-theme, or "improve" the style unless the owner explicitly asks for a redesign.
+- If the owner asks for `1:1`, implementation must preserve the design's measured artboard dimensions, section boundaries, coordinates, spacing, colors, visual hierarchy, imagery, and copy as closely as the web stack allows.
+- Do not claim `1:1`, `完成`, or `一致` unless the current implementation has fresh screenshots against the same viewport/design dimensions and any known deviations are recorded.
+- Runtime code must not import a single full-page design draft as the only page. Allowed approaches are:
+  - real DOM/CSS recreation for editable/interactive UI, or
+  - project-local section/component slices for non-editable visual surfaces, paired with real DOM overlays for links, buttons, inputs, and route handlers.
+- User-provided full drafts belong in Trellis/reference/audit paths; runtime assets under `frontend/app/assets/...` should be cropped/sliced derivatives with a manifest or README recording source, crop boxes, dimensions, and hashes.
+- When replacing an older homepage/search/discovery design asset set, remove or stop referencing the old runtime asset directory in the same change. Do not leave code importing stale designs while reporting that the new design replaced them.
+- Any deviation from the draft must be listed as an explicit acceptance risk, not hidden as an implementation detail.
+
+### 3. Required Verification
+
+For owner-design reproduction tasks:
+
+```powershell
+npm --prefix .\frontend run build
+npm --prefix .\frontend test
+npm --prefix .\frontend run <focused-playwright-visual-check>
+```
+
+The focused Playwright check must capture at least the owner draft's desktop artboard viewport and one narrow/mobile viewport when the route is user-facing.
+
+
 ## Scenario: Default Style Extraction Before Material Generation
 
 ### 1. Scope / Trigger

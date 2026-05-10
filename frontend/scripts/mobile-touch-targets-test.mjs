@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const buttonSource = readFileSync(resolve(__dirname, "../app/ui/button.tsx"), "utf8")
-const homeSource = readFileSync(resolve(__dirname, "../app/routes/home.tsx"), "utf8")
+const homeSource = readFileSync(resolve(__dirname, "../app/routes/home.tsx"), "utf8") + "\n" + readFileSync(resolve(__dirname, "../app/components/soul-link-reference-artboards.tsx"), "utf8")
 const discoverSource = readFileSync(resolve(__dirname, "../app/routes/discover.tsx"), "utf8")
 
 assert.ok(!buttonSource.includes('sm: "h-9'), "small button variant must not be shorter than the 44px mobile touch target")

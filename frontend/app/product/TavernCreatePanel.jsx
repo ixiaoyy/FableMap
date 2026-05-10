@@ -71,6 +71,7 @@ export default function TavernCreatePanel({
     password: '',
     characters: [],
     scene_prompt: '',
+    special_type: '',
   })
   const [llmFormData, setLlmFormData] = useState({
     backend: 'openai',
@@ -175,6 +176,7 @@ export default function TavernCreatePanel({
         access: form.access,
         password: form.access === 'password' ? form.password.trim() : '',
         scene_prompt: form.scene_prompt,
+        special_type: form.special_type,
         owner_id: ownerId || undefined,
       }
 
@@ -440,6 +442,29 @@ export default function TavernCreatePanel({
                 rows={3}
               />
               <p className="form-hint">不用写复杂指令，只要描述空间、气味、声音和第一眼能看到的东西。</p>
+            </div>
+
+            <div className="form-group">
+              <label>特殊功能 (可选)</label>
+              <div className="access-options">
+                {[
+                  { id: '', label: '无特殊类型', icon: '⚪' },
+                  { id: 'cultivation', label: '修行空间', icon: '🧘' },
+                  { id: 'divination', label: '占卜空间', icon: '🔮' },
+                ].map((st) => (
+                  <label key={st.id} className={`access-option ${form.special_type === st.id ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="special_type"
+                      value={st.id}
+                      checked={form.special_type === st.id}
+                      onChange={(e) => updateField('special_type', e.target.value)}
+                    />
+                    <span>{st.icon} {st.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="form-hint">占卜或修行空间会启用特定的玩法模块与回访逻辑。</p>
             </div>
 
             <div className="form-group">

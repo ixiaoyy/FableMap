@@ -1,4 +1,5 @@
 import { Moon, Search, Sparkles } from "lucide-react"
+import type { MouseEvent } from "react"
 import { Link } from "react-router"
 
 type LightReferenceTopNavVariant = "home" | "discover"
@@ -215,6 +216,10 @@ function scaleHomeNavChrome(chrome: LightReferenceTopNavChrome, artboardWidth: n
     width: scaleHomeNavValue(chrome.width, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
     height: scaleHomeNavValue(chrome.height, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
   }
+}
+
+function suppressMouseFocus(event: MouseEvent<HTMLElement>) {
+  event.preventDefault()
 }
 
 function scaleHomeNavHotspot(hotspot: LightReferenceTopNavHotspot, artboardWidth: number, navHeight: number): LightReferenceTopNavHotspot {
@@ -476,6 +481,7 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
               data-discover-black-hotspot-slice={variant === "discover" && surface === "black" ? hotspot.sliceId : undefined}
               to={hotspot.to}
               aria-label={controlLabel}
+              onMouseDown={suppressMouseFocus}
               className={className}
               style={style}
             />
@@ -494,6 +500,7 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
               type="button"
               aria-label={controlLabel}
               onClick={hotspot.onClick}
+              onMouseDown={suppressMouseFocus}
               className={className}
               style={style}
             />

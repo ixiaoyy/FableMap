@@ -39,8 +39,10 @@ from fablemap_api.core.prompt_builder import PromptBuildConfig, PromptBuilder
 from fablemap_api.core.skill_packs import (
     LOCAL_RUMOR_SKILL_PACK_ID,
     NEIGHBORHOOD_KNOWLEDGE_SKILL_PACK_ID,
+    TERRITORY_AWARENESS_SKILL_PACK_ID,
     build_local_rumor_prompt_block,
     build_neighborhood_knowledge_prompt_block,
+    build_territory_awareness_prompt_block,
     is_skill_pack_enabled,
     normalize_skill_pack_settings,
 )
@@ -61,6 +63,12 @@ from fablemap_api.core.tavern import (
     _normalize_gender,
 )
 from fablemap_api.core.continuity_validator import ContinuityValidator, ConflictReport
+from fablemap_api.core.prompt_builder import (
+    PromptBuilder,
+    PromptBuildConfig,
+    ChatMessage as PromptChatMessage
+)
+from fablemap_api.core.hobbies import get_hobby_label, normalize_hobbies
 
 from ...domain.group_chat_policy import (
     clamp_chat_history_limit,
@@ -229,6 +237,7 @@ class RuntimeApplicationMixin:
                 llm_config=llm_config,
                 extra_context=extra_context or [],
                 visitor_state=prompt_visitor_state,
+                visitor_name=visitor_name,
                 character_id=character_id,
                 first_mes=character.first_mes,
                 hobbies=character.hobbies,
@@ -550,6 +559,7 @@ class RuntimeApplicationMixin:
                     llm_config=llm_config,
                     extra_context=[self._group_history_prompt_item(item, tavern, visitor_display_name) for item in history],
                     visitor_state=prompt_visitor_state,
+                    visitor_name=visitor_display_name,
                     character_id=character.id,
                     first_mes=character.first_mes,
                     hobbies=character.hobbies,
@@ -987,10 +997,22 @@ class RuntimeApplicationMixin:
         llm_config: Any,
         extra_context: list[dict[str, Any]],
         visitor_state: VisitorState | None = None,
+        visitor_name: str = "",
         character_id: str = "",
         first_mes: str = "",
         hobbies: list[str] | None = None,
     ) -> str:
+        visitor_id = visitor_state.visitor_id if visitor_state else ""
+        
+        # 1. Fetch relevant state cards (needed for both rules and LLM backends)
+        all_cards = self.store.list_state_cards(tavern_id=tavern.id)
+        confirmed_cards = [
+            c for c in all_cards 
+            if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
+        ]
+        # Sort and limit to prevent prompt bloat
+        top_cards = sorted(confirmed_cards, key=lambda c: c.updated_at or "", reverse=True)[:10]
+
         if _is_rules_backend(llm_config.backend):
             res = resolve_public_welfare_rules_response(
                 message=message,
@@ -1001,16 +1023,29 @@ class RuntimeApplicationMixin:
             )
             if res:
                 return res
-            # Fallback to a generic response if no rule matches
-            if hobbies:
-                hobby = random.choice(hobbies)
+            
+            # Fallback logic for rules backend with Hobbies and StateCards awareness
+            hobbies = normalize_hobbies(hobbies)
+            hobby_label = get_hobby_label(random.choice(hobbies)) if hobbies else ""
+            
+            # Mention a recent state card if available
+            state_mention = ""
+            if top_cards:
+                recent_card = top_cards[0]
+                state_mention = f"，并留意到了关于“{recent_card.title}”的动态"
+
+            if hobby_label:
                 fallbacks = [
-                    f"{character_name}点了点头，看起来正忙着摆弄他的{hobby}，但还是分心听你说话。",
-                    f"{character_name}微微一笑，似乎想到了和{hobby}相关的事，随后轻声回应了你。",
-                    f"{character_name}停下了手中关于{hobby}的动作，抬头看向你，等待你继续说下去。",
-                    f"{character_name}思考片刻，或许是在想如何把{hobby}的精髓分享给你，他耐心地听着。",
+                    f"{character_name}点了点头，看起来正忙着摆弄他的{hobby_label}{state_mention}，但还是分心听你说话。",
+                    f"{character_name}微微一笑，似乎想到了和{hobby_label}相关的事{state_mention}，随后轻声回应了你。",
+                    f"{character_name}停下了手中关于{hobby_label}的动作{state_mention}，抬头看向你，等待你继续说下去。",
+                    f"{character_name}思考片刻，或许是在想如何把{hobby_label}的精髓分享给你{state_mention}，他耐心地听着。",
                 ]
                 return random.choice(fallbacks)
+            
+            if state_mention:
+                return f"{character_name}静静地听着{state_mention}，若有所思地看向你。"
+                
             return f"{character_name}点了点头，似乎在听你说话，但暂时没有更多回复。"
 
         client = create_client(
@@ -1026,42 +1061,49 @@ class RuntimeApplicationMixin:
                 presence_penalty=getattr(llm_config, "presence_penalty", 0.0),
             )
         )
-        system_content = f"你是 FableMap 空间「{tavern.name}」里的 NPC {character_name}。{character_prompt}"
-        if hobbies:
-            hobbies_str = "、".join(hobbies)
-            system_content = f"{system_content}\n\n【个人兴趣】\n该角色对以下领域有深厚兴趣：{hobbies_str}。在对话中，你可以根据这些兴趣点自然地展开话题、分享见解或以此作为比喻。"
-        
 
-        # Add confirmed state cards for context (filtered by visitor scope)
-        visitor_id = visitor_state.visitor_id if visitor_state else ""
-        all_cards = self.store.list_state_cards(tavern_id=tavern.id)
-        confirmed_cards = [
-            c for c in all_cards 
-            if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
-        ]
-        if confirmed_cards:
-            # Sort by updated_at desc then take top 10 to prevent prompt bloat
-            confirmed_cards = sorted(confirmed_cards, key=lambda c: c.updated_at or "", reverse=True)[:10]
-            state_prompt = format_state_cards_for_prompt(confirmed_cards)
-            if state_prompt:
-                system_content = f"{system_content}\n\n{state_prompt}"
+        # 1. Fetch relevant state cards (already fetched above for rules/llm)
+        confirmed_cards = top_cards
 
+        # 2. Prepare Skill Pack prompt block
         skill_pack_prompt = self._skill_pack_prompt_block(tavern)
-        if skill_pack_prompt:
-            system_content = f"{system_content}\n\n{skill_pack_prompt}"
-        affinity_prompt = self._affinity_prompt_block_for_state(visitor_state)
-        if affinity_prompt:
-            system_content = f"{system_content}\n\n{affinity_prompt}"
-        messages = [
-            {"role": "system", "content": system_content},
-            *[
-                {"role": str(item.get("role") or "user"), "content": clean_text(item.get("content"), max_length=800)}
-                for item in extra_context[-12:]
-                if isinstance(item, dict) and item.get("content")
-            ],
-            {"role": "user", "content": message},
-        ]
-        response_text = clean_text(client.complete(messages).content, max_length=2400)
+
+        # 3. Map extra_context (dicts) to PromptChatMessage list
+        history_messages = []
+        for item in extra_context[-12:]:
+            if not isinstance(item, dict) or not item.get("content"):
+                continue
+            history_messages.append(
+                PromptChatMessage(
+                    role=str(item.get("role") or "user"),
+                    content=clean_text(item.get("content"), max_length=800),
+                    name=str(item.get("visitor_name") or item.get("character_name") or "")
+                )
+            )
+
+        # 4. Initialize PromptBuilder
+        config = PromptBuildConfig(
+            char_name=character_name,
+            char_personality=character_prompt if not character_prompt.startswith("你是") else "",
+            char_system_prompt=character_prompt if character_prompt.startswith("你是") else "",
+            char_hobbies=hobbies or [],
+            char_first_mes=first_mes,
+            tavern_name=tavern.name,
+            tavern_lat=tavern.lat,
+            tavern_lon=tavern.lon,
+            user_name=visitor_name or "旅人",
+            visitor_relationship_stage=visitor_state.relationship_stage if visitor_state else "",
+            visitor_relationship_strength=visitor_state.relationship_strength if visitor_state else 0.0,
+            visitor_visit_count=visitor_state.visit_count if visitor_state else 0,
+            state_cards=[c.to_dict() if hasattr(c, "to_dict") else c for c in confirmed_cards],
+            skill_pack_prompt=skill_pack_prompt,
+            output_format="openai"
+        )
+        
+        builder = PromptBuilder(config)
+        prompt_data = builder.build(history_messages, message)
+        
+        response_text = clean_text(client.complete(prompt_data["messages"]).content, max_length=2400)
         if not response_text:
             raise LLMError("LLM returned an empty response")
         return response_text
@@ -1108,6 +1150,22 @@ class RuntimeApplicationMixin:
                 ))
             except Exception as exc:
                 logger.warning("Failed to fetch neighborhood knowledge for prompt: %s", exc)
+        
+        # Territory Awareness Pack
+        if is_skill_pack_enabled(settings, TERRITORY_AWARENESS_SKILL_PACK_ID):
+            config = next((item.get("config", {}) for item in settings if item.get("id") == TERRITORY_AWARENESS_SKILL_PACK_ID), {})
+            limit = self._safe_int(config.get("limit"), 3) if isinstance(config, dict) else 3
+            radius = self._safe_int(config.get("radius"), 300) if isinstance(config, dict) else 300
+            try:
+                if hasattr(self, "territory_service") and self.territory_service:
+                    current = self.territory_service.get_territory_by_tavern(tavern.id)
+                    nearby = self.territory_service.query_nearby(tavern.lat, tavern.lon, radius, limit=limit)
+                    # Filter out current territory from nearby if present
+                    if current:
+                        nearby = [t for t in nearby if t.get("id") != current.get("id")]
+                    blocks.append(build_territory_awareness_prompt_block(current, nearby, limit=limit))
+            except Exception as exc:
+                logger.warning("Failed to fetch territory awareness for prompt: %s", exc)
                 
         return "\n\n".join(blocks) if blocks else ""
 

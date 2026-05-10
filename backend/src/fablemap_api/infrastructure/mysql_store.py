@@ -116,6 +116,7 @@ class MySQLTavernStore:
             roleplay_mode=model.roleplay_mode or "ai_only",
             layout_style=model.layout_style or "lobby",
             place_type=model.place_type or "tavern",
+            special_type=model.special_type or "",
             characters=characters,
             character_claims=deepcopy(model.character_claims) if model.character_claims else [],
             world_info=world_info,
@@ -339,6 +340,7 @@ class MySQLTavernStore:
                 roleplay_mode=tavern.roleplay_mode,
                 layout_style=tavern.layout_style,
                 place_type=tavern.place_type,
+                special_type=tavern.special_type,
                 scene_prompt=tavern.scene_prompt,
                 visit_count=tavern.visit_count,
                 group_chat_enabled=tavern.group_chat_enabled,
@@ -427,6 +429,7 @@ class MySQLTavernStore:
             model.roleplay_mode = tavern.roleplay_mode
             model.layout_style = tavern.layout_style
             model.place_type = tavern.place_type
+            model.special_type = tavern.special_type
             model.scene_prompt = tavern.scene_prompt
             model.visit_count = tavern.visit_count
             model.group_chat_enabled = tavern.group_chat_enabled

@@ -19,7 +19,7 @@ import {
   normalizeFarmProgressExtended,
   updateFarmProgressExtended,
 } from './tavernFarmModes'
-import { getHobbyIcon, getHobbyCategory } from '../lib/character-hobbies.js'
+import { getHobbyIcon, getHobbyCategory, detectHobbiesInText } from '../lib/character-hobbies.js'
 
 import {
   buildGuildActionPrompt,
@@ -498,6 +498,18 @@ function ChatMessage({ message, character, sprites, visitorNickname, voiceConfig
           className="message-content"
           dangerouslySetInnerHTML={{ __html: formatMessageText(message.content) }}
         />
+        {!isUser && character && character.hobbies && (
+          <div className="message-hobbies-feedback">
+            {detectHobbiesInText(message.content, character.hobbies).map(hobby => {
+              const category = getHobbyCategory(hobby)
+              return (
+                <span key={hobby} className={`hobby-badge-mention hobby-badge-mention--${category.id}`} title={`提及了兴趣：${hobby}`}>
+                  {getHobbyIcon(hobby)} {hobby}
+                </span>
+              )
+            })}
+          </div>
+        )}
         <div className="message-meta">
           <span className="message-time">{formatTime(message.timestamp)}</span>
           {!isUser && voiceConfig?.enabled && (
@@ -1045,6 +1057,32 @@ export default function TavernChatRoom({
     () => getGuildQuestBoard(tavern || {}, guildProgress),
     [tavern, guildProgress],
   )
+
+  const hobbyIcebreakers = useMemo(() => {
+    if (!selectedChar?.hobbies || selectedChar.hobbies.length === 0) return []
+    // Pick up to 2 hobbies to avoid clutter
+    const selectedHobbies = [...selectedChar.hobbies].sort(() => 0.5 - Math.random()).slice(0, 2)
+    const prompts = []
+    const templates = [
+      (h) => `我对你的「${h}」很感兴趣，能聊聊吗？`,
+      (h) => `原来你平时也喜欢「${h}」啊。`,
+      (h) => `能给我讲讲你在「${h}」方面的故事吗？`,
+    ]
+
+    selectedHobbies.forEach((hobby) => {
+      // Pick one random template per hobby
+      const template = templates[Math.floor(Math.random() * templates.length)]
+      prompts.push(template(hobby))
+    })
+
+    return prompts
+  }, [selectedChar?.id, selectedChar?.hobbies])
+
+  const finalQuickPrompts = useMemo(() => {
+    // Combine playMode prompts with hobby icebreakers, limit total to 6
+    const combined = [...hobbyIcebreakers, ...quickPrompts]
+    return combined.slice(0, 6)
+  }, [hobbyIcebreakers, quickPrompts])
   const activeGameplayDefinition = useMemo(() => {
     if (!activeGameplaySession?.gameplay_id) return null
     return gameplays.find((gameplay) => gameplay?.id === activeGameplaySession.gameplay_id) || null
@@ -1935,7 +1973,7 @@ export default function TavernChatRoom({
                 placeholder={activeChatChannel === 'public' ? '公共聊天：直接发言，或 @NPC名 对指定 NPC 说...' : undefined}
                 voiceConfig={voiceConfig}
                 tavernId={roomId}
-                quickPrompts={quickPrompts}
+                quickPrompts={finalQuickPrompts}
               />
             </>
           ) : (

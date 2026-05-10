@@ -36,14 +36,16 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     # 根据配置选择存储后端
     store = create_store(resolved)
     configure_process_stores(resolved, store)
+    territory_service = TerritoryApplicationService(
+        create_territory_store(resolved, store)
+    )
+    app.state.territory_service = territory_service
+
     app.state.taverns = TavernApplicationService(
         store,
         create_owner_config_store(resolved, store),
         create_visitor_note_store(resolved, store),
-    )
-
-    app.state.territory_service = TerritoryApplicationService(
-        create_territory_store(resolved, store)
+        territory_service=territory_service,
     )
 
     app.add_middleware(

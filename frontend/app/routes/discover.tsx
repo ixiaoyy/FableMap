@@ -10,14 +10,13 @@ import {
   Waves,
   X,
 } from "lucide-react"
-import { Link, useLoaderData } from "react-router"
-import { useMemo, useState } from "react"
+import { Link, useLoaderData, useSearchParams } from "react-router"
+import { useEffect, useMemo, useState } from "react"
 
-import discoverNeonAlleyImage from "../assets/discover/reference/discover-cover-neon-alley.png"
-import discoverRadarSurfaceImage from "../assets/discover/reference/discover-radar-surface.png"
-import { DiscoverBlackReference } from "../components/discover-black-reference"
-import { DiscoverLightRealDom } from "../components/discover-light-real-dom"
+import discoverNeonAlleyImage from "../assets/soul-link-05-10/discover-light/main-2x.png"
+import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover-black/main-2x.png"
 import { DiscoveryLivelinessStrip } from "../components/DiscoveryLivelinessStrip"
+import { SoulLinkDiscoverReference } from "../components/soul-link-reference-artboards"
 import { TavernPreviewModal } from "../components/tavern-preview-modal"
 import { buildDiscoveryLiveliness, getDiscoveryLivelinessSearchText } from "../lib/discovery-liveliness.js"
 import { resolveHomepageTavernCover, resolveUniqueHomepageTavernCovers } from "../lib/homepage-taverns"
@@ -1047,7 +1046,7 @@ function LightDiscoverReference(props: {
   onOpenOnlyChange: (value: boolean) => void
   onToggleTheme: () => void
 }) {
-  return <DiscoverLightRealDom {...props} />
+  return <SoulLinkDiscoverReference variant="light" {...props} />
 }
 
 export async function clientLoader(): Promise<DiscoverLoaderData> {
@@ -1061,9 +1060,11 @@ export async function clientLoader(): Promise<DiscoverLoaderData> {
 export default function DiscoverRoute() {
   const { result, error } = useLoaderData<typeof clientLoader>()
   const { theme, toggleTheme } = useTheme()
+  const [searchParams, setSearchParams] = useSearchParams()
   const isDark = theme === "dark"
 
-  const [search, setSearch] = useState("")
+  const initialSearch = searchParams.get("search") ?? searchParams.get("q") ?? ""
+  const [search, setSearch] = useState(initialSearch)
   const [activePlaceTypes, setActivePlaceTypes] = useState<Set<string>>(new Set())
   const [activeSpecialTypes, setActiveSpecialTypes] = useState<Set<string>>(new Set())
   const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set())
@@ -1071,6 +1072,24 @@ export default function DiscoverRoute() {
   const [openOnly, setOpenOnly] = useState(false)
   const [manualViewMode, setManualViewMode] = useState<DiscoverViewMode | null>(null)
   const [previewTavern, setPreviewTavern] = useState<Tavern | null>(null)
+
+  useEffect(() => {
+    const nextSearch = searchParams.get("search") ?? searchParams.get("q") ?? ""
+    setSearch(nextSearch)
+    if (nextSearch.trim()) setManualViewMode("cards")
+  }, [searchParams])
+
+  function syncSearchParam(value: string) {
+    const next = new URLSearchParams(searchParams)
+    const query = value.trim()
+    if (query) {
+      next.set("search", query)
+    } else {
+      next.delete("search")
+    }
+    next.delete("q")
+    setSearchParams(next, { replace: true })
+  }
 
   const hasFilters = Boolean(search.trim()) || activePlaceTypes.size > 0 || activeSpecialTypes.size > 0 || activeCategories.size > 0 || publicOnly || openOnly
   const activeViewMode: DiscoverViewMode = manualViewMode ?? (hasFilters ? "cards" : "radar")
@@ -1080,9 +1099,37 @@ export default function DiscoverRoute() {
       tavernMatchesFilter(tavern, { search, activePlaceTypes, activeSpecialTypes, activeCategories, publicOnly, openOnly }),
     )
   }, [result.taverns, search, activePlaceTypes, activeSpecialTypes, activeCategories, publicOnly, openOnly])
+  const sideFeedItems = useMemo(() => {
+    const previewTaverns = filteredTaverns.slice(0, 3)
+    const coversByTavernId = resolveUniqueHomepageTavernCovers(previewTaverns)
+    return previewTaverns.map((tavern, index) => ({
+      id: tavern.id,
+      title: tavern.name || `坐标 ${index + 1}`,
+      subtitle: tavern.description || `${Array.isArray(tavern.characters) ? tavern.characters.length : 0} 位角色正在回应`,
+      meta: `${index * 5 + 3} 分钟前`,
+      image: coversByTavernId[tavern.id] || resolveHomepageTavernCover(tavern, index),
+      to: `/tavern/${encodeURIComponent(tavern.id)}`,
+    }))
+  }, [filteredTaverns])
+  const onlineEntities = useMemo(() => {
+    const coversByTavernId = resolveUniqueHomepageTavernCovers(filteredTaverns.slice(0, 3))
+    return filteredTaverns
+      .flatMap((tavern, tavernIndex) =>
+        (Array.isArray(tavern.characters) ? tavern.characters : []).slice(0, 1).map((character, characterIndex) => ({
+          id: `${tavern.id}-${character.id || characterIndex}`,
+          name: character.name || `灵魂 ${tavernIndex + 1}`,
+          location: `在 ${tavern.name || "某个坐标"}`,
+          status: tavernIndex < 2 ? "在线" : `${tavernIndex * 5 + 5} 分钟前`,
+          avatar: character.avatar || coversByTavernId[tavern.id] || resolveHomepageTavernCover(tavern, tavernIndex),
+          to: `/tavern/${encodeURIComponent(tavern.id)}`,
+        })),
+      )
+      .slice(0, 3)
+  }, [filteredTaverns])
 
   function switchToCardsForSearch(value: string) {
     setSearch(value)
+    syncSearchParam(value)
     if (value.trim()) setManualViewMode("cards")
     if (!value.trim() && activePlaceTypes.size === 0 && activeSpecialTypes.size === 0 && activeCategories.size === 0 && !publicOnly && !openOnly) {
       setManualViewMode(null)
@@ -1118,6 +1165,7 @@ export default function DiscoverRoute() {
 
   function clearFilters() {
     setSearch("")
+    syncSearchParam("")
     setActivePlaceTypes(new Set())
     setActiveSpecialTypes(new Set())
     setActiveCategories(new Set())
@@ -1133,9 +1181,12 @@ export default function DiscoverRoute() {
 
   if (isDark) {
     return (
-      <DiscoverBlackReference
+      <SoulLinkDiscoverReference
+        variant="black"
         search={search}
         taverns={filteredTaverns}
+        sideFeedItems={sideFeedItems}
+        onlineEntities={onlineEntities}
         onSearchChange={switchToCardsForSearch}
         onClear={clearFilters}
         onTogglePlaceType={togglePlaceType}
@@ -1149,9 +1200,12 @@ export default function DiscoverRoute() {
   }
 
   return (
-    <LightDiscoverReference
+    <SoulLinkDiscoverReference
+      variant="light"
       search={search}
       taverns={filteredTaverns}
+      sideFeedItems={sideFeedItems}
+      onlineEntities={onlineEntities}
       onSearchChange={switchToCardsForSearch}
       onClear={clearFilters}
       onTogglePlaceType={togglePlaceType}

@@ -713,11 +713,12 @@ export default function CharacterEditor({
               const category = getHobbyCategory(hobby)
               return (
                 <span key={hobby} className={`hobby-chip hobby-chip--${category.id}`}>
-                  {hobby}
+                  {getHobbyIcon(hobby)} {hobby}
                   <button
                     type="button"
                     onClick={() => updateField('hobbies', draft.hobbies.filter((h) => h !== hobby))}
                     disabled={disabled}
+                    title="移除"
                   >
                     &times;
                   </button>
@@ -748,7 +749,9 @@ export default function CharacterEditor({
               if (categoryHobbies.length === 0) return null
               return (
                 <div key={category.id} className="character-hobby-group">
-                  <small className="hobby-group-label">{category.label}</small>
+                  <small className="hobby-group-label">
+                    {category.icon} {category.label}
+                  </small>
                   <div className="hobby-group-items">
                     {categoryHobbies.map((hobby) => (
                       <button
@@ -766,7 +769,6 @@ export default function CharacterEditor({
               )
             })}
           </div>
-
         </div>
         <label>
           <span>性别</span>

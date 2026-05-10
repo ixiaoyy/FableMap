@@ -50,6 +50,7 @@ interface Tavern {
   roleplay_mode: 'ai_only' | 'hybrid'; // NPC 驱动模式：纯 AI 或店主审批的玩家混合扮演
   layout_style: 'lobby' | 'npc-chat' | 'quest-play' | 'hybrid-room'; // 空间页默认体验布局
   place_type: PlaceType;         // 地点类型；缺省 tavern，Home 默认私密
+  special_type?: '' | 'cultivation' | 'divination'; // 特殊功能类型 (v0.8)；用于修行、占卜等特定玩法薄层
 
   // ── 空间内容 ──────────────────────
   characters: TavernCharacter[];  // 空间内的 NPC 列表

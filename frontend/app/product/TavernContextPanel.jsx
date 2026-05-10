@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AffinityBadge } from '../components/AffinityBadge'
 import { AffinityProgress } from '../components/AffinityProgress'
 import { getAffinityStageMeta } from '../lib/affinity.js'
+import { getHobbyIcon, getHobbyCategory } from '../lib/character-hobbies.js'
 import {
   deleteMemoryAtom,
   listMemoryAtoms,
@@ -62,26 +63,25 @@ function CharacterInfoTab({ character, tavern }) {
         </div>
       )}
 
-      {character.scenario && (
-        <div className="ctx-field">
-          <span className="mini-label">场景设定</span>
-          <p>{character.scenario}</p>
-        </div>
-      )}
-
-      {character.system_prompt && (
-        <div className="ctx-field">
-          <span className="mini-label">角色指令（高级）</span>
-          <p className="system-prompt-text">{character.system_prompt.slice(0, 200)}{character.system_prompt.length > 200 ? '...' : ''}</p>
-        </div>
-      )}
-
       {character.tags?.length > 0 && (
         <div className="ctx-field">
           <span className="mini-label">标签</span>
           <div className="tag-list">
             {character.tags.map((tag, i) => (
               <span key={i} className="tag-chip">{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {character.hobbies?.length > 0 && (
+        <div className="ctx-field">
+          <span className="mini-label">兴趣与爱好</span>
+          <div className="hobby-list">
+            {character.hobbies.map((hobby, i) => (
+              <span key={i} className={`hobby-tag hobby-tag--${getHobbyCategory(hobby).id}`}>
+                {getHobbyIcon(hobby)} {hobby}
+              </span>
             ))}
           </div>
         </div>
@@ -106,13 +106,21 @@ function TavernInfoTab({ tavern }) {
     )
   }
 
+  const activeSkills = (tavern.skill_packs || []).filter(p => p.enabled)
+
   return (
     <div className="ctx-section">
       <div className="ctx-tavern-header">
-        <strong>{tavern.name}</strong>
-        <span className={`tavern-status-badge status-${tavern.status || 'closed'}`}>
-          {tavern.status === 'open' ? '营业中' : '歇业'}
-        </span>
+        <div className="ctx-tavern-title">
+          <strong>{tavern.name}</strong>
+          <span className={`tavern-status-badge status-${tavern.status || 'closed'}`}>
+            {tavern.status === 'open' ? '营业中' : '歇业'}
+          </span>
+        </div>
+        <div className="ctx-badges">
+          {tavern.special_type === 'cultivation' && <span className="badge badge--cultivation">🧘 修行空间</span>}
+          {tavern.special_type === 'divination' && <span className="badge badge--divination">🔮 占卜空间</span>}
+        </div>
       </div>
 
       {tavern.description && (
@@ -122,17 +130,20 @@ function TavernInfoTab({ tavern }) {
         </div>
       )}
 
-      {tavern.scene_prompt && (
+      {activeSkills.length > 0 && (
         <div className="ctx-field">
-          <span className="mini-label">场景氛围</span>
-          <p>{tavern.scene_prompt}</p>
+          <span className="mini-label">空间特质 / 技能</span>
+          <div className="ctx-skill-chips">
+            {activeSkills.map(skill => (
+              <span key={skill.id} className="ctx-skill-chip" title={skill.id}>
+                ✨ {skill.id === 'local-rumor' ? '环境传闻' : 
+                    skill.id === 'neighborhood-knowledge' ? '邻里知识' : 
+                    skill.id === 'territory-awareness' ? '领地感知' : skill.id}
+              </span>
+            ))}
+          </div>
         </div>
       )}
-
-      <div className="ctx-field">
-        <span className="mini-label">访问权限</span>
-        <p>{tavern.access === 'public' ? '公开' : tavern.access === 'password' ? '密码入场' : '私人'}</p>
-      </div>
 
       <div className="ctx-field">
         <span className="mini-label">位置</span>
@@ -144,13 +155,8 @@ function TavernInfoTab({ tavern }) {
       </div>
 
       <div className="ctx-field">
-        <span className="mini-label">角色数量</span>
-        <p>{(tavern.characters || []).length} 个角色</p>
-      </div>
-
-      <div className="ctx-field">
-        <span className="mini-label">世界书条目</span>
-        <p>{(tavern.world_info || []).length} 条设定</p>
+        <span className="mini-label">访问权限</span>
+        <p>{tavern.access === 'public' ? '公开' : tavern.access === 'password' ? '密码入场' : '私人'}</p>
       </div>
     </div>
   )

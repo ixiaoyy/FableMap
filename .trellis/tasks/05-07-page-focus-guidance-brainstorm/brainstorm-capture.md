@@ -148,7 +148,7 @@ Cons:
 
 Which path should this brainstorm converge on?
 
-1. **先立规范**: create the product focus charter only.
+1. **先立规范**: create the product focus charter only. (Drafted in PRODUCT_FOCUS_CHARTER.md)
 2. **先改一个页面**: choose one route and simplify it immediately.
 3. **规范 + 一个样板页**: write a minimal charter, then apply it to one page as proof.
 

@@ -5,10 +5,13 @@ from typing import Any, Dict
 def is_cultivation_tavern(tavern: Any) -> bool:
     """
     检查空间是否属于修行类型。
-    依据 layout_style 或是否启用了 cultivation-play-pack。
+    依据 special_type, layout_style 或是否启用了 cultivation-play-pack。
     """
     if not tavern:
         return False
+    # 优先检查专门的特殊类型字段
+    if getattr(tavern, 'special_type', '') == 'cultivation':
+        return True
     # 检查布局风格
     if getattr(tavern, 'layout_style', '') == 'quest-play':
         return True

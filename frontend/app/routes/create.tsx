@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2, KeyRound, MapPinned, ShieldCheck, Sparkles, U
 import { useState, useEffect, type FormEvent } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 
-import tavernStreetImage from "../assets/homepage/reference/modules/tavern-street.png"
+import tavernStreetImage from "../assets/soul-link-05-10/discover-light/main-2x.png"
 import { DEFAULT_NPC_PREVIEW_PORTRAIT } from "../features/tavern-npc-stage/portraitCatalogConfig"
 import { readCreatePrefill } from "../lib/creator-conversion.js"
 import { buildAiDraftLifecycle } from "../lib/ai-draft-lifecycle.js"

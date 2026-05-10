@@ -3,7 +3,7 @@
   "name": "05-08-divination-tavern-npc-brainstorm",
   "title": "brainstorm: 占卜类型酒馆与玄学 NPC",
   "description": "",
-  "status": "planning",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -48,6 +48,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Completed: Added 'divination' special_type to backend/frontend, implemented '星命观测所' and '塔罗密室' templates, added specialized interaction prompts and UI badges.",
   "meta": {}
 }

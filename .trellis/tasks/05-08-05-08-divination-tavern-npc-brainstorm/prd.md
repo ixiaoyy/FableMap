@@ -43,8 +43,8 @@
 - `WorldInfoEntry`：可做术数背景、禁忌、口癖、牌义/星象术语触发注入。
 - `GameplayDefinition`：可做结构化轻玩法，例如“三牌塔罗”“每日星象问答”“六爻问事”“灵签问答”。
 - `SkillPackSetting`：未来可做 owner 显式启用的 `divination-oracle` 技能包，但现有技能包系统目前只内置 `local-rumor`。
+- 当前 `special_type` 已实现底层支持（v0.8），允许通过 `special_type='divination'`（待选）进行显式分类。
 - `layout_style='npc-chat' | 'quest-play' | 'hybrid-room'`：占卜酒馆可以默认偏向 NPC 会话或轻玩法入口。
-- 当前 `PlaceType` 未包含 `divination` / `fortune-telling`，若新增持久枚举必须同步 Schema、后端校验、前端创建/筛选/展示和测试。
 
 ## Assumptions (temporary)
 
@@ -150,7 +150,7 @@
 
 ## Open Questions
 
-1. 首版占卜模板是否需要新增正式 `place_type`，还是先复用 `tavern` + 模板标签？
+1. 首版占卜模板将使用已实现的 `special_type='divination'` 进行显式分类。
 2. 首版默认提供几个占卜玩法入口？
 
 ## Technical Notes

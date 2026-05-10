@@ -8,6 +8,7 @@ from typing import Any
 
 LOCAL_RUMOR_SKILL_PACK_ID = "local-rumor"
 NEIGHBORHOOD_KNOWLEDGE_SKILL_PACK_ID = "neighborhood-knowledge"
+TERRITORY_AWARENESS_SKILL_PACK_ID = "territory-awareness"
 
 _SKILL_PACK_DEFINITIONS: tuple[dict[str, Any], ...] = (
     {
@@ -49,6 +50,27 @@ _SKILL_PACK_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "config_schema": {
             "limit": {"type": "integer", "minimum": 1, "maximum": 8, "default": 5},
             "radius": {"type": "integer", "minimum": 100, "maximum": 2000, "default": 500},
+        },
+    },
+    {
+        "id": TERRITORY_AWARENESS_SKILL_PACK_ID,
+        "label": "领地感知",
+        "description": "允许 NPC 了解自己所处的领地类型及其周边邻近领地，强化空间锚点意识。",
+        "category": "spatial",
+        "default_enabled": True,
+        "capabilities": [
+            "Recognize the current tavern's territory type and name.",
+            "Identify nearby territories within a certain radius.",
+            "Mention the local neighborhood landscape naturally.",
+        ],
+        "prompt_notes": [
+            "NPC 会意识到自己是在『酒馆』、『菜园』还是『修炼场』中工作。",
+            "当用户询问周边环境时，NPC 可以准确说出附近有哪些其它类型的领地空间。",
+            "这有助于让访客感觉到空间在地图上的真实存在感。",
+        ],
+        "config_schema": {
+            "radius": {"type": "integer", "minimum": 100, "maximum": 1000, "default": 300},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 5, "default": 3},
         },
     },
 )
@@ -191,6 +213,68 @@ def build_neighborhood_knowledge_prompt_block(
     return "\n".join(lines)
 
 
+def build_territory_awareness_prompt_block(
+    current_territory: dict[str, Any] | None,
+    nearby_territories: list[dict[str, Any]] | None,
+    *,
+    limit: int = 3
+) -> str:
+    """Build a runtime prompt block for the territory-awareness pack."""
+
+    lines = [
+        "【空间技能包：领地感知 / territory-awareness】",
+    ]
+
+    if current_territory:
+        t_type = current_territory.get("type", "unknown")
+        t_name = current_territory.get("name") or "未命名空间"
+        from .territory import TERRITORY_TYPE_META, TerritoryType
+        try:
+            type_label = TERRITORY_TYPE_META.get(TerritoryType(t_type), {}).get("name", t_type)
+        except (ValueError, KeyError):
+            type_label = t_type
+        
+        lines.append(f"你当前正处于名为『{t_name}』的『{type_label}』领地内。")
+    else:
+        lines.append("你当前正处于一个尚未正式申领领地的空间中。")
+
+    safe_limit = max(1, min(_safe_int(limit, 3), 10))
+    normalized_nearby = _normalize_territories(nearby_territories or [], safe_limit)
+
+    if normalized_nearby:
+        lines.append("周边邻近领地：")
+        from .territory import TERRITORY_TYPE_META, TerritoryType
+        for index, t in enumerate(normalized_nearby, start=1):
+            nt_name = t.get("name") or "匿名空间"
+            nt_type = t.get("type", "unknown")
+            try:
+                nt_type_label = TERRITORY_TYPE_META.get(TerritoryType(nt_type), {}).get("name", nt_type)
+            except (ValueError, KeyError):
+                nt_type_label = nt_type
+            
+            dist = t.get("distance", 0)
+            lines.append(f"{index}. {nt_name} ({nt_type_label}) - 距离约 {dist} 米")
+    else:
+        lines.append("周边目前还没有其它显眼的邻近领地。")
+
+    return "\n".join(lines)
+
+
+def _normalize_territories(value: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        result.append({
+            "name": str(item.get("name") or "").strip()[:80],
+            "type": str(item.get("type") or "unknown"),
+            "distance": int(item.get("distance") or 0),
+        })
+        if len(result) >= limit:
+            break
+    return result
+
+
 def _iter_skill_pack_items(value: Any) -> list[dict[str, Any]]:
     if isinstance(value, dict):
         if isinstance(value.get("skill_packs"), list):
@@ -224,6 +308,13 @@ def _normalize_skill_pack_config(pack_id: str, value: Any) -> dict[str, Any]:
         return {
             "limit": max(1, min(limit, 10)),
             "radius": max(100, min(radius, 2000))
+        }
+    if pack_id == TERRITORY_AWARENESS_SKILL_PACK_ID:
+        limit = _safe_int(value.get("limit"), 3)
+        radius = _safe_int(value.get("radius"), 300)
+        return {
+            "limit": max(1, min(limit, 5)),
+            "radius": max(100, min(radius, 1000))
         }
     return {}
 
