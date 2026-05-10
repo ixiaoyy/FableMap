@@ -1199,3 +1199,36 @@ Completed full-cycle NPC hobby system: implemented persistence in CharacterModel
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: Sidebar UI/UX Icon and Style Refinement
+
+**Date**: 2026-05-11
+**Task**: Sidebar UI/UX Icon and Style Refinement
+**Branch**: `main`
+
+### Summary
+
+Completed the refinement of sidebar icons and styles to match the premium design draft (index_light.png). Replaced unicode icons with Lucide components, removed heavy borders, added indicator-bar active states, and updated branding typography. Verified with Playwright UX regression suite.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bc57960` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
