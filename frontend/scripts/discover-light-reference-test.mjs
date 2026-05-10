@@ -11,7 +11,6 @@ const lightSources = `${discoverSource}\n${realDomSource}`
 const assetDir = resolve(__dirname, "../app/assets/discover/light")
 const fullAssetPath = resolve(assetDir, "discover-light-reference.png")
 const fullAsset2xPath = resolve(assetDir, "discover-light-reference-2x.png")
-const fullSidecarPath = resolve(assetDir, "discover-light-reference.prompt.md")
 const sliceDir = resolve(assetDir, "slices")
 const elementDir = resolve(assetDir, "elements")
 const expectedSlices = [
@@ -45,30 +44,39 @@ const expectedElements = [
   { name: "discover-light-activity-wave.png", width: 225, height: 29 },
 ]
 
-function readPngDimensions(path) {
+function readPngInfo(path) {
   const buffer = readFileSync(path)
   return {
     width: buffer.readUInt32BE(16),
     height: buffer.readUInt32BE(20),
+    colorType: buffer[25],
   }
+}
+
+function readPngSize(path) {
+  const { width, height } = readPngInfo(path)
+  return { width, height }
 }
 
 assert.ok(existsSync(fullAssetPath), "discover light full reference image should remain project-local provenance")
 assert.ok(existsSync(fullAsset2xPath), "discover light full reference image should have a 2x sibling")
-assert.ok(existsSync(fullSidecarPath), "discover light full reference image should have prompt/provenance sidecar")
-assert.deepEqual(readPngDimensions(fullAssetPath), { width: 1448, height: 1086 }, "discover light full reference should preserve search_light.png dimensions")
-assert.deepEqual(readPngDimensions(fullAsset2xPath), { width: 2896, height: 2172 }, "discover light full reference 2x should preserve retina dimensions")
+assert.deepEqual(readPngSize(fullAssetPath), { width: 1448, height: 1086 }, "discover light full reference should preserve search_light.png dimensions")
+assert.deepEqual(readPngSize(fullAsset2xPath), { width: 2896, height: 2172 }, "discover light full reference 2x should preserve retina dimensions")
 
 let totalBodyArea = 0
 for (const slice of expectedSlices) {
   const slicePath = resolve(sliceDir, slice.name)
   const slice2xPath = resolve(sliceDir, slice.name.replace(".png", "-2x.png"))
-  const sidecarPath = resolve(sliceDir, slice.name.replace(".png", ".prompt.md"))
   assert.ok(existsSync(slicePath), `${slice.name} should exist as a project-local runtime slice`)
   assert.ok(existsSync(slice2xPath), `${slice.name} should have a 2x sibling`)
-  assert.ok(existsSync(sidecarPath), `${slice.name} should have prompt/provenance sidecar`)
-  assert.deepEqual(readPngDimensions(slicePath), { width: slice.width, height: slice.height }, `${slice.name} should preserve slice dimensions`)
-  assert.deepEqual(readPngDimensions(slice2xPath), { width: slice.width * 2, height: slice.height * 2 }, `${slice.name} 2x should preserve retina dimensions`)
+  const sliceInfo = readPngInfo(slicePath)
+  const slice2xInfo = readPngInfo(slice2xPath)
+  assert.deepEqual({ width: sliceInfo.width, height: sliceInfo.height }, { width: slice.width, height: slice.height }, `${slice.name} should preserve slice dimensions`)
+  assert.deepEqual({ width: slice2xInfo.width, height: slice2xInfo.height }, { width: slice.width * 2, height: slice.height * 2 }, `${slice.name} 2x should preserve retina dimensions`)
+  if (slice.name.includes("nav-bar")) {
+    assert.equal(sliceInfo.colorType, 6, `${slice.name} should be a transparent chrome layer, not a baked text screenshot`)
+    assert.equal(slice2xInfo.colorType, 6, `${slice.name} 2x should be a transparent chrome layer`)
+  }
   assert.ok(statSync(slice2xPath).size > statSync(slicePath).size, `${slice.name} 2x should contain a higher-resolution payload`)
   if (slice.role === "body") totalBodyArea += slice.width * slice.height
 }
@@ -77,12 +85,10 @@ assert.equal(totalBodyArea, 1448 * 1014, "discover light body fragments should t
 for (const element of expectedElements) {
   const elementPath = resolve(elementDir, element.name)
   const element2xPath = resolve(elementDir, element.name.replace(".png", "-2x.png"))
-  const sidecarPath = resolve(elementDir, element.name.replace(".png", ".prompt.md"))
   assert.ok(existsSync(elementPath), `${element.name} should exist as a project-local reference element`)
   assert.ok(existsSync(element2xPath), `${element.name} should have a 2x sibling`)
-  assert.ok(existsSync(sidecarPath), `${element.name} should have prompt/provenance sidecar`)
-  assert.deepEqual(readPngDimensions(elementPath), { width: element.width, height: element.height }, `${element.name} should preserve cropped element dimensions`)
-  assert.deepEqual(readPngDimensions(element2xPath), { width: element.width * 2, height: element.height * 2 }, `${element.name} 2x should preserve retina dimensions`)
+  assert.deepEqual(readPngSize(elementPath), { width: element.width, height: element.height }, `${element.name} should preserve cropped element dimensions`)
+  assert.deepEqual(readPngSize(element2xPath), { width: element.width * 2, height: element.height * 2 }, `${element.name} 2x should preserve retina dimensions`)
 }
 
 assert.ok(realDomSource.includes("discoverLightSliceNavBar") && realDomSource.includes("discover-light-slice-01a-nav-bar.png"), "discover real-DOM component should import only the light nav backing slice")

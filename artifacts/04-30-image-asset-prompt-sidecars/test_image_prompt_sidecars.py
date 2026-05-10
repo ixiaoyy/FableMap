@@ -18,8 +18,10 @@ from image_prompt_sidecars import (  # noqa: E402
     build_sidecar_markdown,
     final_prompt_from_body,
     image_metadata,
+    is_npc_image_asset,
     parse_sidecar,
     sidecar_path_for,
+    validate_assets,
     validate_sidecar,
 )
 
@@ -96,6 +98,24 @@ def test_validate_sidecar_rejects_hash_mismatch(tmp_path):
     errors = validate_sidecar(image_path, sidecar, tmp_path)
 
     assert any("sha256 mismatch" in error for error in errors)
+
+
+def test_validate_assets_only_requires_npc_sidecars(tmp_path):
+    ui_path = tmp_path / "frontend" / "app" / "assets" / "homepage" / "light" / "hero.png"
+    npc_path = tmp_path / "frontend" / "public" / "assets" / "npcs" / "demo" / "neutral.png"
+    ui_hash = _write_png(ui_path)
+    npc_hash = _write_png(npc_path)
+    ui_asset = ImageAsset(ui_path, "frontend/app/assets/homepage/light/hero.png", 2, 3, ui_hash, [])
+    npc_asset = ImageAsset(npc_path, "frontend/public/assets/npcs/demo/neutral.png", 2, 3, npc_hash, [])
+
+    failures = validate_assets([ui_asset, npc_asset], tmp_path)
+
+    assert not is_npc_image_asset(ui_path)
+    assert is_npc_image_asset(npc_path)
+    assert "frontend/app/assets/homepage/light/hero.png" not in failures
+    assert len(failures["frontend/public/assets/npcs/demo/neutral.png"]) == 1
+    assert failures["frontend/public/assets/npcs/demo/neutral.png"][0].startswith("sidecar missing:")
+    assert failures["frontend/public/assets/npcs/demo/neutral.png"][0].endswith("neutral.prompt.md")
 
 
 def test_expression_set_sidecar_covers_multiple_sprite_hashes(tmp_path):

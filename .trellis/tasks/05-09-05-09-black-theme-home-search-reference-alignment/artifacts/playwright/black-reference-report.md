@@ -11,9 +11,18 @@ Base URL: http://127.0.0.1:4180
 - Home declares `data-home-reference-template="home-light-compatible"`; discover declares `data-discover-reference-template="search-light-compatible"`.
 - Home has 7 real page boundaries (nav + 6 body sections), with the hero image-backed and the lower 5 sections rendered as DOM.
 - Discover has 6 real page boundaries (nav + 5 body sections), all body sections rendered as DOM.
+- Nav backings are decorative transparent image chrome; logo/menu/search/CTA text and control chrome are editable DOM/SVG layers.
 - Home card hotspots and discover result hotspots derive links from real tavern IDs.
 - Discover keeps a real search input overlay.
 - Desktop and mobile viewports have no horizontal overflow.
+- Playwright audits every visible runtime image and rejects raster upscaling that would make bitmap UI/assets look blurry.
+
+## Raster sharpness audit
+
+- Home desktop visible images: 18
+- Home mobile visible images: 18
+- Discover desktop visible images: 17
+- Discover mobile visible images: 17
 
 ## Screenshots
 

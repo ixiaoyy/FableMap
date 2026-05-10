@@ -162,6 +162,7 @@ class MySQLTavernStore:
             avatar=model.avatar or "",
             appearance=deepcopy(model.appearance) if model.appearance else {},
             talkativeness=0.5 if model.talkativeness is None else model.talkativeness,
+            hobbies=list(model.hobbies) if model.hobbies else [],
         )
 
     def _to_world_info(self, model: WorldInfoModel) -> WorldInfoEntry:
@@ -382,6 +383,7 @@ class MySQLTavernStore:
                     avatar=char.avatar,
                     appearance=char.appearance,
                     talkativeness=char.talkativeness,
+                    hobbies=list(char.hobbies) if char.hobbies else [],
                 )
                 session.add(char_model)
 
@@ -468,6 +470,7 @@ class MySQLTavernStore:
                     avatar=char.avatar,
                     appearance=char.appearance,
                     talkativeness=char.talkativeness,
+                    hobbies=list(char.hobbies) if char.hobbies else [],
                 )
                 session.add(char_model)
 

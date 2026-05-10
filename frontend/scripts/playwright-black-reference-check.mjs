@@ -96,6 +96,40 @@ async function checkNoOverflow(page) {
   return overflow
 }
 
+async function checkNoRasterUpscale(page, surface) {
+  const images = await page.evaluate(() => {
+    return Array.from(document.images)
+      .map((image) => {
+        const rect = image.getBoundingClientRect()
+        return {
+          src: image.currentSrc || image.src,
+          alt: image.alt || "",
+          width: Number(rect.width.toFixed(2)),
+          height: Number(rect.height.toFixed(2)),
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          complete: image.complete,
+        }
+      })
+      .filter((image) => image.complete && image.width > 1 && image.height > 1)
+  })
+  const violations = images.filter((image) => image.naturalWidth + 0.5 < image.width || image.naturalHeight + 0.5 < image.height)
+  assert.deepEqual(
+    violations,
+    [],
+    `${surface} should not render raster assets larger than their intrinsic CSS size: ${JSON.stringify(violations, null, 2)}`,
+  )
+  return images.length
+}
+
+async function checkEditableNav(page, prefix) {
+  await expect(page.locator(`[data-${prefix}-nav] img[alt=""]`)).toHaveCount(1)
+  await expect(page.locator(`[data-${prefix}-nav-text-layer="real-dom-text"]`)).toBeVisible()
+  await expect(page.locator(`[data-${prefix}-nav-chrome="real-css"]`)).toBeVisible()
+  await expect(page.locator(`[data-${prefix}-nav-text="FableMap"]`)).toBeVisible()
+  await expect(page.locator(`[data-${prefix}-nav-text="开始探索"]`)).toBeVisible()
+}
+
 async function checkHome(browser, viewport, screenshotName) {
   const context = await browser.newContext({ viewport })
   const page = await context.newPage()
@@ -105,19 +139,21 @@ async function checkHome(browser, viewport, screenshotName) {
 
   await expect(page.locator('[data-home-black-reference="index-black-real-dom"]')).toBeVisible()
   await expect(page.locator('[data-home-reference-template="home-light-compatible"]')).toBeVisible()
-  await expect(page.locator('[data-home-black-artboard="index-black-1024x1536"]')).toBeVisible()
+  await expect(page.locator('[data-home-black-artboard="index-black-958x1642"]')).toBeVisible()
   await expect(page.locator('[data-reference-artboard-reuse="shared-layout-shell"]')).toHaveCount(0)
   await expect(page.locator('[data-home-black-section-boundary="real-page-section"]')).toHaveCount(7)
   await expect(page.locator('[data-home-black-section-dom="image-backed-reference"]')).toHaveCount(1)
   await expect(page.locator('[data-home-black-section-dom="real-dom-replacement"]')).toHaveCount(5)
+  await checkEditableNav(page, "home-black")
   await expect(page.getByRole("button", { name: "切换到明亮主题" })).toBeVisible()
   await expect(page.getByRole("link", { name: "进入第一个发光区域" })).toHaveAttribute("href", /black_reference_tavern_/)
   await expect(page.getByRole("link", { name: "开始探索真实坐标" })).toBeVisible()
   const overflow = await checkNoOverflow(page)
+  const auditedImageCount = await checkNoRasterUpscale(page, "black home")
   const screenshotPath = resolve(artifactDir, screenshotName)
   await page.screenshot({ path: screenshotPath, fullPage: true })
   await context.close()
-  return { screenshotPath, overflow }
+  return { screenshotPath, overflow, auditedImageCount }
 }
 
 async function checkDiscover(browser, viewport, screenshotName) {
@@ -133,16 +169,18 @@ async function checkDiscover(browser, viewport, screenshotName) {
   await expect(page.locator('[data-reference-artboard-reuse="shared-layout-shell"]')).toHaveCount(0)
   await expect(page.locator('[data-discover-black-section-boundary="real-page-section"]')).toHaveCount(6)
   await expect(page.locator('[data-discover-black-section-dom="real-dom-replacement"]')).toHaveCount(5)
+  await checkEditableNav(page, "discover-black")
   await expect(page.getByRole("button", { name: "切换到明亮主题" })).toBeVisible()
   await expect(page.locator('[data-discover-black-search="real-input"] input')).toBeVisible()
   await page.locator('[data-discover-black-search="real-input"] input').fill("月亮")
   await expect(page.locator('[data-discover-black-search="real-input"] input')).toHaveValue("月亮")
   await expect(page.getByRole("link", { name: "进入第一个搜索结果" })).toHaveAttribute("href", /black_reference_tavern_/)
   const overflow = await checkNoOverflow(page)
+  const auditedImageCount = await checkNoRasterUpscale(page, "black discover")
   const screenshotPath = resolve(artifactDir, screenshotName)
   await page.screenshot({ path: screenshotPath, fullPage: true })
   await context.close()
-  return { screenshotPath, overflow }
+  return { screenshotPath, overflow, auditedImageCount }
 }
 
 await mkdir(artifactDir, { recursive: true })
@@ -169,9 +207,18 @@ Base URL: ${baseUrl}
 - Home declares \`data-home-reference-template="home-light-compatible"\`; discover declares \`data-discover-reference-template="search-light-compatible"\`.
 - Home has 7 real page boundaries (nav + 6 body sections), with the hero image-backed and the lower 5 sections rendered as DOM.
 - Discover has 6 real page boundaries (nav + 5 body sections), all body sections rendered as DOM.
+- Nav backings are decorative transparent image chrome; logo/menu/search/CTA text and control chrome are editable DOM/SVG layers.
 - Home card hotspots and discover result hotspots derive links from real tavern IDs.
 - Discover keeps a real search input overlay.
 - Desktop and mobile viewports have no horizontal overflow.
+- Playwright audits every visible runtime image and rejects raster upscaling that would make bitmap UI/assets look blurry.
+
+## Raster sharpness audit
+
+- Home desktop visible images: ${homeDesktop.auditedImageCount}
+- Home mobile visible images: ${homeMobile.auditedImageCount}
+- Discover desktop visible images: ${discoverDesktop.auditedImageCount}
+- Discover mobile visible images: ${discoverMobile.auditedImageCount}
 
 ## Screenshots
 

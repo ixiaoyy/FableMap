@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -43,9 +44,11 @@ from fablemap_api.core.skill_packs import (
     is_skill_pack_enabled,
     normalize_skill_pack_settings,
 )
+from fablemap_api.core.public_welfare_rules import resolve_public_welfare_rules_response
 from fablemap_api.core.episode_builder import build_episode_export
-from fablemap_api.core.voice_greeting import build_voice_greeting_preview
 from fablemap_api.core.visual_souvenir import build_visual_souvenir_preview
+from fablemap_api.core.voice_greeting import build_voice_greeting_preview
+from fablemap_api.core.state_cards import format_state_cards_for_prompt
 from fablemap_api.core.tavern import (
     ChatMessage,
     LLMConfig as TavernLLMConfig,
@@ -184,9 +187,9 @@ class RuntimeApplicationMixin:
         if not clean_message:
             raise HTTPException(status_code=400, detail="消息不能为空")
 
-        llm_config = self._get_runtime_llm_config(tavern_id)
+        llm_config = self._get_runtime_llm_config(tavern_id) or tavern.llm_config
         if tavern.status != "open":
-            if not llm_config or not llm_config.is_configured():
+            if not llm_config or (not llm_config.is_configured() and not _is_rules_backend(llm_config.backend)):
                 return self._degraded_chat(
                     character_id,
                     character.name,
@@ -204,7 +207,8 @@ class RuntimeApplicationMixin:
                 reason="tavern_closed",
             )
 
-        if not llm_config or not llm_config.is_configured():
+        if not llm_config or (not llm_config.is_configured() and not _is_rules_backend(llm_config.backend)):
+
             return self._degraded_chat(
                 character_id,
                 character.name,
@@ -225,6 +229,9 @@ class RuntimeApplicationMixin:
                 llm_config=llm_config,
                 extra_context=extra_context or [],
                 visitor_state=prompt_visitor_state,
+                character_id=character_id,
+                first_mes=character.first_mes,
+                hobbies=character.hobbies,
             )
         except LLMError as exc:
             return self._degraded_chat(
@@ -543,6 +550,9 @@ class RuntimeApplicationMixin:
                     llm_config=llm_config,
                     extra_context=[self._group_history_prompt_item(item, tavern, visitor_display_name) for item in history],
                     visitor_state=prompt_visitor_state,
+                    character_id=character.id,
+                    first_mes=character.first_mes,
+                    hobbies=character.hobbies,
                 )
             except LLMError as exc:
                 turn_degraded = True
@@ -977,7 +987,32 @@ class RuntimeApplicationMixin:
         llm_config: Any,
         extra_context: list[dict[str, Any]],
         visitor_state: VisitorState | None = None,
+        character_id: str = "",
+        first_mes: str = "",
+        hobbies: list[str] | None = None,
     ) -> str:
+        if _is_rules_backend(llm_config.backend):
+            res = resolve_public_welfare_rules_response(
+                message=message,
+                tavern_id=tavern.id,
+                character_name=character_name,
+                tavern_name=tavern.name,
+                first_mes=first_mes,
+            )
+            if res:
+                return res
+            # Fallback to a generic response if no rule matches
+            if hobbies:
+                hobby = random.choice(hobbies)
+                fallbacks = [
+                    f"{character_name}点了点头，看起来正忙着摆弄他的{hobby}，但还是分心听你说话。",
+                    f"{character_name}微微一笑，似乎想到了和{hobby}相关的事，随后轻声回应了你。",
+                    f"{character_name}停下了手中关于{hobby}的动作，抬头看向你，等待你继续说下去。",
+                    f"{character_name}思考片刻，或许是在想如何把{hobby}的精髓分享给你，他耐心地听着。",
+                ]
+                return random.choice(fallbacks)
+            return f"{character_name}点了点头，似乎在听你说话，但暂时没有更多回复。"
+
         client = create_client(
             ClientLLMConfig(
                 backend=llm_config.backend,
@@ -992,6 +1027,25 @@ class RuntimeApplicationMixin:
             )
         )
         system_content = f"你是 FableMap 空间「{tavern.name}」里的 NPC {character_name}。{character_prompt}"
+        if hobbies:
+            hobbies_str = "、".join(hobbies)
+            system_content = f"{system_content}\n\n【个人兴趣】\n该角色对以下领域有深厚兴趣：{hobbies_str}。在对话中，你可以根据这些兴趣点自然地展开话题、分享见解或以此作为比喻。"
+        
+
+        # Add confirmed state cards for context (filtered by visitor scope)
+        visitor_id = visitor_state.visitor_id if visitor_state else ""
+        all_cards = self.store.list_state_cards(tavern_id=tavern.id)
+        confirmed_cards = [
+            c for c in all_cards 
+            if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
+        ]
+        if confirmed_cards:
+            # Sort by updated_at desc then take top 10 to prevent prompt bloat
+            confirmed_cards = sorted(confirmed_cards, key=lambda c: c.updated_at or "", reverse=True)[:10]
+            state_prompt = format_state_cards_for_prompt(confirmed_cards)
+            if state_prompt:
+                system_content = f"{system_content}\n\n{state_prompt}"
+
         skill_pack_prompt = self._skill_pack_prompt_block(tavern)
         if skill_pack_prompt:
             system_content = f"{system_content}\n\n{skill_pack_prompt}"

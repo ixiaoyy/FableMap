@@ -113,6 +113,7 @@ class CharacterModel(Base):
     avatar = Column(String(500), default="")
     appearance = Column(JSON, default=dict)
     talkativeness = Column(Float, default=0.5)
+    hobbies = Column(JSON, default=list)
 
     # 关系
     tavern = relationship("TavernModel", back_populates="characters")

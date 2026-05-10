@@ -60,6 +60,8 @@ type LightReferenceTopNavLayout = {
 }
 
 const LIGHT_REFERENCE_TOP_NAV_HEIGHT = 72
+const HOME_TOP_NAV_BASE_WIDTH = 958
+const HOME_TOP_NAV_BASE_HEIGHT = LIGHT_REFERENCE_TOP_NAV_HEIGHT
 
 const lightReferenceTopNavLayouts: Record<LightReferenceTopNavVariant, LightReferenceTopNavLayout> = {
   home: {
@@ -202,11 +204,118 @@ function toggleLabelForSurface(surface: ReferenceTopNavSurface) {
   return surface === "black" ? "切换到明亮主题" : "切换到深色主题"
 }
 
+function scaleHomeNavValue(value: number, target: number, base: number) {
+  return (value / base) * target
+}
+
+function scaleHomeNavChrome(chrome: LightReferenceTopNavChrome, artboardWidth: number, navHeight: number): LightReferenceTopNavChrome {
+  return {
+    left: scaleHomeNavValue(chrome.left, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+    top: scaleHomeNavValue(chrome.top, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+    width: scaleHomeNavValue(chrome.width, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+    height: scaleHomeNavValue(chrome.height, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+  }
+}
+
+function scaleHomeNavHotspot(hotspot: LightReferenceTopNavHotspot, artboardWidth: number, navHeight: number): LightReferenceTopNavHotspot {
+  return {
+    ...hotspot,
+    left: scaleHomeNavValue(hotspot.left, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+    top: scaleHomeNavValue(hotspot.top, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+    width: scaleHomeNavValue(hotspot.width, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+    height: scaleHomeNavValue(hotspot.height, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+  }
+}
+
+function layoutForSurface(
+  layout: LightReferenceTopNavLayout,
+  variant: LightReferenceTopNavVariant,
+  surface: ReferenceTopNavSurface,
+  artboardWidth: number,
+  navHeight: number,
+): LightReferenceTopNavLayout {
+  if (surface !== "black" || variant !== "home") return layout
+
+  return {
+    logo: {
+      panel: scaleHomeNavChrome(layout.logo.panel, artboardWidth, navHeight),
+      titleX: scaleHomeNavValue(layout.logo.titleX, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+      titleY: scaleHomeNavValue(layout.logo.titleY, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+      titleSize: scaleHomeNavValue(layout.logo.titleSize, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+      subtitleX: scaleHomeNavValue(layout.logo.subtitleX, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+      subtitleY: scaleHomeNavValue(layout.logo.subtitleY, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+      subtitleSize: scaleHomeNavValue(layout.logo.subtitleSize, navHeight, HOME_TOP_NAV_BASE_HEIGHT),
+    },
+    menu: layout.menu.map((item) => ({
+      ...item,
+      x: scaleHomeNavValue(item.x, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+      width: scaleHomeNavValue(item.width, artboardWidth, HOME_TOP_NAV_BASE_WIDTH),
+    })),
+    chrome: {
+      search: scaleHomeNavChrome(layout.chrome.search, artboardWidth, navHeight),
+      themeToggle: scaleHomeNavChrome(layout.chrome.themeToggle, artboardWidth, navHeight),
+      manager: scaleHomeNavChrome(layout.chrome.manager, artboardWidth, navHeight),
+      cta: scaleHomeNavChrome(layout.chrome.cta, artboardWidth, navHeight),
+    },
+    hotspots: (toggleTheme) => layout.hotspots(toggleTheme).map((hotspot) => scaleHomeNavHotspot(hotspot, artboardWidth, navHeight)),
+  }
+}
+
 export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = "light" }: LightReferenceTopNavProps) {
-  const layout = lightReferenceTopNavLayouts[variant]
-  const navHotspots = layout.hotspots(toggleTheme)
   const navHeight = backing.height || LIGHT_REFERENCE_TOP_NAV_HEIGHT
+  const layout = layoutForSurface(lightReferenceTopNavLayouts[variant], variant, surface, backing.width, navHeight)
+  const chrome = layout.chrome
+  const navHotspots = layout.hotspots(toggleTheme)
   const navControlClass = "absolute z-30 border-0 bg-transparent p-0 outline-none transition focus-visible:ring-4 focus-visible:ring-indigo-400/55"
+  const isBlack = surface === "black"
+  const isBlackHome = isBlack && variant === "home"
+  const logoMarkSize = variant === "discover" ? 44 : 40
+  const logoMarkX = Math.max(14, layout.logo.titleX - logoMarkSize - (variant === "discover" ? 20 : 16))
+  const logoMarkY = Math.max(10, (navHeight - logoMarkSize) / 2)
+  const logoMarkPoints = [
+    `${logoMarkX + logoMarkSize * 0.5},${logoMarkY}`,
+    `${logoMarkX + logoMarkSize * 0.9},${logoMarkY + logoMarkSize * 0.23}`,
+    `${logoMarkX + logoMarkSize * 0.9},${logoMarkY + logoMarkSize * 0.77}`,
+    `${logoMarkX + logoMarkSize * 0.5},${logoMarkY + logoMarkSize}`,
+    `${logoMarkX + logoMarkSize * 0.1},${logoMarkY + logoMarkSize * 0.77}`,
+    `${logoMarkX + logoMarkSize * 0.1},${logoMarkY + logoMarkSize * 0.23}`,
+  ].join(" ")
+  const navShellClass = isBlack
+    ? "relative block overflow-hidden bg-[#030712]"
+    : "relative block overflow-hidden bg-[#f8fbff]"
+  const textLayerClass = isBlack
+    ? "pointer-events-none absolute inset-0 z-20 h-full w-full opacity-100 drop-shadow-[0_0_8px_rgba(34,211,238,0.38)]"
+    : "pointer-events-none absolute inset-0 z-20 h-full w-full opacity-100"
+  const chromeLayerClass = "pointer-events-none absolute inset-0 z-[22] opacity-100"
+  const logoPanelFill = isBlack ? "#06172c" : "#f8fbff"
+  const logoPanelStroke = isBlack ? "#22d3ee" : "#dce4fb"
+  const logoTitleFill = isBlack ? "#e9fbff" : "#1f2a73"
+  const logoSubtitleFill = isBlack ? "#80dfff" : "#4e5b9b"
+  const logoMarkFill = isBlack ? "#06172c" : "#eef5ff"
+  const logoMarkStroke = isBlack ? "#22d3ee" : "#6b7cff"
+  const logoMarkTextFill = isBlack ? "#dffbff" : "#27308a"
+  const menuTextFill = isBlack ? "#dffbff" : "#253079"
+  const menuFontSize = isBlackHome ? 9.8 : variant === "discover" ? 14 : 8.4
+  const menuActiveFill = isBlack ? "rgba(34,211,238,0.13)" : "#f2efff"
+  const menuInactiveFill = isBlack ? "transparent" : "#f8fbff"
+  const menuActiveTextFill = isBlack ? "#67e8f9" : "#6d5bff"
+  const menuAccentFill = isBlack ? "#d946ef" : "#7c67ff"
+  const searchChromeClass = isBlack
+    ? "absolute flex items-center gap-[3.2%] rounded-full border border-cyan-300/42 bg-[#061226]/88 px-[1.55%] text-cyan-100/88 shadow-[0_0_22px_rgba(34,211,238,0.16),inset_0_0_0_1px_rgba(103,232,249,0.12)]"
+    : "absolute flex items-center gap-[3.2%] rounded-full border border-[#d5ddf4]/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,255,0.95))] px-[1.55%] text-[#99a4d3] shadow-[0_8px_22px_rgba(74,98,176,0.13),inset_0_0_0_1px_rgba(255,255,255,0.86)]"
+  const themeChromeClass = isBlack
+    ? "absolute flex items-center justify-center rounded-full border border-cyan-300/34 bg-cyan-300/10 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.16)]"
+    : "absolute flex items-center justify-center rounded-full bg-white/90 text-[#151f82] shadow-[0_5px_14px_rgba(65,82,159,0.08)]"
+  const managerChromeClass = isBlack
+    ? "absolute flex items-center justify-center rounded-[6px] border border-cyan-300/28 bg-[#07182d]/88 text-cyan-50 shadow-[0_0_16px_rgba(34,211,238,0.12)]"
+    : "absolute flex items-center justify-center rounded-[6px] bg-white/92 text-[#253079] shadow-[0_5px_13px_rgba(65,82,159,0.08)]"
+  const ctaChromeClass = isBlack
+    ? "absolute flex items-center justify-center gap-[4%] rounded-full border border-fuchsia-300/55 bg-[linear-gradient(135deg,rgba(8,20,42,0.94)_0%,rgba(88,28,135,0.92)_52%,rgba(6,182,212,0.28)_100%)] text-cyan-50 shadow-[0_0_24px_rgba(217,70,239,0.28),inset_0_0_0_1px_rgba(103,232,249,0.18)]"
+    : "absolute flex items-center justify-center gap-[4%] rounded-full border border-white/40 bg-[linear-gradient(135deg,#3843d3_0%,#4438d3_58%,#5a50ea_100%)] text-white shadow-[0_9px_20px_rgba(58,55,203,0.28),inset_0_1px_0_rgba(255,255,255,0.32)]"
+  const primaryIconClass = isBlack ? "text-cyan-100" : "text-[#253079]"
+  const secondaryIconClass = isBlack ? "text-fuchsia-200" : "text-[#cbc5f1]"
+  const searchTextSize = isBlackHome ? "clamp(8px, 0.78vw, 9.4px)" : variant === "discover" ? "clamp(7px, 0.9vw, 13px)" : "clamp(4px, 0.78vw, 7.5px)"
+  const controlTextSize = isBlackHome ? "clamp(8px, 0.82vw, 9.6px)" : variant === "discover" ? "clamp(7px, 0.92vw, 13px)" : "clamp(5px, 0.88vw, 8.4px)"
 
   return (
     <section
@@ -215,14 +324,15 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
       data-reference-top-nav="shared-template"
       data-reference-top-nav-surface={surface}
       {...dataPropsForVariant(variant, backing, surface)}
-      className="relative block overflow-hidden"
+      className={navShellClass}
       aria-label={backing.label}
     >
       <img
         src={backing.src}
         srcSet={`${backing.src} 1x, ${backing.src2x} 2x`}
         sizes={`(max-width: ${backing.width}px) 100vw, ${backing.width}px`}
-        alt={backing.label}
+        alt=""
+        aria-hidden="true"
         className="block w-full select-none"
         width={backing.width}
         height={navHeight}
@@ -233,27 +343,35 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
 
       <svg
         data-light-reference-nav-text-layer="real-dom-text"
-        data-home-light-nav-text-layer={variant === "home" ? "real-dom-text" : undefined}
-        data-discover-light-nav-text-layer={variant === "discover" ? "real-dom-text" : undefined}
-        className="pointer-events-none absolute inset-0 z-20 h-full w-full opacity-0"
+        data-home-light-nav-text-layer={variant === "home" && surface === "light" ? "real-dom-text" : undefined}
+        data-discover-light-nav-text-layer={variant === "discover" && surface === "light" ? "real-dom-text" : undefined}
+        data-home-black-nav-text-layer={variant === "home" && surface === "black" ? "real-dom-text" : undefined}
+        data-discover-black-nav-text-layer={variant === "discover" && surface === "black" ? "real-dom-text" : undefined}
+        className={textLayerClass}
         viewBox={`0 0 ${backing.width} ${navHeight}`}
         aria-hidden="true"
         focusable="false"
       >
-        <rect x={layout.logo.panel.left} y={layout.logo.panel.top} width={layout.logo.panel.width} height={layout.logo.panel.height} rx="6" fill="#f8fbff" opacity="0.96" />
-        <text {...textDataProps(variant, surface, "FableMap")} x={layout.logo.titleX} y={layout.logo.titleY} fill="#1f2a73" fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={layout.logo.titleSize} fontWeight="800">
+        <g data-reference-top-nav-logo-mark="real-svg">
+          <polygon points={logoMarkPoints} fill={logoMarkFill} stroke={logoMarkStroke} strokeWidth={isBlack ? 2 : 1.4} opacity={isBlack ? 0.94 : 0.98} />
+          <text x={logoMarkX + logoMarkSize * 0.5} y={logoMarkY + logoMarkSize * 0.59} textAnchor="middle" fill={logoMarkTextFill} fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={logoMarkSize * 0.31} fontWeight="900">
+            FM
+          </text>
+        </g>
+        <rect x={layout.logo.panel.left} y={layout.logo.panel.top} width={layout.logo.panel.width} height={layout.logo.panel.height} rx="6" fill={logoPanelFill} stroke={logoPanelStroke} strokeWidth={isBlack ? 0.8 : 0} opacity={isBlack ? 0.36 : 0.96} />
+        <text {...textDataProps(variant, surface, "FableMap")} x={layout.logo.titleX} y={layout.logo.titleY} fill={logoTitleFill} fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={layout.logo.titleSize} fontWeight="800">
           FableMap
         </text>
-        <text x={layout.logo.subtitleX} y={layout.logo.subtitleY} fill="#4e5b9b" fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={layout.logo.subtitleSize} fontWeight="600">
+        <text x={layout.logo.subtitleX} y={layout.logo.subtitleY} fill={logoSubtitleFill} fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={layout.logo.subtitleSize} fontWeight="600">
           Cyber life on real coordinates
         </text>
 
         {layout.menu.map(({ label, x, width, active, icon }) => (
           <g key={label}>
-            <rect x={x - (active ? 42 : 3)} y={active ? 17 : 27} width={active ? 92 : width} height={active ? 45 : 16} rx={active ? 15 : 5} fill={active ? "#f2efff" : "#f8fbff"} opacity={active ? 0.96 : 0.86} />
-            {active ? <rect x={x + 3} y="62" width="25" height="3" rx="1.5" fill="#7c67ff" opacity="0.78" /> : null}
-            {icon ? <text x={x - 22} y="40" fill="#6d5bff" fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize="13" fontWeight="900">✦</text> : null}
-            <text {...textDataProps(variant, surface, label)} x={x} y={variant === "discover" ? 40 : 38.5} fill={active ? "#6d5bff" : "#253079"} fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={variant === "discover" ? 14 : 8.4} fontWeight="800">
+            <rect x={x - (active ? 42 : 3)} y={active ? 17 : 27} width={active ? 92 : width} height={active ? 45 : 16} rx={active ? 15 : 5} fill={active ? menuActiveFill : menuInactiveFill} opacity={active ? (isBlack ? 0.92 : 0.96) : (isBlack ? 0.1 : 0.86)} />
+            {active ? <rect x={x + 3} y="62" width="25" height="3" rx="1.5" fill={menuAccentFill} opacity="0.78" /> : null}
+            {icon ? <text x={x - 22} y="40" fill={menuActiveTextFill} fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize="13" fontWeight="900">✦</text> : null}
+            <text {...textDataProps(variant, surface, label)} x={x} y={variant === "discover" ? 40 : 38.5} fill={active ? menuActiveTextFill : menuTextFill} fontFamily="Microsoft YaHei, PingFang SC, sans-serif" fontSize={menuFontSize} fontWeight="800">
               {label}
             </text>
           </g>
@@ -266,7 +384,7 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
         data-discover-light-nav-chrome={variant === "discover" && surface === "light" ? "real-css" : undefined}
         data-home-black-nav-chrome={variant === "home" && surface === "black" ? "real-css" : undefined}
         data-discover-black-nav-chrome={variant === "discover" && surface === "black" ? "real-css" : undefined}
-        className="pointer-events-none absolute inset-0 z-[22] opacity-0"
+        className={chromeLayerClass}
         aria-hidden="true"
       >
         <div
@@ -275,18 +393,18 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
           data-discover-light-nav-search={variant === "discover" && surface === "light" ? "real-css" : undefined}
           data-home-black-nav-search={variant === "home" && surface === "black" ? "real-css" : undefined}
           data-discover-black-nav-search={variant === "discover" && surface === "black" ? "real-css" : undefined}
-          className="absolute flex items-center gap-[3.2%] rounded-full border border-[#d5ddf4]/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,250,255,0.95))] px-[1.55%] text-[#99a4d3] shadow-[0_8px_22px_rgba(74,98,176,0.13),inset_0_0_0_1px_rgba(255,255,255,0.86)]"
-          style={lightNavChromeStyle(layout.chrome.search, backing.width, navHeight)}
+          className={searchChromeClass}
+          style={lightNavChromeStyle(chrome.search, backing.width, navHeight)}
         >
-          <Search aria-hidden="true" className="h-[clamp(6px,1.04vw,14px)] w-[clamp(6px,1.04vw,14px)] shrink-0 text-[#253079]" strokeWidth={2.8} />
+          <Search aria-hidden="true" className={`h-[clamp(6px,1.04vw,14px)] w-[clamp(6px,1.04vw,14px)] shrink-0 ${primaryIconClass}`} strokeWidth={2.8} />
           <span
             {...textDataProps(variant, surface, "搜索附近坐标、角色、记忆线索")}
             className="min-w-0 flex-1 truncate whitespace-nowrap font-semibold tracking-[-0.02em]"
-            style={{ fontSize: variant === "discover" ? "clamp(7px, 0.9vw, 13px)" : "clamp(4px, 0.78vw, 7.5px)", lineHeight: 1 }}
+            style={{ fontSize: searchTextSize, lineHeight: 1 }}
           >
             搜索附近坐标、角色、记忆线索
           </span>
-          <Sparkles aria-hidden="true" className="h-[clamp(5px,0.92vw,11px)] w-[clamp(5px,0.92vw,11px)] shrink-0 text-[#cbc5f1]" strokeWidth={2.4} />
+          <Sparkles aria-hidden="true" className={`h-[clamp(5px,0.92vw,11px)] w-[clamp(5px,0.92vw,11px)] shrink-0 ${secondaryIconClass}`} strokeWidth={2.4} />
         </div>
 
         <div
@@ -295,8 +413,8 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
           data-discover-light-nav-theme-toggle={variant === "discover" && surface === "light" ? "real-css" : undefined}
           data-home-black-nav-theme-toggle={variant === "home" && surface === "black" ? "real-css" : undefined}
           data-discover-black-nav-theme-toggle={variant === "discover" && surface === "black" ? "real-css" : undefined}
-          className="absolute flex items-center justify-center rounded-full bg-white/90 text-[#151f82] shadow-[0_5px_14px_rgba(65,82,159,0.08)]"
-          style={lightNavChromeStyle(layout.chrome.themeToggle, backing.width, navHeight)}
+          className={themeChromeClass}
+          style={lightNavChromeStyle(chrome.themeToggle, backing.width, navHeight)}
         >
           <Moon aria-hidden="true" className="h-[clamp(7px,1.06vw,15px)] w-[clamp(7px,1.06vw,15px)]" strokeWidth={2.6} />
         </div>
@@ -307,10 +425,10 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
           data-discover-light-nav-manager={variant === "discover" && surface === "light" ? "real-css" : undefined}
           data-home-black-nav-manager={variant === "home" && surface === "black" ? "real-css" : undefined}
           data-discover-black-nav-manager={variant === "discover" && surface === "black" ? "real-css" : undefined}
-          className="absolute flex items-center justify-center rounded-[6px] bg-white/92 text-[#253079] shadow-[0_5px_13px_rgba(65,82,159,0.08)]"
-          style={lightNavChromeStyle(layout.chrome.manager, backing.width, navHeight)}
+          className={managerChromeClass}
+          style={lightNavChromeStyle(chrome.manager, backing.width, navHeight)}
         >
-          <span {...textDataProps(variant, surface, "管理入口")} className="whitespace-nowrap font-extrabold" style={{ fontSize: variant === "discover" ? "clamp(7px, 0.92vw, 13px)" : "clamp(5px, 0.88vw, 8.4px)", lineHeight: 1 }}>
+          <span {...textDataProps(variant, surface, "管理入口")} className="whitespace-nowrap font-extrabold" style={{ fontSize: controlTextSize, lineHeight: 1 }}>
             管理入口
           </span>
         </div>
@@ -321,11 +439,11 @@ export function LightReferenceTopNav({ variant, backing, toggleTheme, surface = 
           data-discover-light-nav-cta={variant === "discover" && surface === "light" ? "real-css" : undefined}
           data-home-black-nav-cta={variant === "home" && surface === "black" ? "real-css" : undefined}
           data-discover-black-nav-cta={variant === "discover" && surface === "black" ? "real-css" : undefined}
-          className="absolute flex items-center justify-center gap-[4%] rounded-full border border-white/40 bg-[linear-gradient(135deg,#3843d3_0%,#4438d3_58%,#5a50ea_100%)] text-white shadow-[0_9px_20px_rgba(58,55,203,0.28),inset_0_1px_0_rgba(255,255,255,0.32)]"
-          style={lightNavChromeStyle(layout.chrome.cta, backing.width, navHeight)}
+          className={ctaChromeClass}
+          style={lightNavChromeStyle(chrome.cta, backing.width, navHeight)}
         >
           <Sparkles aria-hidden="true" className="h-[clamp(6px,0.96vw,12px)] w-[clamp(6px,0.96vw,12px)] shrink-0 text-white" strokeWidth={2.8} />
-          <span {...textDataProps(variant, surface, "开始探索")} className="whitespace-nowrap font-black tracking-[-0.02em]" style={{ fontSize: variant === "discover" ? "clamp(7px, 0.92vw, 13px)" : "clamp(5px, 0.88vw, 8.4px)", lineHeight: 1 }}>
+          <span {...textDataProps(variant, surface, "开始探索")} className="whitespace-nowrap font-black tracking-[-0.02em]" style={{ fontSize: controlTextSize, lineHeight: 1 }}>
             开始探索
           </span>
         </div>

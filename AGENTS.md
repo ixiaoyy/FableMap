@@ -48,7 +48,7 @@ FableMap 是一个空间 UGC 平台：每个人都可以在真实地图上开一
 - 不要未经用户确认移动、删除或重命名既有 `docs/` 文档。
 - 每次功能/bug/重构级改动都要留下可追踪说明：优先记录在对应 `.trellis/tasks/<task>/prd.md`、`task.json`、相关 `.trellis/spec/` 或必要的 `docs/changes/YYYY-MM-DD-slug.md`。
 - 任何要被项目引用或验收的 AI 生成图片，不能只停留在 `%USERPROFILE%\.codex\generated_images\`、临时目录或聊天预览里；必须在完成前复制/转换到仓库内的规范资源路径（如 `frontend/public/...`、`frontend/app/assets/...`、`artifacts/...`），并让代码/文档引用仓库内路径。
-- 正式项目图片必须同目录保留 prompt sidecar：单张独立图片推荐命名为 `<image-stem>.prompt.md`；NPC 同一角色的一组表情图可共用一个 `expression-set.prompt.md`，但必须列出组内每张图片路径、expression、尺寸、SHA-256、prompt 类型、负面约束、风格来源、identity locks 与核验时间。组级 sidecar 的 `## Final prompt` 只保留自然/neutral 单图 prompt，不要把五个表情 prompt 都写进去，以免生图时生成五表情同框；其它表情只作为资产清单/哈希覆盖记录。若找不到原始最终 prompt，必须用反向解析生成 `reverse-engineered` sidecar，并明确标注“不是原始生成 prompt”。
+- 生成的 NPC 图片资产必须同目录保留 prompt sidecar：单张 NPC 头像 / 立绘 / 精灵图推荐命名为 `<image-stem>.prompt.md`；NPC 同一角色的一组表情图可共用一个 `expression-set.prompt.md`，但必须列出组内每张图片路径、expression、尺寸、SHA-256、prompt 类型、负面约束、风格来源、identity locks 与核验时间。组级 sidecar 的 `## Final prompt` 只保留自然/neutral 单图 prompt，不要把五个表情 prompt 都写进去，以免生图时生成五表情同框；其它表情只作为资产清单/哈希覆盖记录。若找不到原始最终 prompt，必须用反向解析生成 `reverse-engineered` sidecar，并明确标注“不是原始生成 prompt”。非 NPC 的页面切图、UI 参考图、模块插画、审计截图或用户提供/裁切替换素材，不强制同目录 prompt sidecar；如需记录来源/处理方式，可写入任务记录、manifest、README 或最终汇报。
 - 图片类任务完成前必须核对 `.codex/generated_images` 中本轮生成物是否已进入当前项目；未搬入的生成图要明确标记为废稿/参考图，或搬入合适的项目目录。
 
 ## Trellis 工作流

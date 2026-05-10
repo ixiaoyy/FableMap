@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Validation entry point for the image prompt sidecar task."""
+"""Validation entry point for the NPC image prompt sidecar task."""
 from image_prompt_sidecars import main
 
 if __name__ == "__main__":

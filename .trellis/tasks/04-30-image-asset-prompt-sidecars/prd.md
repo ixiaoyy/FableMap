@@ -1,5 +1,7 @@
 # Image asset prompt sidecars and inventory
 
+> 2026-05-09 scope update: this historical PRD recorded the original broad request. The current project rule has been narrowed by user request: mandatory same-directory prompt sidecars / Prompt-first provenance apply to generated NPC image assets only. Non-NPC page slices, UI reference images, module illustrations, audit screenshots, and user-supplied/cropped replacement assets are not incomplete solely because a `.prompt.md` sidecar is absent. See `AGENTS.md`, `docs/IMAGE_ASSETS_SPEC.md`, and `.trellis/spec/frontend/image-asset-guidelines.md`.
+
 ## Goal
 
 把“每张项目图片旁边都有可复用最终生成 prompt”升级为 FableMap 图片资产的硬流程：后续任何需要重绘、高清化、换模型生成或人工审美复审的图片，都能在同目录直接找到当时的最终 prompt / 反推 prompt / 生成约束，而不是只能回翻聊天记录、临时 manifest 或 `%USERPROFILE%\.codex\generated_images`。

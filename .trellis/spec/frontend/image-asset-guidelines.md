@@ -53,12 +53,13 @@ frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png -> /asse
 - Code, seed payloads, markdown, and tests must reference repository paths or served URLs, never `C:\Users\...\generated_images\...`.
 - When replacing an existing asset, overwrite the exact path only when replacement was requested; otherwise use a versioned sibling name.
 - After replacement, verify the project path, dimensions/format, and if applicable the build output or runtime copy.
-- Every formal project image must have same-directory prompt provenance. Single independent images use `<image-stem>.prompt.md`; NPC expression sprite sets may share one same-directory `expression-set.prompt.md` per character directory.
-- Single-image sidecar frontmatter must include `asset`, `prompt_type`, `source_type`, `width`, `height`, `sha256`, `updated_at`, and `can_regenerate_higher_quality`; include `character_id`, `expression`, and `source_manifest` when applicable.
+- Generated NPC image assets must have same-directory prompt provenance. Single NPC portraits / sprites use `<image-stem>.prompt.md`; NPC expression sprite sets may share one same-directory `expression-set.prompt.md` per character directory.
+- Non-NPC homepage, discovery, tavern, module, reference, audit, or user-supplied/cropped replacement images do not require same-directory prompt sidecars. Record source/processing in a task note, manifest, README, or final report when useful, but do not fail validation solely because `<image-stem>.prompt.md` is absent.
+- Single NPC image sidecar frontmatter must include `asset`, `prompt_type`, `source_type`, `width`, `height`, `sha256`, `updated_at`, and `can_regenerate_higher_quality`; include `character_id`, `expression`, and `source_manifest` when applicable.
 - NPC expression-set sidecar frontmatter must include `prompt_scope: npc-expression-set`, `asset_group`, `assets`, `expressions`, `asset_count`, `prompt_type`, `source_type`, `character_id`, `widths`, `heights`, `sha256s`, `updated_at`, and `can_regenerate_higher_quality`; include `source_manifest` when applicable. Use a semicolon-separated asset/hash map if the validation script does not parse YAML arrays. Its `## Final prompt` must contain only the neutral/natural single-image prompt; do not include five per-expression prompt blocks.
 - Valid `prompt_type` values are `original-final`, `reverse-engineered`, `reference-only`, and `unknown-needs-human`. Do not label a reverse prompt as original.
-- Sidecar body must include `## Final prompt`, `## Negative constraints`, `## Style recipe / Style DNA source`, `## Identity locks`, and `## Provenance notes`.
-- If the original prompt is missing, reverse-engineer the current image with the `image-style-prompt-extractor` 15D framework and explicitly state that the sidecar is not the original generation prompt.
+- NPC sidecar body must include `## Final prompt`, `## Negative constraints`, `## Style recipe / Style DNA source`, `## Identity locks`, and `## Provenance notes`.
+- If the original NPC prompt is missing, reverse-engineer the current image with the `image-style-prompt-extractor` 15D framework and explicitly state that the sidecar is not the original generation prompt.
 
 ### 4. Validation & Error Matrix
 
@@ -69,7 +70,8 @@ frontend/public/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png -> /asse
 | Existing public image was meant to be replaced but file size/hash/mtime is unchanged | Not complete; overwrite the actual referenced file |
 | Resized/optimized image exists in `frontend/public/...` and source remains in `.codex` | Acceptable; report project path as deliverable |
 | Unused generation variants remain in `.codex` | Acceptable only if final report identifies them as unused drafts or reference-only |
-| Independent formal project image has no same-directory `<image-stem>.prompt.md` | Incomplete; add an `original-final`, `reverse-engineered`, or `reference-only` sidecar before reporting done |
+| Non-NPC UI/reference/module/audit image has no same-directory `<image-stem>.prompt.md` | Acceptable; verify project path, dimensions/hash, source/processing notes when useful, and runtime references instead |
+| Generated NPC portrait/sprite has no same-directory `<image-stem>.prompt.md` | Incomplete; add an `original-final`, `reverse-engineered`, or `reference-only` sidecar before reporting done |
 | NPC expression sprite set has five duplicated per-expression sidecars | Wasteful; collapse to one same-directory `expression-set.prompt.md` that lists each expression asset, dimensions, and SHA-256 |
 | NPC expression sprite set has neither per-image sidecars nor `expression-set.prompt.md` | Incomplete; add grouped prompt provenance before reporting done |
 | `expression-set.prompt.md` final prompt lists `neutral`, `joy`, `anger`, `embarrassment`, and `curiosity` prompt blocks | Invalid; keep only the natural/neutral single-image prompt to avoid five-expression contact-sheet generation |
@@ -107,7 +109,7 @@ For assets loaded by frontend routes:
 npm --prefix .\frontend run build
 ```
 
-For prompt sidecar inventory / schema validation:
+For generated NPC prompt sidecar inventory / schema validation:
 
 ```powershell
 py -3 artifacts/04-30-image-asset-prompt-sidecars/validate_image_prompt_sidecars.py
@@ -146,11 +148,11 @@ Default skill and recipe memory:
 
 ### 3. Contracts
 
-- **Prompt-first is mandatory.** Before any bitmap generation call, produce and preserve the final image Prompt (or prompt manifest for batches). Do not generate images directly from unstated assistant reasoning.
-- The preserved Prompt must be available in same-directory prompt provenance once the image is accepted as a formal project asset: `<image-stem>.prompt.md` for independent images, or `expression-set.prompt.md` for one character's NPC expression set. For expression-set sidecars, preserve the neutral/natural single-image prompt only; expression variants are generated one at a time by changing the expression suffix, not by submitting a five-expression prompt block. During draft work it may also appear in a task artifact, prompt manifest, implementation note, final report, or project-local recipe. A tool-call-only prompt is not sufficient for project memory.
+- **Prompt-first is mandatory for generated NPC image assets.** Before an NPC bitmap generation call, produce and preserve the final image Prompt (or prompt manifest for batches). Do not generate NPC images directly from unstated assistant reasoning.
+- For generated NPC assets, the preserved Prompt must be available in same-directory prompt provenance once the image is accepted: `<image-stem>.prompt.md` for single NPC images, or `expression-set.prompt.md` for one character's NPC expression set. For expression-set sidecars, preserve the neutral/natural single-image prompt only; expression variants are generated one at a time by changing the expression suffix, not by submitting a five-expression prompt block. During draft work it may also appear in a task artifact, prompt manifest, implementation note, final report, or project-local recipe. A tool-call-only prompt is not sufficient for NPC project memory. For non-NPC image assets, prompt manifests / task notes are optional unless the task explicitly requests them; same-directory sidecars are not a completion gate.
 - **Image quality and diversity are mandatory.** A generated asset is not acceptable merely because it is compliant and tavern-related. Reject generic AI concept art, weak focal hierarchy, and repeated decor/lighting/palette/camera formulas unless the task explicitly asks for a unified series.
 - For any batch or sequence, define a diversity matrix or equivalent plan before generation: asset, visual thesis, layout, palette, lighting, material system, style family, camera/composition, and unique motif.
-- Before generating a material image, first establish a reusable style prompt with `image-style-prompt-extractor` or its Style DNA + Composition framework.
+- Before generating an NPC material image, first establish a reusable style prompt with `image-style-prompt-extractor` or its Style DNA + Composition framework. For non-NPC images this is recommended, not a sidecar/provenance gate, unless the task explicitly asks for it.
 - If the user supplies a reference image, extract transferable style only; remove specific characters, text, story details, brands, franchise marks, and living-artist imitation.
 - If the user supplies a text style recipe, preserve the complete recipe under `style-recipes.md` when it is new and project-useful; do not reduce it to a short keyword only.
 - If no reference or recipe exists, create a new project-specific recipe only when needed by the task, and include FableMap adaptation notes plus safety/IP constraints.
@@ -185,9 +187,9 @@ Prompt capability modules should stay composable:
 
 | Case | Expected |
 | --- | --- |
-| Image is generated directly from a vague style word and no reusable prompt is recorded | Incomplete; extract/choose/write a reusable style recipe first |
-| Image tool is called before a final prompt/prompt manifest is written | Invalid; write the prompt first, then regenerate from that prompt if needed |
-| Prompt exists only inside a hidden/tool call and not in task/report memory | Incomplete; copy the prompt into a task artifact, prompt manifest, or final report |
+| NPC image is generated directly from a vague style word and no reusable prompt is recorded | Incomplete; extract/choose/write a reusable style recipe first |
+| Image tool is called for NPC assets before a final prompt/prompt manifest is written | Invalid; write the prompt first, then regenerate from that prompt if needed |
+| NPC prompt exists only inside a hidden/tool call and not in task/report/sidecar memory | Incomplete; copy the prompt into a task artifact, prompt manifest, final report, or sidecar |
 | Multiple assets repeat the same warm wood bar + teal glow + centered subject formula without intent | Reject; revise with a diversity matrix and stronger visual thesis |
 | Prompt is compliant but has weak focal hierarchy or generic “nice AI art” style | Reject; strengthen composition, material, palette, and finish direction |
 | New useful style appears only in chat history | Incomplete; preserve it in `style-recipes.md` or the task artifact |

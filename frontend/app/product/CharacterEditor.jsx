@@ -25,6 +25,14 @@ import {
   normalizePromptStyleDials,
 } from './promptStyleDials.js'
 import { buildDigitalHumanIdentityPack } from '../lib/digital-human-studio.js'
+import {
+  CURATED_HOBBIES,
+  CURATED_HOBBIES_BY_CATEGORY,
+  HOBBY_CATEGORIES,
+  getHobbyCategory,
+  getHobbyIcon
+} from '../lib/character-hobbies.js'
+
 
 const SPRITE_FIELDS = [
   ['neutral', '中性'],
@@ -614,9 +622,17 @@ export default function CharacterEditor({
         ) : null}
         {preview.hobbies.length ? (
           <div className="character-preview-card__hobbies" aria-label="兴趣爱好">
-            {preview.hobbies.map((hobby) => <span key={hobby} className="hobby-tag">✨ {hobby}</span>)}
+            {preview.hobbies.map((hobby) => {
+              const category = getHobbyCategory(hobby)
+              return (
+                <span key={hobby} className={`hobby-tag hobby-tag--${category.id}`}>
+                  {getHobbyIcon(hobby)} {hobby}
+                </span>
+              )
+            })}
           </div>
         ) : null}
+
       </section>
 
       <section
@@ -693,18 +709,21 @@ export default function CharacterEditor({
             <small>这些标签将注入 AI 系统提示词，影响角色的知识面和比喻风格。</small>
           </div>
           <div className="character-hobby-chips">
-            {draft.hobbies.map((hobby) => (
-              <span key={hobby} className="hobby-chip">
-                {hobby}
-                <button
-                  type="button"
-                  onClick={() => updateField('hobbies', draft.hobbies.filter((h) => h !== hobby))}
-                  disabled={disabled}
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
+            {draft.hobbies.map((hobby) => {
+              const category = getHobbyCategory(hobby)
+              return (
+                <span key={hobby} className={`hobby-chip hobby-chip--${category.id}`}>
+                  {hobby}
+                  <button
+                    type="button"
+                    onClick={() => updateField('hobbies', draft.hobbies.filter((h) => h !== hobby))}
+                    disabled={disabled}
+                  >
+                    &times;
+                  </button>
+                </span>
+              )
+            })}
             <input
               type="text"
               placeholder="输入兴趣并回车..."
@@ -722,23 +741,32 @@ export default function CharacterEditor({
             />
           </div>
           <div className="character-hobby-suggestions">
-            <small>推荐标签：</small>
-            {[
-              'Retro Gaming', 'Vinyl Records', 'Local Folklore', 'Mixology', 
-              'Gardening', 'Gourmet Cooking', 'Urban Exploration', 'Star Gazing',
-              'Astrology', 'Crypto-zoology', 'Ancient Languages', 'Street Photography'
-            ].filter(h => !draft.hobbies.includes(h)).map((hobby) => (
-              <button
-                key={hobby}
-                type="button"
-                className="hobby-suggestion"
-                onClick={() => updateField('hobbies', [...draft.hobbies, hobby])}
-                disabled={disabled}
-              >
-                + {hobby}
-              </button>
-            ))}
+            {Object.values(HOBBY_CATEGORIES).map((category) => {
+              const categoryHobbies = CURATED_HOBBIES_BY_CATEGORY[category.id].filter(
+                (h) => !draft.hobbies.includes(h)
+              )
+              if (categoryHobbies.length === 0) return null
+              return (
+                <div key={category.id} className="character-hobby-group">
+                  <small className="hobby-group-label">{category.label}</small>
+                  <div className="hobby-group-items">
+                    {categoryHobbies.map((hobby) => (
+                      <button
+                        key={hobby}
+                        type="button"
+                        className={`hobby-suggestion hobby-suggestion--${category.id}`}
+                        onClick={() => updateField('hobbies', [...draft.hobbies, hobby])}
+                        disabled={disabled}
+                      >
+                        {getHobbyIcon(hobby)} {hobby}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
+
         </div>
         <label>
           <span>性别</span>

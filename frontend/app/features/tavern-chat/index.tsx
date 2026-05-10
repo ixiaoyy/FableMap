@@ -7,6 +7,9 @@ import { GENDER_OPTIONS, genderLabel, normalizeGender } from "../../lib/gender.j
 import { DEFAULT_VISITOR_ID, enterTavern, errorMessage, sendTavernChat, type ChatMessage, type Tavern, type TavernCharacter, type VisitorStatePayload } from "../../lib/taverns"
 import { Button } from "../../ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card"
+// @ts-ignore
+import { getHobbyIcon, getHobbyCategory } from "../../lib/character-hobbies.js"
+
 
 interface TavernChatProps {
   tavern: Tavern
@@ -240,7 +243,24 @@ export function TavernChat({ tavern, character }: TavernChatProps) {
           进入空间
         </Button>
         {visitorState ? <VisitorStateSummary state={visitorState} /> : null}
+        {character?.hobbies && character.hobbies.length > 0 && (
+          <div className="flex flex-wrap gap-2 py-1">
+            {character.hobbies.map((hobby) => {
+              const category = getHobbyCategory(hobby)
+              return (
+                <span 
+                  key={hobby} 
+                  className={`hobby-chip hobby-chip--${category.id}`}
+                >
+                  <span>{getHobbyIcon(hobby)}</span>
+                  {hobby}
+                </span>
+              )
+            })}
+          </div>
+        )}
         <RevisitCuePanel cue={revisitCue} />
+
         <div className="min-h-52 space-y-3 rounded-3xl border border-white/10 bg-slate-950/70 p-4" data-entrance-reactions>
           {lines.length ? (
             lines.map((line, index) => {

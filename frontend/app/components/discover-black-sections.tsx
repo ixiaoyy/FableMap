@@ -307,7 +307,7 @@ export function DiscoverBlackCardGrid({ cards }: { cards: BlackCard[] }) {
         const position = cardPositions[index]
         return (
           <Link key={`${card.id}-${index}`} data-discover-black-hotspot={cardLabels[index]} data-discover-black-section-hotspot="main-card-grid" to={card.to} aria-label={cardLabels[index]} className="absolute block overflow-hidden rounded-[1.15rem] border border-cyan-300/24 bg-[#071226]/94 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.08)] transition hover:-translate-y-1 hover:border-cyan-300/45 hover:shadow-[0_0_34px_rgba(34,211,238,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-300/60" style={localStyle(section, position.left, position.top, 222, 335)}>
-            <div className="relative overflow-hidden rounded-t-[1.05rem] bg-slate-950" style={{ height: "53.73%" }}>
+            <div className="relative overflow-hidden rounded-t-[1.05rem] bg-slate-950" style={{ height: "51.34%" }}>
               <img src={card.image} srcSet={`${card.image} 1x, ${card.image2x} 2x`} alt="" aria-hidden="true" className="h-full w-full object-cover" width={222} height={180} decoding="async" draggable={false} />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(3,7,18,0.38))]" />
             </div>

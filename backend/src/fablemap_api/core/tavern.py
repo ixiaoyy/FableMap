@@ -8,6 +8,7 @@ FableMap Tavern — 空间 CRUD 核心
 from __future__ import annotations
 
 import json
+import logging
 import os
 import uuid
 import hashlib
@@ -65,6 +66,7 @@ PLACE_RELATIONSHIP_STATUSES = {"pending", "approved", "rejected", "revoked"}
 GENDER_VALUES = {"unspecified", "female", "male", "nonbinary", "other"}
 SYSTEM_TAVERN_OWNER_PREFIX = "system_"
 SYSTEM_PUBLIC_WELFARE_LLM_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "system_public_welfare_llm.json"
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────
@@ -1209,11 +1211,13 @@ class TavernStore:
             config = _hydrate_system_public_welfare_llm_config(tavern_data, config, tavern_id=tavern_id)
             if config.is_configured():
                 return config
-            return _system_public_welfare_rules_fallback(
+            res = _system_public_welfare_rules_fallback(
                 tavern_data,
                 tavern_id=tavern_id,
                 token_used=config.token_used,
             ) or config
+            logger.error(f"DEBUG: get_llm_config(KV) tavern_id={tavern_id} backend={res.backend}")
+            return res
 
         # Built-in/public demo taverns can use a non-secret local backend that is
         # stored in taverns.json only. Never resurrect unconfigured remote keys.
@@ -1225,11 +1229,13 @@ class TavernStore:
         config = _hydrate_system_public_welfare_llm_config(tavern_data, config, tavern_id=tavern_id)
         if config.is_configured():
             return config
-        return _system_public_welfare_rules_fallback(
+        res = _system_public_welfare_rules_fallback(
             tavern_data,
             tavern_id=tavern_id,
             token_used=config.token_used,
         )
+        logger.error(f"DEBUG: get_llm_config(Fallback) tavern_id={tavern_id} backend={res.backend if res else 'None'} fallback={fallback}")
+        return res
 
     # ── Voice Config ───────────────────────
 
@@ -1784,6 +1790,7 @@ class TavernService:
             scene_prompt=data.get("scene_prompt", ""),
             group_chat_enabled=_normalize_bool(data.get("group_chat_enabled", False)),
             group_chat_config=_normalize_group_chat_config(data.get("group_chat_config", {})),
+            llm_config=LLMConfig.from_dict(data.get("llm_config", {})),
             timezone=data.get("timezone"),
             operating_hours=deepcopy(data.get("operating_hours", {})) if isinstance(data.get("operating_hours"), dict) else {},
             home_members=_normalize_home_members(data.get("home_members", []), tavern_id),
@@ -1805,7 +1812,7 @@ class TavernService:
             llm_config = None
         if llm_config:
             llm_config = _hydrate_system_public_welfare_llm_config(tavern, llm_config, tavern_id=tavern_id)
-        if llm_config and llm_config.is_configured():
+        if llm_config and (llm_config.is_configured() or str(llm_config.backend or "").strip().lower() in {"rules", "rule_based", "public_welfare"}):
             self.store.save_llm_config(tavern_id, llm_config)
             # 更新 status
             tavern.llm_config = llm_config
@@ -2267,6 +2274,8 @@ class TavernService:
         for key in ("name", "description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
             if key in data:
                 setattr(char, key, data[key])
+        if "hobbies" in data:
+            char.hobbies = _normalize_string_list(data["hobbies"], split_commas=True)
         if "gender" in data:
             char.gender = _normalize_gender(data.get("gender"))
         if "alternate_greetings" in data:
@@ -2448,6 +2457,7 @@ def _parse_sillytavern_card(card: dict[str, Any]) -> dict[str, Any]:
         "appearance": data.get("appearance", {}),
         "talkativeness": data.get("talkativeness", 0.5),
         "sprites": data.get("sprites", {}),
+        "hobbies": data.get("hobbies", []),
     }
 
     # 解析 character_book (WorldInfo)
@@ -2831,6 +2841,7 @@ def _character_from_payload(data: dict[str, Any], tavern_id: str) -> TavernChara
         avatar=str(data.get("avatar") or "").strip(),
         appearance=_normalize_character_appearance(data.get("appearance")),
         talkativeness=_normalize_talkativeness(data.get("talkativeness", 0.5)),
+        hobbies=_normalize_string_list(data.get("hobbies", []), split_commas=True),
     )
 
 

@@ -19,6 +19,8 @@ import {
   normalizeFarmProgressExtended,
   updateFarmProgressExtended,
 } from './tavernFarmModes'
+import { getHobbyIcon, getHobbyCategory } from '../lib/character-hobbies.js'
+
 import {
   buildGuildActionPrompt,
   GUILD_REPUTATION_TIERS,
@@ -433,7 +435,21 @@ function CharacterSidebar({ characters, selectedChar, activeChatChannel = 'publi
                 {char.archetype || char.personality?.slice(0, 20) || ''}
               </div>
               <CharacterLookSummary character={char} compact />
+              {char.hobbies && char.hobbies.length > 0 && (
+                <div className="char-item-hobbies">
+                  {char.hobbies.slice(0, 2).map((hobby) => {
+                    const category = getHobbyCategory(hobby)
+                    return (
+                      <span key={hobby} className={`hobby-chip mini hobby-chip--${category.id}`} title={hobby}>
+                        {getHobbyIcon(hobby)}
+                      </span>
+                    )
+                  })}
+                  {char.hobbies.length > 2 && <span className="hobby-more">+{char.hobbies.length - 2}</span>}
+                </div>
+              )}
             </div>
+
           </div>
         ))}
       </div>
@@ -894,11 +910,14 @@ function CharacterDetail({ character, onClose }) {
             <label>兴趣与爱好</label>
             <div className="hobby-list">
               {character.hobbies.map((hobby, i) => (
-                <span key={i} className="hobby-chip">✨ {hobby}</span>
+                <span key={i} className={`hobby-chip hobby-chip--${getHobbyCategory(hobby).id}`}>
+                  {getHobbyIcon(hobby)} {hobby}
+                </span>
               ))}
             </div>
           </div>
         )}
+
         <div className="char-detail-section">
           <label>外观</label>
           <CharacterLookSummary character={character} showDefault showSummary />

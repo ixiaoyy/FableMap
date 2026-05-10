@@ -16,6 +16,7 @@ class CharacterWriteRequest(FlexibleBody):
     system_prompt: str | None = None
     first_mes: str | None = None
     tags: list[str] | None = None
+    hobbies: list[str] | None = None
 
 
 class CharacterDraftRequest(FlexibleBody):

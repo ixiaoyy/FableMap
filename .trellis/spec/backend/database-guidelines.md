@@ -623,7 +623,9 @@ from fablemap_api.infrastructure import Database              # may import SQLAl
 | `FABLEMAP_DATABASE_URL` set | app creates tables and uses that SQLAlchemy URL |
 | `FABLEMAP_MYSQL_URL` set | app treats it as a legacy alias and uses database-backed stores |
 | `FABLEMAP_STORAGE_BACKEND=json`, SQLAlchemy absent | app imports and `/api/v1/health` returns 200 using explicit JSON fallback |
-| SQLAlchemy unavailable with database backend | fail clearly with dependency/setup guidance, not silent data-loss fallback |
+| `llm_config.backend="rules"` on create | `store.save_llm_config` is called even if `is_configured()` is false |
+| JSON store read | `Tavern.from_dict` restores `rules` from `llm_config` object |
+| MySQL store read | `get_llm_config` follows `_system_public_welfare_rules_fallback` |
 
 ### 5. Good/Base/Bad Cases
 
@@ -932,3 +934,41 @@ def list_visitor_notes(request, tavern_id):
 ```
 
 The service enforces owner-only access and keeps notes private.
+
+---
+
+## Scenario: Tavern LLM Configuration and Rules Backend Persistence
+
+### 1. Scope / Trigger
+
+Use this contract when maintaining `Tavern.llm_config`, `TavernService.create_tavern`, `MySQLTavernStore`, or any logic that determines whether a tavern is "open" based on its AI backend. This applies to both external providers (OpenAI, DeepSeek) and internal rules-based backends.
+
+### 2. Signatures
+
+```python
+LLMConfig.backend: str
+LLMConfig.is_configured() -> bool  # Returns True for external backends with keys
+_is_rules_backend(backend: str) -> bool  # Returns True for internal backends
+TavernService.create_tavern(data: dict[str, Any], ...) -> Tavern
+```
+
+### 3. Contracts
+
+- **Persistence**: `llm_config` must be saved during tavern creation if it is either `is_configured()` OR a valid `rules` backend. Do not skip `save_llm_config` for rules-based taverns.
+- **Rules Backends**: Valid values include `rules`, `rule_based`, and `public_welfare`.
+- **Store Drift**: JSON `TavernStore` saves `llm_config` directly in the tavern record; `MySQLTavernStore` uses a separate `LLMConfigModel`. `TavernService` must orchestrate these calls to keep them in sync.
+- **Open Status**: A tavern with a valid rules backend is considered "runnable" and can be set to `status="open"` even without an external API key.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected |
+|------|----------|
+| Create with `backend: "rules"` | `save_llm_config` called; tavern is searchable/chatable |
+| Load `rules` from JSON | `Tavern.llm_config.backend` remains "rules" |
+| Load `rules` from MySQL | `get_llm_config` returns a config with "rules" backend |
+| Missing `api_key` for `openai` | `is_configured()` is false; chat falls back to degraded response |
+
+### 5. Good/Base/Bad Cases
+
+- **Good**: Ensuring that any backend that can generate a response (including rules) is persisted and correctly hydrated across storage reloads.
+- **Bad**: Assuming `is_configured() == False` means the backend data is junk and shouldn't be saved, leading to a reset to the default `openai` backend on the next reload.

@@ -13,11 +13,7 @@ export const HOME_LIGHT_ARTBOARD = {
   navHeight: 72,
 } as const
 
-export const HOME_BLACK_ARTBOARD = {
-  width: 1024,
-  height: 1536,
-  navHeight: 80,
-} as const
+export const HOME_BLACK_ARTBOARD = HOME_LIGHT_ARTBOARD
 
 export const HOME_LIGHT_SECTIONS: HomeReferenceSection[] = [
   { id: "hero", label: "首页首屏 Hero", top: 0, height: 398 },
@@ -28,14 +24,7 @@ export const HOME_LIGHT_SECTIONS: HomeReferenceSection[] = [
   { id: "cta-footer", label: "底部 CTA 与页脚", top: 1293, height: 277 },
 ]
 
-export const HOME_BLACK_SECTIONS: HomeReferenceSection[] = [
-  { id: "hero", label: "首页首屏 Hero", top: 0, height: 540 },
-  { id: "featured-regions", label: "正在发光的区域", top: 540, height: 430 },
-  { id: "ai-roles", label: "AI 角色相遇", top: 970, height: 185 },
-  { id: "memory-echoes", label: "记忆回响", top: 970, height: 185 },
-  { id: "recommended-coordinates", label: "特色区域推荐", top: 970, height: 185 },
-  { id: "cta-footer", label: "底部 CTA 与页脚", top: 1155, height: 301 },
-]
+export const HOME_BLACK_SECTIONS: HomeReferenceSection[] = HOME_LIGHT_SECTIONS
 
 export function referenceSectionStyle(section: HomeReferenceSection, bodyHeight: number) {
   return {

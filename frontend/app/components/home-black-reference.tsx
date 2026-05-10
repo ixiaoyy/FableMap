@@ -23,14 +23,14 @@ export function HomeBlackReference({ featuredCitySlices, onToggleTheme }: HomeBl
   return (
     <main data-home-black-reference="index-black-real-dom" className="min-h-screen bg-[#030712] p-0 text-cyan-50 sm:p-3">
       <h1 className="sr-only">FableMap 黑色赛博主题首页</h1>
-      <div data-home-black-artboard="index-black-1024x1536" data-home-black-slice-count={HOME_BLACK_RUNTIME_SLICE_COUNT} data-home-black-section-count={HOME_BLACK_TOTAL_SECTION_COUNT} data-home-black-dom-complete="shared-template-real-dom" data-home-reference-template="home-light-compatible" className="relative mx-auto w-full max-w-[1024px] overflow-hidden rounded-[0.55rem] bg-[#030712] shadow-[0_0_88px_rgba(0,214,255,0.12)]">
+      <div data-home-black-artboard="index-black-958x1642" data-home-black-slice-count={HOME_BLACK_RUNTIME_SLICE_COUNT} data-home-black-section-count={HOME_BLACK_TOTAL_SECTION_COUNT} data-home-black-dom-complete="shared-template-real-dom" data-home-reference-template="home-light-compatible" className="relative mx-auto w-full max-w-[958px] overflow-hidden rounded-[0.55rem] bg-[#030712] shadow-[0_0_88px_rgba(0,214,255,0.12)]">
         <LightReferenceTopNav variant="home" backing={HOME_BLACK_NAV_BACKING} toggleTheme={onToggleTheme} surface="black" />
         <section data-home-black-body="hero-image-backed-real-dom-sections" className="relative block overflow-hidden bg-[#030712]" style={{ aspectRatio: `${HOME_BLACK_ARTBOARD_WIDTH} / ${HOME_BLACK_BODY_HEIGHT}` }} aria-label="FableMap 黑色赛博主题首页主体">
           <HomeBlackHeroSection />
           <HomeBlackFeaturedSection targets={cardTargets} />
           <HomeBlackRoleSection />
           <HomeBlackMemorySection />
-          <HomeBlackRecommendedSection />
+          <HomeBlackRecommendedSection targets={cardTargets} />
           <HomeBlackCtaFooterSection />
         </section>
       </div>

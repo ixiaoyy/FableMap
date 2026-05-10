@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { parseCharacterCard, extractCharacterCardFromPng } from './services/tavernService'
 import { buildAiDraftLifecycle } from '../lib/ai-draft-lifecycle.js'
 import {
@@ -386,6 +387,13 @@ export default function CharacterManagementModal({ tavern, ownerId, onClose, onC
                       </div>
                     </div>
                     <div className="char-mgmt-item-actions">
+                      <Link
+                        to={`/tavern/${tavern.id}/character/${char.id}/prompt?owner_id=${encodeURIComponent(ownerId)}`}
+                        className="btn-sm text-cyan-400 hover:underline flex items-center gap-1"
+                        style={{ fontSize: '12px', fontWeight: 'bold' }}
+                      >
+                        提示词实验室
+                      </Link>
                       <button
                         type="button"
                         className="secondary btn-sm"

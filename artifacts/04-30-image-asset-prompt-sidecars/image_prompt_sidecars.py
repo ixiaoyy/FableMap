@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Generate, inventory, and validate FableMap image prompt sidecars."""
+"""Generate, inventory, and validate FableMap NPC image prompt sidecars."""
 from __future__ import annotations
 
 import argparse
@@ -122,6 +122,18 @@ def sidecar_path_for(image_path: Path) -> Path:
     if is_npc_expression_set_member(image_path):
         return image_path.parent / EXPRESSION_SET_SIDECAR_NAME
     return image_path.with_name(f"{image_path.stem}.prompt.md")
+
+
+def is_npc_image_asset(image_path: Path) -> bool:
+    """Return whether this asset is in the generated NPC prompt-provenance scope."""
+    normalized = normalize_path(image_path)
+    return (
+        "frontend/public/assets/npcs/" in normalized
+        or "frontend/app/assets/npc-style-cast/" in normalized
+        or "public-welfare-npc" in normalized
+        or "hospital-nurse-npc" in normalized
+        or "npc-expression" in normalized
+    )
 
 
 def expression_sort_key(path: Path) -> Tuple[int, str]:
@@ -685,7 +697,7 @@ def inventory_rows(assets: Sequence[ImageAsset], prompt_index: Dict[str, PromptR
                 actual_type = str(parse_sidecar(sidecar.read_text(encoding="utf-8")).frontmatter.get("prompt_type", actual_type))
             except Exception:
                 actual_type = "invalid"
-        rows.append({"asset": asset.relpath, "format": asset.path.suffix.lower().lstrip("."), "width": asset.width, "height": asset.height, "sha256": asset.sha256, "sidecar": relpath(sidecar, repo_root), "sidecar_exists": sidecar.exists(), "sidecar_type": actual_type, "priority": asset_priority(asset), "references": asset.references})
+        rows.append({"asset": asset.relpath, "format": asset.path.suffix.lower().lstrip("."), "width": asset.width, "height": asset.height, "sha256": asset.sha256, "sidecar": relpath(sidecar, repo_root), "sidecar_exists": sidecar.exists(), "sidecar_required": is_npc_image_asset(asset.path), "sidecar_type": actual_type, "priority": asset_priority(asset), "references": asset.references})
     return rows
 
 
@@ -698,18 +710,22 @@ def write_inventory(rows: Sequence[dict], out_json: Path, out_md: Path) -> None:
     for row in rows:
         by_type[row["sidecar_type"]] = by_type.get(row["sidecar_type"], 0) + 1
         by_priority[row["priority"]] = by_priority.get(row["priority"], 0) + 1
-        missing += 0 if row["sidecar_exists"] else 1
-    unique_sidecars = sorted({row["sidecar"] for row in rows})
+        missing += 1 if row["sidecar_required"] and not row["sidecar_exists"] else 0
+    required = sum(1 for row in rows if row["sidecar_required"])
+    unique_sidecars = sorted({row["sidecar"] for row in rows if row["sidecar_exists"]})
     grouped_sidecars = [sidecar for sidecar in unique_sidecars if sidecar.endswith(f"/{EXPRESSION_SET_SIDECAR_NAME}")]
-    lines = ["# Image prompt sidecar inventory", "", f"Generated at: {DEFAULT_UPDATED_AT}", "", "## Summary", "", f"- Total image assets scanned: {len(rows)}", f"- Unique prompt sidecar files: {len(unique_sidecars)}", f"- NPC expression-set sidecars: {len(grouped_sidecars)}", f"- Missing sidecars: {missing}", f"- Prompt types: {by_type}", f"- Priorities: {by_priority}", "", "## Assets", "", "| Priority | Asset | Size | SHA-256 | Sidecar | Type | References |", "|---|---|---:|---|---|---|---:|"]
+    lines = ["# Image prompt sidecar inventory", "", f"Generated at: {DEFAULT_UPDATED_AT}", "", "## Summary", "", f"- Total image assets scanned: {len(rows)}", f"- NPC sidecar-required assets: {required}", f"- Unique existing prompt sidecar files: {len(unique_sidecars)}", f"- NPC expression-set sidecars: {len(grouped_sidecars)}", f"- Missing required NPC sidecars: {missing}", f"- Prompt types: {by_type}", f"- Priorities: {by_priority}", "", "## Assets", "", "| Priority | Required | Asset | Size | SHA-256 | Sidecar | Type | References |", "|---|---:|---|---:|---|---|---|---:|"]
     for row in rows:
-        lines.append(f"| {row['priority']} | `{row['asset']}` | {row['width']}×{row['height']} | `{row['sha256']}` | `{row['sidecar']}` | {row['sidecar_type']} | {len(row['references'])} |")
+        required_label = "yes" if row["sidecar_required"] else "no"
+        lines.append(f"| {row['priority']} | {required_label} | `{row['asset']}` | {row['width']}×{row['height']} | `{row['sha256']}` | `{row['sidecar']}` | {row['sidecar_type']} | {len(row['references'])} |")
     out_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def validate_assets(assets: Sequence[ImageAsset], repo_root: Path) -> Dict[str, List[str]]:
     failures: Dict[str, List[str]] = {}
     for asset in assets:
+        if not is_npc_image_asset(asset.path):
+            continue
         errors = validate_sidecar(asset.path, sidecar_path_for(asset.path), repo_root)
         if errors:
             failures[asset.relpath] = errors
@@ -717,7 +733,7 @@ def validate_assets(assets: Sequence[ImageAsset], repo_root: Path) -> Dict[str, 
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate and validate FableMap image prompt sidecars.")
+    parser = argparse.ArgumentParser(description="Generate and validate FableMap NPC image prompt sidecars.")
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--root", action="append", default=[])
     parser.add_argument("--write", action="store_true")
@@ -739,6 +755,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 written += 1
         for asset in assets:
             if asset.path.parent in expression_group_dirs:
+                continue
+            if not is_npc_image_asset(asset.path):
                 continue
             if write_sidecar(asset, prompt_record_for(asset, prompt_index), overwrite=args.overwrite):
                 written += 1

@@ -67,7 +67,7 @@
     "frontend/scripts/home-visual-density-test.mjs",
     "frontend/scripts/home-pc-polish-test.mjs"
   ],
-  "notes": "Corrected after feedback: black/cyber homepage and discover/search no longer use the rejected full-artboard hotspot shell, and the black page files are no longer large single-file pages. They are lean shells composed from extracted black section components, shared section maps, and shared top nav while swapping black assets/theme tokens. Focused static checks, typecheck, frontend build, and Playwright desktop/mobile self-acceptance passed on 2026-05-09.",
+  "notes": "Corrected after feedback: black/cyber homepage and discover/search are lean shells composed from extracted section components on shared layout/nav. Playwright now also audits visible runtime images for raster upscaling to catch blur sources; search result card covers were corrected to render at their extracted 172px height ratio instead of being stretched. Focused static checks, typecheck, frontend build, and Playwright desktop/mobile self-acceptance passed on 2026-05-09.",
   "meta": {
     "black_home_reference": "frontend/app/assets/homepage/black/home-black-index-reference.png",
     "black_discover_reference": "frontend/app/assets/discover/black/discover-black-reference.png",
@@ -99,6 +99,8 @@
     "validation_status": "passed on 2026-05-09 after shared-template correction",
     "black_home_sections": "frontend/app/components/home-black-sections.tsx",
     "black_discover_sections": "frontend/app/components/discover-black-sections.tsx",
-    "architecture_guard": "frontend/scripts/black-reference-test.mjs asserts lean black page shells and extracted section composition."
+    "architecture_guard": "frontend/scripts/black-reference-test.mjs asserts lean black page shells and extracted section composition.",
+    "sharpness_audit": "frontend/scripts/playwright-black-reference-check.mjs checks visible runtime images for raster upscaling on black home/discover desktop and mobile.",
+    "blur_fix": "Black discover card covers use 51.34% card height to match 226x172 extracted assets instead of stretching to 180px."
   }
 }

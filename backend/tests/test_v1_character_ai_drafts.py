@@ -65,7 +65,8 @@ def test_owner_generates_ai_character_draft_without_persisting_it(tmp_path: Path
     }
     for field in ("name", "description", "personality", "scenario", "system_prompt", "first_mes", "mes_example"):
         assert draft[field]
-    assert {"AI 草稿", "猫娘", "傲娇", "复国"}.issubset(set(draft["tags"]))
+    assert {"AI 草稿", "本地模板草稿"}.intersection(set(draft["tags"]))
+    assert {"猫娘", "傲娇", "复国"}.issubset(set(draft["tags"]))
     assert "静安夜航空间" in draft["scenario"]
     assert "不要露骨" in draft["system_prompt"]
     assert "不要真实私人地址" in draft["system_prompt"]

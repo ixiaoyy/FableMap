@@ -15961,3 +15961,325 @@ iframe {
     justify-content: flex-end;
   }
 }
+
+/* ── NPC Hobbies & Interests ── */
+.hobby-list, .char-item-hobbies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.hobby-chip,
+.hobby-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  cursor: default;
+}
+
+.hobby-chip:hover,
+.hobby-tag:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Category variants with vibrant gradients and glows */
+.hobby-chip--arts,
+.hobby-tag--arts {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.05));
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.1);
+}
+.hobby-chip--arts:hover,
+.hobby-tag--arts:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(139, 92, 246, 0.1));
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  border-color: rgba(168, 85, 247, 0.6);
+}
+
+.hobby-chip--tech,
+.hobby-tag--tech {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(8, 145, 178, 0.05));
+  border-color: rgba(6, 182, 212, 0.4);
+  color: #a5f3fc;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.1);
+}
+.hobby-chip--tech:hover,
+.hobby-tag--tech:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(8, 145, 178, 0.1));
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  border-color: rgba(6, 182, 212, 0.6);
+}
+
+.hobby-chip--nature,
+.hobby-tag--nature {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(21, 128, 61, 0.05));
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #bef264;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
+}
+.hobby-chip--nature:hover,
+.hobby-tag--nature:hover {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(21, 128, 61, 0.1));
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  border-color: rgba(34, 197, 94, 0.6);
+}
+
+.hobby-chip--adventure,
+.hobby-tag--adventure {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(194, 65, 12, 0.05));
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #ffedd5;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.1);
+}
+.hobby-chip--adventure:hover,
+.hobby-tag--adventure:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(194, 65, 12, 0.1));
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  border-color: rgba(249, 115, 22, 0.6);
+}
+
+.hobby-chip--social,
+.hobby-tag--social {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(190, 24, 93, 0.05));
+  border-color: rgba(236, 72, 153, 0.4);
+  color: #fce7f3;
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.1);
+}
+.hobby-chip--social:hover,
+.hobby-tag--social:hover {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(190, 24, 93, 0.1));
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.3);
+  border-color: rgba(236, 72, 153, 0.6);
+}
+
+.hobby-chip.mini,
+.hobby-tag.mini {
+  padding: 2px 10px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: none;
+}
+
+.hobby-chip.mini:hover,
+.hobby-tag.mini:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: none;
+  box-shadow: none;
+}
+
+.hobby-more {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* Character Hobby Editor Layout */
+.character-hobby-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.character-hobby-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hobby-group-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.hobby-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hobby-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hobby-suggestion:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.hobby-suggestion--arts:hover { border-color: rgba(168, 85, 247, 0.5); color: #d8b4fe; }
+.hobby-suggestion--tech:hover { border-color: rgba(6, 182, 212, 0.5); color: #67e8f9; }
+.hobby-suggestion--nature:hover { border-color: rgba(34, 197, 94, 0.5); color: #86efac; }
+.hobby-suggestion--adventure:hover { border-color: rgba(249, 115, 22, 0.5); color: #fdba74; }
+.hobby-suggestion--social:hover { border-color: rgba(236, 72, 153, 0.5); color: #f9a8d4; }
+  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  align-self: center;
+  margin-left: 2px;
+  font-weight: 600;
+}
+/* Prompt Block Editor - Dedicated Page Styles */
+.prompt-block-editor {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px); /* Adjust for shell padding/header */
+  min-height: 600px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+}
+
+.prompt-block-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.prompt-block-editor__content {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+.prompt-block-editor__blocks {
+  padding: 24px 32px;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.prompt-block-editor__preview {
+  padding: 24px 32px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 24px;
+}
+
+.block-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prompt-block {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.prompt-block:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(4px);
+}
+
+.prompt-block--platform_boundary { border-left: 3px solid rgba(167, 139, 250, 0.5); }
+.prompt-block--character_card { border-left: 3px solid rgba(34, 211, 238, 0.5); }
+.prompt-block--style_dials { border-left: 3px solid rgba(251, 191, 36, 0.5); }
+.prompt-block--world_info { border-left: 3px solid rgba(34, 211, 238, 0.3); opacity: 0.8; }
+.prompt-block--visitor_state { border-left: 3px solid rgba(167, 139, 250, 0.3); opacity: 0.8; }
+
+.compiled-prompt-container {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 24px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  position: relative;
+  overflow-y: auto;
+}
+
+.compiled-prompt {
+  color: rgba(255, 255, 255, 0.85);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Animations */
+@keyframes fadeInSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.prompt-block {
+  animation: fadeInSlide 0.4s ease forwards;
+}
+
+.prompt-block:nth-child(1) { animation-delay: 0.05s; }
+.prompt-block:nth-child(2) { animation-delay: 0.1s; }
+.prompt-block:nth-child(3) { animation-delay: 0.15s; }
+.prompt-block:nth-child(4) { animation-delay: 0.2s; }
+.prompt-block:nth-child(5) { animation-delay: 0.25s; }
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .prompt-block-editor__content {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .prompt-block-editor {
+    height: auto;
+  }
+  .prompt-block-editor__blocks, .prompt-block-editor__preview {
+    overflow-y: visible;
+    border-right: none;
+  }
+}

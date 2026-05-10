@@ -14,23 +14,28 @@ const radarAssetPath = resolve(__dirname, "../app/assets/discover/reference/disc
 const lightSliceDir = resolve(__dirname, "../app/assets/homepage/light/slices")
 const lightElementDir = resolve(__dirname, "../app/assets/homepage/light/elements")
 
-function readPngDimensions(path) {
+function readPngInfo(path) {
   const buffer = readFileSync(path)
   return {
     width: buffer.readUInt32BE(16),
     height: buffer.readUInt32BE(20),
+    colorType: buffer[25],
   }
 }
 
-function assertPngAssetWith2xAndPrompt(dir, name, width, height) {
+function assertPngAssetWith2x(dir, name, width, height) {
   const imagePath = resolve(dir, name)
   const image2xPath = resolve(dir, name.replace(".png", "-2x.png"))
-  const sidecarPath = resolve(dir, name.replace(".png", ".prompt.md"))
   assert.ok(existsSync(imagePath), `${name} should exist as a project-local image`)
   assert.ok(existsSync(image2xPath), `${name} should have a 2x HD sibling`)
-  assert.ok(existsSync(sidecarPath), `${name} should have same-directory prompt provenance`)
-  assert.deepEqual(readPngDimensions(imagePath), { width, height }, `${name} should preserve its runtime dimensions`)
-  assert.deepEqual(readPngDimensions(image2xPath), { width: width * 2, height: height * 2 }, `${name} 2x should preserve retina dimensions`)
+  const imageInfo = readPngInfo(imagePath)
+  const image2xInfo = readPngInfo(image2xPath)
+  assert.deepEqual({ width: imageInfo.width, height: imageInfo.height }, { width, height }, `${name} should preserve its runtime dimensions`)
+  assert.deepEqual({ width: image2xInfo.width, height: image2xInfo.height }, { width: width * 2, height: height * 2 }, `${name} 2x should preserve retina dimensions`)
+  if (name.includes("nav-bar")) {
+    assert.equal(imageInfo.colorType, 6, `${name} should be a transparent chrome layer, not a baked text screenshot`)
+    assert.equal(image2xInfo.colorType, 6, `${name} 2x should be a transparent chrome layer`)
+  }
   assert.ok(statSync(image2xPath).size > statSync(imagePath).size, `${name} 2x should contain a higher-resolution payload`)
 }
 
@@ -66,9 +71,9 @@ assert.ok(homeRouteSource.includes("HomeLightRealDom"), "light homepage should r
 assert.ok(homeRouteSource.includes("featuredCitySlices={homepage.featuredCitySlices}"), "light homepage should receive dynamic featured tavern data from the route")
 assert.ok(homeRouteSource.includes("onToggleTheme={toggleTheme}"), "light homepage should receive the route theme toggle")
 
-assertPngAssetWith2xAndPrompt(lightSliceDir, "home-light-slice-01a-nav-bar.png", 958, 72)
+assertPngAssetWith2x(lightSliceDir, "home-light-slice-01a-nav-bar.png", 958, 72)
 for (const [name, width, height] of lightElements) {
-  assertPngAssetWith2xAndPrompt(lightElementDir, name, width, height)
+  assertPngAssetWith2x(lightElementDir, name, width, height)
 }
 
 assert.ok(homeLightSource.includes('data-home-light-reference="index-light-hybrid-dom"'), "light homepage should expose the real-DOM reference contract marker")
@@ -97,6 +102,9 @@ assert.ok(sharedNavSource.includes("lightReferenceTopNavLayouts"), "navigation l
 assert.ok(sharedNavSource.includes("lightReferenceTopNavHotspotStyle"), "navigation hotspots should use local nav-section coordinates")
 assert.ok(sharedNavSource.includes("data-home-light-nav-controls") && sharedNavSource.includes("data-home-light-nav-control"), "navigation controls should render as real links/buttons")
 assert.ok(sharedNavSource.includes("data-home-light-nav-text-layer"), "navigation text should be rendered as a real DOM/SVG text layer")
+assert.ok(sharedNavSource.includes('data-reference-top-nav-logo-mark="real-svg"'), "navigation logo mark should be rendered as editable SVG")
+assert.ok(sharedNavSource.includes('alt=""') && sharedNavSource.includes('aria-hidden="true"'), "navigation backing image should be decorative transparent chrome only")
+assert.ok(!sharedNavSource.includes("opacity-0"), "navigation DOM/SVG text and chrome layers must be visible instead of hidden behind baked screenshot text")
 for (const marker of ["data-home-light-nav-search", "data-home-light-nav-theme-toggle", "data-home-light-nav-manager", "data-home-light-nav-cta"]) {
   assert.ok(sharedNavSource.includes(marker), `navigation chrome should expose ${marker}`)
 }

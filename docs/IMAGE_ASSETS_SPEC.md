@@ -8,8 +8,8 @@
 
 ## AI 生成图片落盘总规则
 
-- 所有实际素材图生成必须遵守 Prompt-first：先用项目 skill 生成并记录最终 Prompt / Prompt manifest，再用该 Prompt 调用生图工具；不允许直接从未记录的临时描述调图。
-- Prompt 必须保存在任务记录、prompt artifact、实现说明、最终报告或项目 recipe 中；只存在于 tool call 里的 Prompt 不算项目记忆。
+- 生成 NPC 图片资产必须遵守 Prompt-first：先用项目 skill 生成并记录最终 Prompt / Prompt manifest，再用该 Prompt 调用生图工具；不允许直接从未记录的临时描述调图。
+- NPC 图片资产的 Prompt 必须保存在任务记录、prompt artifact、实现说明、最终报告、项目 recipe 或同目录 sidecar 中；只存在于 tool call 里的 Prompt 不算项目记忆。非 NPC 的页面切图、UI 参考图、模块插画、审计截图或用户提供/裁切替换素材不强制保存对应 Prompt，可按任务需要记录来源/处理方式。
 - 图片质量与差异化是验收要求，不是锦上添花。素材图不能因为“安全、合规、有关空间”就算合格；若画面仍是千篇一律的暖木吧台、青色终端光、居中头像/门面、普通 anime concept art，应视为质量不足。
 - 非同一系列的多张素材必须刻意区分视觉 thesis、构图装置、材质系统、色彩策略、光影哲学或媒介语境；批量素材生成前应有 diversity matrix 或等价说明。
 - 任何用于代码、默认 seed、文档验收或前端展示的 AI 生成图片，必须复制/转换到本仓库内的规范路径后才算完成。
@@ -17,11 +17,11 @@
 - 替换既有图片时，必须覆盖实际被代码/文档引用的项目文件；如果只是生成了新图但引用路径仍指向旧图，视为未替换。
 - 允许保留废稿或参考图，但必须放入 `artifacts/` / 设计参考目录，或在交付说明里明确标记为“未采用/参考-only”。
 - 图片类任务完成前，要核对本轮 `.codex/generated_images` 输出与项目目标路径的对应关系；必要时用 hash、尺寸、修改时间或源→目标映射证明已落盘。
-- 正式项目图片必须在同目录保留 prompt sidecar。单张独立图片推荐命名为 `<image-stem>.prompt.md`；NPC 同一角色的一组表情图可共用一个 `expression-set.prompt.md`，避免为 `neutral` / `joy` / `anger` / `embarrassment` / `curiosity` 重复保存几乎相同的 prompt。组级 sidecar 的 `## Final prompt` 只保留自然/neutral 单图 prompt；不要把五个表情 prompt 都写进去，以免生图工具生成五表情同框或表情表。已有最终 prompt / prompt manifest 时使用 `prompt_type: original-final`；找不到原始 prompt 时必须反向解析当前图片并使用 `prompt_type: reverse-engineered`，正文明确说明“不是原始生成 prompt”；仅作证据或非生成式参考的图片可使用 `reference-only`。
+- 生成的 NPC 图片资产必须在同目录保留 prompt sidecar。单张 NPC 头像 / 立绘 / 精灵图推荐命名为 `<image-stem>.prompt.md`；NPC 同一角色的一组表情图可共用一个 `expression-set.prompt.md`，避免为 `neutral` / `joy` / `anger` / `embarrassment` / `curiosity` 重复保存几乎相同的 prompt。组级 sidecar 的 `## Final prompt` 只保留自然/neutral 单图 prompt；不要把五个表情 prompt 都写进去，以免生图工具生成五表情同框或表情表。已有最终 prompt / prompt manifest 时使用 `prompt_type: original-final`；找不到原始 prompt 时必须反向解析当前图片并使用 `prompt_type: reverse-engineered`，正文明确说明“不是原始生成 prompt”；仅作证据或非生成式参考的 NPC 图片可使用 `reference-only`。非 NPC 图片不因缺少 `<image-stem>.prompt.md` 判定为未完成。
 
-### Prompt sidecar 格式
+### NPC Prompt sidecar 格式（仅 NPC 生成资产强制）
 
-Sidecar 使用 Markdown + YAML frontmatter。单张独立图片至少包含：
+Sidecar 使用 Markdown + YAML frontmatter。单张 NPC 图片至少包含：
 
 ```markdown
 ---
@@ -369,7 +369,7 @@ frontend/public/faction-emblems/
 
 ### 风格 DNA 抽取/选择模板（生成前置）
 
-生成任何可交付图片前，先从参考图、用户风格说明或 `.agents/skills/generate-character-prompt/references/style-recipes.md` 中确定一段可复用 Style DNA。不要只写“朋克 / 二次元 / 复古”这类短标签。
+生成 NPC 图片资产前，必须先从参考图、用户风格说明或 `.agents/skills/generate-character-prompt/references/style-recipes.md` 中确定一段可复用 Style DNA。生成非 NPC 可交付图时推荐沿用这套方法，但不强制保存同目录 prompt sidecar。不要只写“朋克 / 二次元 / 复古”这类短标签。
 
 ```
 [在此处替换为您想要生成的主体内容 / Replace with your subject here]，以可被店主确认的原创 FableMap 素材身份呈现；整体采用 [具体艺术流派/混合风格及品位分支]，主色为 [主色]，辅以 [辅色] 与 [点缀色]，形成 [冷暖/互补/类似色/限色印刷] 的色彩科学策略。光影为 [方向与光质]，明暗对比 [强/弱/平面化]，阴影 [硬边/柔边/装饰性]。画面借鉴 [媒介纹理技法，如 Risograph 半调、胶片颗粒、水彩晕染、赛璐璐平涂、复印机碳粉]，但不强制生成完整海报/杂志/出版物载体；线稿 [粗细/硬边/流动感]，材质触感 [纸张、油墨、金属、玻璃、织物等]。情绪是 [精准情绪：是……而非……]，带有 [时代/文化圈层] 的品位语境；信息密度 [高/中/低]，在 [细节区类型] 保持高精度，在 [概括区类型] 使用平涂、留白或抽象纹理。保留 [符号化视觉语言类型] 作为风格签名。original, no readable text unless explicitly required, no logo, no watermark, no existing IP, no living-artist imitation.

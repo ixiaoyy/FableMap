@@ -1,51 +1,49 @@
-# Brainstorm: NPC Interest and Hobby Tags
+# brainstorm: NPC Interest and Hobby Tags (Visual & Interaction Polish)
 
-## 1. Goal
-Enhance NPC personalities and conversation depth by adding "Interest and Hobby" tags. These tags will be selectable by the Tavern Owner and dynamically injected into the AI's system prompt to influence its knowledge base and conversation style.
+## Goal
 
-## 2. Curated Tag List (Proposal)
-We should provide a curated list to ensure high-quality AI responses, while still allowing free-form tags if needed.
+Enhance NPC personalities and conversation depth by adding a "Visual & Interaction Polish" layer to the Hobby Tags system. The goal is to make the tags not only functional for the AI but also visually stunning and intuitive for the Tavern Owner to configure.
 
-| Category | Suggested Tags |
-| :--- | :--- |
-| **Arts & Culture** | Retro Gaming, Vinyl Records, Local Folklore, Mixology, Calligraphy, Street Photography, Sci-Fi Cinema, Cyberpunk Literature |
-| **Lifestyle & Craft** | Gardening, Gourmet Cooking, Knitting, Pottery, Sustainable Living, Tea Ceremony, Coffee Brewing, Bonsai |
-| **Activity & Nature** | Urban Exploration, Star Gazing, Hiking, Bird Watching, Cycling, Foraging, Geocaching |
-| **Intellectual** | Astrology, Crypto-zoology, Ancient Languages, Mathematics, Paranormal Research, Quantum Physics (Simplified) |
+## What I already know
 
-## 3. Technical Design
+*   **Backend**: `TavernCharacter` already has a `hobbies` field. `runtime.py` already injects these into the LLM system prompt.
+*   **Curated List**: Exists in `frontend/app/lib/character-hobbies.js`.
+*   **Frontend**: `CharacterEditor.jsx` and `TavernChatRoom.jsx` have basic hobby support.
+*   **Styling**: Basic `.hobby-chip` and `.hobby-tag` styles exist in `frontend/app/product/styles.css`.
 
-### A. Data Model (Backend)
-- **File**: `backend/src/fablemap_api/core/tavern.py`
-- **Class**: `TavernCharacter`
-- **Change**: Add `hobbies: list[str] = field(default_factory=list)`.
+## Requirements (Visual & Interaction Polish)
 
-### B. Prompt Injection
-- **File**: `backend/src/fablemap_api/core/prompt_builder.py`
-- **Change**: Update `PromptBuildConfig` to include `char_hobbies`.
-- **Logic**: In `PromptBuilder.build`, add a section:
-  ```text
-  【兴趣与偏好】
-  该角色对以下领域有深厚兴趣：{hobbies}。
-  在对话中，角色可以根据这些兴趣点展开话题、分享见解或以此作为比喻。
-  ```
+### 1. Categorized & Aesthetic Data
+*   Group `CURATED_HOBBIES` into 5 meaningful categories (Arts, Tech, Nature, Adventure, Social).
+*   Assign a primary color theme (HSL/Gradient) to each category.
 
-### C. UI Integration (Frontend)
-- **Character Editor**: `frontend/app/product/CharacterEditor.jsx`
-  - Add a "Hobbies & Interests" section.
-  - Use a Chip/Badge input component.
-  - Provide auto-suggestions from the curated list.
-- **Chat View**: `frontend/app/product/TavernChatRoom.jsx`
-  - Show hobby badges in the "Character Sidebar".
-  - (Optional) Show a small icon/indicator in the chat header when a hobby is relevant.
+### 2. Premium UI Components
+*   **Hobby Chips**: Implement glassmorphism styles with category-specific gradients, subtle glows, and micro-animations on hover.
+*   **Editor Enhancement**:
+    *   Group suggestions by category for easier discovery.
+    *   Smooth transitions when adding/removing tags.
+*   **Chat Sidebar**:
+    *   Show hobby icons with tooltips.
+    *   Ensure layout is responsive and doesn't break character info.
 
-## 4. Verification Plan
-1.  **Backend Unit Tests**: Verify `TavernCharacter` serialization/deserialization with `hobbies`.
-2.  **Prompt Logic Test**: Use `test_world_info_payload` or a similar tool to verify the hobby section appears in the final prompt.
-3.  **Frontend Build**: Run `npm run build` to ensure no UI regressions.
-4.  **Manual Chat Test**: Create an NPC with "Retro Gaming" hobby and verify they can talk about it.
+### 3. Consistency
+*   Ensure `CharacterEditor` preview matches the actual chat sidebar aesthetics.
+*   Normalize terminology between `hobby-chip` and `hobby-tag` where possible.
 
-## 5. Questions for User
-1. Should we restrict hobbies to the curated list, or allow users to type anything (free-form)?
-2. Do we want specific icons for each hobby (e.g., a controller for "Retro Gaming")?
-3. Should hobbies influence WorldInfo retrieval (e.g., if a user mentions "Game Boy", a "Retro Gaming" NPC gets a boost in relevant knowledge)?
+## Acceptance Criteria
+
+*   [ ] Hobbies are grouped into categories in `character-hobbies.js`.
+*   [ ] CSS supports category-specific styles (e.g., `.hobby--tech`, `.hobby--nature`).
+*   [ ] `CharacterEditor` displays suggestions in a grouped, attractive layout.
+*   [ ] `TavernChatRoom` sidebar displays hobbies with improved aesthetics.
+*   [ ] Build passes and mobile responsiveness is maintained.
+
+## Technical Notes
+
+*   `frontend/app/lib/character-hobbies.js`: Define categories and export `HOBBY_CATEGORIES`.
+*   `frontend/app/product/styles.css`: Revamp hobby styles with variables.
+*   `frontend/app/product/CharacterEditor.jsx`: Update `character-hobby-suggestions` to use grouping.
+
+## Out of Scope
+*   Adding new backend logic (already done).
+*   Adding visitor-to-visitor hobby matching features.
