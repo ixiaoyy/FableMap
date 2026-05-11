@@ -94,6 +94,8 @@ class PromptBuildConfig:
     # Simulation (v1.1)
     npc_feeling: str = ""
     social_memories: list[dict] = field(default_factory=list)
+    # Relationship graph context (v1.2)
+    relationship_context: list[dict] = field(default_factory=list)
     # Internal: computed time context (not exposed to caller)
     _time_context: TimeContext | None = field(default=None, repr=False)
 
@@ -247,6 +249,34 @@ class PromptBuilder:
             result_messages.append({
                 "role": "system",
                 "content": f"[社交传闻/八卦] 你最近从其他 NPC 那里听到了以下信息，如果对话契合，可以作为谈资或侧面提及（不要生硬罗列）：\n{memories_text}",
+            })
+
+        # ── Relationship Graph Context (v1.2) ──────────────────────────────
+        if config.relationship_context:
+            _BEHAVIOR_LABELS = {
+                "friendly": "友好", "allied": "同盟", "neutral": "中立",
+                "rival": "竞争", "hostile": "敌对",
+            }
+            _STRENGTH_LABELS = {
+                "weak": "微弱", "normal": "一般", "strong": "紧密",
+            }
+            rel_lines: list[str] = []
+            for rel in config.relationship_context:
+                label = rel.get("display_name") or rel.get("target_name", "")
+                behavior = _BEHAVIOR_LABELS.get(rel.get("behavior_type", ""), rel.get("behavior_type", ""))
+                strength = _STRENGTH_LABELS.get(rel.get("strength_preset", ""), rel.get("strength_preset", ""))
+                direction = rel.get("direction", "outgoing")
+                if direction == "incoming":
+                    rel_lines.append(f"- {label}（对你的{behavior}关系，强度{strength}）")
+                else:
+                    rel_lines.append(f"- {label}（你对他们的{behavior}关系，强度{strength}）")
+            rel_text = "\n".join(rel_lines)
+            result_messages.append({
+                "role": "system",
+                "content": (
+                    "[关系图] 你与其他空间/角色存在以下已确认的关系"
+                    "（由店主配置，非平台判定）：\n" + rel_text
+                ),
             })
 
         # ── Time Context ────────────────────────────────────────────────────

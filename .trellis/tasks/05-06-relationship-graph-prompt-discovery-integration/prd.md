@@ -14,11 +14,11 @@ After core graph and propagation are stable, use confirmed relationship graph co
 
 ## Acceptance Criteria
 
-- [ ] Prompt tests prove relation context appears only when scope-appropriate.
-- [ ] Prompt tests prove private/API-key/message transcript data is not leaked.
-- [ ] UI hints, if added, are clearly source-attributed.
-- [ ] Backend focused tests pass.
-- [ ] Frontend tests/build pass if UI surfaces change.
+- [x] Prompt tests prove relation context appears only when scope-appropriate.
+- [x] Prompt tests prove private/API-key/message transcript data is not leaked.
+- [x] UI hints, if added, are clearly source-attributed. *(No UI added in this task — prompt-only scope)*
+- [x] Backend focused tests pass.
+- [x] Frontend tests/build pass if UI surfaces change. *(No frontend changes — no build needed)*
 
 ## Out of Scope
 

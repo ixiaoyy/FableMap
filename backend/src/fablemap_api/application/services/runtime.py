@@ -52,6 +52,7 @@ from fablemap_api.core.visual_souvenir import build_visual_souvenir_preview
 from fablemap_api.core.voice_greeting import build_voice_greeting_preview
 from fablemap_api.core.simulation import generate_npc_feeling
 from fablemap_api.core.state_cards import format_state_cards_for_prompt
+from fablemap_api.infrastructure.storage import store_database
 from fablemap_api.core.tavern import (
     ChatMessage,
     LLMConfig as TavernLLMConfig,
@@ -1099,6 +1100,9 @@ class RuntimeApplicationMixin:
         raw_social_memories = character.social_memories if character else []
         relevant_social_memories = self._filter_relevant_social_memories(raw_social_memories, message)
 
+        # Relationship graph context (confirmed edges for this tavern/character)
+        relationship_context = self._fetch_relationship_context(tavern.id, character_id)
+
         # 4. Initialize PromptBuilder
         config = PromptBuildConfig(
             char_name=character_name,
@@ -1117,6 +1121,7 @@ class RuntimeApplicationMixin:
             skill_pack_prompt=skill_pack_prompt,
             npc_feeling=npc_feeling,
             social_memories=relevant_social_memories,
+            relationship_context=relationship_context,
             output_format="openai"
         )
         
@@ -1206,6 +1211,62 @@ class RuntimeApplicationMixin:
 
         # 否则取 Top 3
         return [m for score, m in scored_memories[:3]]
+
+    def _fetch_relationship_context(self, tavern_id: str, character_id: str) -> list[dict]:
+        """获取与当前角色相关的已确认关系边，用于 prompt 注入。
+
+        仅返回 status=confirmed 的边，最多 5 条。
+        每条包含 target_name, behavior_type, strength_preset, direction, display_name, description。
+        如果底层存储不可用，静默返回空列表。
+        """
+        database = store_database(self.store)
+        if database is None:
+            return []
+
+        try:
+            from fablemap_api.infrastructure.relationship_graph_store import (
+                SQLAlchemyRelationshipGraphStore,
+            )
+            graph_store = SQLAlchemyRelationshipGraphStore(database)
+        except Exception:
+            logger.debug("Relationship graph store unavailable; skipping relationship context")
+            return []
+
+        # 查询酒馆级别的已确认边
+        tavern_edges = graph_store.list_confirmed_edges_for_node("tavern", tavern_id)
+
+        # 如果有 character_id，也查询角色级别的边
+        char_edges = []
+        if character_id:
+            char_edges = graph_store.list_confirmed_edges_for_node("character", character_id)
+
+        # 合并并去重，限制最多 5 条
+        all_edges: list[dict] = []
+        seen_ids: set[str] = set()
+
+        for edge in tavern_edges + char_edges:
+            if edge.id in seen_ids:
+                continue
+            seen_ids.add(edge.id)
+
+            # 确定方向和目标
+            if edge.source_node_id == tavern_id or edge.source_node_id == character_id:
+                direction = "outgoing"
+                target_name = edge.display_name or edge.target_node_id
+            else:
+                direction = "incoming"
+                target_name = edge.display_name or edge.source_node_id
+
+            all_edges.append({
+                "target_name": target_name,
+                "behavior_type": edge.behavior_type,
+                "strength_preset": edge.strength_preset,
+                "direction": direction,
+                "display_name": edge.display_name,
+                "description": edge.description,
+            })
+
+        return all_edges[:5]
 
     def _affinity_prompt_block_for_state(self, state: VisitorState | None) -> str:
         if not state:
