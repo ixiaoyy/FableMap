@@ -47,8 +47,7 @@
   "subtasks": [],
   "children": [
     "05-06-quest-checklist-persistence",
-    "05-06-preset-import-apply-flow",
-    "05-06-owner-dialogue-preview-dryrun"
+    "05-06-preset-import-apply-flow"
   ],
   "parent": null,
   "relatedFiles": [],
