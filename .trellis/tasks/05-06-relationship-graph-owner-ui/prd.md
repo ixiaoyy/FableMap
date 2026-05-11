@@ -15,12 +15,12 @@ Add a minimal owner-facing UI and frontend API client for relationship graph man
 
 ## Acceptance Criteria
 
-- [ ] Frontend normalizer tests cover behavior type, strength preset, governance mode, and status fallbacks.
-- [ ] Owner UI can list/create/edit/confirm/reject through service methods.
-- [ ] Visitor-facing UI does not expose management controls.
-- [ ] `npm --prefix .\frontend test` passes.
-- [ ] `npm --prefix .\frontend run build` passes.
-- [ ] If visual route changes are made, Playwright/self-acceptance screenshots are recorded before human review.
+- [x] Frontend normalizer tests cover behavior type, strength preset, governance mode, and status fallbacks.
+- [x] Owner UI can list/create/edit/confirm/reject through service methods.
+- [x] Visitor-facing UI does not expose management controls.
+- [x] `npm --prefix .\frontend test` passes.
+- [x] `npm --prefix .\frontend run build` passes.
+- [x] If visual route changes are made, Playwright/self-acceptance screenshots are recorded before human review.
 
 ## Out of Scope
 

@@ -22,12 +22,12 @@
 - 不修改 SillyTavern 兼容字段语义。
 
 ## Acceptance Criteria
-- [ ] 后端新增/补齐 apply 流程，只接受 preview 中 supported 且店主选择的项目。
-- [ ] Apply 前展示 diff/影响范围，支持取消。
-- [ ] Apply 操作 owner-only，有权限测试和 blocked/warning 拦截测试。
-- [ ] Apply 后实际写入 Tavern 的 runtime_presets / prompt_blocks / world_info / characters 中的安全子集。
-- [ ] 前端不再把 preview-only 当作完整导入；按钮状态和结果状态准确。
-- [ ] 更新 preset import spec 或新增 apply contract。
+- [x] 后端新增/补齐 apply 流程，只接受 preview 中 supported 且店主选择的项目。
+- [x] Apply 前展示 diff/影响范围，支持取消。
+- [x] Apply 操作 owner-only，有权限测试和 blocked/warning 拦截测试。
+- [x] Apply 后实际写入 Tavern 的 runtime_presets / prompt_blocks / world_info / characters 中的安全子集。
+- [x] 前端不再把 preview-only 当作完整导入；按钮状态和结果状态准确。
+- [x] 更新 preset import spec 或新增 apply contract。
 
 ## Suggested files
 - `backend/src/fablemap_api/core/preset_import.py`
