@@ -47,7 +47,6 @@
   "subtasks": [],
   "children": [
     "05-06-productize-ai-draft-generation",
-    "05-06-hardcoded-rules-mode-response",
     "05-06-persistent-notification-auth",
     "05-06-home-route-productization",
     "05-06-quest-checklist-persistence",
