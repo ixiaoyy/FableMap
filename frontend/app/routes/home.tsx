@@ -18,7 +18,7 @@ import { Link, useLoaderData, useNavigate } from "react-router"
 import { useState } from "react"
 
 import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover-black/main-2x.png"
-import lightRadarSurface from "../assets/soul-link-05-10/home-light/main-2x.png"
+import lightRadarSurface from "../assets/soul-link-05-10/user-cuts-light/scene-sky-city-balcony.png"
 import { SoulLinkHomeReference } from "../components/soul-link-reference-artboards"
 import { HOMEPAGE_NPC_PREVIEW_PORTRAITS } from "../features/tavern-npc-stage/portraitCatalogConfig"
 import { buildHomepageView, type HomepageMetric, type HomepageMetricId } from "../lib/homepage-taverns"

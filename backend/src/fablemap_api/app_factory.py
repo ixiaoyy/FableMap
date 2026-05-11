@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from .application.taverns import TavernApplicationService
 from .application.territories import TerritoryApplicationService
+from .application.simulation_worker import SimulationWorker
 from .api.v1.router import api_router
 from .core.tavern import TavernStore
 from .infrastructure.settings import ApiSettings
@@ -66,4 +67,17 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         return JSONResponse(status_code=500, content={"error": "服务暂时不可用"})
 
     app.include_router(api_router)
+
+    # ── 仿真引擎启动 (v0.9) ───────────
+    simulation_worker = SimulationWorker(store, interval_seconds=resolved.simulation_interval_seconds)
+    app.state.simulation_worker = simulation_worker
+
+    @app.on_event("startup")
+    async def startup_event():
+        simulation_worker.start()
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        simulation_worker.stop()
+
     return app

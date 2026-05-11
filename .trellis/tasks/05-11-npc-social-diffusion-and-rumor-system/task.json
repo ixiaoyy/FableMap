@@ -1,0 +1,10 @@
+{
+  "id": "05-11-npc-social-diffusion-and-rumor-system",
+  "name": "NPC Social Diffusion & Rumor System",
+  "status": "in_progress",
+  "progress": 50,
+  "owner": "Antigravity",
+  "priority": "high",
+  "tags": ["social", "npc-agency", "memory", "mirror-world"],
+  "description": "实现 NPC 间的社交互动与八卦传递。当 NPC 在同一空间相遇时，交换访客记忆、地点评价或系统级传闻，形成动态的信息流。"
+}

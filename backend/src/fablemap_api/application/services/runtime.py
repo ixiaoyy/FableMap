@@ -50,7 +50,8 @@ from fablemap_api.core.public_welfare_rules import resolve_public_welfare_rules_
 from fablemap_api.core.episode_builder import build_episode_export
 from fablemap_api.core.visual_souvenir import build_visual_souvenir_preview
 from fablemap_api.core.voice_greeting import build_voice_greeting_preview
-from fablemap_api.core.state_cards import format_state_cards_for_prompt
+from fablemap_api.core.simulation import generate_npc_feeling
+from .state_cards import format_state_cards_for_prompt
 from fablemap_api.core.tavern import (
     ChatMessage,
     LLMConfig as TavernLLMConfig,
@@ -1034,17 +1035,27 @@ class RuntimeApplicationMixin:
                 recent_card = top_cards[0]
                 state_mention = f"，并留意到了关于“{recent_card.title}”的动态"
 
+            # Simulation feelings for Rules backend
+            character = next((c for c in tavern.characters if c.id == character_id), None)
+            sim_feeling = ""
+            if character and character.simulation_state:
+                # 只在非常强烈时提及（数值 < 20）
+                s = character.simulation_state
+                if s.hunger < 20: sim_feeling = "，肚子发出了响亮的咕噜声"
+                elif s.thirst < 20: sim_feeling = "，嘴唇看起来有些干裂"
+                elif s.energy < 20: sim_feeling = "，看起来困得睁不开眼"
+
             if hobby_label:
                 fallbacks = [
-                    f"{character_name}点了点头，看起来正忙着摆弄他的{hobby_label}{state_mention}，但还是分心听你说话。",
-                    f"{character_name}微微一笑，似乎想到了和{hobby_label}相关的事{state_mention}，随后轻声回应了你。",
-                    f"{character_name}停下了手中关于{hobby_label}的动作{state_mention}，抬头看向你，等待你继续说下去。",
-                    f"{character_name}思考片刻，或许是在想如何把{hobby_label}的精髓分享给你{state_mention}，他耐心地听着。",
+                    f"{character_name}点了点头{sim_feeling}，看起来正忙着摆弄他的{hobby_label}{state_mention}，但还是分心听你说话。",
+                    f"{character_name}微微一笑{sim_feeling}，似乎想到了和{hobby_label}相关的事{state_mention}，随后轻声回应了你。",
+                    f"{character_name}停下了手中关于{hobby_label}的动作{state_mention}，抬头看向你{sim_feeling}，等待你继续说下去。",
+                    f"{character_name}思考片刻{sim_feeling}，或许是在想如何把{hobby_label}的精髓分享给你{state_mention}，他耐心地听着。",
                 ]
                 return random.choice(fallbacks)
             
-            if state_mention:
-                return f"{character_name}静静地听着{state_mention}，若有所思地看向你。"
+            if state_mention or sim_feeling:
+                return f"{character_name}静静地听着{state_mention}{sim_feeling}，若有所思地看向你。"
                 
             return f"{character_name}点了点头，似乎在听你说话，但暂时没有更多回复。"
 
@@ -1081,6 +1092,13 @@ class RuntimeApplicationMixin:
                 )
             )
 
+        # Simulation feelings & Social KB Retrieval
+        character = next((c for c in tavern.characters if c.id == character_id), None)
+        npc_feeling = generate_npc_feeling(character, tavern.place_type) if character else ""
+        
+        raw_social_memories = character.social_memories if character else []
+        relevant_social_memories = self._filter_relevant_social_memories(raw_social_memories, message)
+
         # 4. Initialize PromptBuilder
         config = PromptBuildConfig(
             char_name=character_name,
@@ -1097,6 +1115,8 @@ class RuntimeApplicationMixin:
             visitor_visit_count=visitor_state.visit_count if visitor_state else 0,
             state_cards=[c.to_dict() if hasattr(c, "to_dict") else c for c in confirmed_cards],
             skill_pack_prompt=skill_pack_prompt,
+            npc_feeling=npc_feeling,
+            social_memories=relevant_social_memories,
             output_format="openai"
         )
         
@@ -1107,6 +1127,85 @@ class RuntimeApplicationMixin:
         if not response_text:
             raise LLMError("LLM returned an empty response")
         return response_text
+
+    @staticmethod
+    def _recency_bonus(timestamp_str: str | None) -> float:
+        """计算时效性加分：越新的记忆权重越高。
+
+        - 1 小时内: +4
+        - 24 小时内: +2
+        - 72 小时内: +1
+        - 更旧或无时间戳: 0
+        """
+        if not timestamp_str:
+            return 0.0
+        try:
+            ts = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            now = datetime.now(UTC)
+            age_hours = (now - ts).total_seconds() / 3600
+            if age_hours < 1:
+                return 4.0
+            if age_hours < 24:
+                return 2.0
+            if age_hours < 72:
+                return 1.0
+            return 0.0
+        except (ValueError, TypeError):
+            return 0.0
+
+    @staticmethod
+    def _extract_ngrams(text: str, n: int = 2) -> set[str]:
+        """从文本中提取 n-gram 集合，用于中文模糊匹配。"""
+        chars = [c for c in text if not c.isspace()]
+        if len(chars) < n:
+            return set(chars)
+        return {"".join(chars[i:i + n]) for i in range(len(chars) - n + 1)}
+
+    def _filter_relevant_social_memories(self, memories: list[dict], user_message: str) -> list[dict]:
+        """
+        关键词 + n-gram 匹配检索，带时效性权重，防止 Prompt 爆炸。
+
+        评分规则:
+        - 来源名出现在用户消息中: +10
+        - 内容 n-gram 与用户消息重叠: 每个 +5
+        - 时效性加分: 1h 内 +4, 24h 内 +2, 72h 内 +1
+        - Top-K=3；无匹配时回退到最近 2 条
+        """
+        if not memories:
+            return []
+
+        user_message_l = user_message.lower()
+        user_ngrams = self._extract_ngrams(user_message_l)
+
+        scored_memories: list[tuple[float, dict]] = []
+        for m in memories:
+            score = 0.0
+            content = m.get("content", "").lower()
+            source = m.get("source_name", "").lower()
+
+            # 来源名精确匹配
+            if source and source in user_message_l:
+                score += 10
+
+            # n-gram 重叠匹配（适配中文）
+            content_ngrams = self._extract_ngrams(content)
+            overlap = content_ngrams & user_ngrams
+            score += len(overlap) * 5
+
+            # 时效性加分
+            score += self._recency_bonus(m.get("timestamp"))
+
+            scored_memories.append((score, m))
+
+        # 按综合分数降序排序
+        scored_memories.sort(key=lambda x: x[0], reverse=True)
+
+        # 如果最高分仍为 0（无任何匹配），按原始顺序取最近 2 条
+        if scored_memories[0][0] <= 0:
+            return memories[:2]
+
+        # 否则取 Top 3
+        return [m for score, m in scored_memories[:3]]
 
     def _affinity_prompt_block_for_state(self, state: VisitorState | None) -> str:
         if not state:

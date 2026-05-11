@@ -91,6 +91,23 @@ If the change spans multiple layers:
 - [ ] Error states tested?
 - [ ] Works after page refresh?
 
+### 6.5. Grill-Me Gate (Source-of-Truth / Visual / Asset Work)
+
+Run `$grill-me` before final handoff when any of these are true:
+
+- UI/design fidelity is part of the request.
+- User-provided cut images, backgrounds, icons, screenshots, or reference art were used.
+- The user challenged alignment, asset choice, validation quality, or source-of-truth assumptions.
+- Continuing without review could bake in a wrong premise.
+
+Required evidence:
+
+- [ ] Source of truth named explicitly.
+- [ ] Relevant asset paths and dimensions listed when assets are involved.
+- [ ] Browser/Playwright screenshots or DOM measurements included when visual UI is involved.
+- [ ] Actual validation commands and pass/fail results reported.
+- [ ] Any unsuitable asset or mismatch is reported instead of silently adapted.
+
 ---
 
 ## Quick Check Flow
@@ -128,6 +145,9 @@ Development Flow:
   Write code -> Test -> $finish-work -> git commit -> $record-session
                           |                              |
                    Ensure completeness              Record progress
+                          |
+              For UI/assets/source-of-truth disputes,
+              run $grill-me before final handoff
 
 Debug Flow:
   Hit bug -> Fix -> $break-loop -> Knowledge capture

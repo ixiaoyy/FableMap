@@ -95,3 +95,4 @@ class ApiSettings:
     mysql_pool_size: int = field(default_factory=lambda: _int_from_env("FABLEMAP_MYSQL_POOL_SIZE", 5))
     mysql_max_overflow: int = field(default_factory=lambda: _int_from_env("FABLEMAP_MYSQL_MAX_OVERFLOW", 10))
     mysql_echo: bool = field(default_factory=lambda: _bool_from_env("FABLEMAP_MYSQL_ECHO", False))
+    simulation_interval_seconds: int = field(default_factory=lambda: _int_from_env("FABLEMAP_SIMULATION_INTERVAL_SECONDS", 600))

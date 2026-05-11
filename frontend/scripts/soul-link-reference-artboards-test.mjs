@@ -49,14 +49,8 @@ for (const [file, dimensions, sha256] of archivedReferences) {
 }
 
 for (const [file, dimensions] of [
-  ["frontend/app/assets/soul-link-05-10/home-light/sidebar.png", "220x1024"],
-  ["frontend/app/assets/soul-link-05-10/home-light/sidebar-2x.png", "440x2048"],
   ["frontend/app/assets/soul-link-05-10/home-light/invite-card.png", "1182x1330"],
   ["frontend/app/assets/soul-link-05-10/home-light/invite-card-2x.png", "1182x1331"],
-  ["frontend/app/assets/soul-link-05-10/home-light/main.png", "1000x1024"],
-  ["frontend/app/assets/soul-link-05-10/home-light/main-2x.png", "2000x2048"],
-  ["frontend/app/assets/soul-link-05-10/home-light/right-rail.png", "316x1024"],
-  ["frontend/app/assets/soul-link-05-10/home-light/right-rail-2x.png", "632x2048"],
   ["frontend/app/assets/soul-link-05-10/home-black/sidebar.png", "236x1024"],
   ["frontend/app/assets/soul-link-05-10/home-black/sidebar-2x.png", "472x2048"],
   ["frontend/app/assets/soul-link-05-10/home-black/invite-card.png", "151x170"],

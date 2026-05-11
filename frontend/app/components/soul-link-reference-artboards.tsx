@@ -4,9 +4,16 @@ import {
   Bell,
   Info,
   ArrowUpRight,
+  BookOpen,
+  Bookmark,
   ChevronDown,
+  Compass,
+  Home as HomeIcon,
+  MapPin,
+  MessageCircle,
   Play,
   Search,
+  Send,
 } from "lucide-react"
 
 import discoverBlackMain from "../assets/soul-link-05-10/discover-black/main.png"
@@ -25,14 +32,8 @@ import homeBlackInviteCard from "../assets/soul-link-05-10/home-black/invite-car
 import homeBlackInviteCard2x from "../assets/soul-link-05-10/home-black/invite-card-2x.png"
 import homeBlackSidePanel from "../assets/soul-link-05-10/home-black/sidebar.png"
 import homeBlackSidePanel2x from "../assets/soul-link-05-10/home-black/sidebar-2x.png"
-import homeLightMain from "../assets/soul-link-05-10/home-light/main.png"
-import homeLightMain2x from "../assets/soul-link-05-10/home-light/main-2x.png"
-import homeLightRightRail from "../assets/soul-link-05-10/home-light/right-rail.png"
-import homeLightRightRail2x from "../assets/soul-link-05-10/home-light/right-rail-2x.png"
 import homeLightInviteCard from "../assets/soul-link-05-10/home-light/invite-card.png"
 import homeLightInviteCard2x from "../assets/soul-link-05-10/home-light/invite-card-2x.png"
-import homeLightSidePanel from "../assets/soul-link-05-10/home-light/sidebar.png"
-import homeLightSidePanel2x from "../assets/soul-link-05-10/home-light/sidebar-2x.png"
 import navAnchorsIcon from "../assets/soul-link-05-10/icons/nav-anchors.png"
 import navCreateIcon from "../assets/soul-link-05-10/icons/nav-create.png"
 import navDiscoverIcon from "../assets/soul-link-05-10/icons/nav-discover.png"
@@ -40,6 +41,23 @@ import navEchoesIcon from "../assets/soul-link-05-10/icons/nav-echoes.png"
 import navHomeIcon from "../assets/soul-link-05-10/icons/nav-home.png"
 import navMemoryIcon from "../assets/soul-link-05-10/icons/nav-memory.png"
 import navSavedIcon from "../assets/soul-link-05-10/icons/nav-saved.png"
+import lightBellIcon from "../assets/soul-link-05-10/user-cuts-light/icon-bell-glow.png"
+import lightCompassIcon from "../assets/soul-link-05-10/user-cuts-light/icon-compass-glow.png"
+import lightGuideEnvelopeBg from "../assets/soul-link-05-10/user-cuts-light/card-envelope-soft.png"
+import lightGuideStarterBg from "../assets/soul-link-05-10/user-cuts-light/card-invite-soft.png"
+import lightLibraryCafeWide from "../assets/soul-link-05-10/user-cuts-light/scene-library-cafe-wide.png"
+import lightLibrarySunlit from "../assets/soul-link-05-10/user-cuts-light/scene-library-sunlit.png"
+import lightLibraryWide from "../assets/soul-link-05-10/user-cuts-light/scene-library-wide.png"
+import lightMessageIcon from "../assets/soul-link-05-10/user-cuts-light/icon-message-glow.png"
+import lightPinIcon from "../assets/soul-link-05-10/user-cuts-light/icon-map-pin-glow.png"
+import lightPlaneWash from "../assets/soul-link-05-10/user-cuts-light/bg-plane-wash.png"
+import lightPlaneIcon from "../assets/soul-link-05-10/user-cuts-light/icon-plane-glow.png"
+import lightPulseIcon from "../assets/soul-link-05-10/user-cuts-light/icon-pulse-bars-glow.png"
+import lightPaperPlaneSoft from "../assets/soul-link-05-10/user-cuts-light/bg-paper-plane-soft.png"
+import lightSeaLane from "../assets/soul-link-05-10/user-cuts-light/scene-sea-lane.png"
+import lightGuideShieldBg from "../assets/soul-link-05-10/user-cuts-light/card-shield-soft.png"
+import lightSkyCityBalcony from "../assets/soul-link-05-10/user-cuts-light/scene-sky-city-balcony.png"
+import lightTrainRainPlatform from "../assets/soul-link-05-10/user-cuts-light/scene-train-platform-rain.png"
 import soulLinkUserAvatar from "../assets/npc-style-cast/portraits-hd/commission-zhideng.png"
 import type { Tavern } from "../lib/taverns"
 
@@ -181,15 +199,41 @@ const DEFAULT_WORLD_STATS: SoulLinkWorldStat[] = [
   { id: "explores", label: "探索次数", value: "3,214" },
 ]
 
+const LIGHT_GUIDE_BACKGROUNDS = [lightGuideStarterBg, lightGuideEnvelopeBg, lightGuideShieldBg] as const
+
+const LIGHT_FALLBACK_COORDINATE_CARDS = [
+  {
+    name: "雨巷书店",
+    description: "雨声落在旧木窗边，店主的 AI 书童正等你递来一句开场白。",
+    tag: "治愈",
+    image: lightLibrarySunlit,
+  },
+  {
+    name: "海街的尽头",
+    description: "沿着潮湿的路牌走到尽头，会遇见一个只在傍晚醒来的守望者。",
+    tag: "纽带",
+    image: lightSeaLane,
+  },
+  {
+    name: "时光咖啡馆",
+    description: "每张桌子都记得一段回访，适合把今天的心事暂存在这里。",
+    tag: "温暖",
+    image: lightLibraryCafeWide,
+  },
+  {
+    name: "旧车站月台",
+    description: "列车不再进站，但仍有人把未寄出的信交给站台 NPC。",
+    tag: "静谧",
+    image: lightTrainRainPlatform,
+  },
+] as const
+
 const HOME_LIGHT: Artboard = {
   width: 1536,
   height: 1024,
   marker: "home-light-real-dom-1536x1024",
   background: "#eef4ff",
-  slices: [
-    { src: homeLightMain, src2x: homeLightMain2x, alt: "SoulLink 首页亮色设计稿主内容切片", x: 220, y: 0, w: 1000, h: 1024 },
-    { src: homeLightRightRail, src2x: homeLightRightRail2x, alt: "SoulLink 首页亮色设计稿右侧栏切片", x: 1220, y: 0, w: 316, h: 1024 },
-  ],
+  slices: [],
 }
 
 const HOME_BLACK: Artboard = {
@@ -259,7 +303,7 @@ const SHARED_SIDEBAR_BOTTOM_ACTIONS = [
 ] as const
 
 const SIDEBAR_REFERENCE_PANELS = {
-  light: { src: homeLightSidePanel, src2x: homeLightSidePanel2x, x: 0, y: 0, w: 220, h: 1024 },
+  light: { x: 0, y: 0, w: 220, h: 1024 },
   black: { src: homeBlackSidePanel, src2x: homeBlackSidePanel2x, x: 0, y: 0, w: 236, h: 1024 },
 } as const
 
@@ -345,8 +389,51 @@ function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(" ")
 }
 
+function UserCutImage({
+  src,
+  className,
+  imgClassName,
+  style,
+  scale = 1,
+  loading = "lazy",
+}: {
+  src: string
+  className?: string
+  imgClassName?: string
+  style?: CSSProperties
+  scale?: number
+  loading?: "lazy" | "eager"
+}) {
+  return (
+    <span aria-hidden="true" className={cx("relative inline-block overflow-hidden", className)} style={style}>
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        loading={loading}
+        decoding="async"
+        className={cx("absolute inset-0 h-full w-full select-none object-cover", imgClassName)}
+        style={scale === 1 ? undefined : { transform: `scale(${scale})` }}
+      />
+    </span>
+  )
+}
+
 function targetFor(id?: string) {
   return id ? `/tavern/${encodeURIComponent(id)}` : "/discover"
+}
+
+function lightCoordinateCardData(slice: HomeReferenceProps["featuredCitySlices"][number] | undefined, index: number) {
+  const fallback = LIGHT_FALLBACK_COORDINATE_CARDS[index % LIGHT_FALLBACK_COORDINATE_CARDS.length]
+  const visitCount = Number(slice?.visit_count || 0)
+  return {
+    id: slice?.id,
+    name: slice?.name || fallback.name,
+    description: slice?.description || fallback.description,
+    tag: slice?.tags?.[0] || fallback.tag,
+    image: fallback.image,
+    visitLabel: visitCount > 0 ? `${visitCount} 人在这里` : "等待第一个回响",
+  }
 }
 
 function suppressMouseFocus(event: MouseEvent<HTMLElement>) {
@@ -363,10 +450,22 @@ const SIDEBAR_NAV_ICON_IMAGES: Record<string, string> = {
   create: navCreateIcon,
 }
 
-function SidebarNavIcon({ id, className }: { id: string; className?: string }) {
+function SidebarNavIcon({ id, variant, className }: { id: string; variant: Variant; className?: string }) {
+  if (variant === "light") {
+    const Icon =
+      id === "home" ? HomeIcon
+      : id === "discover" ? Compass
+      : id === "echoes" ? MessageCircle
+      : id === "memory" ? BookOpen
+      : id === "saved" ? Bookmark
+      : id === "anchors" ? MapPin
+      : Send
+    return <Icon aria-hidden="true" strokeWidth={2.2} className={cx("shrink-0", className)} />
+  }
+  const src = SIDEBAR_NAV_ICON_IMAGES[id] || navCreateIcon
   return (
     <img
-      src={SIDEBAR_NAV_ICON_IMAGES[id] || navCreateIcon}
+      src={src}
       alt=""
       aria-hidden="true"
       draggable={false}
@@ -424,6 +523,7 @@ function SoulLinkSidebar({
   onToggleTheme: () => void
 }) {
   const panel = SIDEBAR_REFERENCE_PANELS[variant]
+  const blackPanel = SIDEBAR_REFERENCE_PANELS.black
   const inviteCard = SIDEBAR_INVITE_CARDS[variant]
   const isBlack = variant === "black"
   const panelClass = isBlack
@@ -443,25 +543,41 @@ function SoulLinkSidebar({
       className={cx("absolute z-30 overflow-hidden rounded-r-[1.45rem] border-r", panelClass)}
       style={boxStyle(artboard, panel.x, panel.y, panel.w, panel.h)}
     >
-      <div aria-hidden="true" className="absolute overflow-hidden" style={panelBoxStyle(panel, 0, 0, panel.w, 126)}>
-        <img
-          src={panel.src}
-          srcSet={`${panel.src} 1x, ${panel.src2x} 2x`}
-          alt=""
-          decoding="async"
-          draggable={false}
-          className="absolute left-0 top-0 w-full select-none object-fill"
-          style={{ height: `${(panel.h / 126) * 100}%` }}
-        />
-      </div>
+      {isBlack ? (
+        <div aria-hidden="true" className="absolute overflow-hidden" style={panelBoxStyle(blackPanel, 0, 0, blackPanel.w, 126)}>
+          <img
+            src={blackPanel.src}
+            srcSet={`${blackPanel.src} 1x, ${blackPanel.src2x} 2x`}
+            alt=""
+            decoding="async"
+            draggable={false}
+            className="absolute left-0 top-0 w-full select-none object-fill"
+            style={{ height: `${(blackPanel.h / 126) * 100}%` }}
+          />
+        </div>
+      ) : (
+        <div aria-hidden="true" className="absolute inset-x-6 top-7 h-16 rounded-[1.45rem] bg-gradient-to-r from-violet-50 via-white to-sky-50" />
+      )}
 
       <Link
         to="/"
         aria-label="SoulLink"
         onMouseDown={suppressMouseFocus}
-        className="absolute touch-manipulation rounded-2xl outline-none focus:ring-4 focus:ring-violet-400/45"
-        style={panelBoxStyle(panel, 48, 48, 134, 52)}
+        className={cx(
+          "absolute touch-manipulation rounded-2xl outline-none focus:ring-4 focus:ring-violet-400/45",
+          isBlack ? "" : "flex items-center gap-3 px-1",
+        )}
+        style={panelBoxStyle(panel, 50, 48, 136, 52)}
       >
+        {!isBlack ? (
+          <>
+            <UserCutImage src={lightPlaneIcon} className="h-8 w-8 rounded-xl" scale={2.2} loading="eager" />
+            <span className="min-w-0">
+              <span className="block text-[1.02rem] font-black leading-tight text-slate-800">FableMap</span>
+              <span className="block truncate text-[10px] font-bold text-slate-400">连接每一个真实坐标</span>
+            </span>
+          </>
+        ) : null}
         <span className="sr-only">SoulLink 连接另一个灵魂坐标</span>
       </Link>
 
@@ -481,7 +597,7 @@ function SoulLinkSidebar({
               )}
               style={panelBoxStyle(panel, item.x, item.y, item.w, item.h)}
             >
-              <SidebarNavIcon id={item.id} className="h-[22px] w-[22px] shrink-0" />
+              <SidebarNavIcon id={item.id} variant={variant} className="h-5 w-5 shrink-0" />
               <span className="ml-[15px] leading-none">{item.label}</span>
               {"badge" in item && (
                 <span className={cx(
@@ -501,7 +617,10 @@ function SoulLinkSidebar({
         data-soul-link-sidebar-cta="shared"
         aria-label="邀请朋友"
         onMouseDown={suppressMouseFocus}
-        className="absolute touch-manipulation overflow-hidden rounded-[1.55rem] outline-none focus:ring-4 focus:ring-violet-400/45"
+        className={cx(
+          "absolute touch-manipulation overflow-hidden rounded-[1.55rem] outline-none focus:ring-4 focus:ring-violet-400/45",
+          isBlack ? "" : "shadow-[0_16px_36px_rgba(104,126,190,0.14)]",
+        )}
         style={panelBoxStyle(panel, SHARED_SIDEBAR_INVITE.x, SHARED_SIDEBAR_INVITE.y, SHARED_SIDEBAR_INVITE.w, SHARED_SIDEBAR_INVITE.h)}
       >
         <img
@@ -512,7 +631,7 @@ function SoulLinkSidebar({
           aria-hidden="true"
           draggable={false}
           decoding="async"
-          className="h-full w-full select-none opacity-85"
+          className={cx("h-full w-full select-none object-cover object-center", isBlack ? "opacity-85" : "opacity-100")}
         />
         <span className="sr-only">邀请朋友，一起探索更多坐标，立即邀请</span>
       </Link>
@@ -603,17 +722,20 @@ function SoulLinkUserCluster({
   artboard,
   variant,
   profile = DEFAULT_SOUL_LINK_USER,
+  forceVisible = false,
 }: {
   artboard: Artboard
   variant: Variant
   profile?: SoulLinkUserProfile
+  forceVisible?: boolean
 }) {
   const isBlack = variant === "black"
   return (
     <div
       data-soul-link-user-cluster="shared"
       className={cx(
-        "absolute z-30 flex items-center gap-[4%] rounded-[1.75rem] border p-[0.55%] pr-[0.75%] opacity-0",
+        "absolute z-30 flex items-center gap-[4%] rounded-[1.75rem] border p-[0.55%] pr-[0.75%]",
+        forceVisible ? "opacity-100" : "opacity-0",
         isBlack
           ? "border-cyan-300/16 bg-[#020710]/96 shadow-[0_0_30px_rgba(0,255,255,0.1)]"
           : "border-white/80 bg-white/92 shadow-[0_14px_36px_rgba(83,103,166,0.13)] backdrop-blur-xl",
@@ -696,18 +818,21 @@ function SoulLinkPanelShell({
   box,
   children,
   className,
+  forceVisible = false,
 }: {
   artboard: Artboard
   variant: Variant
   box: { x: number; y: number; w: number; h: number }
   children: ReactNode
   className?: string
+  forceVisible?: boolean
 }) {
   const isBlack = variant === "black"
   return (
     <section
       className={cx(
-        "absolute z-30 rounded-[1.55rem] border p-[1.55%] opacity-0",
+        "absolute z-30 rounded-[1.55rem] border p-[1.55%]",
+        forceVisible ? "opacity-100" : "opacity-0",
         isBlack
           ? "border-cyan-300/16 bg-[#020710] text-cyan-50 shadow-[0_0_28px_rgba(0,255,255,0.08)]"
           : "border-white/80 bg-white text-slate-700 shadow-[0_18px_44px_rgba(85,103,160,0.13)]",
@@ -720,14 +845,15 @@ function SoulLinkPanelShell({
   )
 }
 
-function SoulLinkOnlineStatus({ status, variant }: { status: string; variant: Variant }) {
+function SoulLinkOnlineStatus({ status, variant, compact = false }: { status: string; variant: Variant; compact?: boolean }) {
   const isBlack = variant === "black"
   const isOnline = /在线|online/i.test(status)
   return (
     <span
       data-soul-link-online-status="real-text"
       className={cx(
-        "inline-flex shrink-0 items-center gap-1 text-[10px] font-bold leading-none",
+        "inline-flex shrink-0 items-center gap-1 font-bold leading-none",
+        compact ? "text-[9px]" : "text-[10px]",
         isOnline
           ? isBlack
             ? "text-emerald-300"
@@ -742,37 +868,47 @@ function SoulLinkOnlineStatus({ status, variant }: { status: string; variant: Va
   )
 }
 
-function SoulLinkOnlineEntityRow({ entity, variant }: { entity: SoulLinkOnlineEntity; variant: Variant }) {
+function SoulLinkOnlineEntityRow({ entity, variant, compact = false }: { entity: SoulLinkOnlineEntity; variant: Variant; compact?: boolean }) {
   const isBlack = variant === "black"
+  const rowClass = cx(
+    "flex touch-manipulation items-center rounded-xl outline-none transition focus:ring-4 focus:ring-violet-400/40",
+    compact ? "min-h-11 gap-2.5" : "min-h-[52px] gap-3",
+    isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70",
+  )
+  const staticRowClass = cx(
+    "flex items-center rounded-xl",
+    compact ? "min-h-11 gap-2.5" : "min-h-[52px] gap-3",
+  )
+  const avatarSizeClass = compact ? "h-8 w-8" : "h-9 w-9"
   const content = (
     <>
-      <span className="relative h-9 w-9 shrink-0">
+      <span className={cx("relative shrink-0", avatarSizeClass)}>
         <img
           data-soul-link-online-avatar="real-image"
           src={entity.avatar}
           alt={`${entity.name} 头像`}
-          className={cx("h-9 w-9 rounded-full border object-cover", isBlack ? "border-cyan-300/18" : "border-violet-100")}
+          className={cx(avatarSizeClass, "rounded-full border object-cover", isBlack ? "border-cyan-300/18" : "border-violet-100")}
           loading="lazy"
           decoding="async"
         />
       </span>
       <span className="min-w-0 flex-1">
-        <span data-soul-link-online-name="real-text" className={cx("block truncate text-xs font-black leading-4", isBlack ? "text-cyan-50" : "text-slate-700")}>{entity.name}</span>
-        <span data-soul-link-online-location="real-text" className={cx("mt-0.5 block truncate text-[10px] font-bold leading-4", isBlack ? "text-cyan-100/48" : "text-slate-400")}>{entity.location}</span>
+        <span data-soul-link-online-name="real-text" className={cx("block truncate font-black", compact ? "text-[0.72rem] leading-4" : "text-xs leading-4", isBlack ? "text-cyan-50" : "text-slate-700")}>{entity.name}</span>
+        <span data-soul-link-online-location="real-text" className={cx("mt-0.5 block truncate font-bold", compact ? "text-[9px] leading-3" : "text-[10px] leading-4", isBlack ? "text-cyan-100/48" : "text-slate-400")}>{entity.location}</span>
       </span>
-      <SoulLinkOnlineStatus status={entity.status} variant={variant} />
+      <SoulLinkOnlineStatus status={entity.status} variant={variant} compact={compact} />
     </>
   )
 
   if (entity.to) {
     return (
-      <Link to={entity.to} onMouseDown={suppressMouseFocus} className={cx("flex min-h-[52px] touch-manipulation items-center gap-3 rounded-xl outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70")}>
+      <Link to={entity.to} onMouseDown={suppressMouseFocus} className={rowClass}>
         {content}
       </Link>
     )
   }
 
-  return <div className="flex min-h-[52px] items-center gap-3 rounded-xl">{content}</div>
+  return <div className={staticRowClass}>{content}</div>
 }
 
 function SoulLinkOnlineEntitiesPanel({
@@ -780,16 +916,19 @@ function SoulLinkOnlineEntitiesPanel({
   variant,
   box,
   entities,
+  forceVisible = false,
 }: {
   artboard: Artboard
   variant: Variant
   box: { x: number; y: number; w: number; h: number }
   entities: SoulLinkOnlineEntity[]
+  forceVisible?: boolean
 }) {
   const isBlack = variant === "black"
+  const isCompact = forceVisible && !isBlack
   const visibleEntities = entities.slice(0, 3)
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} className="flex flex-col gap-3 p-4">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} forceVisible={forceVisible} className={cx("flex flex-col p-4", isCompact ? "gap-2.5" : "gap-3")}>
       <header className="flex items-center justify-between gap-3">
         <span className={cx("block text-sm font-black leading-none", isBlack ? "text-cyan-50" : "text-slate-800")}>在线的灵魂</span>
         <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("text-[10px] font-black leading-none outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-violet-300")}>
@@ -798,9 +937,12 @@ function SoulLinkOnlineEntitiesPanel({
       </header>
       <div data-soul-link-online-panel="real-list" className="flex flex-col divide-y divide-slate-200/60 overflow-hidden">
         {visibleEntities.length ? (
-          visibleEntities.map((entity) => <SoulLinkOnlineEntityRow key={entity.id} entity={entity} variant={variant} />)
+          visibleEntities.map((entity) => <SoulLinkOnlineEntityRow key={entity.id} entity={entity} variant={variant} compact={isCompact} />)
         ) : (
-          <p className={cx("py-8 text-center text-sm font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>暂时没有在线灵魂</p>
+          <p className={cx("flex flex-col items-center gap-2 py-8 text-center text-sm font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>
+            {!isBlack ? <UserCutImage src={lightBellIcon} className="h-9 w-9 rounded-2xl opacity-75" scale={2.4} /> : null}
+            暂时没有在线灵魂
+          </p>
         )}
       </div>
     </SoulLinkPanelShell>
@@ -816,46 +958,59 @@ function SoulLinkPanelHeader({ title, eyebrow, variant }: { title: string; eyebr
         {eyebrow ? <span className={cx("mt-1 block text-[clamp(0.5rem,0.62vw,0.68rem)] font-black uppercase tracking-[0.1em]", isBlack ? "text-cyan-100/45" : "text-slate-400")}>{eyebrow}</span> : null}
       </span>
       <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-xl", isBlack ? "bg-cyan-300/10 text-cyan-300" : "bg-violet-50 text-violet-400")}>
-        <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-          <rect x="4" y="10" width="2.6" height="8" rx="1.3" />
-          <rect x="9" y="6" width="2.6" height="12" rx="1.3" />
-          <rect x="14" y="12" width="2.6" height="6" rx="1.3" />
-          <rect x="19" y="4" width="2.6" height="14" rx="1.3" />
-        </svg>
+        {isBlack ? (
+          <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="4" y="10" width="2.6" height="8" rx="1.3" />
+            <rect x="9" y="6" width="2.6" height="12" rx="1.3" />
+            <rect x="14" y="12" width="2.6" height="6" rx="1.3" />
+            <rect x="19" y="4" width="2.6" height="14" rx="1.3" />
+          </svg>
+        ) : (
+          <UserCutImage src={lightPulseIcon} className="h-5 w-5 rounded-full" scale={2.4} />
+        )}
       </span>
     </header>
   )
 }
 
-function SoulLinkFeedItemRow({ item, variant }: { item: SoulLinkFeedItem; variant: Variant }) {
+function SoulLinkFeedItemRow({ item, variant, compact = false }: { item: SoulLinkFeedItem; variant: Variant; compact?: boolean }) {
   const isBlack = variant === "black"
+  const rowClass = cx(
+    "flex touch-manipulation items-center rounded-2xl outline-none transition focus:ring-4 focus:ring-violet-400/40",
+    compact ? "min-h-12 gap-2.5" : "min-h-14 gap-3",
+    isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70",
+  )
+  const staticRowClass = cx(
+    "flex items-center rounded-2xl",
+    compact ? "min-h-12 gap-2.5" : "min-h-14 gap-3",
+  )
   const content = (
     <>
       <img
         data-soul-link-feed-thumb="real-image"
         src={item.image}
         alt={`${item.title} 缩略图`}
-        className={cx("h-11 w-11 shrink-0 rounded-full border object-cover", isBlack ? "border-cyan-300/18" : "border-violet-100")}
+        className={cx(compact ? "h-10 w-10" : "h-11 w-11", "shrink-0 rounded-full border object-cover", isBlack ? "border-cyan-300/18" : "border-violet-100")}
         loading="lazy"
         decoding="async"
       />
       <span className="min-w-0 flex-1">
-        <span data-soul-link-feed-title="real-text" className={cx("block truncate text-sm font-black", isBlack ? "text-cyan-50" : "text-slate-700")}>{item.title}</span>
-        <span className={cx("mt-1 block truncate text-xs font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>{item.subtitle}</span>
+        <span data-soul-link-feed-title="real-text" className={cx("block truncate font-black", compact ? "text-[0.82rem] leading-4" : "text-sm", isBlack ? "text-cyan-50" : "text-slate-700")}>{item.title}</span>
+        <span className={cx("mt-1 block truncate font-bold", compact ? "text-[0.72rem] leading-4" : "text-xs", isBlack ? "text-cyan-100/48" : "text-slate-400")}>{item.subtitle}</span>
       </span>
-      <span className={cx("shrink-0 text-xs font-black", isBlack ? "text-cyan-100/45" : "text-slate-400")}>{item.meta}</span>
+      <span className={cx("shrink-0 font-black", compact ? "text-[0.72rem]" : "text-xs", isBlack ? "text-cyan-100/45" : "text-slate-400")}>{item.meta}</span>
     </>
   )
 
   if (item.to) {
     return (
-      <Link to={item.to} onMouseDown={suppressMouseFocus} className={cx("flex min-h-14 touch-manipulation items-center gap-3 rounded-2xl outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70")}>
+      <Link to={item.to} onMouseDown={suppressMouseFocus} className={rowClass}>
         {content}
       </Link>
     )
   }
 
-  return <div className="flex min-h-14 items-center gap-3 rounded-2xl">{content}</div>
+  return <div className={staticRowClass}>{content}</div>
 }
 
 function SoulLinkFeedPanel({
@@ -867,6 +1022,7 @@ function SoulLinkFeedPanel({
   items,
   actionLabel,
   actionTo = "/discover",
+  forceVisible = false,
 }: {
   artboard: Artboard
   variant: Variant
@@ -876,21 +1032,23 @@ function SoulLinkFeedPanel({
   items: SoulLinkFeedItem[]
   actionLabel?: string
   actionTo?: string
+  forceVisible?: boolean
 }) {
   const isBlack = variant === "black"
+  const isCompact = forceVisible && !isBlack
   const visibleItems = items.slice(0, 3)
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} className="flex flex-col gap-4">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} forceVisible={forceVisible} className={cx("flex flex-col", isCompact ? "gap-3" : "gap-4")}>
       <SoulLinkPanelHeader title={title} eyebrow={eyebrow} variant={variant} />
       <div data-soul-link-feed-panel="real-list" className="flex flex-col divide-y divide-slate-200/60 overflow-hidden">
         {visibleItems.length ? (
-          visibleItems.map((item) => <SoulLinkFeedItemRow key={item.id} item={item} variant={variant} />)
+          visibleItems.map((item) => <SoulLinkFeedItemRow key={item.id} item={item} variant={variant} compact={isCompact} />)
         ) : (
           <p className={cx("py-8 text-center text-sm font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>暂无新的坐标信号</p>
         )}
       </div>
       {actionLabel ? (
-        <Link to={actionTo} onMouseDown={suppressMouseFocus} className={cx("mt-auto inline-flex min-h-9 touch-manipulation items-center justify-center gap-2 rounded-2xl text-sm font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300 hover:bg-cyan-300/8" : "text-violet-500 hover:bg-violet-50")}>
+        <Link to={actionTo} onMouseDown={suppressMouseFocus} className={cx("mt-auto inline-flex touch-manipulation items-center justify-center gap-2 rounded-2xl font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isCompact ? "min-h-8 text-[0.82rem]" : "min-h-9 text-sm", isBlack ? "text-cyan-300 hover:bg-cyan-300/8" : "text-violet-500 hover:bg-violet-50")}>
           {actionLabel}
           <span aria-hidden="true">→</span>
         </Link>
@@ -904,24 +1062,30 @@ function SoulLinkDailyQuotePanel({
   variant,
   box,
   quote,
+  forceVisible = false,
 }: {
   artboard: Artboard
   variant: Variant
   box: { x: number; y: number; w: number; h: number }
   quote: SoulLinkDailyQuote
+  forceVisible?: boolean
 }) {
   const isBlack = variant === "black"
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} className="overflow-hidden">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={box} forceVisible={forceVisible} className="overflow-hidden">
       <div data-soul-link-daily-quote="real-text" className="relative z-10">
         <p className={cx("text-sm font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{quote.title}</p>
         <blockquote className={cx("mt-4 text-[clamp(0.82rem,0.9vw,1rem)] font-bold leading-7", isBlack ? "text-cyan-100/62" : "text-slate-500")}>“{quote.quote}”</blockquote>
         {quote.source ? <p className={cx("mt-2 text-xs font-bold", isBlack ? "text-cyan-100/42" : "text-slate-400")}>— {quote.source}</p> : null}
       </div>
-      <svg aria-hidden="true" className={cx("absolute bottom-2 right-3 h-16 w-16 opacity-30", isBlack ? "text-cyan-300" : "text-violet-200")} viewBox="0 0 96 96" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M10 51 82 18 60 82 44 57 10 51Z" />
-        <path d="M44 57 82 18" />
-      </svg>
+      {isBlack ? (
+        <svg aria-hidden="true" className="absolute bottom-2 right-3 h-16 w-16 text-cyan-300 opacity-30" viewBox="0 0 96 96" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M10 51 82 18 60 82 44 57 10 51Z" />
+          <path d="M44 57 82 18" />
+        </svg>
+      ) : (
+        <UserCutImage src={lightPlaneIcon} className="absolute bottom-2 right-3 h-16 w-16 rounded-full opacity-35" scale={2.2} />
+      )}
     </SoulLinkPanelShell>
   )
 }
@@ -960,15 +1124,17 @@ function SoulLinkRecentMemoriesPanel({
   artboard,
   variant,
   memories,
+  forceVisible = false,
 }: {
   artboard: Artboard
   variant: Variant
   memories: SoulLinkRecentMemory[]
+  forceVisible?: boolean
 }) {
   const isBlack = variant === "black"
   const visibleMemories = memories.slice(0, 2)
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={HOME_BOTTOM_RAIL.recentMemories} className="flex flex-col gap-1.5 !p-3">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={HOME_BOTTOM_RAIL.recentMemories} forceVisible={forceVisible} className="flex flex-col gap-1.5 !p-3">
       <header className="flex items-center justify-between gap-3">
         <h2 className={cx("text-[0.82rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>最近的记忆</h2>
         <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("text-[0.62rem] font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-slate-400")}>查看全部 →</Link>
@@ -1039,14 +1205,16 @@ function SoulLinkGuideCardView({ card, variant }: { card: SoulLinkGuideCard; var
     <>
       <span data-soul-link-guide-title="real-text" className="relative z-10 block text-[0.68rem] font-black">{card.title}</span>
       <span data-soul-link-guide-text="real-text" className="relative z-10 mt-1.5 block text-[0.72rem] font-black leading-4 opacity-80">{card.text}</span>
-      {card.image ? (
+      {card.image && variant !== "black" ? (
+        <img data-soul-link-guide-image="real-image" src={card.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full origin-center scale-[1.14] object-cover" loading="lazy" decoding="async" />
+      ) : card.image ? (
         <img data-soul-link-guide-image="real-image" src={card.image} alt={`${card.title} 图标`} className="absolute bottom-1.5 right-1.5 h-8 w-8 object-contain opacity-55" loading="lazy" decoding="async" />
       ) : (
         <SoulLinkGuideGlyph accent={card.accent} variant={variant} />
       )}
     </>
   )
-  const className = cx("relative min-h-[4.7rem] overflow-hidden rounded-2xl border p-3 text-left outline-none transition focus:ring-4 focus:ring-violet-400/40", guideToneClasses(card.accent, variant))
+  const className = cx("relative h-full min-h-[4.7rem] overflow-hidden rounded-2xl border p-3 text-left outline-none transition focus:ring-4 focus:ring-violet-400/40", guideToneClasses(card.accent, variant))
 
   if (card.to) {
     return <Link to={card.to} onMouseDown={suppressMouseFocus} className={className}>{content}</Link>
@@ -1055,27 +1223,33 @@ function SoulLinkGuideCardView({ card, variant }: { card: SoulLinkGuideCard; var
   return <div className={className}>{content}</div>
 }
 
-function SoulLinkGuidePanel({ artboard, variant, cards }: { artboard: Artboard; variant: Variant; cards: SoulLinkGuideCard[] }) {
+function SoulLinkGuidePanel({ artboard, variant, cards, forceVisible = false }: { artboard: Artboard; variant: Variant; cards: SoulLinkGuideCard[]; forceVisible?: boolean }) {
   const isBlack = variant === "black"
   const visibleCards = cards.slice(0, 3)
+  const cardsWithLightBackgrounds = visibleCards.map((card, index) => (
+    isBlack ? card : { ...card, image: card.image || LIGHT_GUIDE_BACKGROUNDS[index] }
+  ))
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={HOME_BOTTOM_RAIL.guideCards} className="flex flex-col gap-2 !p-3">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={HOME_BOTTOM_RAIL.guideCards} forceVisible={forceVisible} className="flex flex-col gap-2 !p-3">
       <header className="flex items-center justify-between gap-3">
         <h2 className={cx("text-[0.82rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>探索指南</h2>
         <Link to="/quests" onMouseDown={suppressMouseFocus} className={cx("text-[0.62rem] font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-slate-400")}>查看全部 →</Link>
       </header>
-      <div data-soul-link-guide-panel="real-cards" className="grid grid-cols-3 gap-3 overflow-hidden">
-        {visibleCards.map((card) => <SoulLinkGuideCardView key={card.id} card={card} variant={variant} />)}
+      <div data-soul-link-guide-panel="real-cards" className="grid flex-1 grid-cols-3 gap-3 overflow-hidden">
+        {cardsWithLightBackgrounds.map((card) => <SoulLinkGuideCardView key={card.id} card={card} variant={variant} />)}
       </div>
     </SoulLinkPanelShell>
   )
 }
 
-function SoulLinkWorldStatsPanel({ artboard, variant, stats }: { artboard: Artboard; variant: Variant; stats: SoulLinkWorldStat[] }) {
+function SoulLinkWorldStatsPanel({ artboard, variant, stats, forceVisible = false }: { artboard: Artboard; variant: Variant; stats: SoulLinkWorldStat[]; forceVisible?: boolean }) {
   const isBlack = variant === "black"
   const visibleStats = stats.length ? stats.slice(0, 4) : DEFAULT_WORLD_STATS
   return (
-    <SoulLinkPanelShell artboard={artboard} variant={variant} box={HOME_BOTTOM_RAIL.worldStats} className="overflow-hidden p-[1.25%]">
+    <SoulLinkPanelShell artboard={artboard} variant={variant} box={HOME_BOTTOM_RAIL.worldStats} forceVisible={forceVisible} className="overflow-hidden p-[1.25%]">
+      {!isBlack ? (
+        <img data-soul-link-world-stats-deco="real-image" src={lightPaperPlaneSoft} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full origin-center scale-[1.18] object-cover" loading="lazy" decoding="async" />
+      ) : null}
       <div data-soul-link-world-stats="real-data" className="relative z-10 flex h-full flex-col">
         <header className="flex items-center gap-1.5">
           <h2 className={cx("text-[0.9rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>今日世界统计</h2>
@@ -1090,16 +1264,19 @@ function SoulLinkWorldStatsPanel({ artboard, variant, stats }: { artboard: Artbo
           ))}
         </div>
       </div>
-      <svg data-soul-link-world-stats-deco="real-svg" aria-hidden="true" className={cx("absolute right-7 top-3 h-20 w-20 opacity-25", isBlack ? "text-cyan-300" : "text-violet-200")} viewBox="0 0 96 96" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M10 51 82 18 60 82 44 57 10 51Z" />
-        <path d="M44 57 82 18" />
-        <path d="M24 70c5-7 12-10 20-9" strokeDasharray="4 6" />
-      </svg>
+      {isBlack ? (
+        <svg data-soul-link-world-stats-deco="real-svg" aria-hidden="true" className="absolute right-7 top-3 h-20 w-20 text-cyan-300 opacity-25" viewBox="0 0 96 96" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M10 51 82 18 60 82 44 57 10 51Z" />
+          <path d="M44 57 82 18" />
+          <path d="M24 70c5-7 12-10 20-9" strokeDasharray="4 6" />
+        </svg>
+      ) : null}
     </SoulLinkPanelShell>
   )
 }
 
 function ArtboardShell({ artboard, variant, kind, children }: { artboard: Artboard; variant: Variant; kind: "home" | "discover"; children: ReactNode }) {
+  const isHomeLight = variant === "light" && kind === "home"
   return (
     <main
       data-soul-link-real-dom="true"
@@ -1111,8 +1288,15 @@ function ArtboardShell({ artboard, variant, kind, children }: { artboard: Artboa
         data-soul-link-reference={artboard.marker}
         data-soul-link-dom={kind}
         data-soul-link-design-lock="owner-reference-1-to-1"
-        className="relative mx-auto w-full select-none overflow-hidden"
-        style={{ maxWidth: `${artboard.width}px`, aspectRatio: `${artboard.width} / ${artboard.height}`, background: artboard.background }}
+        className={cx(
+          "relative mx-auto w-full select-none",
+          isHomeLight ? "min-h-screen overflow-visible md:min-h-0 md:overflow-hidden md:aspect-[1536/1024]" : "overflow-hidden",
+        )}
+        style={{
+          maxWidth: `${artboard.width}px`,
+          ...(isHomeLight ? {} : { aspectRatio: `${artboard.width} / ${artboard.height}` }),
+          background: artboard.background,
+        }}
       >
         {artboard.slices.map((slice) => (
           <img
@@ -1181,6 +1365,7 @@ function OverlayInput({
   onSubmit,
   placeholder,
   variant = "light",
+  forceVisible = false,
   x,
   y,
   w,
@@ -1192,6 +1377,7 @@ function OverlayInput({
   onSubmit?: () => void
   placeholder: string
   variant?: Variant
+  forceVisible?: boolean
   x: number
   y: number
   w: number
@@ -1219,7 +1405,11 @@ function OverlayInput({
   return (
     <label
       data-soul-link-search={onChange ? "real-input" : undefined}
-      className={cx("absolute z-20 flex min-h-11 cursor-text touch-manipulation items-center rounded-full border opacity-0 transition focus-within:opacity-100 focus-within:ring-2", shellToneClass)}
+      className={cx(
+        "absolute z-20 flex min-h-11 cursor-text touch-manipulation items-center rounded-full border transition focus-within:ring-2",
+        forceVisible ? "opacity-100" : "opacity-0 focus-within:opacity-100",
+        shellToneClass,
+      )}
       style={boxStyle(artboard, x, y, w, h)}
     >
       <span className="sr-only">搜索地点、角色、记忆或关键词</span>
@@ -1235,15 +1425,173 @@ function OverlayInput({
           inputToneClass,
         )}
       />
-      <span aria-hidden="true" className={cx("pointer-events-none absolute right-[7%] grid h-[48%] min-h-5 w-[7%] min-w-5 place-items-center rounded-lg text-sm font-black leading-none", keyToneClass)}>
+      <span aria-hidden="true" className={cx("pointer-events-none absolute right-[6%] grid h-8 w-8 place-items-center rounded-xl text-sm font-black leading-none", keyToneClass)}>
         /
       </span>
     </label>
   )
 }
 
-function HomeHeroActions({ artboard, variant }: { artboard: Artboard; variant: Variant }) {
+function SoulLinkLightCoordinateCard({
+  artboard,
+  box,
+  slice,
+  index,
+}: {
+  artboard: Artboard
+  box: readonly [number, number, number, number]
+  slice?: HomeReferenceProps["featuredCitySlices"][number]
+  index: number
+}) {
+  const card = lightCoordinateCardData(slice, index)
+  const [x, y, w, h] = box
+
+  return (
+    <Link
+      to={targetFor(card.id)}
+      data-soul-link-home-light-card="real-card"
+      onMouseDown={suppressMouseFocus}
+      className="absolute z-20 min-h-11 touch-manipulation overflow-hidden rounded-[1.2rem] border border-white/90 bg-white shadow-[0_18px_42px_rgba(108,123,178,0.14)] outline-none transition hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(108,123,178,0.2)] focus:ring-4 focus:ring-violet-400/35"
+      style={boxStyle(artboard, x, y, w, h)}
+    >
+      <div className="relative h-[45%] overflow-hidden">
+        <img src={card.image} alt={`${card.name} 坐标封面`} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+        <span className="absolute left-3 top-3 rounded-full bg-violet-500/82 px-3 py-1 text-[clamp(0.46rem,0.68vw,0.72rem)] font-black text-white shadow-[0_8px_18px_rgba(118,91,255,0.22)]">
+          {card.tag}
+        </span>
+      </div>
+      <div className="flex h-[55%] flex-col px-[7%] py-[5%]">
+        <h3 data-soul-link-home-card-title="real-text" className="truncate text-[clamp(0.68rem,0.9vw,1rem)] font-black leading-tight text-slate-800">{card.name}</h3>
+        <p className="mt-[5%] line-clamp-2 text-[clamp(0.5rem,0.74vw,0.82rem)] font-bold leading-5 text-slate-400">{card.description}</p>
+        <div className="mt-auto flex items-center justify-between gap-2 text-[clamp(0.48rem,0.68vw,0.72rem)] font-bold text-slate-400">
+          <span className="flex min-w-0 items-center gap-1 truncate">
+            <UserCutImage src={lightMessageIcon} className="h-5 w-5 rounded-full" scale={2.2} />
+            {card.visitLabel}
+          </span>
+          <span aria-hidden="true" className="text-violet-300">♡</span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function SoulLinkHomeLightMainSurface({
+  artboard,
+  featuredCitySlices,
+}: {
+  artboard: Artboard
+  featuredCitySlices: HomeReferenceProps["featuredCitySlices"]
+}) {
+  return (
+    <>
+      <div aria-hidden="true" className="absolute inset-0 z-0 overflow-hidden">
+        <img src={lightPlaneWash} alt="" className="h-full w-full object-cover opacity-60" draggable={false} decoding="async" />
+      </div>
+      <div aria-hidden="true" className="absolute z-0 overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_80px_rgba(116,135,190,0.14)]" style={boxStyle(artboard, 220, 18, 1000, 530)}>
+        <img src={lightSkyCityBalcony} alt="" className="h-full w-full object-cover opacity-78" draggable={false} decoding="async" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/72 to-white/22" />
+      </div>
+      <div aria-hidden="true" className="absolute z-0 overflow-hidden rounded-[1.75rem] bg-white/92" style={boxStyle(artboard, 1220, 0, 316, 1024)}>
+        <div className="absolute inset-0 bg-white/72" />
+      </div>
+      <UserCutImage src={lightPlaneIcon} className="absolute z-10 rounded-full opacity-85" style={boxStyle(artboard, 600, 70, 64, 64)} scale={2.2} loading="eager" />
+      <UserCutImage src={lightCompassIcon} className="absolute z-10 rounded-full opacity-50" style={boxStyle(artboard, 846, 126, 118, 118)} scale={2.0} loading="eager" />
+      <div className="absolute z-10" style={boxStyle(artboard, 280, 145, 520, 178)}>
+        <p className="text-[clamp(0.48rem,0.72vw,0.8rem)] font-black uppercase tracking-[0.24em] text-violet-400">REAL COORDINATES / AI NPC</p>
+        <h1 data-soul-link-home-light-title="real-text" className="mt-3 max-w-[12em] text-[clamp(1.45rem,2.35vw,2.45rem)] font-black leading-[1.25] tracking-[-0.04em] text-slate-800">
+          在每一个坐标里，
+          <br />
+          遇见另一种可能的自己。
+        </h1>
+        <p className="mt-4 max-w-[32em] text-[clamp(0.58rem,0.9vw,0.95rem)] font-bold leading-7 text-slate-500">
+          连接仍在回应的灵魂，探索属于你的故事。
+        </p>
+      </div>
+      <div className="absolute z-10 rounded-[1.25rem] border border-white/90 bg-white/88 px-5 py-4 shadow-[0_18px_42px_rgba(118,133,190,0.16)]" style={boxStyle(artboard, 1042, 397, 170, 76)}>
+        <p className="text-[clamp(0.44rem,0.62vw,0.66rem)] font-black text-slate-400">当前坐标</p>
+        <p className="mt-2 flex items-center justify-between gap-2 text-[clamp(0.66rem,0.9vw,1rem)] font-black text-slate-700">
+          云上图书馆
+          <UserCutImage src={lightPinIcon} className="h-5 w-5 shrink-0 rounded-full" scale={1.7} loading="eager" />
+        </p>
+      </div>
+      <div className="absolute z-10 flex items-center justify-between" style={boxStyle(artboard, 252, 560, 936, 44)}>
+        <h2 className="text-[clamp(0.72rem,1vw,1rem)] font-black text-slate-800">为你推荐的坐标</h2>
+        <Link to="/discover" onMouseDown={suppressMouseFocus} className="inline-flex min-h-9 touch-manipulation items-center gap-2 rounded-full px-3 text-[clamp(0.52rem,0.68vw,0.72rem)] font-black text-slate-400 outline-none transition hover:bg-white/70 hover:text-violet-500 focus:ring-4 focus:ring-violet-400/35">
+          查看全部 →
+        </Link>
+      </div>
+      {HOME_LAYOUT.cards.map((box, index) => (
+        <SoulLinkLightCoordinateCard
+          key={`home-light-real-card-${featuredCitySlices[index]?.id || index}`}
+          artboard={artboard}
+          box={box}
+          slice={featuredCitySlices[index]}
+          index={index}
+        />
+      ))}
+    </>
+  )
+}
+
+function SoulLinkHomeLightMobile({
+  featuredCitySlices,
+  onToggleTheme,
+}: {
+  featuredCitySlices: HomeReferenceProps["featuredCitySlices"]
+  onToggleTheme: () => void
+}) {
+  const cards = HOME_LAYOUT.cards.map((_, index) => lightCoordinateCardData(featuredCitySlices[index], index))
+  return (
+    <div className="relative z-40 min-h-screen bg-[linear-gradient(180deg,#f4f8ff_0%,#eef4ff_46%,#fff_100%)] px-4 py-5 md:hidden">
+      <header className="flex items-center justify-between rounded-[1.5rem] border border-white/80 bg-white/86 p-3 shadow-[0_18px_42px_rgba(108,123,178,0.14)]">
+        <Link to="/" className="flex min-h-11 touch-manipulation items-center gap-3 rounded-2xl outline-none focus:ring-4 focus:ring-violet-400/35">
+          <UserCutImage src={lightPlaneIcon} className="h-11 w-11 rounded-2xl" scale={2.4} loading="eager" />
+          <span>
+            <span className="block text-base font-black text-slate-800">FableMap</span>
+            <span className="block text-xs font-bold text-slate-400">真实坐标里的 AI 空间</span>
+          </span>
+        </Link>
+        <button type="button" onClick={onToggleTheme} className="grid h-11 w-11 touch-manipulation place-items-center rounded-2xl border border-violet-100 bg-violet-50 text-violet-500" aria-label="切换主题">
+          ☼
+        </button>
+      </header>
+      <section className="relative mt-5 overflow-hidden rounded-[2rem] border border-white/80 bg-white/80 p-5 shadow-[0_22px_54px_rgba(108,123,178,0.16)]">
+        <img src={lightSkyCityBalcony} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-34" loading="lazy" decoding="async" />
+        <div aria-hidden="true" className="absolute inset-0 bg-white/78" />
+        <p className="relative z-10 text-xs font-black uppercase tracking-[0.22em] text-violet-400">Real coordinates</p>
+        <h1 data-soul-link-home-light-title-mobile="real-text" className="relative z-10 mt-3 text-3xl font-black leading-tight tracking-[-0.04em] text-slate-800">在每一个坐标里，遇见另一种可能的自己。</h1>
+        <p className="relative z-10 mt-3 text-sm font-bold leading-7 text-slate-500">用真实地点打开一间空间，和主人配置的 AI NPC 对话、回访、留下记忆。</p>
+        <div className="relative z-10 mt-5 flex gap-3">
+          <Link to="/discover" className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-2xl bg-violet-500 px-4 text-sm font-black text-white shadow-[0_16px_32px_rgba(118,91,255,0.25)]">开始探索</Link>
+          <Link to="/create" className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-2xl border border-violet-100 bg-white px-4 text-sm font-black text-violet-500">创建空间</Link>
+        </div>
+      </section>
+      <section className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-black text-slate-800">推荐坐标</h2>
+          <Link to="/discover" className="text-sm font-black text-violet-400">全部 →</Link>
+        </div>
+        <div className="grid gap-3">
+          {cards.map((slice, index) => (
+            <Link key={slice.id || `fallback-${index}`} to={targetFor(slice.id)} data-soul-link-home-light-card="real-card" className="flex min-h-28 touch-manipulation gap-3 rounded-[1.5rem] border border-white/80 bg-white p-3 shadow-[0_14px_34px_rgba(108,123,178,0.12)]">
+              <img src={slice.image} alt={`${slice.name} 封面`} className="h-24 w-28 rounded-[1.15rem] object-cover" loading="lazy" decoding="async" />
+              <span className="min-w-0 flex-1 py-1">
+                <span data-soul-link-home-card-title="real-text" className="block truncate font-black text-slate-800">{slice.name}</span>
+                <span className="mt-2 line-clamp-2 block text-sm font-bold leading-6 text-slate-400">{slice.description}</span>
+                <span className="mt-2 block text-xs font-black text-violet-400">{slice.tag}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function HomeHeroActions({ artboard, variant, forceVisible = false }: { artboard: Artboard; variant: Variant; forceVisible?: boolean }) {
   const isBlack = variant === "black"
+  const playIconSize = isBlack ? 12 : 16
+  const playIconStrokeWidth = isBlack ? 2 : 2.75
   const primaryClass = isBlack
     ? "border-cyan-200/50 bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.28)]"
     : "border-violet-300/45 bg-[#8e83ff] text-white shadow-[0_14px_28px_rgba(126,111,255,0.22)]"
@@ -1257,7 +1605,11 @@ function HomeHeroActions({ artboard, variant }: { artboard: Artboard; variant: V
         to="/discover"
         aria-label="开始探索"
         onMouseDown={suppressMouseFocus}
-        className={cx("absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black opacity-0 transition hover:-translate-y-0.5 focus:opacity-100 focus:outline-none focus:ring-4", primaryClass)}
+        className={cx(
+          "absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black transition hover:-translate-y-0.5 focus:outline-none focus:ring-4",
+          forceVisible ? "opacity-100" : "opacity-0 focus:opacity-100",
+          primaryClass,
+        )}
         style={boxStyle(artboard, HOME_LAYOUT.heroActions.primary.x, HOME_LAYOUT.heroActions.primary.y, HOME_LAYOUT.heroActions.primary.w, HOME_LAYOUT.heroActions.primary.h)}
       >
         <span>开始探索</span>
@@ -1267,12 +1619,27 @@ function HomeHeroActions({ artboard, variant }: { artboard: Artboard; variant: V
         to="/discover"
         aria-label="观看世界介绍"
         onMouseDown={suppressMouseFocus}
-        className={cx("absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black opacity-0 transition hover:-translate-y-0.5 focus:opacity-100 focus:outline-none focus:ring-4", secondaryClass)}
+        className={cx(
+          "absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black transition hover:-translate-y-0.5 focus:outline-none focus:ring-4",
+          forceVisible ? "opacity-100" : "opacity-0 focus:opacity-100",
+          secondaryClass,
+        )}
         style={boxStyle(artboard, HOME_LAYOUT.heroActions.secondary.x, HOME_LAYOUT.heroActions.secondary.y, HOME_LAYOUT.heroActions.secondary.w, HOME_LAYOUT.heroActions.secondary.h)}
       >
-        <div aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full border border-current/30">
-          <Play size={12} fill="currentColor" className="ml-0.5" />
-        </div>
+        <span
+          aria-hidden="true"
+          className={cx(
+            "grid h-7 w-7 shrink-0 place-items-center",
+            isBlack ? "rounded-full border border-current/30" : "text-[#8277ff]",
+          )}
+        >
+          <Play
+            size={playIconSize}
+            fill="currentColor"
+            strokeWidth={playIconStrokeWidth}
+            className="ml-0.5"
+          />
+        </span>
         <span>观看世界介绍</span>
       </Link>
     </>
@@ -1325,41 +1692,48 @@ export function SoulLinkHomeReference({
   const resolvedWorldPulseItems = worldPulseItems?.length ? worldPulseItems : fallbackFeedItemsFromHome(featuredCitySlices)
   const resolvedOnlineEntities = onlineEntities?.length ? onlineEntities : fallbackOnlineEntitiesFromFeed(resolvedWorldPulseItems)
   const resolvedRecentMemories = recentMemories?.length ? recentMemories : fallbackRecentMemoriesFromHome(featuredCitySlices)
+  const forceRealHome = variant === "light"
   return (
     <ArtboardShell artboard={artboard} variant={variant} kind="home">
-      <SoulLinkSidebar artboard={artboard} variant={variant} active="home" onToggleTheme={onToggleTheme} />
-      <SoulLinkUserCluster artboard={artboard} variant={variant} />
-      <SoulLinkFeedPanel
-        artboard={artboard}
-        variant={variant}
-        box={HOME_RIGHT_RAIL.worldPulse}
-        title="世界脉搏"
-        eyebrow="实时回响"
-        items={resolvedWorldPulseItems}
-        actionLabel="查看全部动态"
-      />
-      <SoulLinkDailyQuotePanel artboard={artboard} variant={variant} box={HOME_RIGHT_RAIL.dailyQuote} quote={dailyQuote} />
-      <SoulLinkOnlineEntitiesPanel artboard={artboard} variant={variant} box={HOME_RIGHT_RAIL.onlineEntities} entities={resolvedOnlineEntities} />
-      <SoulLinkRecentMemoriesPanel artboard={artboard} variant={variant} memories={resolvedRecentMemories} />
-      <SoulLinkGuidePanel artboard={artboard} variant={variant} cards={guideCards} />
-      <SoulLinkWorldStatsPanel artboard={artboard} variant={variant} stats={worldStats} />
-      <OverlayText artboard={artboard} x={270} y={135} w={480} h={120}>
-        {variant === "black" ? "接入仍在回应的数字坐标网络" : "在每一个坐标里，遇见另一种可能的自己。"}
-      </OverlayText>
-      {variant === "black" ? <OverlayMask artboard={artboard} className="rounded-[1.4rem] bg-[#02070e] shadow-[0_0_34px_rgba(2,7,14,0.92)]" {...HOME_LAYOUT.blackSearchMask} /> : null}
-      <OverlayInput
-        artboard={artboard}
-        value={search || ""}
-        onChange={onSearchChange}
-        onSubmit={onSearchSubmit}
-        placeholder="输入你想前往的地方..."
-        variant={variant}
-        {...HOME_LAYOUT.search}
-      />
-      <OverlayMask artboard={artboard} className={variant === "black" ? "rounded-[1.25rem] bg-[#08101a]/92" : "rounded-[1.25rem] bg-white/45 backdrop-blur-[2px]"} {...HOME_LAYOUT.heroActionsMask} />
-      <HomeHeroActions artboard={artboard} variant={variant} />
-      <HomeCardLinks artboard={artboard} featuredCitySlices={featuredCitySlices} />
-      <OverlayLink artboard={artboard} hotspot={HOME_LAYOUT.links.allCoordinates} />
+      {forceRealHome ? <SoulLinkHomeLightMobile featuredCitySlices={featuredCitySlices} onToggleTheme={onToggleTheme} /> : null}
+      <div className={forceRealHome ? "hidden md:block" : undefined}>
+        {forceRealHome ? <SoulLinkHomeLightMainSurface artboard={artboard} featuredCitySlices={featuredCitySlices} /> : null}
+        <SoulLinkSidebar artboard={artboard} variant={variant} active="home" onToggleTheme={onToggleTheme} />
+        <SoulLinkUserCluster artboard={artboard} variant={variant} forceVisible={forceRealHome} />
+        <SoulLinkFeedPanel
+          artboard={artboard}
+          variant={variant}
+          box={HOME_RIGHT_RAIL.worldPulse}
+          title="世界脉搏"
+          eyebrow="实时回响"
+          items={resolvedWorldPulseItems}
+          actionLabel="查看全部动态"
+          forceVisible={forceRealHome}
+        />
+        <SoulLinkDailyQuotePanel artboard={artboard} variant={variant} box={HOME_RIGHT_RAIL.dailyQuote} quote={dailyQuote} forceVisible={forceRealHome} />
+        <SoulLinkOnlineEntitiesPanel artboard={artboard} variant={variant} box={HOME_RIGHT_RAIL.onlineEntities} entities={resolvedOnlineEntities} forceVisible={forceRealHome} />
+        <SoulLinkRecentMemoriesPanel artboard={artboard} variant={variant} memories={resolvedRecentMemories} forceVisible={forceRealHome} />
+        <SoulLinkGuidePanel artboard={artboard} variant={variant} cards={guideCards} forceVisible={forceRealHome} />
+        <SoulLinkWorldStatsPanel artboard={artboard} variant={variant} stats={worldStats} forceVisible={forceRealHome} />
+        <OverlayText artboard={artboard} x={270} y={135} w={480} h={120}>
+          {variant === "black" ? "接入仍在回应的数字坐标网络" : "在每一个坐标里，遇见另一种可能的自己。"}
+        </OverlayText>
+        {variant === "black" ? <OverlayMask artboard={artboard} className="rounded-[1.4rem] bg-[#02070e] shadow-[0_0_34px_rgba(2,7,14,0.92)]" {...HOME_LAYOUT.blackSearchMask} /> : null}
+        <OverlayInput
+          artboard={artboard}
+          value={search || ""}
+          onChange={onSearchChange}
+          onSubmit={onSearchSubmit}
+          placeholder="输入你想前往的地方..."
+          variant={variant}
+          forceVisible={forceRealHome}
+          {...HOME_LAYOUT.search}
+        />
+        {variant === "black" ? <OverlayMask artboard={artboard} className="rounded-[1.25rem] bg-[#08101a]/92" {...HOME_LAYOUT.heroActionsMask} /> : null}
+        <HomeHeroActions artboard={artboard} variant={variant} forceVisible={forceRealHome} />
+        {variant === "black" ? <HomeCardLinks artboard={artboard} featuredCitySlices={featuredCitySlices} /> : null}
+        <OverlayLink artboard={artboard} hotspot={HOME_LAYOUT.links.allCoordinates} />
+      </div>
     </ArtboardShell>
   )
 }
@@ -1404,3 +1778,5 @@ export function SoulLinkDiscoverReference(props: DiscoverReferenceProps) {
     </ArtboardShell>
   )
 }
+
+

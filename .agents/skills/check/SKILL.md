@@ -25,6 +25,10 @@ Execute these steps:
 
 4. **Read the specific guideline files** referenced in the Quality Check section (e.g., `quality-guidelines.md`, `conventions.md`). The index is NOT the goal — it points you to the actual guideline files. Read those files and review your code against them.
 
-5. **Run lint and typecheck** for the affected package.
+5. **Run adversarial source-of-truth review when needed**:
+   - If the changes touch UI/design fidelity, user-provided assets, image mapping, screenshots, product copy, or any area the user challenged as mismatched, run `$grill-me` before treating the check as complete.
+   - The `grill-me` review must name the source of truth and evidence (paths, dimensions, screenshots, DOM measurements, commands). Do not treat “build passes” as visual acceptance.
 
-6. **Report any violations** and fix them if found.
+6. **Run lint and typecheck** for the affected package.
+
+7. **Report any violations** and fix them if found.

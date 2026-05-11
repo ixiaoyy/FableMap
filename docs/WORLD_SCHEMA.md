@@ -100,6 +100,7 @@ type PlaceType =
   | 'bookstore'
   | 'school'
   | 'hospital'
+  | 'board-game'
   | 'home';
 
 type Gender =
@@ -254,8 +255,12 @@ interface TavernCharacter {
   sprites: Record<string, string>; // 表情立绘映射 (e.g. { "joy": "url" })
   appearance: dict[str, Any];    // 角色长相/外貌 preset 信息
   talkativeness: float;          // 0.0-1.0，群聊发言积极度
-}
-  sprites?: TavernSpriteSet;     // 表情精灵图
+
+  // ── 仿真与流动 (v0.9) ──────────────
+  current_tavern_id: string;     // 当前所在空间 ID（支持跨空间流动）
+  home_tavern_id: string;        // 初始锚点空间 ID（默认出生地）
+  simulation_state?: NpcSimulationState; // 生理与心理状态
+  traits: NpcTrait[];            // 性格特质枚举
 }
 
 /**
@@ -797,6 +802,31 @@ SillyTavern 角色卡 V2 JSON 导入时的字段映射：
 | `sibling_younger` | 兄妹 | Older Brother | 兄 + 妹妹 |
 | `sibling_older` | 姐弟 | Older Sister | 姐 + 弟弟 |
 | `sworn_sibling` | 结拜兄妹 | Sworn Sibling | 结义兄弟/姐妹 |
+
+---
+
+## 十七、NPC 仿真与流动协议 (v0.9)
+
+NPC 仿真系统让空间角色具备了主体性，使其在镜像世界中能够像真实访客一样感知需求并在坐标间迁移。
+
+### 17.1 状态衰减与寻路逻辑
+- **自然衰减**：系统 Tick 每隔 15 分钟触发一次，根据 `traits` 计算状态值的下降。
+- **寻路动机 (Motivation)**：当任一状态值低于 30 时，NPC 进入“寻找目标”状态。
+  - `hunger < 30` -> 寻找 `place_type` 为 `convenience-store`, `restaurant` 的空间。
+  - `thirst < 30` -> 寻找 `place_type` 为 `cafe`, `milk-tea-shop` 的空间。
+  - `entertainment < 30` -> 寻找挂载了 `board-game` 或 `text_game` 玩法的空间。
+- **移动执行**：
+  - NPC 选定目标坐标后，从 `current_tavern_id` 列表中移除。
+  - 系统记录 `NpcMobilityEvent`。
+  - 模拟步行/通勤时间后（由 lat/lon 距离计算），NPC 出现在目标空间的 `characters` 列表中（标记为 `is_visitor: true`）。
+
+### 17.2 镜像世界连续性
+- **跨空间记忆**：NPC 在移动时携带其 `TavernMemory` 片段。在新空间对话时，AI Director 会优先注入上一个空间的交互摘要。
+- **环境响应**：NPC 的状态衰减速率受目标坐标的真实天气影响（如：高温天气下 `thirst` 下降速率翻倍）。
+
+### 17.3 访客干预 (Intervention)
+- 访客可以通过 `Engagement` 系统的礼物功能（如：赠送“一瓶矿泉水”）直接提升 NPC 的对应状态值。
+- 高频次的干预会显著提升 `VisitorState.relationship.strength`。
 
 **非排他（可多人，capacity: N）**
 

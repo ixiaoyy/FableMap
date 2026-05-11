@@ -41,6 +41,7 @@ type TavernChatWorkbenchProps = {
   currentUserId: string
   isOwner: boolean
   publicPanel?: ReactNode
+  visitorState?: any // Added for relationship context
 }
 
 type DetailSectionProps = {
@@ -124,8 +125,24 @@ function hostGuideMessage(tavern: Tavern, characters: TavernCharacter[]): ChatMe
   }
 }
 
-function publicEntranceMessages(characters: TavernCharacter[], tavern: Tavern): ChatMessage[] {
-  return [...entranceReactionMessages(characters, tavern.name), hostGuideMessage(tavern, characters)]
+function publicEntranceMessages(characters: TavernCharacter[], tavern: Tavern, shopkeeperNpc?: TavernCharacter): ChatMessage[] {
+  // If we have a real NPC shopkeeper, they greet.
+  // Otherwise, the host guide (virtual shopkeeper) greets.
+  // If no virtual shopkeeper and no NPC shopkeeper, pick one NPC to fallback greet.
+  const greetings: ChatMessage[] = []
+
+  if (shopkeeperNpc) {
+    greetings.push({
+      id: `entrance-shopkeeper-${Date.now()}`,
+      role: "assistant",
+      character_id: shopkeeperNpc.id,
+      content: entranceReactionContent(shopkeeperNpc, tavern.name),
+      timestamp: new Date().toISOString(),
+    })
+  }
+
+  greetings.push(hostGuideMessage(tavern, characters))
+  return greetings
 }
 
 function normalizeMentionName(value: string) {
@@ -293,7 +310,13 @@ function NpcSeatGallery({
               key={`seat-${character.id}`}
               type="button"
               aria-pressed={active}
-              onClick={() => onSelectCharacter(character.id)}
+              onClick={() => {
+                if (activeChatChannel === "public") {
+                  handleSelectNpcInPublic(character.id)
+                } else {
+                  onSelectCharacter(character.id)
+                }
+              }}
               className={`group min-w-[4.4rem] rounded-2xl border p-1.5 text-left transition hover:border-cyan-300/45 hover:bg-cyan-300/8 ${
                 active ? "border-cyan-300/55 bg-cyan-300/12" : "border-white/10 bg-white/[0.04]"
               }`}
@@ -392,6 +415,8 @@ export function TavernChatWorkbench({
   const [message, setMessage] = useState("")
   const [mentionQuery, setMentionQuery] = useState("")
   const [mentionIndex, setMentionIndex] = useState(0)
+  const [targetedCharacterId, setTargetedCharacterId] = useState("") // For smart targeting
+  const [visitorState, setVisitorState] = useState<any>(null)
   const mentionRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [activeChatChannel, setActiveChatChannel] = useState<ChatChannel>("public")
@@ -433,8 +458,11 @@ export function TavernChatWorkbench({
 
     let cancelled = false
     enterTavern(tavern.id, "", visitorId, visitorGender)
-      .then(() => {
+      .then((res) => {
         if (cancelled) return
+        if (res.visitor_state) {
+          setVisitorState(res.visitor_state)
+        }
       })
       .catch((err) => {
         if (cancelled) return
@@ -451,10 +479,38 @@ export function TavernChatWorkbench({
       setPrivateMessagesByCharacterId({})
       return
     }
+
+    // Identify shopkeeper NPC
+    const shopkeeperNpc = characters.find(c => 
+      c.name?.includes("店长") || 
+      c.tags?.some(t => t.toLowerCase().includes("shopkeeper") || t.includes("店长"))
+    )
+
+    // Identity friendly NPCs who should greet in private
+    const friendlyNpcs = characters.filter(c => {
+      const stage = visitorState?.relationship?.stage || "stranger"
+      return ["familiar", "friend", "close_friend", "best_friend"].includes(stage)
+    })
+
     setActiveChatChannel("public")
-    setPublicMessages(publicEntranceMessages(characters, tavern))
-    setPrivateMessagesByCharacterId({})
-  }, [characters, passwordLocked, tavern.id, tavern.name, tavern.gameplay_definitions])
+    
+    // Public greetings: Shopkeeper only
+    setPublicMessages(publicEntranceMessages(characters, tavern, shopkeeperNpc))
+
+    // Private greetings: Friendly NPCs only
+    const privateGreetings: Record<string, ChatMessage[]> = {}
+    friendlyNpcs.forEach(npc => {
+      privateGreetings[npc.id] = [{
+        id: `entrance-private-${npc.id}-${Date.now()}`,
+        role: "assistant",
+        character_id: npc.id,
+        content: entranceReactionContent(npc, tavern.name),
+        timestamp: new Date().toISOString(),
+      }]
+    })
+    setPrivateMessagesByCharacterId(privateGreetings)
+
+  }, [characters, passwordLocked, tavern.id, tavern.name, tavern.gameplay_definitions, visitorState])
 
   useEffect(() => {
     chatLogRef.current?.scrollTo({ top: chatLogRef.current.scrollHeight, behavior: "smooth" })
@@ -569,22 +625,27 @@ export function TavernChatWorkbench({
 
   async function sendPublicChat(cleanMessage: string, intentForTurn = selectedIntent) {
     const mention = parsePublicMentionTarget(cleanMessage, characters)
-    const targetCharacter = mention?.character || selectedCharacter
-    setPublicMessages((current) => [...current, buildUserLine(cleanMessage, mention?.character.id)])
+    const targetedChar = characters.find(c => c.id === targetedCharacterId)
+    const targetCharacter = mention?.character || targetedChar || selectedCharacter
+    
+    // Clear targeted character after use
+    setTargetedCharacterId("")
 
-    if (mention?.character) {
+    setPublicMessages((current) => [...current, buildUserLine(cleanMessage, targetCharacter?.id)])
+
+    if (targetCharacter) {
       const result = await sendTavernChat(tavern.id, {
-        character_id: mention.character.id,
+        character_id: targetCharacter.id,
         visitor_id: visitorId,
         visitor_name: visitorName,
         visitor_gender: visitorGender,
-        message: mention.message,
+        message: mention?.message || cleanMessage,
         display_message: cleanMessage,
         extra_context: buildConversationIntentContext(intentForTurn),
       })
       const responseText = String(result.response || "").trim()
       if (responseText) {
-        setPublicMessages((current) => [...current, buildAssistantLine(responseText, mention.character.id, result)])
+        setPublicMessages((current) => [...current, buildAssistantLine(responseText, targetCharacter.id, result)])
       } else if (result.degradation?.message) {
         setError(result.degradation.message)
       }
@@ -607,24 +668,6 @@ export function TavernChatWorkbench({
         setError(result.error)
       }
       return
-    }
-
-    if (targetCharacter) {
-      const result = await sendTavernChat(tavern.id, {
-        character_id: targetCharacter.id,
-        visitor_id: visitorId,
-        visitor_name: visitorName,
-        visitor_gender: visitorGender,
-        message: cleanMessage,
-        display_message: cleanMessage,
-        extra_context: buildConversationIntentContext(intentForTurn),
-      })
-      const responseText = String(result.response || "").trim()
-      if (responseText) {
-        setPublicMessages((current) => [...current, buildAssistantLine(responseText, targetCharacter.id, result)])
-      } else if (result.degradation?.message) {
-        setError(result.degradation.message)
-      }
     }
   }
 
@@ -695,14 +738,24 @@ export function TavernChatWorkbench({
     textareaRef.current?.focus()
   }
 
+  function handleSelectNpcInPublic(characterId: string) {
+    if (targetedCharacterId === characterId) {
+      setTargetedCharacterId("")
+    } else {
+      setTargetedCharacterId(characterId)
+    }
+  }
+
   function selectCharacter(characterId: string) {
     setSelectedCharacterId(characterId)
     setActiveChatChannel("private")
+    setTargetedCharacterId("")
     setError("")
   }
 
   function selectPublicChannel() {
     setActiveChatChannel("public")
+    setTargetedCharacterId("")
     setError("")
   }
 
@@ -790,7 +843,13 @@ export function TavernChatWorkbench({
                       key={character.id}
                       type="button"
                       data-private-chat-channel
-                      onClick={() => selectCharacter(character.id)}
+                      onClick={() => {
+                        if (activeChatChannel === "public") {
+                          handleSelectNpcInPublic(character.id)
+                        } else {
+                          selectCharacter(character.id)
+                        }
+                      }}
                       className={`flex min-h-16 w-full min-w-0 items-center gap-3 rounded-3xl border p-3 text-left transition hover:border-cyan-300/35 hover:bg-cyan-300/8 ${
                         active ? "border-cyan-300/45 bg-cyan-300/12" : "border-white/10 bg-slate-950/30"
                       }`}
@@ -1041,6 +1100,20 @@ export function TavernChatWorkbench({
               </details>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
                 <div ref={mentionRef} className="relative min-w-0 flex-1">
+                  {targetedCharacterId && activeChatChannel === "public" && (
+                    <div className="mb-2 flex items-center justify-between rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-3 py-1.5">
+                      <span className="text-xs font-bold text-cyan-100">
+                        正在对 <span className="text-white">{characterNameById.get(targetedCharacterId)}</span> 发言
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setTargetedCharacterId("")}
+                        className="text-xs text-cyan-200/60 hover:text-cyan-100"
+                      >
+                        取消点名
+                      </button>
+                    </div>
+                  )}
                   <textarea
                     ref={textareaRef}
                     value={message}

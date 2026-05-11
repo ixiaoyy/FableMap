@@ -16469,3 +16469,201 @@ $css
 .hobby-suggestion { padding: 4px 12px; border-radius: 10px; font-size: 0.8rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.2s ease; }
 .hobby-suggestion:hover { background: rgba(255, 255, 255, 0.08); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
 
+
+/* ©¤©¤ NPC Simulation Status Bars (v0.9) ©¤©¤ */
+.char-sim-stats {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0.85;
+}
+
+.char-visitor-badge {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 1px 4px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 2px;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sim-bars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 8px;
+}
+
+.sim-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sim-bar-icon {
+  font-size: 10px;
+  width: 12px;
+  text-align: center;
+}
+
+.sim-bar-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 20px;
+}
+
+.sim-bar-fill {
+  height: 100%;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.char-item.active .char-sim-stats {
+  opacity: 1;
+}
+
+.char-item.active .sim-bar-track {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ©¤©¤ NPC Recovery Animations (v1.0) ©¤©¤ */
+.sim-bar-item.is-recovering .sim-bar-icon {
+  animation: bounce 2s infinite;
+}
+
+.sim-recovery-arrow {
+  font-size: 10px;
+  color: #4ade80;
+  font-weight: bold;
+  margin-left: 1px;
+  animation: slideUp 1.5s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(2px); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(-4px); opacity: 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ©¤©¤ NPC Simulation Editor (v1.0) ©¤©¤ */
+.character-simulation-editor {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 20px;
+}
+
+.simulation-traits-editor {
+  margin-bottom: 20px;
+}
+
+.trait-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.trait-chip {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.trait-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.trait-chip.is-active {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: #60a5fa;
+  color: #60a5fa;
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.1);
+}
+
+.simulation-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.simulation-stat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.stat-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-input-group input[type="range"] {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  min-width: 36px;
+  text-align: right;
+}
+
+.simulation-mobility-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 16px;
+}
+
+/* ©¤©¤ NPC Geo Badges (v1.2) ©¤©¤ */
+.char-sim-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.char-location-badge {
+  font-size: 10px;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  font-family: monospace;
+}

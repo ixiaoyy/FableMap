@@ -125,6 +125,17 @@ function normalizeCharacterDraft(character = {}) {
     appearance: normalizeCharacterAppearance(character),
     talkativeness: normalizeTalkativeness(character.talkativeness),
     hobbies: Array.isArray(character.hobbies) ? character.hobbies : [],
+    current_tavern_id: character.current_tavern_id || character.tavern_id || '',
+    home_tavern_id: character.home_tavern_id || character.tavern_id || '',
+    traits: Array.isArray(character.traits) ? character.traits : [],
+    simulation_state: {
+      energy: 100,
+      hunger: 100,
+      thirst: 100,
+      social: 100,
+      entertainment: 100,
+      ...(character.simulation_state || {})
+    },
     sprites,
   }
 }
@@ -162,6 +173,10 @@ export function normalizeCharacterPayload(draft) {
     appearance: normalizeCharacterAppearance(draft),
     talkativeness: normalizeTalkativeness(draft.talkativeness),
     hobbies: Array.isArray(draft.hobbies) ? draft.hobbies : [],
+    current_tavern_id: draft.current_tavern_id,
+    home_tavern_id: draft.home_tavern_id,
+    traits: Array.isArray(draft.traits) ? draft.traits : [],
+    simulation_state: draft.simulation_state,
     sprites: cleanSpriteMap(draft.sprites),
   }
 
@@ -786,19 +801,96 @@ export default function CharacterEditor({
         </label>
       </div>
 
-      <label className="character-editor-full character-editor-range-field">
-        <span>群聊发言积极度</span>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          value={draft.talkativeness}
-          onChange={(event) => updateField('talkativeness', Number.parseFloat(event.target.value))}
-          disabled={disabled}
-        />
         <small>{Math.round(normalizeTalkativeness(draft.talkativeness) * 100)}% · 数值越高，群聊里越容易主动接话。</small>
       </label>
+
+      <div className="character-editor-full character-simulation-editor">
+        <div className="character-editor-section-heading">
+          <span>NPC 仿真引擎设置 (Mirror World)</span>
+          <small>控制 NPC 的生理需求初始值与行为动机。</small>
+        </div>
+
+        <div className="simulation-traits-editor">
+          <span className="mini-label">性格特质 (Traits)</span>
+          <div className="trait-chips">
+            {[
+              { id: 'workaholic', label: '工作狂', hint: '偏好留在原地，能量消耗慢' },
+              { id: 'socialite', label: '社交达人', hint: '社交需求快，公共空间回升快' },
+              { id: 'glutton', label: '吃货', hint: '饿得快，吃得也快' },
+              { id: 'loner', label: '孤僻', hint: '社交需求消耗极慢' },
+              { id: 'curious', label: '好奇', hint: '容易被娱乐类空间吸引' },
+            ].map((trait) => {
+              const active = draft.traits.includes(trait.id)
+              return (
+                <button
+                  key={trait.id}
+                  type="button"
+                  className={`trait-chip ${active ? 'is-active' : ''}`}
+                  onClick={() => {
+                    const nextTraits = active 
+                      ? draft.traits.filter(t => t !== trait.id)
+                      : [...draft.traits, trait.id]
+                    updateField('traits', nextTraits)
+                  }}
+                  title={trait.hint}
+                  disabled={disabled}
+                >
+                  {trait.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="simulation-stats-grid">
+          {[
+            { id: 'energy', label: '当前能量', icon: '⚡' },
+            { id: 'hunger', label: '当前饱腹', icon: '🍔' },
+            { id: 'thirst', label: '当前渴觉', icon: '💧' },
+            { id: 'social', label: '当前社交', icon: '💬' },
+            { id: 'entertainment', label: '当前娱乐', icon: '🎮' },
+          ].map((stat) => (
+            <label key={stat.id} className="simulation-stat-field">
+              <span className="stat-label">{stat.icon} {stat.label}</span>
+              <div className="stat-input-group">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={draft.simulation_state[stat.id] || 0}
+                  onChange={(e) => {
+                    const nextState = { ...draft.simulation_state, [stat.id]: Number(e.target.value) }
+                    updateField('simulation_state', nextState)
+                  }}
+                  disabled={disabled}
+                />
+                <span className="stat-value">{Math.round(draft.simulation_state[stat.id] || 0)}%</span>
+              </div>
+            </label>
+          ))}
+        </div>
+
+        <div className="simulation-mobility-fields">
+          <label>
+            <span>初始出生点 (Home Tavern ID)</span>
+            <input
+              value={draft.home_tavern_id}
+              onChange={(e) => updateField('home_tavern_id', e.target.value)}
+              disabled={disabled}
+              placeholder="留空则默认为当前空间"
+            />
+          </label>
+          <label>
+            <span>当前所在地 (Current Tavern ID)</span>
+            <input
+              value={draft.current_tavern_id}
+              onChange={(e) => updateField('current_tavern_id', e.target.value)}
+              disabled={disabled}
+              placeholder="跨空间流动中的当前位置"
+            />
+          </label>
+        </div>
+      </div>
 
       <label className="character-editor-full">
         <span>角色描述</span>

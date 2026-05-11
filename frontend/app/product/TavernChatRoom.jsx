@@ -6,6 +6,7 @@ import CharacterLookSummary from './CharacterLookSummary'
 import TavernMiniGamePanel from './TavernMiniGamePanel'
 import TavernGameplayLauncher from './TavernGameplayLauncher'
 import GameplaySessionPanel from './GameplaySessionPanel'
+import OrphanSignalGameplayPanel from './OrphanSignalGameplayPanel'
 import StateCardReviewPanel from './StateCardReviewPanel'
 import GardenFarmPanel from './GardenFarmPanel'
 import {
@@ -367,10 +368,71 @@ function parsePublicMentionTarget(message, characters = []) {
 }
 
 // ─────────────────────────────────────────
+// Simulation Status Bars (v0.9)
+// ─────────────────────────────────────────
+
+function SimulationStatusBars({ state, isVisitor, currentTavernType, lat, lon }) {
+  if (!state) return null
+
+  // 这里的映射要与后端 simulation.py 中的 PLACE_RECOVERY_MAP 一致
+  const recoveryMap = {
+    "home": ["energy"],
+    "cafe": ["thirst", "social"],
+    "milk-tea-shop": ["thirst"],
+    "restaurant": ["hunger"],
+    "tavern": ["social", "thirst", "entertainment"],
+    "board-game": ["entertainment", "social"],
+    "convenience-store": ["hunger", "thirst"],
+    "bookstore": ["entertainment"]
+  }
+
+  const recoveringStats = recoveryMap[currentTavernType] || []
+
+  const stats = [
+    { key: 'energy', icon: '⚡', color: '#fbbf24', label: '能量' },
+    { key: 'hunger', icon: '🍔', color: '#f97316', label: '饱腹' },
+    { key: 'thirst', icon: '💧', color: '#22d3ee', label: '渴觉' },
+    { key: 'social', icon: '💬', color: '#a855f7', label: '社交' },
+    { key: 'entertainment', icon: '🎮', color: '#4ade80', label: '娱乐' },
+  ]
+
+  return (
+    <div className="char-sim-stats">
+      <div className="char-sim-header">
+        {isVisitor && <div className="char-visitor-badge">访客 NPC</div>}
+        {lat !== undefined && lon !== undefined && lat !== null && (
+          <div className="char-location-badge" title="当前地理坐标">
+            📍 {Number(lat).toFixed(4)}, {Number(lon).toFixed(4)}
+          </div>
+        )}
+      </div>
+      <div className="sim-bars-grid">
+        {stats.map((stat) => {
+          const val = Math.round(state[stat.key] || 0)
+          const isRecovering = recoveringStats.includes(stat.key) && val < 100
+          return (
+            <div key={stat.key} className={`sim-bar-item ${isRecovering ? 'is-recovering' : ''}`} title={`${stat.label}: ${val}%${isRecovering ? ' (正在恢复)' : ''}`}>
+              <span className="sim-bar-icon">{stat.icon}</span>
+              <div className="sim-bar-track">
+                <div 
+                  className={`sim-bar-fill ${isRecovering ? 'animate-pulse' : ''}`}
+                  style={{ width: `${val}%`, backgroundColor: stat.color }} 
+                />
+              </div>
+              {isRecovering && <span className="sim-recovery-arrow">↑</span>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
 // Character Sidebar
 // ─────────────────────────────────────────
 
-function CharacterSidebar({ characters, selectedChar, activeChatChannel = 'public', onSelectPublicChat, onSelectChar }) {
+function CharacterSidebar({ characters, selectedChar, activeChatChannel = 'public', onSelectPublicChat, onSelectChar, tavern }) {
   const [expanded, setExpanded] = useState(false)
 
   if (!characters || characters.length === 0) {
@@ -448,6 +510,13 @@ function CharacterSidebar({ characters, selectedChar, activeChatChannel = 'publi
                   {char.hobbies.length > 2 && <span className="hobby-more">+{char.hobbies.length - 2}</span>}
                 </div>
               )}
+              <SimulationStatusBars 
+                state={char.simulation_state} 
+                isVisitor={char.is_visitor} 
+                currentTavernType={tavern?.place_type} 
+                lat={char.lat}
+                lon={char.lon}
+              />
             </div>
 
           </div>
@@ -1874,23 +1943,39 @@ export default function TavernChatRoom({
                 onDecision={handleStateCardDecision}
               />
 
-              <TavernGameplayLauncher
-                gameplays={gameplays}
-                activeSessions={gameplaySessions}
-                busy={gameplayBusy}
-                onStart={handleGameplayStart}
-                onResume={handleGameplayResume}
-              />
+              {playMode.id !== 'divination' && (
+                <TavernGameplayLauncher
+                  gameplays={gameplays}
+                  activeSessions={gameplaySessions}
+                  busy={gameplayBusy}
+                  onStart={handleGameplayStart}
+                  onResume={handleGameplayResume}
+                />
+              )}
 
-              <GameplaySessionPanel
-                session={activeGameplaySession}
-                scene={gameplayScene}
-                gameplay={activeGameplayDefinition}
-                busy={gameplayBusy}
-                onChoice={(choice) => handleGameplayAdvance({ choiceId: choice.id })}
-                onSubmit={(message) => handleGameplayAdvance({ message })}
-                onAbandon={handleGameplayAbandon}
-              />
+              {playMode.id === 'divination' ? (
+                <OrphanSignalGameplayPanel
+                  session={activeGameplaySession}
+                  scene={gameplayScene}
+                  gameplay={activeGameplayDefinition}
+                  busy={gameplayBusy}
+                  onChoice={(choice) => handleGameplayAdvance({ choiceId: choice.id })}
+                  onSubmit={(message) => handleGameplayAdvance({ message })}
+                  onAbandon={handleGameplayAbandon}
+                  onStart={handleGameplayStart}
+                  miniGameTemplates={miniGameTemplates}
+                />
+              ) : (
+                <GameplaySessionPanel
+                  session={activeGameplaySession}
+                  scene={gameplayScene}
+                  gameplay={activeGameplayDefinition}
+                  busy={gameplayBusy}
+                  onChoice={(choice) => handleGameplayAdvance({ choiceId: choice.id })}
+                  onSubmit={(message) => handleGameplayAdvance({ message })}
+                  onAbandon={handleGameplayAbandon}
+                />
+              )}
 
               {/* Messages */}
               <div className="chat-messages-area" data-entrance-reactions>

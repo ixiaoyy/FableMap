@@ -362,11 +362,13 @@ python3 ./.trellis/scripts/task.py list-archive    # List archived tasks
 2. **During development**:
    - [!] **Follow** `.trellis/spec/` guidelines
    - For cross-layer features, use `/trellis:check-cross-layer`
+   - For UI/design fidelity, user-provided assets, or source-of-truth disputes, use `$grill-me` before continuing or reporting completion. `grill-me` must compare against the actual design/reference/assets; build success alone is not visual acceptance.
    - Develop only one task at a time
    - Run lint and tests frequently
 
 3. **After development complete**:
    - Use `/trellis:finish-work` for completion checklist
+   - If the change is visual/product-facing or asset-based, include a `$grill-me` verdict with evidence before final handoff.
    - After fix bug, use `/trellis:break-loop` for deep analysis
    - Human commits after testing passes
    - Use `add_session.py` to record progress

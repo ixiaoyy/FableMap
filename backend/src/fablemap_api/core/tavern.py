@@ -51,6 +51,7 @@ PLACE_TYPES = {
     "bookstore",
     "school",
     "hospital",
+    "board-game",
     "home",
 }
 HOME_MEMBER_TYPES = {"conversational_character", "silent_member", "display_object"}
@@ -198,6 +199,40 @@ class TavernSpriteSet:
 
 
 @dataclass
+class NpcSimulationState:
+    """NPC 仿真生理与心理状态"""
+    energy: float = 100.0
+    hunger: float = 100.0
+    thirst: float = 100.0
+    social: float = 100.0
+    entertainment: float = 100.0
+    last_tick_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "energy": self.energy,
+            "hunger": self.hunger,
+            "thirst": self.thirst,
+            "social": self.social,
+            "entertainment": self.entertainment,
+            "last_tick_at": self.last_tick_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> NpcSimulationState:
+        if not d:
+            return cls()
+        return cls(
+            energy=float(d.get("energy", 100.0)),
+            hunger=float(d.get("hunger", 100.0)),
+            thirst=float(d.get("thirst", 100.0)),
+            social=float(d.get("social", 100.0)),
+            entertainment=float(d.get("entertainment", 100.0)),
+            last_tick_at=d.get("last_tick_at", ""),
+        )
+
+
+@dataclass
 class TavernCharacter:
     """空间角色 — 兼容 SillyTavern Character Card V2"""
     id: str
@@ -217,6 +252,17 @@ class TavernCharacter:
     appearance: dict[str, Any] = field(default_factory=dict)
     talkativeness: float = 0.5  # 0.0–1.0，群聊时说话频率
     hobbies: list[str] = field(default_factory=list)
+    
+    # ── 仿真与流动 (v0.9) ──────────────
+    current_tavern_id: str = ""
+    home_tavern_id: str = ""
+    simulation_state: NpcSimulationState = field(default_factory=NpcSimulationState)
+    traits: list[str] = field(default_factory=list)
+    social_memories: list[dict] = field(default_factory=list) # [{content, source_name, timestamp}]
+    is_visitor: bool = False  # 是否为外来访客（流动 NPC）
+    # ── Mobility & Geo (v1.2) ──────────
+    lat: float | None = None
+    lon: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -237,6 +283,14 @@ class TavernCharacter:
             "appearance": deepcopy(self.appearance) if isinstance(self.appearance, dict) else {},
             "talkativeness": _normalize_talkativeness(self.talkativeness),
             "hobbies": list(self.hobbies) if self.hobbies else [],
+            "current_tavern_id": self.current_tavern_id or self.tavern_id,
+            "home_tavern_id": self.home_tavern_id or self.tavern_id,
+            "lat": self.lat,
+            "lon": self.lon,
+            "simulation_state": self.simulation_state.to_dict(),
+            "traits": list(self.traits),
+            "social_memories": self.social_memories,
+            "is_visitor": self.is_visitor,
         }
 
     @classmethod
@@ -267,6 +321,12 @@ class TavernCharacter:
             appearance=_normalize_character_appearance(d.get("appearance")),
             talkativeness=_normalize_talkativeness(d.get("talkativeness", 0.5)),
             hobbies=d.get("hobbies", []),
+            current_tavern_id=d.get("current_tavern_id", d.get("tavern_id", "")),
+            home_tavern_id=d.get("home_tavern_id", d.get("tavern_id", "")),
+            simulation_state=NpcSimulationState.from_dict(d.get("simulation_state", {})),
+            traits=d.get("traits", []),
+            social_memories=d.get("social_memories", []),
+            is_visitor=bool(d.get("is_visitor", False)),
         )
 
 

@@ -91,6 +91,9 @@ class PromptBuildConfig:
     include_system_in_history: bool = False
     # Extra
     extra_macros: dict = field(default_factory=dict)
+    # Simulation (v1.1)
+    npc_feeling: str = ""
+    social_memories: list[dict] = field(default_factory=list)
     # Internal: computed time context (not exposed to caller)
     _time_context: TimeContext | None = field(default=None, repr=False)
 
@@ -225,6 +228,25 @@ class PromptBuilder:
             result_messages.append({
                 "role": "system",
                 "content": sys_prompt,
+            })
+
+        # ── NPC Simulation Feelings (v1.1) ──────────────────────────────────
+        if config.npc_feeling:
+            result_messages.append({
+                "role": "system",
+                "content": f"[当前状态提示] 你现在的生理与心理感受如下，请在对话中自然体现：{config.npc_feeling}",
+            })
+
+        # ── NPC Social Memories (v0.1) ──────────────────────────────────────
+        if config.social_memories:
+            memory_lines = []
+            for m in config.social_memories:
+                memory_lines.append(f"- {m['source_name']} 提到过：{m['content']}")
+            
+            memories_text = "\n".join(memory_lines)
+            result_messages.append({
+                "role": "system",
+                "content": f"[社交传闻/八卦] 你最近从其他 NPC 那里听到了以下信息，如果对话契合，可以作为谈资或侧面提及（不要生硬罗列）：\n{memories_text}",
             })
 
         # ── Time Context ────────────────────────────────────────────────────
