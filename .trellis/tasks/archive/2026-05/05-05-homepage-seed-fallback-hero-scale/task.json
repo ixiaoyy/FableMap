@@ -3,7 +3,7 @@
   "name": "homepage-seed-fallback-hero-scale",
   "title": "Fix homepage seed fallback and hero scale",
   "description": "修复首页公益 seed 因损坏 taverns.json 被隐藏导致数据为 0，并收小首页 hero 左侧字号。",
-  "status": "review",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": {
     "allowed": [
@@ -28,7 +28,7 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-05",
-  "completedAt": null,
+  "completedAt": "2026-05-11",
   "branch": null,
   "base_branch": "codex-homepage-dynamic-entry-covers",
   "worktree_path": null,
