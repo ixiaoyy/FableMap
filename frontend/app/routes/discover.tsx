@@ -13,7 +13,7 @@ import {
 import { Link, useLoaderData, useSearchParams } from "react-router"
 import { useEffect, useMemo, useState } from "react"
 
-import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover-black/main-2x.png"
+import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover/cards/card-compass-square.png"
 import { DiscoveryLivelinessStrip } from "../components/DiscoveryLivelinessStrip"
 import { SoulLinkDiscoverReference } from "../components/soul-link-reference-artboards"
 import { TavernPreviewModal } from "../components/tavern-preview-modal"

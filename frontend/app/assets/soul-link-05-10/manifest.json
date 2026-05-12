@@ -341,107 +341,95 @@
         }
       }
     },
-    "discover-light": {
-      "source": ".trellis/tasks/05-10-05-10-ui-ux-design-audit-and-polish/reference-designs/search_light.png",
+    "discover": {
+      "source": "shared-runtime-materials-for-light-and-black-discover-template",
       "source_size": [
         1536,
         1024
       ],
-      "slices": {
-        "sidebar": {
-          "path": "frontend/app/assets/soul-link-05-10/discover-light/sidebar.png",
-          "box": [
-            0,
-            0,
-            200,
-            1024
-          ],
+      "materials": {
+        "card-library-sunlit-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-library-sunlit-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/scene-library-sunlit.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
           "size": [
-            200,
-            1024
+            512,
+            512
           ],
-          "sha256": "94ee761b45527e5d5a0d79d237089eb15cc578579a5377236b06f8cc3267fc17"
+          "sha256": "b031db0f457bce4b3be55bdc1582bffdf213e3a5a0cfe3a997070035219155f3"
         },
-        "main": {
-          "path": "frontend/app/assets/soul-link-05-10/discover-light/main.png",
-          "box": [
-            200,
-            0,
-            1018,
-            1024
-          ],
+        "card-sea-lane-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-sea-lane-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/scene-sea-lane.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
           "size": [
-            1018,
-            1024
+            512,
+            512
           ],
-          "sha256": "619f7e5e551f6196798e9532b6b77235164535f012136f56d15e67ef7484da1e"
+          "sha256": "97438d7bfac9a74e394050428a37368edb82486ea4fc2ec5ff23c1cb4f04079f"
         },
-        "right-rail": {
-          "path": "frontend/app/assets/soul-link-05-10/discover-light/right-rail.png",
-          "box": [
-            1218,
-            0,
-            318,
-            1024
-          ],
+        "card-cafe-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-cafe-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/scene-library-cafe-wide.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
           "size": [
-            318,
-            1024
+            512,
+            512
           ],
-          "sha256": "1ca92efdd0b6bf3f67dee67f2c602c4c4d17cf9ee165138b953446b427389ab9"
+          "sha256": "68cff5f25997b0fda18f9ddddd0841d61114579fa7b262b0bdf5f76d56ed4c70"
+        },
+        "card-train-platform-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-train-platform-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/scene-train-platform-rain.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "ffaf8d1a37240a8fd597d69d8f2ecac88f6648f1ec02dd2bba722b15b8a70cc2"
+        },
+        "card-sky-city-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-sky-city-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/scene-sky-city-balcony.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "3dc897226c77020019aed01976bc217177e5af1384883d456dd7f229c6b91003"
+        },
+        "card-library-wide-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-library-wide-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/scene-library-wide.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "a3b093dd770261d6a3b39bdb71c2c4894d850fcd3ab336d98efffbe43e4e74b5"
+        },
+        "card-compass-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-compass-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/icon-compass-glow.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "5e92b9740912920c547cf8de41750757cf7190dfca3f41f088bc49a5ab244eb1"
+        },
+        "card-plane-square": {
+          "path": "frontend/app/assets/soul-link-05-10/discover/cards/card-plane-square.png",
+          "source": "frontend/app/assets/soul-link-05-10/home-light/icon-plane-glow.png",
+          "processing": "center-square-crop-or-resize-placeholder; text kept in DOM, not baked into image",
+          "size": [
+            512,
+            512
+          ],
+          "sha256": "9736746f4d1ff86637d2b394a47f36045b1bf2c7a71e39807f050f5455e496ee"
         }
-      }
-    },
-    "discover-black": {
-      "source": ".trellis/tasks/05-10-05-10-ui-ux-design-audit-and-polish/reference-designs/search_black.png",
-      "source_size": [
-        1545,
-        1018
-      ],
-      "slices": {
-        "sidebar": {
-          "path": "frontend/app/assets/soul-link-05-10/discover-black/sidebar.png",
-          "box": [
-            0,
-            0,
-            210,
-            1018
-          ],
-          "size": [
-            210,
-            1018
-          ],
-          "sha256": "58bc5cc141c8fcc70f35bd30a5500fbcb81a2e66b16caaeb844c53df816e25ea"
-        },
-        "main": {
-          "path": "frontend/app/assets/soul-link-05-10/discover-black/main.png",
-          "box": [
-            210,
-            0,
-            1020,
-            1018
-          ],
-          "size": [
-            1020,
-            1018
-          ],
-          "sha256": "d2d2b5bd781a131c3bdaca55dd81bd664786e24bc43ee32592f44f352f8a209c"
-        },
-        "right-rail": {
-          "path": "frontend/app/assets/soul-link-05-10/discover-black/right-rail.png",
-          "box": [
-            1230,
-            0,
-            315,
-            1018
-          ],
-          "size": [
-            315,
-            1018
-          ],
-          "sha256": "7903247d05d805a2c3ae949ed2b78244f77f1b44e76cafbf75e6b264df384d12"
-        }
-      }
+      },
+      "notes": "One real-DOM/CSS discover template serves light and black. Runtime bitmaps are only atomic 1:1 placeholder card materials; legacy full/column screenshots are archived under .trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/."
     }
   }
 }

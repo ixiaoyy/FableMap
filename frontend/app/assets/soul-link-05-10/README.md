@@ -1,8 +1,9 @@
-# SoulLink 05-10 design slices
+# SoulLink 05-10 runtime assets
 
-Runtime assets generated from the four owner-provided Trellis design drafts for strict visual reproduction.
+Runtime assets generated from owner-provided Trellis design drafts or derived local placeholders.
 
-- These are page-section / column slices, not full-page artboards.
-- Interactive links, buttons, theme toggles, and search input are implemented as DOM overlays in `frontend/app/components/soul-link-reference-artboards.tsx`.
+- Discover/Search runtime materials for both light and black live under `discover/cards/` as one shared set of atomic `512×512` image slots only.
+- Discover/Search navigation, filters, search controls, lists, cards, stats, right rail, and copy must be DOM/CSS, not screenshot PNGs.
+- Do not add loose `main.png`, `right-rail.png`, `sidebar.png`, or `*-2x.png` screenshot slices back under `discover-light/` or `discover-black/`.
 - Original full design drafts remain archived under `.trellis/tasks/05-10-05-10-ui-ux-design-audit-and-polish/reference-designs/` for audit only and must not be imported by runtime code.
-- Source crop boxes and SHA-256 hashes are recorded in `manifest.json`.
+- Source processing and SHA-256 hashes for runtime materials are recorded in `manifest.json`.

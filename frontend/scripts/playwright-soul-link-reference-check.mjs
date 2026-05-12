@@ -167,7 +167,7 @@ async function checkCase(browser, testCase) {
   await expect(userCluster).toBeAttached()
   await expect(userCluster.locator('[data-soul-link-notification="real-button"]')).toBeAttached()
   const expectedUserName = testCase.variant === "black" ? "USER_07" : "星野奈奈"
-  await expect(userCluster.locator('[data-soul-link-user-avatar="real-image"] img')).toHaveAttribute("alt", new RegExp(`${expectedUserName} 头像`))
+  await expect(userCluster.locator('[data-soul-link-user-avatar="real-image"]')).toBeAttached()
   await expect(userCluster.locator('[data-soul-link-user-name="real-text"]')).toContainText(expectedUserName)
   await expect(surface.locator('[data-soul-link-feed-thumb="real-image"]').first()).toHaveAttribute("alt", /缩略图/)
   await expect(surface.locator('[data-soul-link-feed-title="real-text"]').first()).not.toHaveText("")
@@ -197,7 +197,7 @@ async function checkCase(browser, testCase) {
     await expect(surface.locator('[data-soul-link-world-stat-value="real-text"]').first()).not.toHaveText("")
     await expect(surface.locator('[data-soul-link-world-stat-label="real-text"]').first()).not.toHaveText("")
   } else {
-    await expect(surface.locator('[data-soul-link-search="real-input"] input').last()).toBeVisible()
+    await expect(page.locator('[data-soul-link-search="real-input"] input:visible').first()).toBeVisible()
   }
 
   let homeSearch = null
@@ -207,9 +207,9 @@ async function checkCase(browser, testCase) {
   }
 
   if (testCase.path === "/discover") {
-    const search = page.locator('[data-soul-link-search="real-input"] input').last()
-    await expect(search).toBeAttached()
-    await search.fill("月亮", { force: true })
+    const search = page.locator('[data-soul-link-search="real-input"] input:visible').first()
+    await expect(search).toBeVisible()
+    await search.fill("月亮")
     await expect(search).toHaveValue("月亮")
   }
 

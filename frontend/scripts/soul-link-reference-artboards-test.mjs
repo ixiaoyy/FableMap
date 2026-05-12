@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -20,13 +20,32 @@ function readPngInfo(path) {
   }
 }
 
+function collectSourceFiles(root) {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = resolve(root, entry.name)
+    if (entry.isDirectory()) return collectSourceFiles(entryPath)
+    return /\.(tsx?|jsx?)$/.test(entry.name) ? [entryPath] : []
+  })
+}
+
 const componentSource = readSource(resolve(repoRoot, "frontend/app/components/soul-link-reference-artboards.tsx"))
 const homeRouteSource = readSource(resolve(repoRoot, "frontend/app/routes/home.tsx"))
 const discoverRouteSource = readSource(resolve(repoRoot, "frontend/app/routes/discover.tsx"))
+const frontendAppSource = collectSourceFiles(resolve(repoRoot, "frontend/app")).map(readSource).join("\n")
 const runtimeConfigSource = readSource(resolve(repoRoot, "frontend/app/lib/tavern-runtime-config.js"))
 const portraitConfigSource = readSource(resolve(repoRoot, "frontend/app/features/tavern-npc-stage/portraitCatalogConfig.ts"))
 const packageJson = JSON.parse(readSource(resolve(repoRoot, "frontend/package.json")))
 const newAssetRoot = resolve(repoRoot, "frontend/app/assets/soul-link-05-10")
+const discoverAssetRoot = resolve(newAssetRoot, "discover")
+const discoverCardsRoot = resolve(discoverAssetRoot, "cards")
+const discoverLightLegacySlicesRoot = resolve(
+  repoRoot,
+  ".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light",
+)
+const discoverBlackLegacySlicesRoot = resolve(
+  repoRoot,
+  ".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black",
+)
 
 
 const archivedReferences = [
@@ -39,6 +58,37 @@ const archivedReferences = [
 assert.ok(existsSync(newAssetRoot), "new SoulLink 05-10 asset root should exist")
 assert.ok(!existsSync(resolve(repoRoot, "frontend/app/assets/homepage")), "old homepage design assets should be deleted from runtime assets")
 assert.ok(!existsSync(resolve(repoRoot, "frontend/app/assets/discover")), "old discover/search design assets should be deleted from runtime assets")
+assert.ok(existsSync(discoverCardsRoot), "discover atomic card materials should live under shared discover/cards")
+assert.ok(!existsSync(resolve(newAssetRoot, "discover-light")), "light discover runtime folder must not contain screenshot/card variants; use shared discover/cards")
+assert.ok(!existsSync(resolve(newAssetRoot, "discover-black")), "black discover runtime folder must not contain screenshot/card variants; use shared discover/cards")
+assert.ok(!existsSync(resolve(discoverAssetRoot, "reference")), "discover runtime assets must not contain full-page screenshot reference folders")
+assert.ok(existsSync(discoverLightLegacySlicesRoot), "old light discover screenshot slices should be archived outside frontend runtime assets")
+assert.ok(existsSync(discoverBlackLegacySlicesRoot), "old black discover screenshot slices should be archived outside frontend runtime assets")
+
+for (const filename of [
+  "main.png",
+  "main-2x.png",
+  "right-rail.png",
+  "right-rail-2x.png",
+  "sidebar.png",
+  "sidebar-2x.png",
+  "card-library-sunlit-square.png",
+  "card-sea-lane-square.png",
+  "card-cafe-square.png",
+  "card-train-platform-square.png",
+  "card-sky-city-square.png",
+  "card-library-wide-square.png",
+  "card-compass-square.png",
+  "card-plane-square.png",
+]) {
+  assert.ok(!existsSync(resolve(discoverAssetRoot, filename)), `discover root must not expose loose product/reference PNG: ${filename}`)
+}
+
+assert.deepEqual(
+  readdirSync(discoverAssetRoot).sort(),
+  ["cards"],
+  "discover runtime root should only expose atomic card assets, not screenshot reference folders",
+)
 
 for (const [file, dimensions, sha256] of archivedReferences) {
   const assetPath = resolve(repoRoot, file)
@@ -49,10 +99,28 @@ for (const [file, dimensions, sha256] of archivedReferences) {
 }
 
 for (const [file, dimensions] of [
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light/sidebar.png", "200x1024"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light/sidebar-2x.png", "400x2048"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light/main.png", "1018x1024"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light/main-2x.png", "2036x2048"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light/right-rail.png", "318x1024"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-light/right-rail-2x.png", "636x2048"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black/sidebar.png", "210x1018"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black/sidebar-2x.png", "420x2036"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black/main.png", "1020x1018"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black/main-2x.png", "2040x2036"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black/right-rail.png", "315x1018"],
+  [".trellis/tasks/05-12-search-light-style-decomposition-continuation/legacy-ui-slices/discover-black/right-rail-2x.png", "630x2036"],
+]) {
+  const info = readPngInfo(resolve(repoRoot, file))
+  assert.equal(`${info.width}x${info.height}`, dimensions, `${file} should preserve archived legacy slice dimensions`)
+}
+
+for (const [file, dimensions] of [
   ["frontend/app/assets/soul-link-05-10/home-light/invite-card.png", "1182x1330"],
   ["frontend/app/assets/soul-link-05-10/home-light/invite-card-2x.png", "1182x1331"],
-  ["frontend/app/assets/soul-link-05-10/home-black/invite-card.png", "151x170"],
-  ["frontend/app/assets/soul-link-05-10/home-black/invite-card-2x.png", "302x340"],
+  ["frontend/app/assets/soul-link-05-10/home-black/invite-card.png", "1182x1331"],
+  ["frontend/app/assets/soul-link-05-10/home-black/invite-card-2x.png", "1182x1331"],
   ["frontend/app/assets/soul-link-05-10/home-black/hero-system-visual.png", "1672x941"],
   ["frontend/app/assets/soul-link-05-10/home-black/node-data-harbor.png", "1736x906"],
   ["frontend/app/assets/soul-link-05-10/home-black/node-neon-ruins.png", "1733x907"],
@@ -64,18 +132,14 @@ for (const [file, dimensions] of [
   ["frontend/app/assets/soul-link-05-10/home-black/guide-protocol-icon.png", "1024x1024"],
   ["frontend/app/assets/soul-link-05-10/home-black/guide-database-icon.png", "1024x1024"],
   ["frontend/app/assets/soul-link-05-10/home-black/guide-security-icon.png", "1024x1024"],
-  ["frontend/app/assets/soul-link-05-10/discover-light/sidebar.png", "200x1024"],
-  ["frontend/app/assets/soul-link-05-10/discover-light/sidebar-2x.png", "400x2048"],
-  ["frontend/app/assets/soul-link-05-10/discover-light/main.png", "1018x1024"],
-  ["frontend/app/assets/soul-link-05-10/discover-light/main-2x.png", "2036x2048"],
-  ["frontend/app/assets/soul-link-05-10/discover-light/right-rail.png", "318x1024"],
-  ["frontend/app/assets/soul-link-05-10/discover-light/right-rail-2x.png", "636x2048"],
-  ["frontend/app/assets/soul-link-05-10/discover-black/sidebar.png", "210x1018"],
-  ["frontend/app/assets/soul-link-05-10/discover-black/sidebar-2x.png", "420x2036"],
-  ["frontend/app/assets/soul-link-05-10/discover-black/main.png", "1020x1018"],
-  ["frontend/app/assets/soul-link-05-10/discover-black/main-2x.png", "2040x2036"],
-  ["frontend/app/assets/soul-link-05-10/discover-black/right-rail.png", "315x1018"],
-  ["frontend/app/assets/soul-link-05-10/discover-black/right-rail-2x.png", "630x2036"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-library-sunlit-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-sea-lane-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-cafe-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-train-platform-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-sky-city-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-library-wide-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-compass-square.png", "512x512"],
+  ["frontend/app/assets/soul-link-05-10/discover/cards/card-plane-square.png", "512x512"],
 ]) {
   const info = readPngInfo(resolve(repoRoot, file))
   assert.equal(`${info.width}x${info.height}`, dimensions, `${file} should preserve locked crop dimensions`)
@@ -105,7 +169,31 @@ assert.ok(homeRouteSource.includes('variant="black"') && homeRouteSource.include
 assert.ok(discoverRouteSource.includes('variant="black"') && discoverRouteSource.includes('variant="light"'), "discover route should keep theme-driven light/dark rendering")
 assert.ok(!componentSource.includes("../assets/soul-link-05-10/discover-light/main"), "light discover runtime should not import the full main screenshot slice")
 assert.ok(!componentSource.includes("../assets/soul-link-05-10/discover-light/right-rail"), "light discover runtime should not import the full right-rail screenshot slice")
+assert.ok(!componentSource.includes("../assets/soul-link-05-10/discover-black/main"), "black discover runtime should not import the full main screenshot slice")
+assert.ok(!componentSource.includes("../assets/soul-link-05-10/discover-black/right-rail"), "black discover runtime should not import the full right-rail screenshot slice")
 assert.ok(!discoverRouteSource.includes("../assets/soul-link-05-10/discover-light/main"), "discover route should not import the full light search screenshot")
+assert.ok(!discoverRouteSource.includes("../assets/soul-link-05-10/discover-black/main"), "discover route should not import the full black search screenshot")
+for (const forbiddenRuntimeReference of [
+  "discover-light/reference",
+  "legacy-ui-slices/discover-light",
+  "discover-light/main",
+  "discover-light/main-2x",
+  "discover-light/right-rail",
+  "discover-light/right-rail-2x",
+  "discover-light/sidebar",
+  "discover-light/sidebar-2x",
+  "discover-light/cards",
+  "discover-black/reference",
+  "legacy-ui-slices/discover-black",
+  "discover-black/main",
+  "discover-black/main-2x",
+  "discover-black/right-rail",
+  "discover-black/right-rail-2x",
+  "discover-black/sidebar",
+  "discover-black/sidebar-2x",
+]) {
+  assert.ok(!frontendAppSource.includes(forbiddenRuntimeReference), `frontend runtime source must not reference discover screenshot slice: ${forbiddenRuntimeReference}`)
+}
 
 for (const marker of [
   'data-soul-link-real-dom="true"',
@@ -163,9 +251,9 @@ for (const marker of [
   "function SoulLinkGuidePanel",
   "function SoulLinkGuideCardView",
   "function SoulLinkWorldStatsPanel",
-  "function SoulLinkDiscoverLightSurface",
-  "function SoulLinkDiscoverLightFilterPanel",
-  "function SoulLinkDiscoverLightRightRail",
+  "function SoulLinkDiscoverSurface",
+  "function SoulLinkDiscoverFilterPanel",
+  "function SoulLinkDiscoverRightRail",
   'data-soul-link-feed-panel="real-list"',
   'data-soul-link-feed-thumb="real-image"',
   'data-soul-link-feed-title="real-text"',
@@ -174,6 +262,14 @@ for (const marker of [
   'data-soul-link-discover-right-rail="real-dom"',
   'data-soul-link-discover-card-cover="real-image"',
   'data-soul-link-discover-card-title="real-text"',
+  'data-soul-link-discover-card-copy="real-text-layer"',
+  'data-soul-link-discover-square-image="512x512"',
+  'data-soul-link-sidebar-invite="real-dom"',
+  'data-soul-link-sidebar-invite-copy="real-text"',
+  "const DISCOVER_CARD_IMAGES =",
+  "function withDiscoverSquareFeedImages",
+  "function withDiscoverSquareOnlineImages",
+  'discover/cards/card-library-sunlit-square.png',
   'data-soul-link-daily-quote="real-text"',
   'data-soul-link-online-panel="real-list"',
   'data-soul-link-online-avatar="real-image"',
@@ -251,4 +347,3 @@ for (const forbidden of [
 
 assert.ok(packageJson.scripts.test.includes("soul-link-reference-artboards-test.mjs"), "SoulLink real-DOM contract test should be wired into npm test")
 console.log("soul-link-reference-artboards-test: ok")
-
