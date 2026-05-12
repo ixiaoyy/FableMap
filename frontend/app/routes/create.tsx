@@ -283,7 +283,7 @@ export default function CreateRoute() {
           layout_style: String(form.get("layout_style") || layoutStyle || "lobby"),
           roleplay_mode: String(form.get("roleplay_mode") || "ai_only"),
           scene_prompt: String(form.get("scene_prompt") || "").trim(),
-          llm_config: { backend: "public_welfare", model: "kilo-auto/free" },
+          llm_config: { backend: "public_welfare", model: "deepseek-v4-flash-free" },
         }),
         ownerIdSubmit,
       )

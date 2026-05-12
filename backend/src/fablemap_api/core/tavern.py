@@ -68,6 +68,12 @@ GENDER_VALUES = {"unspecified", "female", "male", "nonbinary", "other"}
 SPECIAL_TYPES = {"", "cultivation", "divination"}
 SYSTEM_TAVERN_OWNER_PREFIX = "system_"
 SYSTEM_PUBLIC_WELFARE_LLM_CONFIG_PATH = Path(__file__).resolve().parents[3] / "config" / "system_public_welfare_llm.json"
+SYSTEM_PUBLIC_WELFARE_MANAGED_FREE_MODELS = {
+    "deepseek-v4-flash-free",
+    "opencode/deepseek-v4-flash-free",
+    "glm-4.7-flash",
+    "kilo-auto/free",
+}
 logger = logging.getLogger(__name__)
 
 
@@ -488,6 +494,10 @@ def _versioned_system_public_welfare_llm_config(
     llm_payload = payload.get("llm_config")
     if not isinstance(llm_payload, dict):
         return None
+    llm_payload = dict(llm_payload)
+    api_key_env = str(llm_payload.get("api_key_env") or "").strip()
+    if api_key_env and not str(llm_payload.get("api_key") or "").strip():
+        llm_payload["api_key"] = os.getenv(api_key_env, "")
     config = LLMConfig.from_dict(llm_payload)
     if not config.is_configured():
         return None
@@ -505,6 +515,11 @@ def _should_hydrate_system_public_welfare_llm_choice(candidate: LLMConfig, versi
         return True
     candidate_model = str(candidate.model or "").strip().lower()
     versioned_model = str(versioned.model or "").strip().lower()
+    if (
+        candidate_model in SYSTEM_PUBLIC_WELFARE_MANAGED_FREE_MODELS
+        and versioned_model in SYSTEM_PUBLIC_WELFARE_MANAGED_FREE_MODELS
+    ):
+        return True
     return bool(candidate_model and versioned_model and candidate_model == versioned_model)
 
 
@@ -541,10 +556,13 @@ def _system_public_welfare_rules_fallback(
 ) -> LLMConfig | None:
     if not _is_system_or_public_welfare_tavern_data(value, tavern_id=tavern_id):
         return None
-    return _versioned_system_public_welfare_llm_config(
+    versioned = _versioned_system_public_welfare_llm_config(
         include_api_key=include_api_key,
         token_used=token_used,
     )
+    if versioned:
+        return versioned
+    return _public_welfare_rules_fallback_llm_config(token_used=token_used)
 
 
 @dataclass

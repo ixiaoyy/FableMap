@@ -147,7 +147,7 @@ def test_v1_public_welfare_seed_chat_uses_system_public_welfare_llm(
 
     class DummyResponse:
         content = "系统公益 LLM：我会用小灯牌帮你把问题拆成一步。"
-        model = "kilo-auto/free"
+        model = "deepseek-v4-flash-free"
         usage = {"total_tokens": 19}
 
     class DummyClient:
@@ -158,6 +158,7 @@ def test_v1_public_welfare_seed_chat_uses_system_public_welfare_llm(
             return DummyResponse()
 
     monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: DummyClient(cfg))
+    monkeypatch.setenv("OPENCODE_API_KEY", "sk-opencode-test")
 
     client = _client(tmp_path)
 
@@ -182,9 +183,9 @@ def test_v1_public_welfare_seed_chat_uses_system_public_welfare_llm(
     assert "公益 LLM" in payload["response_mode"]["label"]
     assert captured_configs
     assert captured_configs[0].backend == "custom"
-    assert captured_configs[0].model == "kilo-auto/free"
-    assert captured_configs[0].base_url == "https://api.kilo.ai/api/gateway"
-    assert captured_configs[0].api_key
+    assert captured_configs[0].model == "deepseek-v4-flash-free"
+    assert captured_configs[0].base_url == "https://opencode.ai/zen"
+    assert captured_configs[0].api_key == "sk-opencode-test"
     assert client.app.state.taverns.store.get_token_usage("pw_lantern_helpdesk") > 0
 
 
@@ -215,7 +216,7 @@ def test_v1_public_welfare_default_rules_marker_is_not_reported_to_visitors(tmp_
     assert "built_in_rules" not in combined_text
     assert "public-welfare-rules-v1" not in combined_text
     assert "无 Key" not in combined_text
-    assert client.app.state.taverns.store.get_token_usage("pw_third_shelf_observatory") > 0
+    assert client.app.state.taverns.store.get_token_usage("pw_third_shelf_observatory") == 0
 
 
 def test_v1_llm_failure_does_not_return_local_rules_npc_reply(
@@ -286,15 +287,15 @@ def test_v1_user_tavern_without_llm_reports_configuration_mode(tmp_path: Path) -
     assert payload["tavern_status"] == "closed"
 
 
-def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selected(
+def test_v1_public_welfare_uses_versioned_opencode_config_when_free_model_is_selected(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     captured_configs: list[Any] = []
 
     class DummyResponse:
-        content = "V1 Kilo 测试模型回复。"
-        model = "kilo-auto/free"
+        content = "V1 OpenCode DeepSeek 测试模型回复。"
+        model = "deepseek-v4-flash-free"
         usage = {"total_tokens": 23}
 
     class DummyClient:
@@ -305,6 +306,7 @@ def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selecte
             return DummyResponse()
 
     monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: DummyClient(cfg))
+    monkeypatch.setenv("OPENCODE_API_KEY", "sk-opencode-test")
 
     client = _client(tmp_path)
 
@@ -314,9 +316,9 @@ def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selecte
         json={
             "llm_config": {
                 "backend": "custom",
-                "model": "kilo-auto/free",
+                "model": "deepseek-v4-flash-free",
                 "api_key": "",
-                "base_url": "",
+                "base_url": "https://opencode.ai/zen",
                 "temperature": 0.8,
                 "max_tokens": 1024,
                 "top_p": 0.9,
@@ -326,14 +328,14 @@ def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selecte
 
     assert saved.status_code == 200
     assert saved.json()["status"] == "open"
-    assert saved.json()["llm_config"]["model"] == "kilo-auto/free"
+    assert saved.json()["llm_config"]["model"] == "deepseek-v4-flash-free"
 
     reloaded = client.get(
         "/api/v1/taverns/pw_lantern_helpdesk",
         headers={"X-User-Id": DEFAULT_PUBLIC_WELFARE_OWNER_ID},
     )
     assert reloaded.status_code == 200
-    assert reloaded.json()["llm_config"]["model"] == "kilo-auto/free"
+    assert reloaded.json()["llm_config"]["model"] == "deepseek-v4-flash-free"
 
     visitor_view = client.get(
         "/api/v1/taverns/pw_lantern_helpdesk",
@@ -355,7 +357,10 @@ def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selecte
     assert probe.status_code == 200
     assert probe.json()["ok"] is True
     assert captured_configs
-    assert captured_configs[-1].api_key
+    assert captured_configs[-1].backend == "custom"
+    assert captured_configs[-1].model == "deepseek-v4-flash-free"
+    assert captured_configs[-1].base_url == "https://opencode.ai/zen"
+    assert captured_configs[-1].api_key == "sk-opencode-test"
     captured_configs.clear()
 
     response = client.post(
@@ -373,12 +378,12 @@ def test_v1_public_welfare_uses_versioned_kilo_config_when_free_model_is_selecte
     payload = response.json()
     assert payload["degraded"] is False
     assert payload["tavern_status"] == "open"
-    assert payload["response"] == "V1 Kilo 测试模型回复。"
+    assert payload["response"] == "V1 OpenCode DeepSeek 测试模型回复。"
     assert captured_configs
     assert captured_configs[0].backend == "custom"
-    assert captured_configs[0].model == "kilo-auto/free"
-    assert captured_configs[0].base_url == "https://api.kilo.ai/api/gateway"
-    assert captured_configs[0].api_key
+    assert captured_configs[0].model == "deepseek-v4-flash-free"
+    assert captured_configs[0].base_url == "https://opencode.ai/zen"
+    assert captured_configs[0].api_key == "sk-opencode-test"
     assert client.app.state.taverns.store.get_token_usage("pw_lantern_helpdesk") > 0
 
 

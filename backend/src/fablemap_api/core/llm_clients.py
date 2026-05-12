@@ -119,7 +119,9 @@ class LLMBackend(ABC):
 
     def _default_headers(self, api_key: str, extra: dict = None) -> dict:
         headers = {
+            "Accept": "application/json",
             "Content-Type": "application/json",
+            "User-Agent": "FableMap/0.1 Python",
             "Authorization": f"Bearer {api_key}",
         }
         if extra:

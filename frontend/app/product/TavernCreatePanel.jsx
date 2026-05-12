@@ -181,7 +181,7 @@ export default function TavernCreatePanel({
       }
 
       // 添加 AI 配置（远端通常需要 API Key；Ollama/本地兼容后端可只填 API 地址）
-      // 如果没有可用 LLM 配置，使用 public_welfare 后端，后端会自动注入系统级 Kilo API Key
+      // 如果没有可用 LLM 配置，使用 public_welfare 标记；系统/公益空间可由后端版本化 OpenCode 配置补齐
       if (hasLlmConfig) {
         payload.llm_config = {
           backend: llmFormData.backend,
@@ -193,8 +193,8 @@ export default function TavernCreatePanel({
           top_p: Number.parseFloat(llmFormData.top_p),
         }
       } else {
-        // 兜底：没有配置 LLM 时使用 public_welfare，后端会自动注入系统 Kilo API Key
-        payload.llm_config = { backend: 'public_welfare', model: 'kilo-auto/free' }
+        // 兜底：没有配置 LLM 时使用 public_welfare，普通用户仍走后端规则降级，不继承系统密钥
+        payload.llm_config = { backend: 'public_welfare', model: 'deepseek-v4-flash-free' }
       }
 
       const tavern = await createTavern(payload, ownerId)

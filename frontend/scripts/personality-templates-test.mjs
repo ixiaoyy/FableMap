@@ -37,6 +37,30 @@ assert.ok(filteredNegativeArchetypes.some((template) => template.id === 'snarky-
 assert.ok(filteredNegativeArchetypes.some((template) => template.id === 'smarmy-dating-sim'))
 assert.ok(filteredNegativeArchetypes.some((template) => template.id === 'cold-dealer'))
 
+// ── 戏剧张力 ─────────────────────────────────────────────────────────────────
+const dramaticPerformer = NPC_PERSONALITY_TEMPLATES.find((template) => template.id === 'dramatic-performer')
+assert.ok(dramaticPerformer, 'dramatic-performer should be in templates')
+assert.equal(dramaticPerformer.name, '戏精表演者')
+assert.equal(dramaticPerformer.category, '戏剧张力')
+assert.ok(dramaticPerformer.tags.includes('戏精'))
+assert.ok(dramaticPerformer.system_prompt.includes('1-3 句'))
+assert.ok(dramaticPerformer.system_prompt.includes('不攻击'))
+
+const filteredDramaticArchetypes = filterNpcPersonalityTemplates({
+  category: '戏剧张力',
+  query: '',
+  draft: {},
+  limit: 10,
+})
+assert.ok(filteredDramaticArchetypes.some((template) => template.id === 'dramatic-performer'))
+assert.ok(filteredDramaticArchetypes.every((template) => template.category === '戏剧张力'))
+
+const recommendedDramatic = recommendNpcPersonalityTemplates({
+  name: '临时剧场入口',
+  tags_text: '戏精, 舞台, 表演',
+}, 3)
+assert.ok(recommendedDramatic.some((template) => template.id === 'dramatic-performer'))
+
 // ── 古装宫廷 ─────────────────────────────────────────────────────────────────
 const coldEmperor = NPC_PERSONALITY_TEMPLATES.find((template) => template.id === 'cold-emperor')
 assert.ok(coldEmperor, 'cold-emperor should be in templates')
@@ -125,6 +149,24 @@ const snarkyDraft = applyNpcPersonalityTemplateToDraft({
 assert.equal(snarkyDraft.personality, snarkyBartender.personality)
 assert.ok(snarkyDraft.first_mes.includes('借口') || snarkyDraft.first_mes.includes('拆穿'))
 assert.ok(snarkyDraft.tags_text.includes('毒舌'))
+
+// ── apply dramatic performer ──────────────────────────────────────────────────
+const dramaticDraft = applyNpcPersonalityTemplateToDraft({
+  name: '剧场主持人',
+  description: '',
+  personality: '',
+  scenario: '',
+  system_prompt: '',
+  first_mes: '',
+  mes_example: '',
+  alternate_greetings_text: '',
+  tags_text: '',
+  talkativeness: null,
+}, dramaticPerformer, { mode: 'fill' })
+assert.equal(dramaticDraft.personality, dramaticPerformer.personality)
+assert.ok(dramaticDraft.first_mes.includes('幕布') || dramaticDraft.first_mes.includes('戏'))
+assert.ok(dramaticDraft.tags_text.includes('戏精'))
+assert.equal(dramaticDraft.talkativeness, dramaticPerformer.talkativeness)
 
 const recommended = recommendNpcPersonalityTemplates({
   name: '雨夜档案亭',

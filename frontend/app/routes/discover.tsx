@@ -1215,9 +1215,7 @@ export default function DiscoverRoute() {
       onToggleTheme={toggleTheme}
     />
   )
-
-  return (
-    <ProductShell eyebrow="Discover">
+}
       <section id="discover-mainline" className="grid scroll-mt-28 gap-6 lg:grid-cols-[0.62fr_1.38fr] lg:items-start">
         <aside className="space-y-5 lg:sticky lg:top-28">
           <div className="rounded-[2rem] border border-theme-accent-border bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_34%),linear-gradient(160deg,rgba(15,23,42,0.84),rgba(30,27,75,0.62))] p-6 shadow-[0_0_42px_rgba(34,211,238,0.08)] backdrop-blur-xl">

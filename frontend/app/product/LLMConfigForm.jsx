@@ -100,16 +100,16 @@ export const DEFAULT_BASE_URLS = {
  */
 export const LLM_PRESETS = [
   {
-    id: 'kilo-free-owner-opt-in',
-    title: 'Kilo 免费模型',
-    badge: '系统/公共测试',
-    icon: '🏢',
-    description: '店主自行选择的 kilo-auto/free 低门槛方案；系统店 / 体验店测试期由后端版本化配置补齐连接信息，免费额度、速率和稳定性可能受限，不作为平台强制默认。',
-    bestFor: '系统店 / 体验店试运营 / 低成本验证',
+    id: 'opencode-deepseek-v4-flash-free',
+    title: 'OpenCode DeepSeek V4 Flash Free',
+    badge: '限时免费',
+    icon: '🧭',
+    description: 'OpenCode Zen 限时免费 DeepSeek V4 Flash Free（model: deepseek-v4-flash-free）；系统店 / 体验店测试期由后端版本化配置补齐连接信息，免费期限、额度、速率和稳定性以 OpenCode 当前规则为准，不作为平台强制默认。',
+    bestFor: '系统店 / 体验店试运营 / 中文低成本验证',
     config: {
       backend: 'custom',
-      model: 'kilo-auto/free',
-      base_url: 'https://api.kilo.ai/api/gateway',
+      model: 'deepseek-v4-flash-free',
+      base_url: 'https://opencode.ai/zen',
       temperature: 0.8,
       max_tokens: 4096,
       top_p: 0.9,

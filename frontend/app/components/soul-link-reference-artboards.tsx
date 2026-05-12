@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react"
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react"
 import { Link } from "react-router"
 import {
   Bell,
@@ -1530,6 +1530,19 @@ function OverlayInput({
       ? "border-cyan-300/16 bg-cyan-100/8 text-cyan-100/70"
       : "bg-slate-100/80 text-slate-400"
 
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeyDown as any)
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown as any)
+  }, [])
+
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== "Enter" || !onSubmit) return
     event.preventDefault()
@@ -1553,6 +1566,7 @@ function OverlayInput({
         <Search size={18} strokeWidth={2.75} className="pointer-events-none absolute left-[7.5%] text-[#90a5ff] opacity-72" />
       )}
       <input
+        ref={inputRef}
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         onKeyDown={handleKeyDown}
@@ -1658,10 +1672,10 @@ function SoulLinkDiscoverCard({
       data-soul-link-discover-card="real-card"
       onMouseDown={suppressMouseFocus}
       className={cx(
-        "absolute z-20 flex touch-manipulation gap-3 overflow-hidden rounded-[1.1rem] border p-3 outline-none transition hover:-translate-y-0.5 focus:ring-4",
+        "absolute z-20 flex touch-manipulation gap-3 overflow-hidden rounded-[1.1rem] border p-3 outline-none transition duration-300 hover:scale-[1.02] hover:-translate-y-0.5 focus:ring-4",
         isBlack
-          ? "border-cyan-300/14 bg-[#061226]/92 text-cyan-50 shadow-[0_18px_38px_rgba(0,0,0,0.35),0_0_26px_rgba(34,211,238,0.08)] hover:border-cyan-300/26 hover:shadow-[0_22px_46px_rgba(0,0,0,0.42),0_0_32px_rgba(34,211,238,0.12)] focus:ring-cyan-300/35"
-          : "border-white/90 bg-white/95 text-slate-800 shadow-[0_12px_32px_rgba(108,123,178,0.12)] hover:shadow-[0_16px_40px_rgba(108,123,178,0.18)] focus:ring-violet-400/35",
+          ? "border-cyan-300/14 bg-[#061226]/92 text-cyan-50 shadow-[0_18px_38px_rgba(0,0,0,0.35),0_0_26px_rgba(34,211,238,0.08)] hover:border-cyan-300/26 hover:shadow-[0_22px_46px_rgba(0,0,0,0.42),0_0_40px_rgba(34,211,238,0.18)] focus:ring-cyan-300/35"
+          : "border-white/90 bg-white/95 text-slate-800 shadow-[0_12px_32px_rgba(108,123,178,0.12)] hover:shadow-[0_16px_48px_rgba(108,123,178,0.22)] focus:ring-violet-400/35",
       )}
       style={boxStyle(artboard, x, y, w, h)}
     >
@@ -2182,9 +2196,9 @@ function SoulLinkDiscoverRightRail({
         </header>
         <div className="relative mt-6 h-24">
           <svg data-soul-link-discover-world-orbit="real-svg" aria-hidden="true" className={cx("absolute right-3 top-0 h-24 w-36", isBlack ? "text-cyan-300/45" : "text-violet-300/45")} viewBox="0 0 180 120" fill="none" stroke="currentColor">
-            <circle cx="92" cy="60" r="12" fill="currentColor" opacity=".16" />
-            <circle cx="92" cy="60" r="34" strokeDasharray="4 10" />
-            <circle cx="92" cy="60" r="58" strokeDasharray="3 12" />
+            <circle cx="92" cy="60" r="12" fill="currentColor" opacity=".16" className="animate-pulse" />
+            <circle cx="92" cy="60" r="34" strokeDasharray="4 10" className="opacity-40" />
+            <circle cx="92" cy="60" r="58" strokeDasharray="3 12" className="opacity-20" />
             <path d="M32 60h120M92 6v108" opacity=".28" />
           </svg>
           <p className={cx("relative z-10 text-3xl font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>1,298</p>
@@ -2349,7 +2363,7 @@ function SoulLinkDiscoverMobile({
             <Compass size={22} strokeWidth={2.6} />
           </span>
           <span>
-            <span className={cx("block text-lg font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>探索</span>
+            <span data-soul-link-discover-title="real-text" className={cx("block text-lg font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>探索</span>
             <span className={cx("block text-[13px] font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>查找真实坐标里的 AI 空间</span>
           </span>
         </Link>
