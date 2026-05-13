@@ -1294,3 +1294,37 @@ Audited local skills for redundancy and codified 'grill-me' as a mandatory sourc
 ### Next Steps
 
 - None - task complete
+
+
+## Session 28: Optimize NPC Conversational Vividness
+
+**Date**: 2026-05-13
+**Task**: Optimize NPC Conversational Vividness
+**Branch**: `main`
+
+### Summary
+
+Refined the NPC voice contract in 
+pc_voice.py to eliminate robotic 'AI assistant' tones. Added mandatory vividness rules (asterisks), micro-behaviors (interjections, thinking gaps), and action placement variety. Verified improvement via an LLM-based audit (score 26 -> 30 for generic NPCs) and passing all regression tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `none` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
