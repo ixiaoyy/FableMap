@@ -9599,6 +9599,58 @@ iframe {
   gap: 8px;
 }
 
+/* Memory feedback UI */
+.memory-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-reinforce {
+  color: #34d399;
+}
+.btn-reinforce:hover {
+  background: rgba(52, 211, 153, 0.12);
+}
+.btn-correct {
+  color: #fbbf24;
+}
+.btn-correct:hover {
+  background: rgba(251, 191, 36, 0.12);
+}
+.btn-flag {
+  color: #f87171;
+}
+.btn-flag:hover,
+.btn-flag.active {
+  background: rgba(248, 113, 113, 0.12);
+}
+.btn-flag.active {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.feedback-count {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+.memory-correction {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.memory-correction-textarea {
+  border-radius: 8px;
+  font-size: 12px;
+  min-height: 64px;
+  resize: vertical;
+}
+.memory-correction-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .memory-error {
   margin: 0;
   color: #fca5a5;
@@ -16434,7 +16486,7 @@ iframe {
 }
 $css
 
-/* ©¤©¤©¤ Badges ©¤©¤©¤ */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Badges ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.1); margin-right: 6px; }
 .badge--cultivation { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399; }
 .badge--divination { background: rgba(167, 139, 250, 0.15); border-color: rgba(167, 139, 250, 0.3); color: #c4b5fd; }
@@ -16454,7 +16506,7 @@ $css
 @keyframes fadeInHobby { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
 
-/* ©¤©¤©¤ Premium Hobby Editor ©¤©¤©¤ */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Premium Hobby Editor ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 .character-hobby-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; backdrop-filter: blur(12px); }
 .hobby-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
 .hobby-chip:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3); }
@@ -16470,7 +16522,7 @@ $css
 .hobby-suggestion:hover { background: rgba(255, 255, 255, 0.08); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
 
 
-/* ©¤©¤ NPC Simulation Status Bars (v0.9) ©¤©¤ */
+/* ï¿½ï¿½ï¿½ï¿½ NPC Simulation Status Bars (v0.9) ï¿½ï¿½ï¿½ï¿½ */
 .char-sim-stats {
   margin-top: 6px;
   display: flex;
@@ -16531,7 +16583,7 @@ $css
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* ©¤©¤ NPC Recovery Animations (v1.0) ©¤©¤ */
+/* ï¿½ï¿½ï¿½ï¿½ NPC Recovery Animations (v1.0) ï¿½ï¿½ï¿½ï¿½ */
 .sim-bar-item.is-recovering .sim-bar-icon {
   animation: bounce 2s infinite;
 }
@@ -16564,7 +16616,7 @@ $css
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* ©¤©¤ NPC Simulation Editor (v1.0) ©¤©¤ */
+/* ï¿½ï¿½ï¿½ï¿½ NPC Simulation Editor (v1.0) ï¿½ï¿½ï¿½ï¿½ */
 .character-simulation-editor {
   background: rgba(255, 255, 255, 0.03);
   padding: 16px;
@@ -16650,7 +16702,7 @@ $css
   padding-top: 16px;
 }
 
-/* ©¤©¤ NPC Geo Badges (v1.2) ©¤©¤ */
+/* ï¿½ï¿½ï¿½ï¿½ NPC Geo Badges (v1.2) ï¿½ï¿½ï¿½ï¿½ */
 .char-sim-header {
   display: flex;
   justify-content: space-between;

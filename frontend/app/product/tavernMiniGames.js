@@ -1,5 +1,15 @@
 export const MINI_GAME_TEMPLATES = [
   {
+    id: 'npc-rps-duel',
+    title: 'NPC 猜拳心理战',
+    icon: '✊',
+    duration: '1-3 分钟',
+    summary: '和当前 NPC 来一局三手小对局，胜负由规则判定，不计排行。',
+    tags: ['duel', 'npc', 'family-friendly'],
+    duelType: 'rps',
+    startInstruction: '请以轻松口吻说明这是一局三手猜拳小对局：石头、剪刀、布；胜负只按规则结算，不涉及排行、奖励、等级或真实输赢压力。',
+  },
+  {
     id: 'clue-trail',
     title: '线索调查',
     icon: '🔎',
@@ -91,8 +101,25 @@ const PLAY_MODE_PRIORITY = {
 
 const SAFETY_BOUNDARY = '不要涉及血腥、成人、真实危险行动，不索取隐私，不给医疗、法律或金融结论。'
 
+export const RPS_MOVES = [
+  { id: 'rock', label: '石头', icon: '✊', beats: 'scissors' },
+  { id: 'scissors', label: '剪刀', icon: '✌️', beats: 'paper' },
+  { id: 'paper', label: '布', icon: '🖐️', beats: 'rock' },
+]
+
+const RPS_MOVE_IDS = new Set(RPS_MOVES.map((move) => move.id))
+
 function textOf(value) {
   return String(value || '').trim()
+}
+
+function stableHash(value) {
+  const input = textOf(value)
+  let hash = 0
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash * 31 + input.charCodeAt(index)) >>> 0
+  }
+  return hash
 }
 
 function priorityIndex(template, priorityIds) {
@@ -122,4 +149,93 @@ export function buildMiniGameStartPrompt(template, context = {}) {
     instruction,
     SAFETY_BOUNDARY,
   ].join('\n')
+}
+
+export function isNpcRpsDuelTemplate(template) {
+  return template?.id === 'npc-rps-duel' || template?.duelType === 'rps'
+}
+
+export function createRpsDuelState() {
+  return {
+    round: 0,
+    playerScore: 0,
+    npcScore: 0,
+    drawCount: 0,
+    lastRound: null,
+  }
+}
+
+export function normalizeRpsMove(moveId) {
+  const normalized = textOf(moveId)
+  return RPS_MOVE_IDS.has(normalized) ? normalized : ''
+}
+
+export function decideRpsWinner(playerMoveId, npcMoveId) {
+  const playerMove = RPS_MOVES.find((move) => move.id === normalizeRpsMove(playerMoveId))
+  const npcMove = RPS_MOVES.find((move) => move.id === normalizeRpsMove(npcMoveId))
+  if (!playerMove || !npcMove) {
+    return { outcome: 'invalid', playerMove: playerMove || null, npcMove: npcMove || null }
+  }
+  if (playerMove.id === npcMove.id) {
+    return { outcome: 'draw', playerMove, npcMove }
+  }
+  return {
+    outcome: playerMove.beats === npcMove.id ? 'player_win' : 'npc_win',
+    playerMove,
+    npcMove,
+  }
+}
+
+export function pickNpcRpsMove(context = {}) {
+  const round = Number.isFinite(Number(context.round)) ? Number(context.round) : 0
+  const seed = [
+    context.characterName || '当前 NPC',
+    context.tavernName || '',
+    context.duelId || 'npc-rps-duel',
+    round,
+  ].join('|')
+  return RPS_MOVES[stableHash(seed) % RPS_MOVES.length]
+}
+
+export function getRpsOutcomeLabel(outcome) {
+  if (outcome === 'player_win') return '你赢了这一手'
+  if (outcome === 'npc_win') return 'NPC 赢了这一手'
+  if (outcome === 'draw') return '平局'
+  return '无效出招'
+}
+
+export function buildRpsNpcLine(result, context = {}) {
+  const name = textOf(context.characterName) || '当前 NPC'
+  if (result?.outcome === 'player_win') {
+    return `${name}眯起眼笑了笑：这手被你读到了。再来，我要换个节奏。`
+  }
+  if (result?.outcome === 'npc_win') {
+    return `${name}轻轻敲了敲桌面：别只看手势，要看我停顿的时机。`
+  }
+  if (result?.outcome === 'draw') {
+    return `${name}把手收回袖口：同步了，说明我们都在试探。`
+  }
+  return `${name}提醒你：这一局只接受石头、剪刀、布。`
+}
+
+export function playRpsRound(state = createRpsDuelState(), playerMoveId, context = {}) {
+  const current = {
+    ...createRpsDuelState(),
+    ...(state && typeof state === 'object' ? state : {}),
+  }
+  const npcMove = pickNpcRpsMove({ ...context, round: current.round + 1 })
+  const result = decideRpsWinner(playerMoveId, npcMove.id)
+  const nextState = {
+    ...current,
+    round: current.round + 1,
+    lastRound: {
+      ...result,
+      label: getRpsOutcomeLabel(result.outcome),
+      npcLine: buildRpsNpcLine(result, context),
+    },
+  }
+  if (result.outcome === 'player_win') nextState.playerScore += 1
+  if (result.outcome === 'npc_win') nextState.npcScore += 1
+  if (result.outcome === 'draw') nextState.drawCount += 1
+  return nextState
 }

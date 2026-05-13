@@ -344,6 +344,29 @@ def _compact_prompt_context_text(value: Any, *, max_chars: int = 1200) -> str:
     return normalized[:max_chars]
 
 
+def _co_present_character_prompt_roster(tavern: Any, current_character_id: str, *, limit: int = 8) -> list[dict[str, Any]]:
+    """Build prompt-only context so an NPC recognizes other NPCs in the same tavern."""
+
+    roster: list[dict[str, Any]] = []
+    for character in list(getattr(tavern, "characters", []) or [])[:limit]:
+        name = _compact_prompt_context_text(getattr(character, "name", ""), max_chars=32)
+        if not name:
+            continue
+        role = _compact_prompt_context_text(
+            getattr(character, "description", "")
+            or getattr(character, "personality", "")
+            or getattr(character, "scenario", ""),
+            max_chars=96,
+        )
+        roster.append({
+            "id": getattr(character, "id", ""),
+            "name": name,
+            "role": role,
+            "current": getattr(character, "id", "") == current_character_id,
+        })
+    return roster
+
+
 def _strip_context_speaker_prefix(value: str) -> str:
     text = str(value or "").strip()
     for separator in ("：", ":"):
@@ -1309,6 +1332,7 @@ class WebService:
             char_tags=character.tags or [],
             char_hobbies=character.hobbies or [],
             char_traits=character.traits or [],
+            co_present_characters=_co_present_character_prompt_roster(tavern, character.id),
             user_name=visitor_name,
             visitor_visit_count=int(payload.get("visitor_visit_count") or 0),
             visitor_relationship_stage=str(payload.get("visitor_relationship_stage") or ""),
@@ -2110,6 +2134,7 @@ class WebService:
             char_tags=getattr(character, "tags", []) or [],
             char_hobbies=getattr(character, "hobbies", []) or [],
             char_traits=getattr(character, "traits", []) or [],
+            co_present_characters=_co_present_character_prompt_roster(tavern, getattr(character, "id", "")),
             user_name=prompt_user_name,
             visitor_visit_count=prompt_visitor_state.visit_count if prompt_visitor_state else 0,
             visitor_relationship_stage=prompt_visitor_state.relationship_stage if prompt_visitor_state else "",

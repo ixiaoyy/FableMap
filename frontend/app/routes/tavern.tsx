@@ -51,7 +51,7 @@ export async function clientLoader({ params, request }: ClientLoaderFunctionArgs
     return { tavernId, currentUserId, tavern: null, roleplay: null, error: "缺少空间 ID" }
   }
   try {
-    const tavern = await getTavern(tavernId, currentUserId)
+    const tavern = await getTavern(tavernId, currentUserId, { view: "entry" })
     let roleplay: RoleplayState | null = null
     try {
       roleplay = await getRoleplayState(tavernId, currentUserId)

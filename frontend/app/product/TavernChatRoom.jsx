@@ -1524,15 +1524,16 @@ export default function TavernChatRoom({
       const responseText = String(result.response || '').trim()
       const replyId = `msg-${Date.now()}-r`
       const isDegraded = Boolean(result.degraded)
-      const nextExpression = isDegraded ? DEFAULT_EXPRESSION : currentExpression
-      const nextExpressionSource = isDegraded ? 'fallback' : expressionSource
+      const isFallback = result.is_fallback === true
+      const nextExpression = isDegraded || isFallback ? DEFAULT_EXPRESSION : currentExpression
+      const nextExpressionSource = isDegraded || isFallback ? 'fallback' : expressionSource
       if (result.visitor_state) {
         setVisitorMemoryState(result.visitor_state)
       }
-      if (result.created_memories && result.created_memories.length > 0) {
+      if (!isFallback && result.created_memories && result.created_memories.length > 0) {
         setCreatedMemories(result.created_memories)
       }
-      if (Array.isArray(result.state_card_candidates) && result.state_card_candidates.length > 0) {
+      if (!isFallback && Array.isArray(result.state_card_candidates) && result.state_card_candidates.length > 0) {
         setStateCards((prev) => mergeStateCards(prev, result.state_card_candidates))
         setStateCardError('')
       }
@@ -1549,14 +1550,16 @@ export default function TavernChatRoom({
         }
         setMessages((prev) => [...prev, charMsg])
       }
-      if (isDegraded) {
+      if (isDegraded || isFallback) {
         setCurrentExpression(DEFAULT_EXPRESSION)
         setExpressionSource('fallback')
-        setDegradationNotice(result.degradation || {
-          title: 'AI 服务暂时不可用',
-          message: '本轮没有生成 NPC 回复。',
-          action: '稍后重试；如果持续出现，请店主在 AI 配置里测试连接。',
-        })
+        setDegradationNotice(
+          result.degradation || {
+            title: isFallback ? 'NPC 暂时无法回复' : 'AI 服务暂时不可用',
+            message: result.fallback_notice || '本轮没有生成有效 NPC 回复。',
+            action: '可以换个问法或稍后重试；如果持续出现，请店主检查 AI 配置。',
+          },
+        )
       } else {
         setDegradationNotice(null)
         if (responseText) {
@@ -1630,16 +1633,16 @@ export default function TavernChatRoom({
       if (result.visitor_state) {
         setVisitorMemoryState(result.visitor_state)
       }
-      if (result.created_memories && result.created_memories.length > 0) {
+      if (result.is_fallback !== true && result.created_memories && result.created_memories.length > 0) {
         setCreatedMemories(result.created_memories)
       }
-      if (Array.isArray(result.state_card_candidates) && result.state_card_candidates.length > 0) {
+      if (result.is_fallback !== true && Array.isArray(result.state_card_candidates) && result.state_card_candidates.length > 0) {
         setStateCards((prev) => mergeStateCards(prev, result.state_card_candidates))
         setStateCardError('')
       }
 
-      if (result.degraded) {
-        setGroupSessionError(result.error || '群聊角色暂时没有回应。')
+      if (result.degraded || result.is_fallback === true) {
+        setGroupSessionError(result.error || result.fallback_notice || '群聊角色暂时没有回应。')
       } else {
         setGroupSessionError('')
       }
@@ -2045,21 +2048,26 @@ export default function TavernChatRoom({
               </div>
 
               {/* Input */}
-              <TavernMiniGamePanel
-                templates={miniGameTemplates}
-                sending={sending}
-                disabled={!selectedChar}
-                onStart={handleMiniGameStart}
-              />
               <ChatInputArea
                 onSend={handleSend}
                 sending={sending}
                 character={selectedChar}
-                placeholder={activeChatChannel === 'public' ? '公共聊天：直接发言，或 @NPC名 对指定 NPC 说...' : undefined}
+                placeholder={activeChatChannel === 'public' ? '公共聊天：直接发言，或输入 @NPC名 等回复' : undefined}
                 voiceConfig={voiceConfig}
                 tavernId={roomId}
                 quickPrompts={finalQuickPrompts}
               />
+              <details className="tavern-mini-game-drawer">
+                <summary>桌边小玩法 · 不挡聊天输入</summary>
+                <TavernMiniGamePanel
+                  templates={miniGameTemplates}
+                  sending={sending}
+                  disabled={!selectedChar}
+                  characterName={selectedChar?.name || '当前 NPC'}
+                  tavernName={roomName}
+                  onStart={handleMiniGameStart}
+                />
+              </details>
             </>
           ) : (
             <div className="chat-no-char">

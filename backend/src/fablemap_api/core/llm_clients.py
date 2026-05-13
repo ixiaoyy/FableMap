@@ -1642,6 +1642,37 @@ class ZAIBackend(LLMBackend):
 # ─── TextGen Backends (Ooba/Mancer/vLLM/etc.) ────────────────────────────────
 
 
+class RulesBackend(LLMBackend):
+    """Rule-based backend for public welfare taverns. Returns local responses."""
+
+    def complete(self, messages: list[dict[str, str]], **kwargs) -> LLMResponse:
+        # Simple reactive logic
+        user_msg = ""
+        system_prompt = ""
+        for msg in messages:
+            if msg["role"] == "user":
+                user_msg = msg["content"]
+            elif msg["role"] == "system":
+                system_prompt = msg["content"]
+        
+        content = f"（提示：此区域目前使用规则引擎响应）\n我很理解你的意思。关于“{user_msg[:20]}”，作为这里的向导，我会说：在现实的锚点上，我们每个人都在寻找属于自己的那枚徽章。你觉得呢？"
+        
+        if "阿衡" in system_prompt or "英雄" in system_prompt:
+            content = f"阿衡放下手里的镊子，抬头看你一眼：“{user_msg[:30]}”——这种事，写在英雄卡上可能不太起眼，但在我这柜台里，它值得一个位置。你想把它放哪儿？"
+
+        return LLMResponse(
+            content=content,
+            model=self.config.model,
+            usage={"prompt_tokens": 0, "completion_tokens": 0},
+        )
+
+    def count_tokens(self, text: str) -> int:
+        return 0
+
+    def supports_streaming(self) -> bool:
+        return False
+
+
 class TextGenBackend(LLMBackend):
     """Text completion backend (Ooba, Mancer, vLLM, Tabby, KoboldCPP, etc.)."""
 
@@ -1780,6 +1811,68 @@ class TextGenBackend(LLMBackend):
         return True
 
 
+
+class MakerSuiteBackend(LLMBackend):
+    """Google AI Studio (Gemini) API."""
+
+    DEFAULT_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+
+    def complete(self, messages: list[dict[str, str]], **kwargs) -> LLMResponse:
+        import urllib.request
+        import urllib.error
+
+        model = self.config.model or "gemini-1.5-flash"
+        url = f"{self.DEFAULT_URL}/{model}:generateContent?key={self.config.api_key}"
+        
+        contents = []
+        for msg in messages:
+            role = "user" if msg["role"] in ("user", "system") else "model"
+            contents.append({
+                "role": role,
+                "parts": [{"text": msg["content"]}]
+            })
+
+        body = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": self.config.temperature,
+                "maxOutputTokens": self.config.max_tokens,
+                "topP": self.config.top_p,
+            }
+        }
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                content = data["candidates"][0]["content"]["parts"][0]["text"]
+                return LLMResponse(
+                    content=content,
+                    model=model,
+                    usage={
+                        "prompt_tokens": data.get("usageMetadata", {}).get("promptTokenCount", 0),
+                        "completion_tokens": data.get("usageMetadata", {}).get("candidatesTokenCount", 0),
+                    },
+                    raw=data,
+                )
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8") if e.fp else ""
+            raise LLMError(f"Gemini API error {e.code}: {error_body[:200]}") from e
+        except Exception as e:
+            raise LLMError(f"Gemini request failed: {e}") from e
+
+    def count_tokens(self, text: str) -> int:
+        return self._estimate_tokens(text)
+
+    def supports_streaming(self) -> bool:
+        return False
+
 # ─── Factory ──────────────────────────────────────────────────────────────────
 
 
@@ -1818,6 +1911,9 @@ _BACKENDS: dict[str, type[LLMBackend]] = {
     "featherless": TextGenBackend,
     "huggingface": TextGenBackend,
     "generic": TextGenBackend,
+    "gemini": MakerSuiteBackend,
+    "makersuite": MakerSuiteBackend,
+    "rules": RulesBackend,
     # Backward compatibility
     "local": OllamaBackend,  # alias
 }

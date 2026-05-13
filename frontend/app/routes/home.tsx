@@ -14,8 +14,8 @@ import {
   Sun,
   type LucideIcon,
 } from "lucide-react"
-import { Link, useLoaderData, useNavigate } from "react-router"
-import { useState } from "react"
+import { Link, useNavigate } from "react-router"
+import { useState, useEffect } from "react"
 
 import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover/cards/card-compass-square.png"
 import lightRadarSurface from "../assets/soul-link-05-10/home-light/scene-sky-city-balcony.png"
@@ -45,10 +45,9 @@ type Feature = {
   text: string
 }
 
-type HomeLoaderData = {
-  result: TavernListResponse
-  error: string
-}
+const HOMEPAGE_TAVERN_LIST_LIMIT = 12
+
+const EMPTY_LIST_RESULT: TavernListResponse = { taverns: [], count: 0 }
 
 const navItems = [
   { to: "/discover", label: "探索" },
@@ -309,16 +308,19 @@ function HeroPosterPreview() {
   )
 }
 
-export async function clientLoader(): Promise<HomeLoaderData> {
-  try {
-    return { result: await listTaverns(), error: "" }
-  } catch (error) {
-    return { result: { taverns: [], count: 0 }, error: errorMessage(error) }
-  }
-}
 
 export default function HomeRoute() {
-  const { result, error } = useLoaderData<typeof clientLoader>()
+  const [result, setResult] = useState<TavernListResponse>(EMPTY_LIST_RESULT)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+    listTaverns({ limit: HOMEPAGE_TAVERN_LIST_LIMIT, offset: 0 })
+      .then((data) => { if (!cancelled) setResult(data) })
+      .catch((err) => { if (!cancelled) setError(errorMessage(err)) })
+    return () => { cancelled = true }
+  }, [])
+
   const homepage = buildHomepageView(result, error)
   const metrics = withMetricIcons(homepage.metrics)
   const { theme, toggleTheme } = useTheme()

@@ -19,3 +19,15 @@ assert.ok(
   source.includes('API 请求失败（${response.status}）'),
   'non-JSON HTTP error responses should include the HTTP status in the user-facing error',
 )
+assert.ok(
+  source.includes('export function unwrapApiPayload'),
+  'api client should expose an envelope unwrap helper',
+)
+assert.ok(
+  source.includes('"data" in candidate') && source.includes('candidate.meta'),
+  'api client should detect {data, meta} envelopes',
+)
+assert.ok(
+  source.includes('candidate.meta?.error'),
+  'api client should read enveloped error metadata',
+)

@@ -2,8 +2,8 @@
   "id": "05-13-chat-input-game-panel-relocation",
   "name": "05-13-chat-input-game-panel-relocation",
   "title": "Move mini-game panel out of chat input flow",
-  "description": "Relocate the tabletop mini-game launcher so it no longer sits between chat messages and the composer/input area.",
-  "status": "planning",
+  "description": "Relocate the tabletop mini-game launcher so it no longer sits between chat messages and the composer/input area, and keep @ mention suggestions hidden until @ is typed.",
+  "status": "done",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-13",
-  "completedAt": null,
+  "completedAt": "2026-05-13",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,14 @@
   "subtasks": [],
   "children": [],
   "parent": null,
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "frontend/app/features/tavern-chat-workbench/index.tsx",
+    "frontend/app/product/TavernChatRoom.jsx",
+    "frontend/app/product/TavernMiniGamePanel.jsx",
+    "frontend/app/product/tavernMiniGames.css",
+    "frontend/scripts/tavern-chat-workbench-test.mjs",
+    "frontend/scripts/mini-games-test.mjs"
+  ],
+  "notes": "Moved the large tabletop mini-game launcher out of the chat input flow. Native workbench keeps composer directly after chat status and folds mini-games into secondary tools after the composer; legacy chat room places mini-games in a collapsed drawer after ChatInputArea. Follow-up review simplified script coverage: kept only lightweight source-order checks and removed brittle copy-level / implementation-detail assertions for the @ mention copy/menu.",
   "meta": {}
 }

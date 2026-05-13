@@ -1,0 +1,72 @@
+{
+  "id": "clue-egg-hunt-rewards",
+  "name": "clue-egg-hunt-rewards",
+  "title": "brainstorm: 线索彩蛋寻宝奖励玩法",
+  "description": "",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "Brainstorm only: clue/easter-egg/puzzle hunt rewards for FableMap gameplay; no implementation yet.",
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-13",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 1,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "05-13-clue-hunt-route-domain-governance",
+    "05-13-clue-hunt-session-answer-gate",
+    "05-13-clue-hunt-engagement-reward",
+    "05-13-clue-hunt-owner-visitor-ui"
+  ],
+  "parent": null,
+  "relatedFiles": [
+    "backend/src/fablemap_api/core/gameplay.py",
+    "backend/src/fablemap_api/core/engagement.py",
+    "frontend/app/product/ownerGameplayTemplates.js",
+    "docs/WORLD_SCHEMA.md",
+    ".trellis/spec/backend/engagement-api-contract.md",
+    ".trellis/spec/frontend/engagement-ui-boundary.md"
+  ],
+  "notes": "Brainstorm decisions captured: C cross-space clue hunt; same-owner/system-only governance; semi-hidden route; reward = memorial text + tavern-local engagement coins. Ready for final PRD confirmation or child task split.",
+  "meta": {
+    "selected_approach": "C_cross_space_clue_hunt",
+    "next_question": "final_confirmation",
+    "governance_scope": "same_owner_routes_plus_system_public_welfare_routes",
+    "system_owner_id": "system_public_welfare",
+    "route_visibility": "semi_hidden_route",
+    "reward_type": "memorial_text_plus_engagement_coins"
+  }
+}

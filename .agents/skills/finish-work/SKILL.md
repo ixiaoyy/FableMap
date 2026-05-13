@@ -3,166 +3,26 @@ name: finish-work
 description: "Pre-commit quality checklist covering lint, typecheck, tests, code-spec sync, API changes, database migrations, cross-layer verification, and manual testing. Blocks commit if infra or cross-layer specs lack executable depth. Use when code is written and tested but not yet committed, before submitting changes, or as a final review before git commit."
 ---
 
-# Finish Work - Pre-Commit Checklist
+# Finish Work
 
-Before submitting or committing, use this checklist to ensure work completeness.
-
-**Timing**: After code is written and tested, before commit
-
----
+Run a proportional final check before reporting or committing.
 
 ## Checklist
 
-### 1. Code Quality
+- Changed files match the requested scope.
+- No unrelated formatting/refactor/dependency changes.
+- API/schema/security changes have tests and spec/docs updates.
+- UI changes consider mobile/narrow screens.
+- Validation was run or skipped with a clear reason.
+- Risks and remaining work are explicit.
 
-```bash
-# Must pass
-pnpm lint
-pnpm type-check
-pnpm test
-```
+## Validation
 
-- [ ] `pnpm lint` passes with 0 errors?
-- [ ] `pnpm type-check` passes with no type errors?
-- [ ] Tests pass?
-- [ ] No `console.log` statements (use logger)?
-- [ ] No non-null assertions (the `x!` operator)?
-- [ ] No `any` types?
+Use the smallest real command:
 
-### 2. Code-Spec Sync
+- Backend syntax: `py -3 -m compileall -q backend/src`
+- Backend behavior: focused `pytest`
+- Frontend build/UI: `npm --prefix .\frontend run build`
+- Frontend helper/service rules: focused script or `npm --prefix .\frontend test`
 
-**Code-Spec Docs**:
-- [ ] Does `.trellis/spec/backend/` need updates?
-  - New patterns, new modules, new conventions
-- [ ] Does `.trellis/spec/frontend/` need updates?
-  - New components, new hooks, new patterns
-- [ ] Does `.trellis/spec/guides/` need updates?
-  - New cross-layer flows, lessons from bugs
-
-**Key Question**:
-> "If I fixed a bug or discovered something non-obvious, should I document it so future me (or others) won't hit the same issue?"
-
-If YES -> Update the relevant code-spec doc.
-
-### 2.5. Code-Spec Hard Block (Infra/Cross-Layer)
-
-If this change touches infra or cross-layer contracts, this is a blocking checklist:
-
-- [ ] Spec content is executable (real signatures/contracts), not principle-only text
-- [ ] Includes file path + command/API name + payload field names
-- [ ] Includes validation and error matrix
-- [ ] Includes Good/Base/Bad cases
-- [ ] Includes required tests and assertion points
-
-**Block Rule**:
-If infra/cross-layer changed but the related spec is still abstract, do NOT finish. Run `$update-spec` manually first.
-
-### 3. API Changes
-
-If you modified API endpoints:
-
-- [ ] Input schema updated?
-- [ ] Output schema updated?
-- [ ] API documentation updated?
-- [ ] Client code updated to match?
-
-### 4. Database Changes
-
-If you modified database schema:
-
-- [ ] Migration file created?
-- [ ] Schema file updated?
-- [ ] Related queries updated?
-- [ ] Seed data updated (if applicable)?
-
-### 5. Cross-Layer Verification
-
-If the change spans multiple layers:
-
-- [ ] Data flows correctly through all layers?
-- [ ] Error handling works at each boundary?
-- [ ] Types are consistent across layers?
-- [ ] Loading states handled?
-
-### 6. Manual Testing
-
-- [ ] Feature works in browser/app?
-- [ ] Edge cases tested?
-- [ ] Error states tested?
-- [ ] Works after page refresh?
-
-### 6.5. Grill-Me Gate (Source-of-Truth / Visual / Asset Work)
-
-Run `$grill-me` before final handoff when any of these are true:
-
-- UI/design fidelity is part of the request.
-- User-provided cut images, backgrounds, icons, screenshots, or reference art were used.
-- The user challenged alignment, asset choice, validation quality, or source-of-truth assumptions.
-- Continuing without review could bake in a wrong premise.
-
-Required evidence:
-
-- [ ] Source of truth named explicitly.
-- [ ] Relevant asset paths and dimensions listed when assets are involved.
-- [ ] Browser/Playwright screenshots or DOM measurements included when visual UI is involved.
-- [ ] Actual validation commands and pass/fail results reported.
-- [ ] Any unsuitable asset or mismatch is reported instead of silently adapted.
-
----
-
-## Quick Check Flow
-
-```bash
-# 1. Code checks
-pnpm lint && pnpm type-check
-
-# 2. View changes
-git status
-git diff --name-only
-
-# 3. Based on changed files, check relevant items above
-```
-
----
-
-## Common Oversights
-
-| Oversight | Consequence | Check |
-|-----------|-------------|-------|
-| Code-spec docs not updated | Others don't know the change | Check .trellis/spec/ |
-| Spec text is abstract only | Easy regressions in infra/cross-layer changes | Require signature/contract/matrix/cases/tests |
-| Migration not created | Schema out of sync | Check db/migrations/ |
-| Types not synced | Runtime errors | Check shared types |
-| Tests not updated | False confidence | Run full test suite |
-| Console.log left in | Noisy production logs | Search for console.log |
-
----
-
-## Relationship to Other Commands
-
-```
-Development Flow:
-  Write code -> Test -> $finish-work -> git commit -> $record-session
-                          |                              |
-                   Ensure completeness              Record progress
-                          |
-              For UI/assets/source-of-truth disputes,
-              run $grill-me before final handoff
-
-Debug Flow:
-  Hit bug -> Fix -> $break-loop -> Knowledge capture
-                       |
-                  Deep analysis
-```
-
-- `$finish-work` - Check work completeness (this skill)
-- `$record-session` - Record session and commits
-- `$break-loop` - Deep analysis after debugging
-
----
-
-## Core Principle
-
-> **Delivery includes not just code, but also documentation, verification, and knowledge capture.**
-
-Complete work = Code + Docs + Tests + Verification
+Do not run broad/browser validation for simple text/layout changes unless required.

@@ -29,7 +29,6 @@ import discoverCardTrainPlatform from "../assets/soul-link-05-10/discover/cards/
 import discoverWorldStatusBgBlack from "../assets/soul-link-05-10/discover/world-status/bg-black.png"
 import discoverWorldStatusBgLight from "../assets/soul-link-05-10/discover/world-status/bg-light.png"
 import homeBlackInviteCard from "../assets/soul-link-05-10/home-black/invite-card.png"
-import homeBlackInviteCard2x from "../assets/soul-link-05-10/home-black/invite-card-2x.png"
 import homeBlackGuideDatabaseIcon from "../assets/soul-link-05-10/home-black/guide-database-icon.png"
 import homeBlackGuideProtocolIcon from "../assets/soul-link-05-10/home-black/guide-protocol-icon.png"
 import homeBlackGuideSecurityIcon from "../assets/soul-link-05-10/home-black/guide-security-icon.png"
@@ -381,7 +380,7 @@ const SIDEBAR_MATERIALS = {
     inviteCard: { src: homeLightInviteCard, src2x: homeLightInviteCard2x },
   },
   black: {
-    inviteCard: { src: homeBlackInviteCard, src2x: homeBlackInviteCard2x },
+    inviteCard: { src: homeBlackInviteCard, src2x: homeBlackInviteCard },
   },
 } as const
 

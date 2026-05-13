@@ -120,7 +120,7 @@ def test_v1_worldinfo_global_crud_test_and_permissions(tmp_path: Path) -> None:
         json={"tavern_id": tavern_id},
     )
     assert deleted.status_code == 200
-    assert deleted.json() == {"ok": True, "entry_id": "rain-entry", "tavern_id": tavern_id}
+    assert deleted.json()["data"] == {"ok": True, "entry_id": "rain-entry", "tavern_id": tavern_id}
 
     empty = client.get("/api/v1/worldinfo", headers={"X-User-Id": OWNER_ID}, params={"tavern_id": tavern_id})
     assert empty.status_code == 200

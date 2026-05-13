@@ -4,6 +4,7 @@ import { AffinityProgress } from '../components/AffinityProgress'
 import {
   createMemoryAtom,
   deleteMemoryAtom,
+  feedbackMemoryAtom,
   listMemories,
   togglePinMemory,
   updateMemoryAtom,
@@ -56,10 +57,26 @@ function getVisitorMemoryPayload(entryState, fallbackVisitCount = 0) {
 /**
  * Memory atom card — single row in the memory list.
  */
-function MemoryCard({ memory, onPin, onDelete, onMarkWrong }) {
+function MemoryCard({ memory, onPin, onDelete, onFeedback }) {
   const dim = memory.dimension || 'fact'
   const color = DIMENSION_COLORS[dim] || DIMENSION_COLORS.fact
   const flaggedWrong = Boolean(memory.metadata?.flagged_wrong)
+  const reinforcementCount = Number(memory.metadata?.reinforcement_count || 0)
+  const [showCorrection, setShowCorrection] = useState(false)
+  const [correctionText, setCorrectionText] = useState(memory.content || '')
+
+  function handleSaveCorrection() {
+    const newContent = correctionText.trim()
+    if (newContent && newContent !== memory.content) {
+      onFeedback(memory.id, { correct: false, content: newContent })
+    }
+    setShowCorrection(false)
+  }
+
+  function handleCancelCorrection() {
+    setCorrectionText(memory.content || '')
+    setShowCorrection(false)
+  }
 
   return (
     <div className={`memory-card ${memory.pinned ? 'pinned' : ''} ${flaggedWrong ? 'flagged' : ''}`}>
@@ -79,7 +96,39 @@ function MemoryCard({ memory, onPin, onDelete, onMarkWrong }) {
           <span className="memory-wrong-tag" title="已标错">标错</span>
         )}
       </div>
-      <p className="memory-card-content">{memory.content}</p>
+
+      {showCorrection ? (
+        <div className="memory-correction">
+          <textarea
+            className="memory-correction-textarea"
+            value={correctionText}
+            onChange={(e) => setCorrectionText(e.currentTarget.value)}
+            rows={3}
+            autoFocus
+            placeholder="输入正确的记忆内容..."
+          />
+          <div className="memory-correction-actions">
+            <button
+              type="button"
+              className="btn-memory-action"
+              onClick={handleCancelCorrection}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn-primary btn-small"
+              onClick={handleSaveCorrection}
+              disabled={!correctionText.trim() || correctionText.trim() === memory.content}
+            >
+              保存修正
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="memory-card-content">{memory.content}</p>
+      )}
+
       {memory.subject && (
         <p className="memory-card-subject">关于：{memory.subject}</p>
       )}
@@ -89,18 +138,35 @@ function MemoryCard({ memory, onPin, onDelete, onMarkWrong }) {
         </span>
         <div className="memory-card-actions">
           <button
+            className="btn-memory-action btn-reinforce"
+            onClick={() => onFeedback(memory.id, { correct: true })}
+            title="记对了"
+          >
+            记对了 {reinforcementCount > 0 && <span className="feedback-count">({reinforcementCount})</span>}
+          </button>
+          <button
+            className="btn-memory-action btn-correct"
+            onClick={() => {
+              setCorrectionText(memory.content || '')
+              setShowCorrection(true)
+            }}
+            title="修正记忆"
+          >
+            修正
+          </button>
+          <button
+            className={`btn-memory-action btn-flag ${flaggedWrong ? 'active' : ''}`}
+            onClick={() => onFeedback(memory.id, { correct: false })}
+            title={flaggedWrong ? '已标错' : '记错了'}
+          >
+            {flaggedWrong ? '已标错' : '记错了'}
+          </button>
+          <button
             className="btn-memory-action"
             onClick={() => onPin(memory.id, !memory.pinned)}
             title={memory.pinned ? '取消固定' : '固定记忆'}
           >
             {memory.pinned ? '📌' : '📍'}
-          </button>
-          <button
-            className="btn-memory-action"
-            onClick={() => onMarkWrong(memory.id, !flaggedWrong, memory.metadata || {})}
-            title={flaggedWrong ? '恢复记忆' : '标记为错误'}
-          >
-            {flaggedWrong ? '恢复' : '标错'}
           </button>
           <button
             className="btn-memory-action btn-memory-delete"
@@ -285,17 +351,17 @@ export default function TavernMemoryPanel({
       })
   }
 
-  function handleMarkWrong(memoryId, flagged, metadata) {
+  function handleFeedback(memoryId, feedback) {
     if (!tavernId) return
-    updateMemoryAtom(tavernId, memoryId, { metadata: { ...(metadata || {}), flagged_wrong: flagged } }, visitorId)
+    feedbackMemoryAtom(tavernId, memoryId, feedback, visitorId)
       .then((result) => {
         const updated = result.memory_atom
         setAtoms((prev) =>
-          prev.map((m) => (m.id === memoryId ? (updated || { ...m, metadata: { ...(m.metadata || {}), flagged_wrong: flagged } }) : m))
+          prev.map((m) => (m.id === memoryId ? (updated || m) : m))
         )
       })
       .catch((err) => {
-        alert('标记记忆失败：' + (err.message || String(err)))
+        alert('反馈失败：' + (err.message || String(err)))
       })
   }
 
@@ -444,7 +510,7 @@ export default function TavernMemoryPanel({
                 memory={atom}
                 onPin={handlePin}
                 onDelete={handleDelete}
-                onMarkWrong={handleMarkWrong}
+                onFeedback={handleFeedback}
               />
             ))}
           </div>

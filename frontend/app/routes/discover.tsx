@@ -1,3 +1,4 @@
+import type { ClientLoaderFunctionArgs } from "react-router"
 import {
   ArrowRight,
   Compass,
@@ -10,7 +11,7 @@ import {
   Waves,
   X,
 } from "lucide-react"
-import { Link, useLoaderData, useSearchParams } from "react-router"
+import { Link, useSearchParams } from "react-router"
 import { useEffect, useMemo, useState } from "react"
 
 import discoverRadarSurfaceImage from "../assets/soul-link-05-10/discover/cards/card-compass-square.png"
@@ -91,6 +92,32 @@ const DISCOVER_DESKTOP_BOARD_FRAME =
 
 const DISCOVER_DESKTOP_BOARD_SCROLL =
   "lg:min-h-0 lg:overflow-y-auto lg:pr-2 lg:[scrollbar-gutter:stable]"
+
+const DISCOVER_TAVERN_LIST_LIMIT = 100
+
+function cleanSearchParam(value: string | null) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function discoverListFiltersFromRequest(request: Request): Record<string, string | number> {
+  const url = new URL(request.url)
+  const filters: Record<string, string | number> = {
+    limit: DISCOVER_TAVERN_LIST_LIMIT,
+    offset: 0,
+  }
+  const query = cleanSearchParam(url.searchParams.get("search")) || cleanSearchParam(url.searchParams.get("q"))
+  const access = cleanSearchParam(url.searchParams.get("access"))
+  const status = cleanSearchParam(url.searchParams.get("status"))
+  const placeType = cleanSearchParam(url.searchParams.get("place_type"))
+  const specialType = cleanSearchParam(url.searchParams.get("special_type"))
+
+  if (query) filters.q = query
+  if (access) filters.access = access
+  if (status) filters.status = status
+  if (placeType) filters.place_type = placeType
+  if (specialType) filters.special_type = specialType
+  return filters
+}
 
 function characterAvatar(character: TavernCharacter) {
   if (!character) return ""
@@ -1085,18 +1112,25 @@ function LightDiscoverReference(props: {
   return <SoulLinkDiscoverReference variant="light" {...props} />
 }
 
-export async function clientLoader(): Promise<DiscoverLoaderData> {
-  try {
-    return { result: await listTaverns(), error: "" }
-  } catch (error) {
-    return { result: { taverns: [], count: 0 }, error: errorMessage(error) }
-  }
-}
+
 
 export default function DiscoverRoute() {
-  const { result, error } = useLoaderData<typeof clientLoader>()
-  const { theme, toggleTheme } = useTheme()
+  const [result, setResult] = useState<TavernListResponse>({ taverns: [], count: 0 })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+
   const [searchParams, setSearchParams] = useSearchParams()
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    listTaverns(discoverListFiltersFromRequest(new Request(window.location.href)))
+      .then((data) => { if (!cancelled) { setResult(data); setLoading(false); } })
+      .catch((err) => { if (!cancelled) { setError(errorMessage(err)); setLoading(false); } })
+    return () => { cancelled = true }
+  }, [searchParams])
+
+  const { theme, toggleTheme } = useTheme()
   const isDark = theme === "dark"
 
   const initialSearch = searchParams.get("search") ?? searchParams.get("q") ?? ""

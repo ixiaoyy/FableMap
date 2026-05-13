@@ -81,9 +81,20 @@ from ...domain.world_info_policy import (
 
 logger = logging.getLogger(__name__)
 
+MAX_TAVERN_LIST_LIMIT = 100
+
 
 def _utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _normalize_tavern_list_pagination(limit: int | None, offset: int | None) -> tuple[int | None, int]:
+    safe_offset = max(0, int(offset or 0))
+    if limit is None:
+        return None, safe_offset
+    safe_limit = max(0, min(int(limit), MAX_TAVERN_LIST_LIMIT))
+    return safe_limit, safe_offset
+
 
 class TavernManagementApplicationMixin:
     """Focused tavernmanagement use cases."""
@@ -96,8 +107,12 @@ class TavernManagementApplicationMixin:
         radius: float = 5000,
         access: str | None = None,
         status: str | None = None,
+        place_type: str = "",
+        special_type: str = "",
         query: str = "",
         owner_id: str = "",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> dict[str, Any]:
         taverns = self.taverns.list_taverns(
             lat=lat,
@@ -105,16 +120,30 @@ class TavernManagementApplicationMixin:
             radius=radius,
             access=access,
             status=status,
+            place_type=place_type,
+            special_type=special_type,
             query=query,
             owner_id=owner_id,
         )
-        return {"taverns": taverns, "count": len(taverns)}
+        safe_limit, safe_offset = _normalize_tavern_list_pagination(limit, offset)
+        total = len(taverns)
+        end = None if safe_limit is None else safe_offset + safe_limit
+        paged_taverns = taverns[safe_offset:end]
+        count = len(paged_taverns)
+        return {
+            "taverns": paged_taverns,
+            "count": count,
+            "total": total,
+            "limit": safe_limit,
+            "offset": safe_offset,
+            "has_more": safe_offset + count < total,
+        }
 
     def create_tavern(self, data: dict[str, Any], owner_id: str = "") -> dict[str, Any]:
         return self.taverns.create_tavern(data, owner_id)
 
-    def get_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
-        return self.taverns.get_tavern(tavern_id, user_id)
+    def get_tavern(self, tavern_id: str, user_id: str = "", view: str = "") -> dict[str, Any]:
+        return self.taverns.get_tavern(tavern_id, user_id, view=view)
 
     def get_tavern_share(self, tavern_id: str, user_id: str = "", base_url: str = "") -> dict[str, Any]:
         tavern = self._get_tavern_or_404(tavern_id)

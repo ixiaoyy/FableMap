@@ -10,6 +10,26 @@
   box-shadow: 0 -12px 36px rgba(2, 6, 23, 0.18);
 }
 
+.tavern-mini-game-drawer {
+  margin: 10px 12px 12px;
+  border: 1px solid rgba(251, 191, 36, 0.14);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.tavern-mini-game-drawer > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 14px;
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tavern-mini-game-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
 .tavern-mini-game-panel__header {
   display: flex;
   justify-content: space-between;
@@ -131,12 +151,148 @@
   font-weight: 800;
 }
 
+.tavern-rps-duel {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(45, 212, 191, 0.18);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(45, 212, 191, 0.14), transparent 30%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.72));
+  color: #e2e8f0;
+}
+
+.tavern-rps-duel__topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.tavern-rps-duel__topline > div {
+  display: grid;
+  gap: 4px;
+}
+
+.tavern-rps-duel__topline span {
+  color: #5eead4;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.tavern-rps-duel__topline strong {
+  color: #f8fafc;
+  font-size: 15px;
+}
+
+.tavern-rps-duel__topline button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.68);
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.tavern-rps-duel__score {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.tavern-rps-duel__score span {
+  padding: 5px 9px;
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  border-radius: 999px;
+  background: rgba(120, 53, 15, 0.22);
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tavern-rps-duel__moves {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tavern-rps-duel__moves button {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid rgba(45, 212, 191, 0.20);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e0f2fe;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.tavern-rps-duel__moves button:hover:not(:disabled),
+.tavern-rps-duel__moves button:focus-visible:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(45, 212, 191, 0.74);
+  background: rgba(20, 184, 166, 0.18);
+}
+
+.tavern-rps-duel__moves button:disabled,
+.tavern-rps-duel__topline button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.tavern-rps-duel__moves span {
+  font-size: 22px;
+}
+
+.tavern-rps-duel__result {
+  display: grid;
+  gap: 5px;
+  min-height: 88px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.tavern-rps-duel__result strong {
+  color: #f8fafc;
+  font-size: 14px;
+}
+
+.tavern-rps-duel__result span {
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.tavern-rps-duel__result em {
+  color: #a7f3d0;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
 @media (max-width: 640px) {
   .tavern-mini-game-panel__header {
     flex-direction: column;
   }
 
   .tavern-mini-game-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tavern-rps-duel__topline {
+    flex-direction: column;
+  }
+
+  .tavern-rps-duel__moves {
     grid-template-columns: 1fr;
   }
 }

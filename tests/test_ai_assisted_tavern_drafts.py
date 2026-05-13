@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 
 from fablemap_api.domain.owner_llm_policy import mask_owner_llm_config, normalize_owner_llm_config
 from fablemap_api.infrastructure.owner_config_store import OwnerConfigStore
@@ -47,7 +48,7 @@ def test_owner_default_llm_configs_are_isolated_by_owner(tmp_path):
 def test_owner_default_llm_api_masks_secret(tmp_path):
     app = create_app(ApiSettings(output_root=tmp_path, fixture_file=None, frontend_root=None))
     client = TestClient(app)
-    headers = {"X-User-Id": "owner_api"}
+    headers = {"X-User-Id": f"owner_api_{uuid4().hex}"}
 
     missing = client.get("/api/v1/owners/me/default-llm", headers=headers)
     assert missing.status_code == 200
@@ -69,7 +70,10 @@ def test_owner_default_llm_api_masks_secret(tmp_path):
     assert body["llm_config"]["api_key_configured"] is True
     assert "api_key" not in body["llm_config"]
 
-    assert client.get("/api/v1/owners/me/default-llm", headers=headers).json() == body
+    loaded = client.get("/api/v1/owners/me/default-llm", headers=headers).json()
+    assert loaded["configured"] == body["configured"]
+    assert loaded["llm_config"] == body["llm_config"]
+    assert loaded["data"] == body["data"]
 
 
 def test_owner_default_llm_api_requires_user_id(tmp_path):

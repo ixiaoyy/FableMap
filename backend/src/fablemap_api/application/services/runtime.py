@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -72,6 +73,7 @@ from fablemap_api.core.prompt_builder import (
 )
 from fablemap_api.core.hobbies import get_hobby_label, normalize_hobbies
 from fablemap_api.core.npc_voice import build_rules_identity_phrase
+from fablemap_api.core.item_economy import process_npc_response as process_item_gifts
 
 from ...domain.group_chat_policy import (
     clamp_chat_history_limit,
@@ -115,6 +117,31 @@ logger = logging.getLogger(__name__)
 
 
 RULES_BACKENDS = {"rules", "rule_based", "public_welfare"}
+FALLBACK_NOTICE = "NPC 暂时无法给出有效回复，可以换个问法或稍后重试。"
+NON_ANSWER_FALLBACK_PHRASES = (
+    "似乎在听你说话",
+    "暂时没有更多回复",
+)
+GENERIC_NON_ANSWER_FALLBACKS = {
+    "i understand",
+    "i see",
+    "got it",
+    "understood",
+    "ok",
+    "okay",
+    "i am listening",
+    "i'm listening",
+    "i m listening",
+    "i hear you",
+    "我明白",
+    "我明白了",
+    "明白了",
+    "我知道了",
+    "知道了",
+    "好的",
+    "好",
+    "嗯",
+}
 
 
 def _is_rules_backend(backend: str) -> bool:
@@ -143,6 +170,31 @@ def _truthy(value: Any) -> bool:
     if isinstance(value, (int, float)):
         return bool(value)
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _normalize_fallback_candidate(value: str) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"[\s\"'“”‘’.,!?;:，。！？；：…、（）()【】\[\]{}<>《》]+", " ", text)
+    return " ".join(text.split())
+
+
+def _is_non_answer_fallback_response(response_text: str) -> bool:
+    """Detect generic/non-answer fallback text that must not create progress claims."""
+
+    text = str(response_text or "").strip()
+    if not text:
+        return True
+    if any(phrase in text for phrase in NON_ANSWER_FALLBACK_PHRASES):
+        return True
+
+    normalized = _normalize_fallback_candidate(text)
+    if normalized in GENERIC_NON_ANSWER_FALLBACKS:
+        return True
+    if normalized.startswith("i understand") and len(normalized) <= 32:
+        return True
+    if normalized.startswith("i hear you") and len(normalized) <= 32:
+        return True
+    return False
 
 
 class RuntimeApplicationMixin:
@@ -198,7 +250,24 @@ class RuntimeApplicationMixin:
         if not clean_message:
             raise HTTPException(status_code=400, detail="消息不能为空")
 
+        # ── LLM Config Resolution: Prefer Tavern Config, Fallback to User Global ──
         llm_config = self._get_runtime_llm_config(tavern_id) or tavern.llm_config
+
+        # Global Overdrive: If tavern is on 'rules' but visitor has a real LLM, use visitor's
+        if _is_rules_backend(llm_config.backend) and user_id and self.owner_config_store:
+            owner_llm = self.owner_config_store.get_default_llm_config(user_id)
+            if owner_llm and not _is_rules_backend(owner_llm.get("backend")):
+                from fablemap_api.core.llm_clients import LLMConfig as ClientLLMConfig
+                llm_config = ClientLLMConfig(
+                    backend=owner_llm.get("backend", "openai"),
+                    model=owner_llm.get("model", ""),
+                    api_key=owner_llm.get("api_key", ""),
+                    base_url=owner_llm.get("base_url", ""),
+                    temperature=float(owner_llm.get("temperature", 0.8)),
+                    max_tokens=int(owner_llm.get("max_tokens", 1024)),
+                    top_p=float(owner_llm.get("top_p", 1.0)),
+                )
+        # ─────────────────────────────────────────────────────────────────────────
         if tavern.status != "open":
             if not llm_config or (not llm_config.is_configured() and not _is_rules_backend(llm_config.backend)):
                 return self._degraded_chat(
@@ -267,6 +336,31 @@ class RuntimeApplicationMixin:
                 tavern=tavern,
             )
 
+        # ── Item Economy: parse gifts, award coins, strip tags ─────────────
+        _rel_stage = "stranger"
+        try:
+            _prompt_vs = self.store.get_visitor_state(tavern_id, visitor_id)
+            _rel = _prompt_vs.relationship if _prompt_vs else None
+            _rel_stage = (_rel.get("stage", "stranger") if isinstance(_rel, dict) else getattr(_rel, "stage", "stranger")) or "stranger"
+        except Exception:
+            pass
+        _engagement = self._get_or_init_engagement(tavern_id, visitor_id)
+        _gift_result = process_item_gifts(
+            response_text,
+            relationship_stage=_rel_stage,
+            wallet=_engagement.get("wallet"),
+            ledger=_engagement.get("ledger"),
+            character_id=character_id,
+        )
+        response_text = _gift_result["clean_text"]
+        if _gift_result["coins_added"] > 0:
+            try:
+                self._save_engagement(tavern_id, visitor_id, _engagement)
+            except Exception as _exc:
+                logger.warning("Failed to save engagement wallet: %s", _exc)
+        # ──────────────────────────────────────────────────────────────────
+        is_fallback = _is_non_answer_fallback_response(response_text)
+
         now = _utc_now_iso()
         user_message = ChatMessage(
             id=f"msg_{uuid.uuid4().hex[:12]}",
@@ -292,85 +386,100 @@ class RuntimeApplicationMixin:
         self.store.add_chat_message(assistant_message)
         if not _is_rules_backend(llm_config.backend):
             self.store.add_token_usage(tavern_id, max(1, (len(clean_message) + len(response_text)) // 4))
-        try:
-            self._reinforce_referenced_memory_atoms(
-                tavern,
-                visitor_id=visitor_id,
-                character_id=character_id,
-                current_message=clean_message,
-                response_text=response_text,
-            )
-        except Exception as exc:
-            logger.warning("Failed to reinforce referenced memory atoms: %s", exc.__class__.__name__)
+        if not is_fallback:
+            try:
+                self._reinforce_referenced_memory_atoms(
+                    tavern,
+                    visitor_id=visitor_id,
+                    character_id=character_id,
+                    current_message=clean_message,
+                    response_text=response_text,
+                )
+            except Exception as exc:
+                logger.warning("Failed to reinforce referenced memory atoms: %s", exc.__class__.__name__)
 
-        # Calculate and update visitor affinity based on chat interaction
-        affinity_result = self._update_affinity_from_chat(
-            tavern_id=tavern_id,
-            visitor_id=visitor_id,
-            visitor_message=clean_message,
-            character_response=response_text,
-            visitor_gender=visitor_gender,
-            now=now,
-        )
-        visitor_state = affinity_result["visitor_state"]
-
-        created_memories: list[dict[str, Any]] = []
-        try:
-            atoms = auto_create_memories_from_chat(
-                self.store,
+        if is_fallback:
+            visitor_state = self._touch_visitor_state_without_affinity(
                 tavern_id,
                 visitor_id,
-                character_id,
-                character.name,
-                user_message.content,
-                response_text,
-                user_message_id=user_message.id,
-                assistant_message_id=assistant_message.id,
-                importance_threshold=0.5,
+                now,
+                visitor_gender=visitor_gender,
             )
-            created_memories = [atom.to_dict() for atom in atoms]
-        except Exception:
-            created_memories = []
-
-        conflicts: list[dict[str, Any]] = []
-        try:
-            confirmed_cards = [
-                c for c in self.store.list_state_cards(tavern_id)
-                if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
-            ]
-            validator = ContinuityValidator()
-            reports = validator.validate_reply(response_text, confirmed_cards)
-            conflicts = [
-                {
-                    "card_id": r.card_id,
-                    "card_title": r.card_title,
-                    "reason": r.contradiction_reason,
-                    "severity": r.severity
-                }
-                for r in reports
-            ]
-        except Exception as exc:
-            logger.warning("Continuity validation failed: %s", exc)
-
-        state_card_candidates: list[dict[str, Any]] = []
-        try:
-            state_card_candidates = self.create_state_card_candidates_from_chat(
+            affinity_result = {"affinity": None}
+        else:
+            # Calculate and update visitor affinity based on chat interaction
+            affinity_result = self._update_affinity_from_chat(
                 tavern_id=tavern_id,
                 visitor_id=visitor_id,
-                character_id=character_id,
-                user_message=user_message.content,
-                assistant_message=response_text,
-                source_message_ids=[user_message.id, assistant_message.id],
-                proposed_by=visitor_id,
-                source="chat",
+                visitor_message=clean_message,
+                character_response=response_text,
+                visitor_gender=visitor_gender,
+                now=now,
             )
-        except Exception:
-            state_card_candidates = []
+            visitor_state = affinity_result["visitor_state"]
+
+        created_memories: list[dict[str, Any]] = []
+        if not is_fallback:
+            try:
+                atoms = auto_create_memories_from_chat(
+                    self.store,
+                    tavern_id,
+                    visitor_id,
+                    character_id,
+                    character.name,
+                    user_message.content,
+                    response_text,
+                    user_message_id=user_message.id,
+                    assistant_message_id=assistant_message.id,
+                    importance_threshold=0.5,
+                )
+                created_memories = [atom.to_dict() for atom in atoms]
+            except Exception:
+                created_memories = []
+
+        conflicts: list[dict[str, Any]] = []
+        if not is_fallback:
+            try:
+                confirmed_cards = [
+                    c for c in self.store.list_state_cards(tavern_id)
+                    if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
+                ]
+                validator = ContinuityValidator()
+                reports = validator.validate_reply(response_text, confirmed_cards)
+                conflicts = [
+                    {
+                        "card_id": r.card_id,
+                        "card_title": r.card_title,
+                        "reason": r.contradiction_reason,
+                        "severity": r.severity
+                    }
+                    for r in reports
+                ]
+            except Exception as exc:
+                logger.warning("Continuity validation failed: %s", exc)
+
+        state_card_candidates: list[dict[str, Any]] = []
+        if not is_fallback:
+            try:
+                state_card_candidates = self.create_state_card_candidates_from_chat(
+                    tavern_id=tavern_id,
+                    visitor_id=visitor_id,
+                    character_id=character_id,
+                    user_message=user_message.content,
+                    assistant_message=response_text,
+                    source_message_ids=[user_message.id, assistant_message.id],
+                    proposed_by=visitor_id,
+                    source="chat",
+                )
+            except Exception:
+                state_card_candidates = []
 
         return {
             "character_id": character_id,
             "character_name": character.name,
             "response": response_text,
+            "is_fallback": is_fallback,
+            "fallback_notice": FALLBACK_NOTICE if is_fallback else "",
             "mood": "curious",
             "degraded": bool(degradation),
             "degradation": degradation,
@@ -386,6 +495,11 @@ class RuntimeApplicationMixin:
             "state_card_candidates": state_card_candidates,
             "conflicts": conflicts,
             "timestamp": now,
+            "gift": {
+                "coins_added": _gift_result["coins_added"],
+                "events": _gift_result["events"],
+                "wallet_balance": _gift_result["wallet_balance"],
+            },
         }
 
     def test_llm_config(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -513,7 +627,13 @@ class RuntimeApplicationMixin:
 
         llm_config = self._get_runtime_llm_config(tavern_id)
         if not llm_config or not llm_config.is_configured():
-            return {"messages": [], "error": "AI 后端还没配置", "degraded": True}
+            return {
+                "messages": [],
+                "error": "AI 后端还没配置",
+                "degraded": True,
+                "is_fallback": True,
+                "fallback_notice": "AI 后端还没配置，本轮没有生成 NPC 回复。",
+            }
 
         config = normalize_group_chat_config(tavern.group_chat_config)
         manager = GroupChatManager()
@@ -620,6 +740,7 @@ class RuntimeApplicationMixin:
 
             output_rule_result = apply_output_rules(response_text, tavern.output_rules)
             response_text = output_rule_result.get("text", response_text)
+            is_fallback = _is_non_answer_fallback_response(response_text)
             token_count = max(1, (len(clean_message) + len(response_text)) // 4)
             total_token_count += token_count
             assistant_message_id = f"msg_{uuid.uuid4().hex[:12]}"
@@ -646,6 +767,8 @@ class RuntimeApplicationMixin:
                 "content": response_text,
                 "timestamp": response_timestamp,
                 "degraded": bool(degradation),
+                "is_fallback": is_fallback,
+                "fallback_notice": FALLBACK_NOTICE if is_fallback else "",
                 "output_rules": {
                     "changed": output_rule_result.get("changed", False),
                     "applied": output_rule_result.get("applied", []),
@@ -658,22 +781,24 @@ class RuntimeApplicationMixin:
 
         if total_token_count:
             self.store.add_token_usage(tavern_id, total_token_count)
+        non_fallback_responses = [response for response in responses if not response.get("is_fallback")]
         assistant_text = "\n".join(
             f"{response.get('character_name') or '群聊角色'}: {response.get('content') or ''}".strip()
-            for response in responses
+            for response in non_fallback_responses
             if response.get("content")
         )
-        try:
-            self._reinforce_referenced_memory_atoms(
-                tavern,
-                visitor_id=visitor_id,
-                character_id="",
-                current_message=clean_message,
-                response_text=assistant_text,
-            )
-        except Exception as exc:
-            logger.warning("Failed to reinforce group memory atoms: %s", exc.__class__.__name__)
-        if responses:
+        if assistant_text:
+            try:
+                self._reinforce_referenced_memory_atoms(
+                    tavern,
+                    visitor_id=visitor_id,
+                    character_id="",
+                    current_message=clean_message,
+                    response_text=assistant_text,
+                )
+            except Exception as exc:
+                logger.warning("Failed to reinforce group memory atoms: %s", exc.__class__.__name__)
+        if assistant_text:
             affinity_result = self._update_affinity_from_chat(
                 tavern_id=tavern_id,
                 visitor_id=visitor_id,
@@ -685,7 +810,7 @@ class RuntimeApplicationMixin:
             visitor_state = affinity_result["visitor_state"]
         else:
             affinity_result = {"affinity": None}
-            visitor_state = self._touch_visitor_state(tavern_id, visitor_id, now, visitor_gender=visitor_gender)
+            visitor_state = self._touch_visitor_state_without_affinity(tavern_id, visitor_id, now, visitor_gender=visitor_gender)
         if not responses:
             return {
                 "messages": [],
@@ -693,6 +818,8 @@ class RuntimeApplicationMixin:
                 "strategy": manager.strategy,
                 "error": "群聊角色暂时没有回应",
                 "degraded": True,
+                "is_fallback": True,
+                "fallback_notice": FALLBACK_NOTICE,
                 "visitor_state": visitor_state.to_dict(),
                 "affinity": affinity_result.get("affinity"),
                 "created_memories": [],
@@ -700,63 +827,68 @@ class RuntimeApplicationMixin:
             }
 
         created_memories: list[dict[str, Any]] = []
-        try:
-            atoms = auto_create_memories_from_chat(
-                self.store,
-                tavern_id,
-                visitor_id,
-                "",
-                "群聊",
-                saved_user_content,
-                assistant_text,
-                user_message_id=current_user_message_id,
-                assistant_message_id=str(responses[0].get("id") or ""),
-                importance_threshold=0.5,
-            )
-            created_memories = [atom.to_dict() for atom in atoms]
-        except Exception:
-            created_memories = []
+        if assistant_text:
+            try:
+                atoms = auto_create_memories_from_chat(
+                    self.store,
+                    tavern_id,
+                    visitor_id,
+                    "",
+                    "群聊",
+                    saved_user_content,
+                    assistant_text,
+                    user_message_id=current_user_message_id,
+                    assistant_message_id=str(non_fallback_responses[0].get("id") or ""),
+                    importance_threshold=0.5,
+                )
+                created_memories = [atom.to_dict() for atom in atoms]
+            except Exception:
+                created_memories = []
 
         conflicts: list[dict[str, Any]] = []
-        try:
-            confirmed_cards = [
-                c for c in self.store.list_state_cards(tavern_id)
-                if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
-            ]
-            validator = ContinuityValidator()
-            reports = validator.validate_reply(assistant_text, confirmed_cards)
-            conflicts = [
-                {
-                    "card_id": r.card_id,
-                    "card_title": r.card_title,
-                    "reason": r.contradiction_reason,
-                    "severity": r.severity
-                }
-                for r in reports
-            ]
-        except Exception as exc:
-            logger.warning("Group chat continuity validation failed: %s", exc)
+        if assistant_text:
+            try:
+                confirmed_cards = [
+                    c for c in self.store.list_state_cards(tavern_id)
+                    if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
+                ]
+                validator = ContinuityValidator()
+                reports = validator.validate_reply(assistant_text, confirmed_cards)
+                conflicts = [
+                    {
+                        "card_id": r.card_id,
+                        "card_title": r.card_title,
+                        "reason": r.contradiction_reason,
+                        "severity": r.severity
+                    }
+                    for r in reports
+                ]
+            except Exception as exc:
+                logger.warning("Group chat continuity validation failed: %s", exc)
 
         state_card_candidates: list[dict[str, Any]] = []
-        try:
-            state_card_candidates = self.create_state_card_candidates_from_chat(
-                tavern_id=tavern_id,
-                visitor_id=visitor_id,
-                character_id="",
-                user_message=saved_user_content,
-                assistant_message=assistant_text,
-                source_message_ids=[current_user_message_id, str(responses[0].get("id") or "")],
-                proposed_by=visitor_id,
-                source="group_chat",
-            )
-        except Exception:
-            state_card_candidates = []
+        if assistant_text:
+            try:
+                state_card_candidates = self.create_state_card_candidates_from_chat(
+                    tavern_id=tavern_id,
+                    visitor_id=visitor_id,
+                    character_id="",
+                    user_message=saved_user_content,
+                    assistant_message=assistant_text,
+                    source_message_ids=[current_user_message_id, str(non_fallback_responses[0].get("id") or "")],
+                    proposed_by=visitor_id,
+                    source="group_chat",
+                )
+            except Exception:
+                state_card_candidates = []
 
         return {
             "messages": responses,
             "speaker_count": len(responses),
             "strategy": manager.strategy,
             "degraded": turn_degraded,
+            "is_fallback": not bool(assistant_text),
+            "fallback_notice": FALLBACK_NOTICE if not assistant_text else "",
             "visitor_state": visitor_state.to_dict(),
             "affinity": affinity_result.get("affinity"),
             "created_memories": created_memories,
@@ -944,6 +1076,34 @@ class RuntimeApplicationMixin:
         sprites = getattr(character, "sprites", None)
         return str(getattr(character, "avatar", "") or (sprites.get("neutral") if sprites else "") or "")
 
+    def _co_present_character_prompt_roster(
+        self,
+        tavern: Tavern,
+        current_character_id: str,
+        *,
+        limit: int = 8,
+    ) -> list[dict[str, Any]]:
+        """Build a compact same-tavern NPC roster for prompt-only context."""
+
+        roster: list[dict[str, Any]] = []
+        for character in list(getattr(tavern, "characters", []) or [])[:limit]:
+            name = clean_text(getattr(character, "name", ""), max_length=32)
+            if not name:
+                continue
+            role = clean_text(
+                getattr(character, "description", "")
+                or getattr(character, "personality", "")
+                or getattr(character, "scenario", ""),
+                max_length=96,
+            )
+            roster.append({
+                "id": getattr(character, "id", ""),
+                "name": name,
+                "role": role,
+                "current": getattr(character, "id", "") == current_character_id,
+            })
+        return roster
+
     def _ensure_group_chat_visitor_scope(
         self,
         tavern: Tavern,
@@ -1053,11 +1213,11 @@ class RuntimeApplicationMixin:
         hobbies: list[str] | None = None,
     ) -> str:
         visitor_id = str(prompt_visitor_id or (visitor_state.visitor_id if visitor_state else "") or "").strip()
-        
+
         # 1. Fetch relevant state cards (needed for both rules and LLM backends)
         all_cards = self.store.list_state_cards(tavern_id=tavern.id)
         confirmed_cards = [
-            c for c in all_cards 
+            c for c in all_cards
             if c.status == "confirmed" and (c.canon_scope == "tavern" or c.visitor_id == visitor_id)
         ]
         # Sort and limit to prevent prompt bloat
@@ -1073,7 +1233,7 @@ class RuntimeApplicationMixin:
             )
             if res:
                 return res
-            
+
             # Fallback logic for rules backend with Hobbies and StateCards awareness
             hobbies = normalize_hobbies(hobbies)
             hobby_label = get_hobby_label(random.choice(hobbies)) if hobbies else ""
@@ -1083,7 +1243,7 @@ class RuntimeApplicationMixin:
                 tags=character_tags or [],
             )
             identity_suffix = f"，{identity_phrase}" if identity_phrase else ""
-            
+
             # Mention a recent state card if available
             state_mention = ""
             if top_cards:
@@ -1108,10 +1268,10 @@ class RuntimeApplicationMixin:
                     f"{character_name}思考片刻{identity_suffix}{sim_feeling}，或许是在想如何把{hobby_label}的精髓分享给你{state_mention}，他耐心地听着。",
                 ]
                 return random.choice(fallbacks)
-            
+
             if state_mention or sim_feeling:
                 return f"{character_name}静静地听着{identity_suffix}{state_mention}{sim_feeling}，若有所思地看向你。"
-                
+
             return f"{character_name}点了点头{identity_suffix}，似乎在听你说话，但暂时没有更多回复。"
 
         client = create_client(
@@ -1150,7 +1310,7 @@ class RuntimeApplicationMixin:
         # Simulation feelings & Social KB Retrieval
         character = next((c for c in tavern.characters if c.id == character_id), None)
         npc_feeling = generate_npc_feeling(character, tavern.place_type) if character else ""
-        
+
         raw_social_memories = character.social_memories if character else []
         relevant_social_memories = self._filter_relevant_social_memories(raw_social_memories, message)
 
@@ -1199,6 +1359,7 @@ class RuntimeApplicationMixin:
             tavern_name=tavern.name,
             tavern_lat=tavern.lat,
             tavern_lon=tavern.lon,
+            co_present_characters=self._co_present_character_prompt_roster(tavern, character_id),
             user_name=visitor_name or "旅人",
             visitor_relationship_stage=visitor_state.relationship_stage if visitor_state else "",
             visitor_relationship_strength=visitor_state.relationship_strength if visitor_state else 0.0,
@@ -1212,10 +1373,10 @@ class RuntimeApplicationMixin:
             relationship_context=relationship_context,
             output_format="openai"
         )
-        
+
         builder = PromptBuilder(config)
         prompt_data = builder.build(history_messages, message)
-        
+
         response_text = clean_text(client.complete(prompt_data["messages"]).content, max_length=2400)
         if not response_text:
             raise LLMError("LLM returned an empty response")
@@ -1429,7 +1590,7 @@ class RuntimeApplicationMixin:
     def _skill_pack_prompt_block(self, tavern: Tavern) -> str:
         settings = normalize_skill_pack_settings(tavern.skill_packs)
         blocks = []
-        
+
         # Local Rumor Pack
         if is_skill_pack_enabled(settings, LOCAL_RUMOR_SKILL_PACK_ID):
             config = next((item.get("config", {}) for item in settings if item.get("id") == LOCAL_RUMOR_SKILL_PACK_ID), {})
@@ -1439,7 +1600,7 @@ class RuntimeApplicationMixin:
                 blocks.append(build_local_rumor_prompt_block(rumors, limit=limit))
             except Exception:
                 pass
-        
+
         # Neighborhood Knowledge Pack
         if is_skill_pack_enabled(settings, NEIGHBORHOOD_KNOWLEDGE_SKILL_PACK_ID):
             config = next((item.get("config", {}) for item in settings if item.get("id") == NEIGHBORHOOD_KNOWLEDGE_SKILL_PACK_ID), {})
@@ -1447,19 +1608,19 @@ class RuntimeApplicationMixin:
             radius = self._safe_int(config.get("radius"), 500) if isinstance(config, dict) else 500
             try:
                 knowledge = self.neighborhood_service.list_nearby_knowledge(
-                    tavern.lat, 
-                    tavern.lon, 
-                    radius_m=radius, 
+                    tavern.lat,
+                    tavern.lon,
+                    radius_m=radius,
                     limit=limit
                 )
                 blocks.append(build_neighborhood_knowledge_prompt_block(
-                    knowledge, 
-                    limit=limit, 
+                    knowledge,
+                    limit=limit,
                     tavern_tags=tavern.intent_tags
                 ))
             except Exception as exc:
                 logger.warning("Failed to fetch neighborhood knowledge for prompt: %s", exc)
-        
+
         # Territory Awareness Pack
         if is_skill_pack_enabled(settings, TERRITORY_AWARENESS_SKILL_PACK_ID):
             config = next((item.get("config", {}) for item in settings if item.get("id") == TERRITORY_AWARENESS_SKILL_PACK_ID), {})
@@ -1475,7 +1636,7 @@ class RuntimeApplicationMixin:
                     blocks.append(build_territory_awareness_prompt_block(current, nearby, limit=limit))
             except Exception as exc:
                 logger.warning("Failed to fetch territory awareness for prompt: %s", exc)
-                
+
         return "\n\n".join(blocks) if blocks else ""
 
     def _chat_response_mode(
@@ -1547,6 +1708,8 @@ class RuntimeApplicationMixin:
             "character_id": character_id,
             "character_name": character_name,
             "response": "",
+            "is_fallback": True,
+            "fallback_notice": message or FALLBACK_NOTICE,
             "mood": "quiet",
             "degraded": True,
             "degradation": degradation,
@@ -1617,6 +1780,35 @@ class RuntimeApplicationMixin:
         self.store.update_visitor_state(tavern_id, state)
         return {"visitor_state": state, "affinity": result.to_dict(), "progression": progression}
 
+
+    def _get_or_init_engagement(self, tavern_id: str, visitor_id: str) -> dict:
+        """Get or initialize visitor engagement wallet from VisitorState.metadata."""
+        try:
+            vs = self.store.get_visitor_state(tavern_id, visitor_id)
+            meta = (vs.metadata or {}) if vs else {}
+            progress = meta.get("_engagement_progress") or {}
+            if not isinstance(progress.get("wallet"), dict):
+                progress["wallet"] = {"balance": 0, "lifetime_earned": 0, "lifetime_spent": 0}
+            if not isinstance(progress.get("ledger"), list):
+                progress["ledger"] = []
+            return progress
+        except Exception:
+            return {"wallet": {"balance": 0, "lifetime_earned": 0, "lifetime_spent": 0}, "ledger": []}
+
+    def _save_engagement(self, tavern_id: str, visitor_id: str, engagement: dict) -> None:
+        """Persist visitor engagement wallet back to VisitorState.metadata."""
+        try:
+            vs = self.store.get_visitor_state(tavern_id, visitor_id)
+            if vs is None:
+                return
+            if not isinstance(vs.metadata, dict):
+                vs.metadata = {}
+            vs.metadata["_engagement_progress"] = engagement
+            self.store.update_visitor_state(tavern_id, vs)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("_save_engagement failed: %s", exc)
+
     def _touch_visitor_state(
         self,
         tavern_id: str,
@@ -1661,6 +1853,29 @@ class RuntimeApplicationMixin:
 
         state.relationship_strength = result.current_strength
         state.relationship_stage = result.new_stage.value
+        self.store.update_visitor_state(tavern_id, state)
+        return state
+
+    def _touch_visitor_state_without_affinity(
+        self,
+        tavern_id: str,
+        visitor_id: str,
+        now: str,
+        *,
+        visitor_gender: str = "",
+    ) -> VisitorState:
+        """Persist visit metadata without awarding relationship progress."""
+
+        state = self.store.get_visitor_state(tavern_id, visitor_id) or VisitorState(
+            visitor_id=visitor_id,
+            tavern_id=tavern_id,
+            first_visit=now,
+        )
+        if not state.first_visit:
+            state.first_visit = now
+        state.last_visit = now
+        if visitor_gender:
+            state.gender = _normalize_gender(visitor_gender)
         self.store.update_visitor_state(tavern_id, state)
         return state
 

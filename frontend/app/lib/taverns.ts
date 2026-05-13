@@ -198,6 +198,7 @@ export type Tavern = {
   roleplay_mode?: RoleplayMode | string
   layout_style?: TavernLayoutStyle | string
   place_type?: PlaceType | string
+  special_type?: string
   character_claims?: RoleplayClaim[]
   visit_count?: number
   characters?: TavernCharacter[]
@@ -223,6 +224,10 @@ export type Tavern = {
 export type TavernListResponse = {
   taverns: Tavern[]
   count: number
+  total?: number | null
+  limit?: number | null
+  offset?: number
+  has_more?: boolean
 }
 
 export type TavernSharePayload = {
@@ -269,6 +274,7 @@ export type ChatMessage = {
   visitor_gender?: Gender | string
   timestamp?: string
   progress_signals?: ConversationProgressSignal[]
+  fallback_notice?: string
   conflicts?: ConflictReport[]
 }
 
@@ -352,6 +358,8 @@ export type ChatResponse = {
   character_id: string
   character_name: string
   response: string
+  is_fallback?: boolean
+  fallback_notice?: string
   degraded?: boolean
   degradation?: {
     title?: string
@@ -402,6 +410,8 @@ export type GroupChatMessage = {
   avatar?: string
   timestamp?: string
   degraded?: boolean
+  is_fallback?: boolean
+  fallback_notice?: string
   output_rules?: Record<string, unknown>
 }
 
@@ -410,6 +420,8 @@ export type GroupChatResponse = {
   speaker_count?: number
   strategy?: string
   degraded?: boolean
+  is_fallback?: boolean
+  fallback_notice?: string
   error?: string
   visitor_state?: VisitorStatePayload | null
   affinity?: AffinityResult | null
@@ -873,8 +885,13 @@ export function createTavern(data: Partial<Tavern> & Record<string, unknown>, us
   return readApiJson<Tavern>("/api/v1/taverns", jsonInit("POST", data, userId))
 }
 
-export function getTavern(tavernId: string, userId = "") {
-  return readApiJson<Tavern>(`/api/v1/taverns/${encodeURIComponent(tavernId)}`, { userId })
+export type TavernDetailView = "entry"
+
+export function getTavern(tavernId: string, userId = "", options: { view?: TavernDetailView } = {}) {
+  return readApiJson<Tavern>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}${queryString({ view: options.view })}`,
+    { userId },
+  )
 }
 
 export function getTavernShare(tavernId: string, userId = "") {
@@ -1548,6 +1565,33 @@ export function togglePinMemory(
   userId = DEFAULT_VISITOR_ID,
 ) {
   return updateMemoryAtom(tavernId, memoryId, { pinned }, userId)
+}
+
+export interface MemoryFeedbackRequest {
+  correct: boolean | null
+  content?: string | null
+}
+
+export interface MemoryFeedbackResponse {
+  ok: boolean
+  tavern_id: string
+  memory_atom: MemoryAtom
+  feedback: {
+    status: 'reinforced' | 'corrected' | 'flagged_wrong'
+    correct: boolean
+  }
+}
+
+export function feedbackMemoryAtom(
+  tavernId: string,
+  memoryId: string,
+  feedback: MemoryFeedbackRequest,
+  userId = DEFAULT_VISITOR_ID,
+) {
+  return readApiJson<MemoryFeedbackResponse>(
+    `/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}/feedback`,
+    jsonInit('POST', feedback, userId),
+  )
 }
 
 export function listMemories(

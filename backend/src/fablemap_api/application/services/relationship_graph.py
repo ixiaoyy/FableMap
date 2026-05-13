@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 
@@ -18,8 +18,10 @@ from fablemap_api.core.relationship_graph import (
     specificity_rank,
     strength_multiplier,
 )
-from fablemap_api.infrastructure.relationship_graph_store import SQLAlchemyRelationshipGraphStore
 from fablemap_api.infrastructure.storage import store_database
+
+if TYPE_CHECKING:
+    from fablemap_api.infrastructure.relationship_graph_store import SQLAlchemyRelationshipGraphStore
 
 _POSITIVE_CAPS = {
     "friendly": 0.6,
@@ -49,7 +51,7 @@ class RelationshipGraphService:
     directly explained by edges touching the original event node, then stops.
     """
 
-    def __init__(self, store: SQLAlchemyRelationshipGraphStore):
+    def __init__(self, store: "SQLAlchemyRelationshipGraphStore"):
         self.store = store
 
     def propagate_event(self, event: RelationshipPropagationEvent) -> list[RelationshipPropagationResult]:
@@ -240,13 +242,15 @@ class RelationshipGraphService:
 class RelationshipGraphApplicationMixin:
     """Owner/system governance use cases for relationship edges."""
 
-    def _relationship_graph_store(self) -> SQLAlchemyRelationshipGraphStore:
+    def _relationship_graph_store(self) -> "SQLAlchemyRelationshipGraphStore":
         existing = getattr(self, "_relationship_graph_store_instance", None)
         if existing is not None:
             return existing
         database = store_database(self.store)
         if database is None:
             raise HTTPException(status_code=500, detail="关系图谱需要数据库存储")
+        from fablemap_api.infrastructure.relationship_graph_store import SQLAlchemyRelationshipGraphStore
+
         store = SQLAlchemyRelationshipGraphStore(database)
         self._relationship_graph_store_instance = store
         return store

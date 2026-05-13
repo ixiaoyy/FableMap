@@ -103,7 +103,7 @@ def test_owner_can_delete_note(tmp_path):
         headers={"X-User-Id": "owner_notes"},
     )
     assert deleted.status_code == 200, deleted.text
-    assert deleted.json() == {"ok": True, "note_id": note["id"]}
+    assert deleted.json()["data"] == {"ok": True, "note_id": note["id"]}
 
     listed = client.get(
         f"/api/v1/taverns/{tavern['id']}/visitor-notes",

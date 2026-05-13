@@ -74,6 +74,10 @@ class TavernUpdateRequest(FlexibleBody):
 class TavernListResponse(BaseModel):
     taverns: list[dict[str, Any]]
     count: int
+    total: int | None = None
+    limit: int | None = None
+    offset: int = 0
+    has_more: bool = False
 
 
 class TavernStatusInfo(BaseModel):

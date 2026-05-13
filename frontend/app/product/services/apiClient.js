@@ -7,6 +7,30 @@ export function getDefaultApiBase() {
 }
 
 export function createApiClient(getBaseUrl) {
+  function isApiEnvelope(payload) {
+    return !!payload && typeof payload === 'object' && 'data' in payload && !!payload.meta && typeof payload.meta === 'object'
+  }
+
+  function unwrapApiPayload(payload) {
+    return isApiEnvelope(payload) ? payload.data : payload
+  }
+
+  function apiErrorMessage(payload, status) {
+    if (payload && typeof payload === 'object') {
+      if (payload.error || payload.detail) {
+        return payload.error || payload.detail
+      }
+      const metaError = payload.meta?.error
+      if (typeof metaError === 'string' && metaError.trim()) {
+        return metaError
+      }
+      if (metaError && typeof metaError === 'object' && metaError.message) {
+        return metaError.message
+      }
+    }
+    return `HTTP ${status}`
+  }
+
   async function readJson(response) {
     const raw = await response.text()
     let payload = {}
@@ -24,9 +48,9 @@ export function createApiClient(getBaseUrl) {
     }
 
     if (!response.ok) {
-      throw new Error(payload.error || payload.detail || `HTTP ${response.status}`)
+      throw new Error(apiErrorMessage(payload, response.status))
     }
-    return payload
+    return unwrapApiPayload(payload)
   }
 
   return {

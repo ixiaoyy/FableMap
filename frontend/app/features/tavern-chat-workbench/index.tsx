@@ -42,7 +42,8 @@ import {
   abandonGameplaySession,
   listGameplaySessions,
 } from "../../lib/taverns"
-import { getMiniGameTemplates } from "../../product/tavernMiniGames"
+import { buildMiniGameStartPrompt, getMiniGameTemplates } from "../../product/tavernMiniGames"
+import TavernMiniGamePanel from "../../product/TavernMiniGamePanel"
 import OrphanSignalGameplayPanel from "../../product/OrphanSignalGameplayPanel"
 import GameplaySessionPanel from "../../product/GameplaySessionPanel"
 import { SpaceCapabilityHubPanel } from "../../components/SpaceCapabilityHubPanel"
@@ -50,6 +51,11 @@ import { SocialMemoryCreationPanel } from "../social-memory-debug/SocialMemoryCr
 
 
 type ChatChannel = "public" | "private"
+
+type MiniGameTemplate = {
+  id?: string
+  [key: string]: unknown
+}
 
 type TavernChatWorkbenchProps = {
   tavern: Tavern
@@ -134,7 +140,7 @@ function hostGuideMessage(tavern: Tavern, characters: TavernCharacter[]): ChatMe
       : ""
 
   const mentionHint = characters.length
-    ? `也可以在公共频道输入 @NPC名，或者点击左侧头像，我会把话递给对应的人。`
+    ? `也可以在公共频道输入 @NPC名，或点击左侧头像找某位 NPC 聊。`
     : "等店主添加 NPC 后，就可以直接找他们聊天。"
 
   return {
@@ -552,7 +558,7 @@ export function TavernChatWorkbench({
   const [visitorName, setVisitorName] = useState(isOwner ? "店主" : "旅人")
   const [visitorGender, setVisitorGender] = useState("unspecified")
   const [message, setMessage] = useState("")
-  const [mentionQuery, setMentionQuery] = useState("")
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [mentionIndex, setMentionIndex] = useState(0)
   const [targetedCharacterId, setTargetedCharacterId] = useState("") // For smart targeting
   const [visitorState, setVisitorState] = useState<any>(null)
@@ -566,7 +572,9 @@ export function TavernChatWorkbench({
   const [busy, setBusy] = useState("")
   const [error, setError] = useState("")
   const chatLogRef = useRef<HTMLDivElement | null>(null)
+  const chatInitializationKeyRef = useRef("")
   const [searchParams] = useSearchParams()
+  const [pendingReplyTargetName, setPendingReplyTargetName] = useState("")
 
   const [gameplayDefinitions, setGameplayDefinitions] = useState<any[]>([])
 
@@ -576,6 +584,8 @@ export function TavernChatWorkbench({
 
   const [createdMemories, setCreatedMemories] = useState<NpcSocialMemory[]>([])
   const [draftMessage, setDraftMessage] = useState("")
+  const [coinBalance, setCoinBalance] = useState<number | null>(null)
+  const [lastGift, setLastGift] = useState<{ coins: number; items: string } | null>(null)
 
   const access = String(tavern.access || "public")
 
@@ -588,6 +598,7 @@ export function TavernChatWorkbench({
   const firstMinute = useMemo(() => buildTavernFirstMinuteGuide(tavern), [tavern])
 
   const mentionMatches = useMemo(() => {
+    if (mentionQuery === null) return []
     if (!mentionQuery) return characters
     const query = mentionQuery.toLowerCase()
     return characters.filter((char) => (char.name || char.id || "").toLowerCase().includes(query))
@@ -637,6 +648,10 @@ export function TavernChatWorkbench({
       c.tags?.some(t => t.toLowerCase().includes("shopkeeper") || t.includes("店长"))
     )
 
+    const initKey = `${tavern.id}:${passwordLocked ? "locked" : "open"}`
+    const shouldReplaceInitialMessages = chatInitializationKeyRef.current !== initKey
+    chatInitializationKeyRef.current = initKey
+
     // Identity friendly NPCs who should greet in private
     const friendlyNpcs = characters.filter(c => {
       const stage = visitorState?.relationship?.stage || "stranger"
@@ -645,8 +660,12 @@ export function TavernChatWorkbench({
 
     setActiveChatChannel("public")
     
-    // Public greetings: Shopkeeper only
-    setPublicMessages(publicEntranceMessages(characters, tavern, shopkeeperNpc))
+    // Public greetings: Shopkeeper only. Do not overwrite an in-flight/first user message
+    // when visitorState arrives after the visitor has already sent something.
+    const publicGreetings = publicEntranceMessages(characters, tavern, shopkeeperNpc)
+    setPublicMessages((current) =>
+      shouldReplaceInitialMessages || current.length === 0 ? publicGreetings : current,
+    )
 
     // Private greetings: Friendly NPCs only
     const privateGreetings: Record<string, ChatMessage[]> = {}
@@ -659,7 +678,14 @@ export function TavernChatWorkbench({
         timestamp: new Date().toISOString(),
       }]
     })
-    setPrivateMessagesByCharacterId(privateGreetings)
+    setPrivateMessagesByCharacterId((current) =>
+      shouldReplaceInitialMessages
+        ? privateGreetings
+        : {
+            ...privateGreetings,
+            ...current,
+          },
+    )
 
   }, [characters, passwordLocked, tavern.id, tavern.name, tavern.gameplay_definitions, visitorState])
 
@@ -755,6 +781,9 @@ export function TavernChatWorkbench({
       character_id: characterId,
       visitor_id: visitorId,
       progress_signals: result ? progressSignalsFromChatResult(result) : [],
+      fallback_notice: result?.is_fallback === true
+        ? String(result.fallback_notice || "NPC 暂时无法给出有效回复，可以换个问法或稍后重试。")
+        : "",
       timestamp: now,
     }
   }
@@ -768,6 +797,9 @@ export function TavernChatWorkbench({
         content: String(groupMessage.content || "").trim(),
         character_id: groupMessage.character_id,
         visitor_name: groupMessage.visitor_name,
+        fallback_notice: groupMessage.is_fallback === true
+          ? String(groupMessage.fallback_notice || result.fallback_notice || "NPC 暂时无法给出有效回复，可以换个问法或稍后重试。")
+          : "",
         timestamp: groupMessage.timestamp || new Date().toISOString(),
       }))
       .filter((groupMessage) => groupMessage.content)
@@ -789,6 +821,7 @@ export function TavernChatWorkbench({
   async function sendPrivateChat(cleanMessage: string, intentForTurn = selectedIntent) {
     if (!selectedCharacter) return
     const userLine = buildUserLine(cleanMessage, selectedCharacter.id)
+    setPendingReplyTargetName(selectedCharacter.name || selectedCharacter.id || "NPC")
     appendPrivateMessages(selectedCharacter.id, [userLine])
 
     const result = await sendTavernChat(tavern.id, {
@@ -806,8 +839,17 @@ export function TavernChatWorkbench({
     } else if (result.degradation?.message) {
       setError(result.degradation.message)
     }
-    if (Array.isArray(result.created_memories) && result.created_memories.length > 0) {
+    if (result.is_fallback !== true && Array.isArray(result.created_memories) && result.created_memories.length > 0) {
       setCreatedMemories((prev) => [...prev, ...(result.created_memories as NpcSocialMemory[])])
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const _gift = (result as any).gift
+    if (_gift && _gift.coins_added > 0) {
+      setCoinBalance(_gift.wallet_balance ?? null)
+      const _items = (_gift.events as Array<{ item_name: string; quantity: number }>)
+        .map((e) => `${e.item_name}×${e.quantity}`).join(' ')
+      setLastGift({ coins: _gift.coins_added, items: _items })
+      setTimeout(() => setLastGift(null), 3500)
     }
   }
 
@@ -815,6 +857,7 @@ export function TavernChatWorkbench({
     const mention = parsePublicMentionTarget(cleanMessage, characters)
     const targetedChar = characters.find(c => c.id === targetedCharacterId)
     const targetCharacter = mention?.character || targetedChar || selectedCharacter
+    setPendingReplyTargetName(targetCharacter ? characterNameById.get(targetCharacter.id) || targetCharacter.name || "NPC" : "")
     
     // Clear targeted character after use
     setTargetedCharacterId("")
@@ -837,8 +880,17 @@ export function TavernChatWorkbench({
       } else if (result.degradation?.message) {
         setError(result.degradation.message)
       }
-      if (Array.isArray(result.created_memories) && result.created_memories.length > 0) {
+      if (result.is_fallback !== true && Array.isArray(result.created_memories) && result.created_memories.length > 0) {
         setCreatedMemories((prev) => [...prev, ...(result.created_memories as NpcSocialMemory[])])
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const _gift = (result as any).gift
+      if (_gift && _gift.coins_added > 0) {
+        setCoinBalance(_gift.wallet_balance ?? null)
+        const _items = (_gift.events as Array<{ item_name: string; quantity: number }>)
+          .map((e) => `${e.item_name}×${e.quantity}`).join(' ')
+        setLastGift({ coins: _gift.coins_added, items: _items })
+        setTimeout(() => setLastGift(null), 3500)
       }
       return
     }
@@ -869,6 +921,8 @@ export function TavernChatWorkbench({
     if (activeChatChannel === "private" && !selectedCharacter) return
 
     setMessage("")
+    setMentionQuery(null)
+    setMentionIndex(0)
     setBusy("send")
     const intentForTurn = selectedIntent
     clearConversationIntent()
@@ -883,12 +937,13 @@ export function TavernChatWorkbench({
     } catch (err) {
       setError(errorMessage(err))
     } finally {
+      setPendingReplyTargetName("")
       setBusy("")
     }
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (mentionMatches.length) {
+    if (activeChatChannel === "public" && mentionQuery !== null && mentionMatches.length) {
       if (event.key === "ArrowDown") {
         event.preventDefault()
         setMentionIndex((i) => Math.min(i + 1, mentionMatches.length - 1))
@@ -905,7 +960,7 @@ export function TavernChatWorkbench({
         return
       }
       if (event.key === "Escape") {
-        setMentionQuery("")
+        setMentionQuery(null)
         return
       }
     }
@@ -922,9 +977,9 @@ export function TavernChatWorkbench({
     const atIndex = message.lastIndexOf("@")
     if (atIndex === -1) return
     const before = message.slice(0, atIndex)
-    const after = message.slice(atIndex + mentionQuery.length + 1)
+    const after = message.slice(atIndex + (mentionQuery?.length || 0) + 1)
     setMessage(`${before}@${name} ${after}`)
-    setMentionQuery("")
+    setMentionQuery(null)
     setMentionIndex(0)
     textareaRef.current?.focus()
   }
@@ -939,9 +994,17 @@ export function TavernChatWorkbench({
   function fillComposerDraft(prompt: string) {
     setMessage(prompt)
     setDraftMessage(prompt)
-    setMentionQuery("")
+    setMentionQuery(null)
     setMentionIndex(0)
     focusComposerAfterDraft()
+  }
+
+  function handleMiniGameStart(template: MiniGameTemplate) {
+    const prompt = buildMiniGameStartPrompt(template, {
+      tavernName: tavern.name,
+      characterName: selectedCharacter?.name || "当前 NPC",
+    })
+    if (prompt) fillComposerDraft(prompt)
   }
 
   function handleDoorwayStartChat(character: TavernCharacter | undefined, prompt: string) {
@@ -982,12 +1045,16 @@ export function TavernChatWorkbench({
   function selectCharacter(characterId: string) {
     setSelectedCharacterId(characterId)
     setActiveChatChannel("private")
+    setMentionQuery(null)
+    setMentionIndex(0)
     setTargetedCharacterId("")
     setError("")
   }
 
   function selectPublicChannel() {
     setActiveChatChannel("public")
+    setMentionQuery(null)
+    setMentionIndex(0)
     setTargetedCharacterId("")
     setError("")
   }
@@ -1105,6 +1172,24 @@ export function TavernChatWorkbench({
             </div>
           </div>
         </div>
+
+        {/* ── 金币余额 & 收礼提示（作用域在 TavernChatWorkbench 内）── */}
+        {coinBalance !== null && (
+          <div className="px-4 pb-2 sm:px-6">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-bold text-yellow-300">
+              🪙 金币：{coinBalance}
+            </span>
+          </div>
+        )}
+        {lastGift && (
+          <div
+            className="mx-4 mb-2 animate-bounce rounded-2xl border border-yellow-300/40 bg-yellow-400/15 px-4 py-2 text-sm font-bold text-yellow-200 shadow-lg sm:mx-6"
+            role="status"
+            aria-live="polite"
+          >
+            🎁 收到 {lastGift.items}，+{lastGift.coins} 金币！
+          </div>
+        )}
 
         <TavernDoorwayRitual
           tavern={tavern}
@@ -1229,7 +1314,7 @@ export function TavernChatWorkbench({
                     </p>
                     <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-violet-50/72">
                       {activeChatChannel === "public"
-                        ? "这里是空间公共聊天窗口。直接发言会进入公共频道；输入 @NPC名 可以把话递给指定 NPC。"
+                        ? "这里是空间公共聊天窗口。直接发言会进入公共频道；输入 @NPC名 后等对应 NPC 回复。"
                         : characterStageSummary(selectedCharacter, tavern.name)}
                     </p>
                   </div>
@@ -1362,6 +1447,11 @@ export function TavernChatWorkbench({
                         {formatChatTime(line.timestamp) ? <span className="ml-2 font-semibold normal-case tracking-normal">{formatChatTime(line.timestamp)}</span> : null}
                       </p>
                       <p className="whitespace-pre-wrap break-words">{line.content}</p>
+                      {!isUser && line.fallback_notice ? (
+                        <div className="mt-3 rounded-2xl border border-amber-200/25 bg-amber-200/8 px-3 py-2 text-[0.76rem] leading-5 text-amber-100/88">
+                          {line.fallback_notice}
+                        </div>
+                      ) : null}
                       {isUser
                         ? null
                         : Array.isArray(line.progress_signals) &&
@@ -1390,7 +1480,11 @@ export function TavernChatWorkbench({
               {busy === "send" ? (
                 <div className="flex justify-start">
                   <div className="rounded-[1.35rem] rounded-bl-md border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-violet-50/68">
-                    {activeChatChannel === "public" ? "公共频道正在接话…" : `${selectedCharacter?.name || "NPC"} 正在回复…`}
+                    {pendingReplyTargetName
+                      ? `${pendingReplyTargetName} 正在回复…`
+                      : activeChatChannel === "public"
+                        ? "公共频道正在接话…"
+                        : `${selectedCharacter?.name || "NPC"} 正在回复…`}
                   </div>
                 </div>
               ) : null}
@@ -1500,24 +1594,29 @@ export function TavernChatWorkbench({
                       setMessage(val)
                       setDraftMessage(val)
                       // Detect @ mention
+                      if (activeChatChannel !== "public") {
+                        setMentionQuery(null)
+                        setMentionIndex(0)
+                        return
+                      }
                       const value = event.target.value
                       const cursor = event.target.selectionStart ?? value.length
                       const beforeCursor = value.slice(0, cursor)
-                      const atMatch = beforeCursor.match(/@([^@]*)$/)
+                      const atMatch = beforeCursor.match(/@([^\s@]*)$/)
                       if (atMatch) {
                         setMentionQuery(atMatch[1] || "")
                       } else {
-                        setMentionQuery("")
+                        setMentionQuery(null)
                       }
                     }}
                     onKeyDown={handleComposerKeyDown}
                     disabled={(activeChatChannel === "private" && !selectedCharacter) || characters.length === 0 || busy === "send" || passwordLocked}
                     rows={2}
                     maxLength={1600}
-                    placeholder={activeChatChannel === "public" ? "公共频道：直接发言，或 @NPC名 对指定 NPC 说话" : `Type a message，和 ${selectedCharacter?.name || "NPC"} 私聊；Shift+Enter 换行`}
+                    placeholder={activeChatChannel === "public" ? "公共频道：直接发言，或输入 @NPC名 等回复" : `Type a message，和 ${selectedCharacter?.name || "NPC"} 私聊；Shift+Enter 换行`}
                     className="min-h-14 w-full resize-none rounded-3xl border border-white/12 bg-white/[0.06] px-5 py-3 text-sm leading-6 text-white outline-none placeholder:text-violet-100/35 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-55"
                   />
-                  {mentionQuery !== undefined && mentionMatches.length > 0 && activeChatChannel === "public" && (
+                  {mentionQuery !== null && mentionMatches.length > 0 && activeChatChannel === "public" && (
                     <div className="absolute bottom-full left-0 right-0 mb-2 max-h-60 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/98 shadow-xl shadow-black/40">
                       {mentionMatches.map((char, index) => (
                         <button
@@ -1553,6 +1652,17 @@ export function TavernChatWorkbench({
 
                 <DetailSection title="更多空间功能" description="分享、公开扩展和回访入口折叠收纳">
                   {publicPanel || <SpaceCapabilityHubPanel tavern={tavern} />}
+                </DetailSection>
+
+                <DetailSection title="桌边小玩法" description="小游戏收在这里，不挡聊天输入">
+                  <TavernMiniGamePanel
+                    templates={miniGameTemplates}
+                    sending={busy === "send"}
+                    disabled={!selectedCharacter || passwordLocked}
+                    characterName={selectedCharacter?.name || "当前 NPC"}
+                    tavernName={tavern.name}
+                    onStart={handleMiniGameStart}
+                  />
                 </DetailSection>
               </div>
             </section>

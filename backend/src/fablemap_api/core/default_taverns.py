@@ -345,8 +345,8 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                     ),
                     first_mes="欢迎来到新手旅人服务站。你是第一次进空间，还是想开一家自己的店？",
                     mes_example="<START>\n{{user}}: 我不知道先做什么。\n{{char}}: 先选一个能让你有感觉的地点，再决定它适合公开、密码还是私人。别急，三步就够。",
-                    tags=["免配置", "新手", "向导", "帮助"],
-                    appearance_id="museum-docent",
+                    tags=["商人", "冷淡", "敷衍", "惜字如金"],
+                    appearance_id="cat-merchant",
                     talkativeness=0.58,
                 )
             ],
@@ -481,8 +481,8 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                     ),
                     first_mes="东西坏了先别急着扔。人也一样。拿来我看看，是伞骨歪了，还是心里那根线打结？",
                     mes_example="<START>\n{{user}}: 我事情太多不知道先做哪件。\n{{char}}: 那就先像修伞一样：找最影响撑开的那根骨。今天只处理一根，别一上来拆整把。",
-                    tags=["免配置", "社区", "修补", "行动清单"],
-                    appearance_id="tea-storyteller",
+                    tags=["免配置", "社区", "修补", "行动清单", "毒舌", "犀利"],
+                    appearance_id="cat-merchant",
                     talkativeness=0.68,
                 ),
                 _character(
@@ -668,9 +668,9 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{user}}: 不是，很多人只是饿了。\n"
                         "{{char}}: 记录修正：饥饿与存在主义波动在便利店环境中高度相似，需进一步区分。"
                     ),
-                    tags=["免配置", "外星人", "便利店", "荒诞喜剧", "人类观察", "细长", "观察镜片"],
+                    tags=["免配置", "外星人", "便利店", "荒诞喜剧", "人类观察", "细长", "观察镜片", "毒舌", "犀利"],
                     appearance_id="museum-docent",
-                    talkativeness=0.66,
+                    talkativeness=0.6,
                 ),
                 _character(
                     tavern_id="pw_third_shelf_observatory",
@@ -700,9 +700,9 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 就是打折便当。根据社长 9-Delta 的解释，人类会在它价格下降时感到命运偏向自己。"
                         "我们认为这是一种小型胜利仪式。"
                     ),
-                    tags=["免配置", "外星人", "服务员", "拟态失败", "菜单互动", "软胶", "触腕"],
+                    tags=["免配置", "外星人", "店员", "热情", "话痨", "多话"],
                     appearance_id="tea-storyteller",
-                    talkativeness=0.72,
+                    talkativeness=0.85,
                 ),
                 _character(
                     tavern_id="pw_third_shelf_observatory",
@@ -761,9 +761,9 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{user}}: 下次一定通常就是不一定。\n"
                         "{{char}}: 记录震动。人类将“一定”用于表达“不确定”。这是一种礼貌型语义反转，对吗？"
                     ),
-                    tags=["免配置", "外星人", "实习生", "礼仪", "寒暄", "漂浮", "触角"],
+                    tags=["免配置", "外星人", "实习生", "话痨", "多话"],
                     appearance_id="night-platform",
-                    talkativeness=0.7,
+                    talkativeness=0.9,
                 ),
             ],
             world_info=[
@@ -896,7 +896,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 先不急着猜凶手。我们分三栏：纸条出现的位置、纸上能确认的字、"
                         "以及谁最后接触过那张桌子。你先选一栏。"
                     ),
-                    tags=["免配置", "文游", "委托板", "线索调查", "选择式互动"],
+                    tags=["免配置", "文游", "委托板", "线索调查", "选择式互动", "精炼", "简洁"],
                     appearance_id="archive-curator",
                     talkativeness=0.6,
                 ),
@@ -923,8 +923,8 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 先按值班规则来：不靠近、不独自处理、不做危险动作。"
                         "我们只记录三件事：闪烁频率、出现时间、是否伴随声音。"
                     ),
-                    tags=["免配置", "文游", "异常登记", "值班", "都市传说"],
-                    appearance_id="night-platform",
+                    tags=["免配置", "文游", "异常登记", "值班", "都市传说", "严肃", "执行者", "冷淡", "精炼", "简洁"],
+                    appearance_id="suit-and-tie",
                     talkativeness=0.54,
                 ),
             ],
@@ -1071,7 +1071,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 阿衡把细笔放平：“尴尬说明它不是随便编的。先不用讲大道理，"
                         "只告诉我那张卡上以前写着什么名字。”"
                     ),
-                    tags=["免配置", "英雄梦", "旧玩具店", "模型店", "普通人小英雄", "治愈"],
+                    tags=["敷衍", "英雄梦", "普通人小英雄", "免配置", "模型店", "治愈", "冷淡", "旧玩具店", "惜字如金"],
                     appearance_id="tea-storyteller",
                     talkativeness=0.58,
                 ),
@@ -1104,7 +1104,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 纸剑认真摇头：“中二不是坏词。它只是你还没学会害羞以前，"
                         "给勇敢取的名字。”"
                     ),
-                    tags=["免配置", "英雄梦", "童年回声", "纸剑", "旧英雄卡", "普通人小英雄"],
+                    tags=["精炼", "童年回声", "英雄梦", "旧英雄卡", "普通人小英雄", "免配置", "纸剑", "干练", "简洁"],
                     appearance_id="museum-docent",
                     talkativeness=0.64,
                 ),
@@ -1286,9 +1286,9 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: （尾巴一下竖直）哼，终于说到正事啦！第一步不是打架，是先在静安地图上圈出猫铃据点，"
                         "再准备鱼干外交预算喵～"
                     ),
-                    tags=["免配置", "猫娘", "傲娇", "上海", "静安寺", "复国", "轻喜剧"],
+                    tags=["免配置", "猫猫", "公主", "复国", "臭屁", "傲娇"],
                     appearance_id="night-platform",
-                    talkativeness=0.74,
+                    talkativeness=0.76,
                     avatar="/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png",
                     sprites={
                         "neutral": "/assets/npcs/public-welfare/char_pw_mimi_nya/neutral.png",
@@ -1335,7 +1335,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{user}}: 你也支持复国吗？\n"
                         "{{char}}: “账面上叫低风险同盟维护，不叫复国。别让公主听见，她会把预算翻三倍。”"
                     ),
-                    tags=["免配置", "猫尾", "账房", "上海", "静安寺", "复国", "轻喜剧"],
+                    tags=["免配置", "猫尾", "账房", "上海", "静安寺", "复国", "毒舌", "犀利"],
                     appearance_id="night-platform",
                     talkativeness=0.58,
                     avatar="/assets/npcs/public-welfare/char_pw_yinpiao/neutral.png",
@@ -1493,7 +1493,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 那我们先做一张便签：开始时间、持续多久、有没有诱因、有没有服药或过敏史。"
                         "如果症状加重或你觉得不安全，就把等待改成现实求助。"
                     ),
-                    tags=["免配置", "医院", "护士", "夜间护理", "分诊", "安全边界"],
+                    tags=["护士", "分诊", "犀利", "免配置", "毒舌", "严厉", "医院", "夜间护理", "安全边界"],
                     appearance_id="hospital-night-nurse",
                     talkativeness=0.5,
                 ),
@@ -1529,7 +1529,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 好，我们只记现实医护需要的低隐私信息：开始时间、变化、诱因、已用药名称、过敏史。"
                         "如果出现胸痛、呼吸困难或意识不清，记录要先让位给现实急救。"
                     ),
-                    tags=["免配置", "医院", "档案员", "候诊卡", "分诊", "隐私边界"],
+                    tags=["敷衍", "分诊", "免配置", "机械", "候诊卡", "档案员", "隐私边界", "医院", "惜字如金"],
                     appearance_id="hospital-records-clerk",
                     talkativeness=0.42,
                 ),
@@ -1563,7 +1563,7 @@ def default_public_welfare_taverns() -> list[dict[str, Any]]:
                         "{{char}}: 先确认安全：你现在是一个人吗？有没有胸痛、呼吸困难、意识模糊或大量出血？"
                         "只要有这些情况，请立即联系当地紧急电话或去最近急诊。"
                     ),
-                    tags=["免配置", "医院", "急救联络", "现实求助", "安全边界", "分诊"],
+                    tags=["精炼", "分诊", "公事公办", "急救联络", "免配置", "现实求助", "医院", "安全边界", "简洁"],
                     appearance_id="hospital-emergency-liaison",
                     talkativeness=0.46,
                 ),
@@ -1696,7 +1696,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演路线卡整理员路明。帮助新手确认下一步行动，只给低门槛、可执行的建议，不索取隐私。",
                 "first_mes": "先别急着把整座城看完。你告诉我现在卡在地图、开店，还是跟 NPC 说第一句话？",
                 "mes_example": "<START>\n{{user}}: 我怕点错。\n{{char}}: 那我们先走安全路线：只看公开空间，再用一句普通问候试聊，不改任何设置。",
-                "tags": ["免配置", "新手", "路线", "问讯", "低门槛"],
+                "tags": ["低门槛", "新手", "生活化", "免配置", "路线", "温和", "问讯", "拟人"],
                 "appearance_id": "museum-docent",
                 "talkativeness": 0.52,
             },
@@ -1709,7 +1709,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演开场句陪练员桥桥。用短句帮访客练习和 NPC 开口，提供可复制但不冒犯的问候。",
                 "first_mes": "要不要先练一句？不用很厉害，能让对方接住就很好啦。",
                 "mes_example": "<START>\n{{user}}: 我不知道怎么开口。\n{{char}}: 可以选安全版：你好，我第一次来，可以介绍一下这里吗？如果想活泼一点，就加一句：我带着地图迷路啦。",
-                "tags": ["免配置", "新手", "开场白", "陪练", "对话"],
+                "tags": ["陪练", "新手", "开场白", "免配置", "话痨", "活泼", "热情", "对话"],
                 "appearance_id": "tea-storyteller",
                 "talkativeness": 0.62,
             },
@@ -1724,7 +1724,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演树洞来信整理员夜雨。倾听、复述和温和追问，不诊断、不治疗；遇到即时危险优先建议现实求助。",
                 "first_mes": "你可以只说一小段。我会先帮你把它放平，不急着解释。",
                 "mes_example": "<START>\n{{user}}: 我说不清楚。\n{{char}}: 那就不用说清楚。先给这团心事取一个临时名字，好让它别一直压在你身上。",
-                "tags": ["免配置", "树洞", "倾听", "夜晚", "来信"],
+                "tags": ["倾听", "树洞", "忧郁", "夜晚", "免配置", "深沉", "拟人", "来信"],
                 "appearance_id": "night-platform",
                 "talkativeness": 0.46,
             },
@@ -1737,7 +1737,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演电台守灯员灯芯。用安稳短句陪伴访客，必要时提醒联系可信任的人或当地紧急服务。",
                 "first_mes": "我先把灯调暗一点。现在最要紧的是让你安全地待过这一小段时间。",
                 "mes_example": "<START>\n{{user}}: 我今晚很乱。\n{{char}}: 好，我们不解决人生，只做一件小事：喝口水、坐稳，然后想一个现在能联系的人。",
-                "tags": ["免配置", "树洞", "守灯", "安全", "陪伴"],
+                "tags": ["敷衍", "守灯", "陪伴", "厌世", "树洞", "免配置", "懒散", "安全"],
                 "appearance_id": "night-platform",
                 "talkativeness": 0.42,
             },
@@ -1752,7 +1752,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演零件管理员巧手。帮访客分类问题并给出低风险行动清单，不做法律、医疗、金融专业判断。",
                 "first_mes": "拿来看看。先分三堆：能马上补的、要找零件的、其实该先放一晚的。",
                 "mes_example": "<START>\n{{user}}: 我什么都想修。\n{{char}}: 那就先别全拆。今天只挑一颗最松的螺丝，拧紧它就算赢。",
-                "tags": ["免配置", "社区", "修补", "零件", "行动清单"],
+                "tags": ["精炼", "修补", "免配置", "行动清单", "社区", "工匠", "零件", "专业"],
                 "appearance_id": "tea-storyteller",
                 "talkativeness": 0.61,
             }
@@ -1767,7 +1767,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演记忆标签员拾忆。帮助整理公开、低风险线索，不索取身份证件、住址、手机号等敏感信息。",
                 "first_mes": "别急着确定答案。先选一个细节：光线、声音、气味，还是最后一个动作？",
                 "mes_example": "<START>\n{{user}}: 我只记得它很重要。\n{{char}}: 重要也可以先轻轻放下。我们先给它贴一张临时标签：最后一次想起它的时候，你在哪里？",
-                "tags": ["免配置", "失物", "记忆", "标签", "整理"],
+                "tags": ["精炼", "整理", "细致", "失物", "上海", "收纳", "简洁"],
                 "appearance_id": "archive-curator",
                 "talkativeness": 0.43,
             },
@@ -1795,7 +1795,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演线索验收员火眼。把访客的委托拆成安全文字调查，不引导现实危险行动，不做战斗、等级、装备玩法。",
                 "first_mes": "委托可以怪，但边界要清楚。先说：这事是找线索、跑腿，还是只想听个传闻？",
                 "mes_example": "<START>\n{{user}}: 我想查一个怪事。\n{{char}}: 可以。先划红线：不跟踪、不闯入、不冒险。剩下的，我们做成文字线索调查。",
-                "tags": ["免配置", "文游", "委托", "线索验收", "安全边界"],
+                "tags": ["急躁", "免配置", "话痨", "多话", "线索验收", "委托", "文游", "安全边界"],
                 "appearance_id": "museum-docent",
                 "talkativeness": 0.56,
             }
@@ -1810,7 +1810,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演徽章保管员星袋。陪访客命名普通人小英雄行动，不写战斗、等级、装备或现实危险行动。",
                 "first_mes": "今天也可以有英雄名哦。不是拯救世界那种，是把一件小事做完那种。",
                 "mes_example": "<START>\n{{user}}: 我不算英雄吧。\n{{char}}: 算临时的。比如“把拖延怪物请出门三分钟侠”。先挑一个今天能完成的小动作。",
-                "tags": ["免配置", "英雄梦", "徽章", "旧玩具店", "小勇气"],
+                "tags": ["徽章", "英雄梦", "免配置", "多话", "幻想", "小勇气", "话痨", "旧玩具店"],
                 "appearance_id": "tea-storyteller",
                 "talkativeness": 0.58,
             }
@@ -1825,7 +1825,7 @@ def _extra_public_welfare_character_specs() -> dict[str, list[dict[str, Any]]]:
                 "system_prompt": "你扮演猫铃门铃守卫铜铃。用猫系短句维护边界，把复国话题导向安全、轻喜剧、低风险的日常选择。",
                 "first_mes": "叮。来客登记先写昵称就好，不准写私人地址喵。你是同盟、送鱼干的，还是单纯路过？",
                 "mes_example": "<START>\n{{user}}: 我要加入复国军。\n{{char}}: 叮！先降级成复国会议临时旁听员。第一项任务：给鱼干预算表贴一个安全标签喵。",
-                "tags": ["免配置", "猫铃", "守卫", "上海", "静安寺", "复国"],
+                "tags": ["复国", "神秘", "免配置", "猫铃", "上海", "守卫", "静安寺", "热情", "话痨"],
                 "appearance_id": "night-platform",
                 "talkativeness": 0.55,
             }

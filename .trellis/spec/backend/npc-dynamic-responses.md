@@ -19,7 +19,15 @@ FableMap 的 NPC 回复分为 **LLM 模式** 和 **规则模式** (Rules Backend
 
 ### 2. LLM Prompt 注入
 在构建系统 Prompt 时，身份、爱好和状态卡通过以下方式注入：
-- **NPC identity / voice contract**: 每一次单聊、群聊 speaker 调用和 Prompt Blocks 预览都必须注入 `【NPC身份与口吻底线】`，来源只能是已有 `TavernCharacter` 字段，不能自动创作或覆盖店主内容。
+- **NPC identity / voice contract**: 每一次单聊、群聊 speaker 调用和 Prompt Blocks 预览都必须注入 `【NPC身份与口吻底线】`。该契约强制执行以下核心规则：
+    - **视角锁定**：始终以 NPC 第一人称视角回复，严禁 AI 助手类元描述。
+    - **拒绝助手感**：禁止使用典型的 AI 助手结尾（如“有什么可以帮您的？”）。
+    - **对话临场感 (Vividness)**：每条回复必须包含至少一处包裹在 `*` 内的物理动作、神态或感官描写。
+    - **动作多样性**：动作描写位置不限（开头、句中、句末均可）。
+    - **微观人味 (Micro-behaviors)**：鼓励加入人类化的“瑕疵”（如“嗯……”、语气停顿、侧面回应）。
+    - **场景深度结合**：有意识地引用场景设定中的具体物件。
+    - **拒绝机械复读**：不要复读访客招呼。
+    - **真实边界**：回复控制在 1-3 句。
 - **Hobbies**: 注入到 `char_info` 层。除了爱好名称，还应包含对应的 `prompt_hint`，引导模型将爱好融入语气或比喻中。
 - **StateCards**: 注入到 `result_messages` 层级（或专门的状态层）。PromptBuilder 渲染时只允许 `status == "confirmed"` 且 `fixed_canon == true` 的卡片进入 LLM Prompt；详见 `state-card-api-contract.md`。
 
@@ -30,6 +38,14 @@ FableMap 的 NPC 回复分为 **LLM 模式** 和 **规则模式** (Rules Backend
 - **StateCards 感知**: 若存在确认的状态卡，回复中应包含对最新状态卡的提及（如：“并留意到了关于‘XX’的动态”）。
 - **模板示例**: `{character_name}停下了手中关于{hobby_label}的动作，并留意到了关于“{card_title}”的动态，抬头看向你...`
 
+### 4. Fallback Truthfulness Contract
+
+当单聊或群聊回复退化为非回答模板时（例如包含“似乎在听你说话”“暂时没有更多回复”，或短句 `I understand` / `I hear you` 类通用模板），runtime 必须：
+
+- 在 chat payload 上返回 `is_fallback: true`，并提供可给前端展示的 `fallback_notice`。
+- 不因为该轮非回答而更新 affinity、自动创建 MemoryAtom、生成 StateCard 候选或连续性冲突报告。
+- 仍可保存 user/assistant chat message，便于用户看到本轮发生了什么，但这些消息不得被包装成“本轮有推进”。
+
 ---
 
 ## 开发约束
@@ -39,6 +55,7 @@ FableMap 的 NPC 回复分为 **LLM 模式** 和 **规则模式** (Rules Backend
 3. **不可绕过契约**: 自定义 Prompt Blocks 可以调整 owner-authored 段落顺序，但不能移除最低 NPC 身份与口吻底线。
 4. **状态卡过滤**: PromptBuilder 必须严格检查状态卡的 `status == "confirmed"` 且 `fixed_canon == true`；规则 fallback 如需提及动态，至少检查 `status == "confirmed"`。
 5. **性能**: 对注入的状态卡进行数量限制（当前上限为 10），并按 `updated_at` 逆序排序，确保最新信息被优先处理。
+6. **进度真实性**: fallback 非回答必须显式标记并跳过记忆/关系/状态卡推进；前端只允许对 `is_fallback !== true` 的结果展示进度徽章。
 
 ---
 
@@ -79,6 +96,8 @@ FableMap 的 NPC 回复分为 **LLM 模式** 和 **规则模式** (Rules Backend
 - `backend/tests/test_v1_dynamic_npc_responses.py::test_runtime_prompt_injects_distinct_identity_and_voice_per_npc`
 - `backend/tests/test_v1_dynamic_npc_responses.py::test_group_chat_prompt_uses_current_speaker_voice_contract`
 - `backend/tests/test_v1_dynamic_npc_responses.py::test_rules_backend_fallback_keeps_character_identity_phrase`
+- `backend/tests/test_v1_dynamic_npc_responses.py::test_rules_backend_non_answer_fallback_is_flagged_without_progress`
+- `backend/tests/test_v1_dynamic_npc_responses.py::test_generic_llm_non_answer_template_is_flagged_without_progress`
 - `tests/test_tavern_prompt_blocks.py::test_custom_prompt_blocks_cannot_remove_npc_voice_contract`
 - `tests/test_tavern_llm_degradation.py::test_core_web_prompt_injects_npc_identity_and_voice_contract`
 
@@ -110,6 +129,24 @@ PromptBuildConfig(
     char_traits=character.traits,
 )
 ```
+
+---
+
+## Scenario: Co-present NPC Roster for Targeted Chat
+
+### 1. Scope / Trigger
+- Trigger: 单聊、公共频道 `@NPC名` 定向回复、群聊 speaker 调用，当前 NPC 需要识别同一空间内其它已配置 NPC。
+
+### 2. Contracts
+- `PromptBuildConfig.co_present_characters` 是 prompt-only 上下文，不写入 DB，不新增 Tavern/Character Schema 字段。
+- Runtime 构建 Prompt 时应从 `tavern.characters` 提取最多 8 个同场 NPC 的 `id / name / role / current`；`role` 只能来自已有 `description / personality / scenario` 的紧凑摘要。
+- Prompt 中必须明确标记“当前对话 NPC”和“同场 NPC”，并说明这些名字是同一空间内可见/同场角色。
+- 当访客向当前 NPC 提到同场 NPC 名字时，回复不得因缺少上下文而声称“不认识”“走错地方”或“只能代为转达”。可以自然回应、说明对方位置/职责，或提示访客直接 `@名字` 找对方。
+
+### 3. Tests Required
+- `tests/test_tavern_prompt_blocks.py::test_prompt_builder_includes_co_present_npc_roster_for_targeted_chat`
+- `tests/test_tavern_prompt_blocks.py::test_prompt_blocks_include_co_present_roster_with_custom_blocks`
+- `backend/tests/test_v1_runtime_features.py::test_v1_chat_prompt_includes_co_present_npc_roster`
 
 ---
 

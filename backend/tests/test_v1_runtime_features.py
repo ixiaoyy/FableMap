@@ -738,3 +738,49 @@ def test_v1_group_chat_second_turn_prompt_keeps_previous_assistant_reply(
         if isinstance(message, dict) and message.get("content")
     )
     assert first_reply in second_prompt
+
+
+def test_v1_chat_prompt_includes_co_present_npc_roster(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_calls: list[list[dict[str, Any]]] = []
+
+    class DummyResponse:
+        content = "夜航向导点点头：灯牌调酒师也在吧台那边。"
+        model = "stub-model"
+        usage = {"total_tokens": 14}
+
+    class DummyClient:
+        def complete(self, messages: list[dict[str, Any]]) -> DummyResponse:
+            captured_calls.append(messages)
+            return DummyResponse()
+
+    monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: DummyClient())
+
+    client = _client(tmp_path)
+    tavern_id, character_ids = _create_tavern(client)
+
+    response = client.post(
+        f"/api/v1/taverns/{tavern_id}/chat",
+        headers={"X-User-Id": VISITOR_ID},
+        json={
+            "character_id": character_ids[1],
+            "message": "我想找灯牌调酒师聊聊。",
+            "visitor_id": VISITOR_ID,
+            "visitor_name": "测试旅人",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["degraded"] is False
+    assert captured_calls
+    prompt_text = "\n\n".join(
+        str(message.get("content") or "")
+        for message in captured_calls[-1]
+        if isinstance(message, dict) and message.get("content")
+    )
+    assert "同场 NPC" in prompt_text
+    assert "灯牌调酒师（同场 NPC）" in prompt_text
+    assert "夜航向导（当前对话 NPC）" in prompt_text
+    assert "不要声称不认识、走错地方或只能代为转达" in prompt_text

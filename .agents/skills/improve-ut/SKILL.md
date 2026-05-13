@@ -1,69 +1,22 @@
 ---
 name: improve-ut
-description: "Analyzes changed files and improves unit test coverage using project-specific testing conventions from .trellis/spec/ unit-test specs. Determines test scope (unit vs integration vs regression), adds or updates tests following existing patterns, and runs validation. Use when code changes need test coverage, after implementing a feature, after fixing a bug, or when test gaps are identified."
+description: "Adds or updates focused tests for changed behavior using existing project patterns. Use when code changes need real regression coverage; do not add brittle tests for incidental copy/layout changes."
 ---
 
-# Improve Unit Tests (UT)
+# Improve Tests
 
-Use this skill to improve test coverage after code changes.
+1. Inspect changed files and existing nearby tests.
+2. Add the smallest test that protects behavior/API/security/schema boundaries.
+3. Prefer existing test style and no new dependencies.
+4. Run focused validation only.
 
-## Usage
+Common commands:
 
-```text
-$improve-ut
+```powershell
+py -3 -m pytest backend/tests/<file>.py -q --tb=short
+py -3 -m pytest tests/<file>.py -q --tb=short
+node .\frontend\scripts\<script>.mjs
+npm --prefix .\frontend test
 ```
 
-## Source of Truth
-
-Discover and read unit-test specs dynamically:
-
-```bash
-# Discover available packages and their spec layers
-python3 ./.trellis/scripts/get_context.py --mode packages
-```
-
-Look for packages with `unit-test` spec layer in the output. For each discovered `unit-test/` directory, read all relevant spec files inside it (for example `index.md`, `conventions.md`, `integration-patterns.md`, `mock-strategies.md`).
-
-> If this skill conflicts with the unit-test specs, the specs win.
-
----
-
-## Execution Flow
-
-1. Inspect changed files:
-   - `git diff --name-only`
-2. Decide test scope using unit-test specs:
-   - unit vs integration vs regression
-   - mock vs real filesystem flow
-3. Add/update tests using existing project test patterns
-4. Run validation:
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-```
-
-5. Summarize decisions, updates, and remaining test gaps.
-
----
-
-## Output Format
-
-```markdown
-## UT Coverage Plan
-- Changed areas: ...
-- Test scope (unit/integration/regression): ...
-
-## Test Updates
-- Added: ...
-- Updated: ...
-
-## Validation
-- pnpm lint: pass/fail
-- pnpm typecheck: pass/fail
-- pnpm test: pass/fail
-
-## Gaps / Follow-ups
-- <none or explicit rationale>
-```
+Avoid adding tests that assert exact UI copy, CSS classes, or component source internals unless they guard a real contract.

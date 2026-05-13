@@ -176,6 +176,34 @@ class OwnerConfigApplicationMixin:
         except Exception:
             return []
 
+    def _co_present_character_prompt_roster(
+        self,
+        tavern: Tavern,
+        current_character_id: str,
+        *,
+        limit: int = 8,
+    ) -> list[dict[str, Any]]:
+        """Build prompt-only context so previews match runtime NPC awareness."""
+
+        roster: list[dict[str, Any]] = []
+        for character in list(getattr(tavern, "characters", []) or [])[:limit]:
+            name = clean_text(getattr(character, "name", ""), max_length=32)
+            if not name:
+                continue
+            role = clean_text(
+                getattr(character, "description", "")
+                or getattr(character, "personality", "")
+                or getattr(character, "scenario", ""),
+                max_length=96,
+            )
+            roster.append({
+                "id": getattr(character, "id", ""),
+                "name": name,
+                "role": role,
+                "current": getattr(character, "id", "") == current_character_id,
+            })
+        return roster
+
     def preview_prompt_blocks(self, tavern_id: str, data: dict[str, Any], user_id: str = "") -> dict[str, Any]:
         tavern = self._get_tavern_or_404(tavern_id)
         self._ensure_owner(tavern, user_id)
@@ -201,6 +229,7 @@ class OwnerConfigApplicationMixin:
             char_scenario=character.scenario or "",
             char_first_mes=character.first_mes or "",
             char_system_prompt=character.system_prompt or "",
+            co_present_characters=self._co_present_character_prompt_roster(tavern, character.id),
             user_name=visitor_name,
             visitor_visit_count=self._safe_int(payload.get("visitor_visit_count"), 0),
             visitor_relationship_stage=str(payload.get("visitor_relationship_stage") or ""),
@@ -269,6 +298,7 @@ class OwnerConfigApplicationMixin:
             char_scenario=character.scenario or "",
             char_first_mes=character.first_mes or "",
             char_system_prompt=character.system_prompt or "",
+            co_present_characters=self._co_present_character_prompt_roster(tavern, character.id),
             user_name=visitor_name,
             visitor_visit_count=visitor_state.visit_count if visitor_state else 0,
             visitor_relationship_stage=visitor_state.relationship_stage if visitor_state else "",

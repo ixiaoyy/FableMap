@@ -4,6 +4,15 @@ type ApiInit = RequestInit & {
 
 const API_BASE = import.meta.env.VITE_API_BASE?.trim() || ""
 
+type ApiEnvelope = {
+  data?: unknown
+  meta?: {
+    ok?: unknown
+    error?: unknown
+    envelope?: unknown
+  }
+}
+
 function apiUrl(path: string) {
   if (/^https?:\/\//i.test(path)) {
     return path
@@ -41,13 +50,10 @@ export async function readApiJson<T>(path: string, init: ApiInit = {}): Promise<
     }
   }
   if (!response.ok) {
-    const message =
-      payload && typeof payload === "object" && ("error" in payload || "detail" in payload)
-        ? String((payload as { error?: unknown; detail?: unknown }).error || (payload as { detail?: unknown }).detail)
-        : `HTTP ${response.status}`
+    const message = apiErrorMessage(payload, response.status)
     throw new Error(message)
   }
-  return payload as T
+  return unwrapApiPayload<T>(payload)
 }
 
 export async function readApiBlob(path: string, init: ApiInit = {}): Promise<Blob> {
@@ -65,8 +71,8 @@ export async function readApiBlob(path: string, init: ApiInit = {}): Promise<Blo
   if (!response.ok) {
     let message = `HTTP ${response.status}`
     try {
-      const payload = (await response.json()) as { error?: unknown; detail?: unknown }
-      message = String(payload.error || payload.detail || message)
+      const payload = (await response.json()) as unknown
+      message = apiErrorMessage(payload, response.status)
     } catch {
       // Keep status fallback for non-JSON binary endpoints.
     }
@@ -83,4 +89,43 @@ export function jsonInit(method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unk
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   }
+}
+
+export function unwrapApiPayload<T>(payload: unknown): T {
+  if (isApiEnvelope(payload)) {
+    return (payload as ApiEnvelope).data as T
+  }
+  return payload as T
+}
+
+function isApiEnvelope(payload: unknown): payload is ApiEnvelope {
+  if (!payload || typeof payload !== "object") {
+    return false
+  }
+  const candidate = payload as ApiEnvelope
+  return "data" in candidate && !!candidate.meta && typeof candidate.meta === "object"
+}
+
+function apiErrorMessage(payload: unknown, status: number): string {
+  if (payload && typeof payload === "object") {
+    const candidate = payload as { error?: unknown; detail?: unknown; meta?: { error?: unknown } }
+    if (candidate.error || candidate.detail) {
+      return String(candidate.error || candidate.detail)
+    }
+    const metaError = candidate.meta?.error
+    if (typeof metaError === "string" && metaError.trim()) {
+      return metaError
+    }
+    if (metaError && typeof metaError === "object") {
+      const message = (metaError as { message?: unknown; detail?: unknown }).message
+      if (message) {
+        return String(message)
+      }
+      const detail = (metaError as { detail?: unknown }).detail
+      if (detail) {
+        return String(detail)
+      }
+    }
+  }
+  return `HTTP ${status}`
 }

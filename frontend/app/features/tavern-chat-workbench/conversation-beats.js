@@ -62,6 +62,8 @@ function affinityStageLabel(affinity) {
 }
 
 export function progressSignalsFromChatResult(result) {
+  if (result?.is_fallback === true) return []
+
   const signals = []
   const memoryCount = countList(result?.created_memories)
   const stateCardCount = countList(result?.state_card_candidates)

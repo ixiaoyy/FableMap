@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from .api.response_envelope import add_api_response_envelope_middleware
 from .application.taverns import TavernApplicationService
 from .application.territories import TerritoryApplicationService
 from .application.simulation_worker import SimulationWorker
@@ -31,8 +35,6 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     """Create the native enterprise FastAPI application."""
 
     resolved = settings or ApiSettings()
-    app = FastAPI(title=resolved.app_name, version=resolved.api_version)
-    app.state.settings = resolved
 
     # 根据配置选择存储后端
     store = create_store(resolved)
@@ -40,14 +42,30 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
     territory_service = TerritoryApplicationService(
         create_territory_store(resolved, store)
     )
-    app.state.territory_service = territory_service
 
-    app.state.taverns = TavernApplicationService(
+    taverns_service = TavernApplicationService(
         store,
         create_owner_config_store(resolved, store),
         create_visitor_note_store(resolved, store),
         territory_service=territory_service,
     )
+
+    # ── 仿真引擎启动 (v0.9) ───────────
+    simulation_worker = SimulationWorker(store, interval_seconds=resolved.simulation_interval_seconds)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        simulation_worker.start()
+        try:
+            yield
+        finally:
+            simulation_worker.stop()
+
+    app = FastAPI(title=resolved.app_name, version=resolved.api_version, lifespan=lifespan)
+    app.state.settings = resolved
+    app.state.territory_service = territory_service
+    app.state.taverns = taverns_service
+    app.state.simulation_worker = simulation_worker
 
     app.add_middleware(
         CORSMiddleware,
@@ -56,6 +74,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    add_api_response_envelope_middleware(app, path_prefixes=("/api/v1",))
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:
@@ -67,17 +86,5 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         return JSONResponse(status_code=500, content={"error": "服务暂时不可用"})
 
     app.include_router(api_router)
-
-    # ── 仿真引擎启动 (v0.9) ───────────
-    simulation_worker = SimulationWorker(store, interval_seconds=resolved.simulation_interval_seconds)
-    app.state.simulation_worker = simulation_worker
-
-    @app.on_event("startup")
-    async def startup_event():
-        simulation_worker.start()
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        simulation_worker.stop()
 
     return app

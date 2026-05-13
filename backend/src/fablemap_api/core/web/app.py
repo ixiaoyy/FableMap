@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from fablemap_api.api.response_envelope import add_api_response_envelope_middleware
 from fablemap_api.api.v1.router import api_router
 from fablemap_api.application.taverns import TavernApplicationService
 from fablemap_api.infrastructure.settings import ApiSettings as NativeApiSettings
@@ -82,6 +83,7 @@ def create_web_app(settings: ApiSettings) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    add_api_response_envelope_middleware(app, path_prefixes=("/api",))
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:

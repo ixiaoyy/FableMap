@@ -3,19 +3,19 @@
   "name": "05-13-npc-fallback-memory-truthfulness",
   "title": "NPC fallback + memory truthfulness — no progress badge on non-answer",
   "description": "Detect non-answer fallback in chat response. Do not show progress/memory/relationship badges when fallback fires. Only show badges when NPC gave a real, non-fallback response.",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "backend detects fallback, frontend gates badges",
   "package": null,
   "priority": "P1",
   "creator": "claude",
-  "assignee": null,
+  "assignee": "lijin",
   "createdAt": "2026-05-13",
-  "completedAt": null,
+  "completedAt": "2026-05-13",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 4,
   "next_action": [
     {
       "phase": 1,
@@ -53,6 +53,6 @@
     "backend/src/fablemap_api/application/services/runtime.py",
     "backend/src/fablemap_api/contracts/memories.py"
   ],
-  "notes": "Child task of 05-12-onsite-visitor-brutal-audit-issues. Combines issues #6 (NPC fallback non-response) and #7 (memory/relationship overclaim). Backend must flag fallback response; frontend must gate badges behind non-fallback response.",
+  "notes": "Child task of 05-12-onsite-visitor-brutal-audit-issues. Combines issues #6 (NPC fallback non-response) and #7 (memory/relationship overclaim). Backend must flag fallback response; frontend must gate badges behind non-fallback response.\n2026-05-13 lijin claimed task after user reported misleading chat progress/memory feedback; focus: flag/gate fallback/non-answer so UI does not show fake progress badges.\n2026-05-13 implementation complete: backend returns is_fallback/fallback_notice for non-answer fallbacks and skips affinity/memory/state-card progress; frontend gates progress badges and memory append behind is_fallback !== true; verification.md and evidence/ contain build/test/browser results.",
   "meta": {}
 }

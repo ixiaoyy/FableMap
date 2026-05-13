@@ -17,6 +17,30 @@ import { normalizeGender } from '../../lib/gender.js'
  * @param {Response} response
  * @returns {Promise<object>}
  */
+function isApiEnvelope(payload) {
+  return !!payload && typeof payload === 'object' && 'data' in payload && !!payload.meta && typeof payload.meta === 'object'
+}
+
+function unwrapApiPayload(payload) {
+  return isApiEnvelope(payload) ? payload.data : payload
+}
+
+function apiErrorMessage(payload, status) {
+  if (payload && typeof payload === 'object') {
+    if (payload.error || payload.detail) {
+      return payload.error || payload.detail
+    }
+    const metaError = payload.meta?.error
+    if (typeof metaError === 'string' && metaError.trim()) {
+      return metaError
+    }
+    if (metaError && typeof metaError === 'object' && metaError.message) {
+      return metaError.message
+    }
+  }
+  return `HTTP ${status}`
+}
+
 async function readJson(response) {
   const raw = await response.text()
   let payload = {}
@@ -34,11 +58,11 @@ async function readJson(response) {
   }
 
   if (!response.ok) {
-    const err = new Error(payload.error || payload.detail || `HTTP ${response.status}`)
+    const err = new Error(apiErrorMessage(payload, response.status))
     err.errorType = response.status
     throw err
   }
-  return payload
+  return unwrapApiPayload(payload)
 }
 
 function buildHeaders(userId = '', extra = {}) {
@@ -795,6 +819,32 @@ export function createTavernService(getBaseUrl) {
         { metadata: { ...(metadata || {}), flagged_wrong: flagged } },
         userId
       )
+    },
+
+    /**
+     * Send feedback on a memory atom (reinforce / correct / flag wrong).
+     * @param {string} tavernId
+     * @param {string} memoryId
+     * @param {object} feedback — { correct: boolean, content?: string }
+     *   - reinforce:   { correct: true }
+     *   - correction: { correct: false, content: "new content" }
+     *   - flag wrong:  { correct: false }
+     * @param {string} userId
+     * @returns {Promise<object>}
+     */
+    async feedbackMemoryAtom(tavernId, memoryId, feedback, userId = '') {
+      const response = await fetch(
+        `${getBaseUrl()}/api/v1/taverns/${encodeURIComponent(tavernId)}/memory-atoms/${encodeURIComponent(memoryId)}/feedback`,
+        {
+          method: 'POST',
+          headers: buildJsonHeaders(userId),
+          body: JSON.stringify({
+            correct: feedback.correct ?? null,
+            content: feedback.content ?? null,
+          }),
+        }
+      )
+      return readJson(response)
     },
 
     // ─── Character Management ──────────────────────────────────────

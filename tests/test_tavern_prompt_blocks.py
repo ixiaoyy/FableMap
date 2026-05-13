@@ -57,7 +57,7 @@ def test_prompt_block_builder_uses_default_segments_and_dynamic_world_info():
     assert "守夜人、档案员" in text
     assert "慢热、低声细语" in text
     assert "NPC身份与口吻底线" in text
-    assert "不要自称 AI" in text
+    assert "禁止表现出任何 AI 助手或程序的痕迹" in text
     assert "当前访客关系状态" in text
     assert "关系阶段=常客" in text
     assert "[WorldInfo: 档案柜]" in text
@@ -84,9 +84,55 @@ def test_custom_prompt_blocks_cannot_remove_npc_voice_contract():
 
     assert "【自定义】只写鹿灯与访客甲。" in text
     assert "【NPC身份与口吻底线】" in text
-    assert "你现在只能作为「鹿灯」回应" in text
+    assert "你现在是且仅能是「鹿灯」" in text
     assert "旧店守夜人" in text
-    assert "不要自称 AI" in text
+    assert "禁止表现出任何 AI 助手或程序的痕迹" in text
+
+
+def test_prompt_builder_includes_co_present_npc_roster_for_targeted_chat():
+    cfg = _prompt_config([])
+    cfg.char_name = "青柚"
+    cfg.co_present_characters = [
+        {"id": "char_mika", "name": "弥夏", "role": "夜间护理站的护士", "current": False},
+        {"id": "char_qingyou", "name": "青柚", "role": "候诊档案员", "current": True},
+        {"id": "char_nanxing", "name": "南星", "role": "外联协调员", "current": False},
+    ]
+
+    result = PromptBuilder(cfg).build([], "我想找弥夏聊聊。")
+    text = _combined_prompt_text(result)
+
+    assert "同场 NPC" in text
+    assert "弥夏（同场 NPC）：夜间护理站的护士" in text
+    assert "青柚（当前对话 NPC）：候诊档案员" in text
+    assert "南星（同场 NPC）：外联协调员" in text
+    assert "不要声称不认识、走错地方或只能代为转达" in text
+
+
+def test_prompt_blocks_include_co_present_roster_with_custom_blocks():
+    blocks = [
+        {
+            "id": "minimal_custom",
+            "name": "极简自定义段",
+            "enabled": True,
+            "type": "custom",
+            "order": 10,
+            "template": "【自定义】{{char}} 正在回应 {{user}}。",
+            "token_budget": 400,
+        }
+    ]
+    cfg = _prompt_config(blocks)
+    cfg.co_present_characters = [
+        {"id": "char_ludeng", "name": "鹿灯", "role": "旧店守夜人", "current": True},
+        {"id": "char_yan", "name": "砚舟", "role": "同在雾港旧店的修伞匠", "current": False},
+    ]
+
+    result = PromptBuilder(cfg).build([], "我想问砚舟修伞。")
+    text = _combined_prompt_text(result)
+
+    assert "【自定义】鹿灯 正在回应 访客甲。" in text
+    assert "【同场 NPC】" in text
+    assert "砚舟（同场 NPC）：同在雾港旧店的修伞匠" in text
+    assert "鹿灯（当前对话 NPC）：旧店守夜人" in text
 
 
 def test_prompt_blocks_can_disable_world_info_and_truncate_custom_segments():

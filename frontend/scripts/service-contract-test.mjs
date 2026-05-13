@@ -1,5 +1,7 @@
 import { createTavernService } from '../app/product/services/tavernService.js'
 import { NEWCOMER_TAVERN_ID, resolveNewcomerTavern } from '../app/product/services/newcomerTavern.js'
+import fs from 'node:fs'
+import path from 'node:path'
 
 const service = createTavernService(() => '')
 
@@ -128,5 +130,16 @@ async function testNewcomerFallbackWhenPrimaryMissing() {
 await testNewcomerPrimaryTavern()
 await testNewcomerFallbackWhenPrimaryClosed()
 await testNewcomerFallbackWhenPrimaryMissing()
+
+const tavernServiceSource = fs.readFileSync(path.resolve('app/product/services/tavernService.js'), 'utf8')
+const apiClientSource = fs.readFileSync(path.resolve('app/product/services/apiClient.js'), 'utf8')
+assert(
+  tavernServiceSource.includes('unwrapApiPayload(payload)') && tavernServiceSource.includes("'data' in payload"),
+  'product tavern service should unwrap {data, meta} envelopes',
+)
+assert(
+  apiClientSource.includes('unwrapApiPayload(payload)') && apiClientSource.includes("'data' in payload"),
+  'legacy product api client should unwrap {data, meta} envelopes',
+)
 
 console.log(`Tavern service contract ok (${requiredMethods.length} methods, newcomer fallback ok)`)

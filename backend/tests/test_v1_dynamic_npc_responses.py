@@ -558,6 +558,99 @@ def test_rules_backend_fallback_keeps_character_identity_phrase(tmp_path: Path) 
     assert "门卫、退休教师" in payload["response"]
 
 
+def test_rules_backend_non_answer_fallback_is_flagged_without_progress(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    client.post(
+        "/api/v1/taverns",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "id": "t_rules_non_answer",
+            "name": "Rules Non-answer Tavern",
+            "llm_config": {"backend": "rules", "model": "rules"},
+        },
+    )
+    client.post(
+        "/api/v1/taverns/t_rules_non_answer/characters",
+        headers={"X-User-Id": OWNER_ID},
+        json={"id": "c_quiet", "name": "安静店员"},
+    )
+
+    response = client.post(
+        "/api/v1/taverns/t_rules_non_answer/chat",
+        headers={"X-User-Id": VISITOR_ID},
+        json={
+            "character_id": "c_quiet",
+            "message": "今天街口有什么动静？",
+            "visitor_id": VISITOR_ID,
+            "visitor_name": "Traveler",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["is_fallback"] is True
+    assert "暂时没有更多回复" in payload["response"]
+    assert payload["affinity"] is None
+    assert payload["created_memories"] == []
+    assert payload["state_card_candidates"] == []
+    assert payload["visitor_state"]["relationship"]["strength"] == 0.0
+    assert payload["visitor_state"]["relationship"]["stage"] == "stranger"
+
+
+def test_generic_llm_non_answer_template_is_flagged_without_progress(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class StubResponse:
+        content = "I understand."
+        model = "stub-model"
+        usage = {"total_tokens": 4}
+
+    class StubClient:
+        def __init__(self, config: Any) -> None:
+            pass
+
+        def complete(self, messages: list[dict[str, Any]]) -> StubResponse:
+            return StubResponse()
+
+    monkeypatch.setattr("fablemap_api.application.services.runtime.create_client", lambda cfg: StubClient(cfg))
+    client = _client(tmp_path)
+
+    client.post(
+        "/api/v1/taverns",
+        headers={"X-User-Id": OWNER_ID},
+        json={
+            "id": "t_generic_non_answer",
+            "name": "Generic Non-answer Tavern",
+            "llm_config": {"backend": "openai", "model": "gpt-4o", "api_key": "sk-test"},
+        },
+    )
+    client.post(
+        "/api/v1/taverns/t_generic_non_answer/characters",
+        headers={"X-User-Id": OWNER_ID},
+        json={"id": "c_generic", "name": "Template Bot"},
+    )
+
+    response = client.post(
+        "/api/v1/taverns/t_generic_non_answer/chat",
+        headers={"X-User-Id": VISITOR_ID},
+        json={
+            "character_id": "c_generic",
+            "message": "Tell me something real.",
+            "visitor_id": VISITOR_ID,
+            "visitor_name": "Traveler",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["response"] == "I understand."
+    assert payload["is_fallback"] is True
+    assert payload["affinity"] is None
+    assert payload["created_memories"] == []
+
+
 def test_rules_backend_state_card_awareness(tmp_path: Path) -> None:
     client = _client(tmp_path)
     

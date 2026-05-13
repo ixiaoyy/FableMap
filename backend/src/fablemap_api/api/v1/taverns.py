@@ -29,17 +29,27 @@ def list_taverns(
     radius: float = 5000,
     access: str | None = None,
     status: str | None = None,
+    place_type: str = "",
+    special_type: str = "",
     q: str = "",
+    search: str = "",
     owner_id: str = "",
+    limit: int | None = None,
+    offset: int = 0,
 ) -> dict[str, Any]:
+    query = q or search
     return taverns_service(request).list_taverns(
         lat=lat,
         lon=lon,
         radius=radius,
         access=access,
         status=status,
-        query=q,
+        place_type=place_type,
+        special_type=special_type,
+        query=query,
         owner_id=owner_id,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -49,8 +59,8 @@ def create_tavern(request: Request, data: TavernCreateRequest) -> dict[str, Any]
 
 
 @router.get("/{tavern_id}")
-def get_tavern(request: Request, tavern_id: str) -> dict[str, Any]:
-    return taverns_service(request).get_tavern(tavern_id, get_user_id(request))
+def get_tavern(request: Request, tavern_id: str, view: str = "") -> dict[str, Any]:
+    return taverns_service(request).get_tavern(tavern_id, get_user_id(request), view=view)
 
 
 @router.get("/{tavern_id}/share")

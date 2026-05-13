@@ -337,6 +337,39 @@ class TavernCharacter:
         )
 
 
+def _entry_character_payload(character: TavernCharacter) -> dict[str, Any]:
+    """Public-safe character shape for the tavern entry page."""
+    return {
+        "id": character.id,
+        "tavern_id": character.tavern_id,
+        "name": character.name,
+        "description": character.description,
+        "personality": character.personality,
+        "scenario": character.scenario,
+        "gender": _normalize_gender(character.gender),
+        "first_mes": character.first_mes,
+        "tags": list(character.tags),
+        "sprites": character.sprites.to_dict() if character.sprites else {},
+        "avatar": character.avatar or (character.sprites.get("neutral") if character.sprites else ""),
+        "appearance": deepcopy(character.appearance) if isinstance(character.appearance, dict) else {},
+        "talkativeness": _normalize_talkativeness(character.talkativeness),
+        "hobbies": list(character.hobbies) if character.hobbies else [],
+        "current_tavern_id": character.current_tavern_id or character.tavern_id,
+        "is_visitor": character.is_visitor,
+        "lat": character.lat,
+        "lon": character.lon,
+    }
+
+
+def _entry_gameplay_payload(gameplay: dict[str, Any]) -> dict[str, Any]:
+    """Small published gameplay summary for first-render task hints."""
+    return {
+        key: deepcopy(gameplay[key])
+        for key in ("id", "name", "title", "description", "summary", "status", "icon")
+        if key in gameplay
+    }
+
+
 @dataclass
 class WorldInfoEntry:
     """世界知识条目 — 关键词触发的上下文注入"""
@@ -780,6 +813,39 @@ class Tavern:
         ]
         result.pop("home_members", None)
         result.pop("place_relationships", None)
+        return result
+
+    def to_dict_entry(self) -> dict[str, Any]:
+        """Slim public-safe payload for visitor tavern entry/detail pages."""
+        result = self.to_dict_public()
+        for key in (
+            "world_info",
+            "groups",
+            "bookmarks",
+            "chat_templates",
+            "output_rules",
+            "prompt_blocks",
+            "runtime_presets",
+            "active_preset_id",
+            "memory_policy",
+            "group_chat_config",
+        ):
+            result.pop(key, None)
+
+        visible_llm_config = _hydrate_system_public_welfare_llm_config(
+            self,
+            self.llm_config,
+            tavern_id=self.id,
+            include_api_key=False,
+        )
+        result["llm_config"] = {"backend": visible_llm_config.backend}
+        result["characters"] = [_entry_character_payload(character) for character in self.characters]
+        result["gameplay_definitions"] = [
+            _entry_gameplay_payload(gameplay)
+            for gameplay in deepcopy(self.gameplay_definitions)
+            if str((gameplay or {}).get("status") or "published") == "published"
+        ]
+        result["response_view"] = "entry"
         return result
 
     @classmethod
@@ -1775,6 +1841,8 @@ class TavernService:
         radius: float = 5000,
         access: str | None = None,
         status: str | None = None,
+        place_type: str = "",
+        special_type: str = "",
         query: str = "",
         owner_id: str = "",
     ) -> list[dict[str, Any]]:
@@ -1782,6 +1850,8 @@ class TavernService:
         taverns = self.store.list_taverns(include_private=bool(owner_id), owner_id=owner_id)
         normalized_query = (query or "").strip()
         normalized_status = (status or "").strip()
+        normalized_place_type = _normalize_tavern_list_place_type_filter(place_type)
+        normalized_special_type = _normalize_tavern_list_special_type_filter(special_type)
 
         result = []
         for t in taverns:
@@ -1792,6 +1862,10 @@ class TavernService:
             if access and t.access != access:
                 continue
             if normalized_status and t.status != normalized_status:
+                continue
+            if normalized_place_type and t.place_type != normalized_place_type:
+                continue
+            if normalized_special_type and t.special_type != normalized_special_type:
                 continue
             if normalized_query and not _matches_tavern_query(t, normalized_query):
                 continue
@@ -1813,7 +1887,7 @@ class TavernService:
         result.sort(key=lambda x: x["_distance"] if x["_distance"] is not None else float("inf"))
         return result
 
-    def get_tavern(self, tavern_id: str, user_id: str = "") -> dict[str, Any]:
+    def get_tavern(self, tavern_id: str, user_id: str = "", view: str = "") -> dict[str, Any]:
         tavern = self.store.get_tavern(tavern_id)
         if not tavern:
             raise HTTPException(status_code=404, detail="空间不存在")
@@ -1822,13 +1896,17 @@ class TavernService:
             raise HTTPException(status_code=403, detail="此空间是私人的")
 
         # 添加时间状态信息
-        tavern_dict = tavern.to_dict_private(user_id) if tavern.owner_id and tavern.owner_id == user_id else tavern.to_dict_public()
+        entry_view = str(view or "").strip().lower() == "entry"
+        if entry_view:
+            tavern_dict = tavern.to_dict_entry()
+        else:
+            tavern_dict = tavern.to_dict_private(user_id) if tavern.owner_id and tavern.owner_id == user_id else tavern.to_dict_public()
         self._enrich_time_status(tavern_dict, tavern)
         if tavern.place_type == "school":
             tavern_dict["school_members"] = self.list_school_members(tavern_id, user_id=user_id)["members"]
-            if tavern.owner_id and tavern.owner_id == user_id:
+            if not entry_view and tavern.owner_id and tavern.owner_id == user_id:
                 tavern_dict["pending_school_enrollments"] = self._school_relationships(tavern_id, statuses={"pending"})
-        if tavern.owner_id and tavern.owner_id == user_id:
+        if not entry_view and tavern.owner_id and tavern.owner_id == user_id:
             tavern_dict["target_place_relationships"] = self._target_relationships(tavern_id)
             tavern_dict["pending_place_relationships"] = self._target_relationships(tavern_id, statuses={"pending"})
 
@@ -2705,6 +2783,16 @@ def _normalize_special_type(value: Any) -> str:
     return s if s in SPECIAL_TYPES else ""
 
 
+def _normalize_tavern_list_special_type_filter(value: Any) -> str:
+    special_type = str(value or "").strip().lower().replace("_", "-")
+    return special_type if special_type in SPECIAL_TYPES and special_type else ""
+
+
+def _normalize_tavern_list_place_type_filter(value: Any) -> str:
+    place_type = str(value or "").strip().lower().replace("_", "-")
+    return place_type if place_type in PLACE_TYPES else ""
+
+
 def _normalize_place_type(value: Any) -> str:
     place_type = str(value or "tavern").strip().lower().replace("_", "-")
     return place_type if place_type in PLACE_TYPES else "tavern"
@@ -2972,6 +3060,7 @@ def _matches_tavern_query(tavern: Tavern, query: str) -> bool:
         tavern.access,
         tavern.status,
         tavern.place_type,
+        tavern.special_type,
         tavern.scene_prompt,
     ]
 

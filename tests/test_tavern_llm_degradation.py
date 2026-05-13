@@ -191,10 +191,10 @@ def test_core_web_prompt_injects_npc_identity_and_voice_contract(monkeypatch):
         assert payload["degraded"] is False
         system_text = "\n".join(m.get("content", "") for m in captured["messages"] if m.get("role") == "system")
         assert "【NPC身份与口吻底线】" in system_text
-        assert "你现在只能作为「Mira」回应" in system_text
+        assert "你现在是且仅能是「Mira」" in system_text
         assert "失物看守人" in system_text
         assert "慢热、低声" in system_text
-        assert "不要自称 AI" in system_text
+        assert "禁止表现出任何 AI 助手或程序的痕迹" in system_text
 
 
 def test_display_message_is_persisted_while_full_prompt_reaches_llm(monkeypatch):
