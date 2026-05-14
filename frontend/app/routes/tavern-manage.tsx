@@ -66,7 +66,7 @@ export default function TavernManageRoute() {
   const previewPath = visitorPreviewPath(tavernId)
 
   return (
-    <ProductShell eyebrow="Owner manage">
+    <ProductShell eyebrow="店主管理">
       <section data-tavern-owner-management="dedicated-route" className="scroll-mt-28 space-y-6">
         {tavern && isOwner ? (
           <>
@@ -76,7 +76,7 @@ export default function TavernManageRoute() {
                   <div className="min-w-0">
                     <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-theme-accent-border bg-theme-accent-bg px-3 py-1.5 text-xs font-black text-theme-accent-text">
                       <ShieldCheck className="h-3.5 w-3.5" />
-                      Owner-only management
+                      店主管理
                     </div>
                     <CardTitle className="text-4xl font-black leading-tight">{tavern.name} 管理台</CardTitle>
                     <CardDescription className="mt-3 max-w-3xl text-base leading-7">
@@ -102,7 +102,7 @@ export default function TavernManageRoute() {
               <CardContent>
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
                   <span className="rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-violet-50/72">
-                    Owner ID：<span className="font-bold text-theme-primary">{currentUserId || "未提供"}</span>
+                    店主标识：<span className="font-bold text-theme-primary">{currentUserId || "未提供"}</span>
                   </span>
                   <span className="rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-violet-50/72">
                     访问：<span className="font-bold text-theme-primary">{tavern.access || "public"}</span>
@@ -121,7 +121,7 @@ export default function TavernManageRoute() {
             <CardHeader>
               <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-amber-300/24 bg-amber-300/10 px-3 py-1.5 text-xs font-black text-amber-100">
                 <Store className="h-3.5 w-3.5" />
-                Owner required
+                需要店主身份
               </div>
               <CardTitle>需要店主身份</CardTitle>
               <CardDescription className="mt-2">

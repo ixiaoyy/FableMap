@@ -319,23 +319,12 @@ const SHOPKEEPER_CHARACTER = {
   sprites: {},
 }
 
-function hasTavernTasks(tavern) {
-  return Array.isArray(tavern?.gameplay_definitions) && tavern.gameplay_definitions.length > 0
-}
-
-function hostGuideMessage(tavern, characters = [], roomName = '') {
+function hostGuideMessage(tavern, _characters = [], roomName = '') {
   const timestamp = Date.now()
-  const hasTasks = hasTavernTasks(tavern)
-  const firstNpc = characters[0]
-  const mentionHint = firstNpc
-    ? `公共聊天支持 @NPC名，比如 @${firstNpc.name || firstNpc.id}。`
-    : '等店主添加 NPC 后，就可以直接找他们聊天。'
   return {
     id: `host-guide-${timestamp}`,
     role: 'assistant',
-    content: hasTasks
-      ? `我是店长，欢迎来到${roomName || tavern?.name || '这间空间'}。可以先在公共频道和大家打招呼，${mentionHint} 这间空间现在有任务，可以从任务入口开始。`
-      : `我是店长，欢迎来到${roomName || tavern?.name || '这间空间'}。可以先在公共频道和大家打招呼，${mentionHint} 想私聊就点左侧某个 NPC。`,
+    content: `欢迎来到${roomName || tavern?.name || '这间空间'}。`,
     timestamp,
     character: SHOPKEEPER_CHARACTER,
     expression: DEFAULT_EXPRESSION,
@@ -471,7 +460,7 @@ function CharacterSidebar({ characters, selectedChar, activeChatChannel = 'publi
         <div className="char-avatar public-channel-icon">👥</div>
         <div className="char-info">
           <div className="char-name">公共聊天</div>
-          <div className="char-archetype muted">@NPC名 找指定角色</div>
+          <div className="char-archetype muted">吧台这边，大家都在。</div>
         </div>
       </button>
 
@@ -782,11 +771,11 @@ function ChatInputArea({ onSend, sending, character, placeholder, voiceConfig, t
           </button>
         </div>
       </div>
-      <div className="input-hints muted">
-        <span>Enter 发送</span>
-        <span>Shift+Enter 换行</span>
-        {voiceEnabled && <span>🎤 语音输入</span>}
-      </div>
+      {voiceEnabled ? (
+        <div className="input-hints muted">
+          <span>🎤 语音输入</span>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -1744,10 +1733,31 @@ export default function TavernChatRoom({
     }
   }
 
+  function ensurePrivateEntranceMessage(char) {
+    if (!char?.id) return
+    setMessages((prev) => {
+      const existing = prev.some((message) => (
+        message.channel === 'private' && message.character?.id === char.id
+      ))
+      if (existing) return prev
+      return [
+        ...prev,
+        buildAssistantMessage({
+          id: `entrance-private-${char.id}-${Date.now()}`,
+          content: entranceReactionContent(char, roomName || tavern?.name),
+          timestamp: Date.now(),
+          character: char,
+          channel: 'private',
+        }),
+      ]
+    })
+  }
+
   function handleSelectChar(char) {
     if (char.id === selectedChar?.id && activeChatChannel === 'private') return
     setSelectedChar(char)
     setActiveChatChannel('private')
+    ensurePrivateEntranceMessage(char)
     resetExpressionForCharacter(char)
     if (onCharacterSwitch) {
       onCharacterSwitch(char)
@@ -1763,6 +1773,7 @@ export default function TavernChatRoom({
   function handleAvatarClick(char) {
     setSelectedChar(char)
     setActiveChatChannel('private')
+    ensurePrivateEntranceMessage(char)
     setShowDetail(true)
   }
 
@@ -1856,7 +1867,7 @@ export default function TavernChatRoom({
                   <div className="char-bar-name">{activeChatChannel === 'public' ? '公共聊天' : selectedChar.name}</div>
                   <div className="char-bar-archetype muted">
                     {activeChatChannel === 'public'
-                      ? '默认入口，可 @NPC名 点名，也可点左侧 NPC 私聊'
+                      ? '吧台这边，大家都在。'
                       : groupChatEnabled
                       ? `${characters.length} 个角色会按${getGroupStrategyLabel(groupChatConfig.strategy)}接话`
                       : selectedChar.personality?.slice(0, 30) || selectedChar.archetype || ''}
@@ -1999,7 +2010,7 @@ export default function TavernChatRoom({
                         <p>
                           {groupChatEnabled
                             ? '先把一句话放到桌上，角色们会自然接过去。'
-                            : '打个招呼，或从下方抽一张玩法卡。'}
+                            : '随便说点什么，TA 会接住你的话。'}
                         </p>
                       </div>
                     </div>
@@ -2017,7 +2028,7 @@ export default function TavernChatRoom({
                     <div className="chat-start-strip" aria-label="可选开局氛围">
                       <span>{playMode.icon} {playMode.label}</span>
                       <span>闲聊一会儿</span>
-                      <span>抽一张玩法卡</span>
+                      <span>坐一会儿</span>
                     </div>
                   </div>
                 )}
@@ -2052,7 +2063,7 @@ export default function TavernChatRoom({
                 onSend={handleSend}
                 sending={sending}
                 character={selectedChar}
-                placeholder={activeChatChannel === 'public' ? '公共聊天：直接发言，或输入 @NPC名 等回复' : undefined}
+                placeholder={activeChatChannel === 'public' ? '在这里说点什么…' : undefined}
                 voiceConfig={voiceConfig}
                 tavernId={roomId}
                 quickPrompts={finalQuickPrompts}

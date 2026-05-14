@@ -312,12 +312,25 @@ function HeroPosterPreview() {
 export default function HomeRoute() {
   const [result, setResult] = useState<TavernListResponse>(EMPTY_LIST_RESULT)
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setError("")
     listTaverns({ limit: HOMEPAGE_TAVERN_LIST_LIMIT, offset: 0 })
-      .then((data) => { if (!cancelled) setResult(data) })
-      .catch((err) => { if (!cancelled) setError(errorMessage(err)) })
+      .then((data) => {
+        if (!cancelled) {
+          setResult(data)
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(errorMessage(err))
+          setLoading(false)
+        }
+      })
     return () => { cancelled = true }
   }, [])
 
@@ -379,6 +392,7 @@ export default function HomeRoute() {
 
   const referenceProps = {
     featuredCitySlices: homepage.featuredCitySlices,
+    isLoading: loading,
     worldPulseItems,
     dailyQuote,
     onlineEntities,

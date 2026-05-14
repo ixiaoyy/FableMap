@@ -43,7 +43,7 @@ export default function QuestsRoute() {
               </div>
               <CardTitle className="text-4xl font-black leading-tight">探索指南</CardTitle>
               <CardDescription className="text-base leading-7">
-                这是空间的轻量导览，不是传统 RPG 主线、数值成长、排名或会保存的任务系统。它只帮你找到下一间真实坐标空间、认识 NPC，并把回访提示留在具体空间体验里。
+                这是给新手的轻量导览：帮你找到下一间真实坐标空间、认识 NPC，并把回访提示留在具体空间里。
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -68,7 +68,7 @@ export default function QuestsRoute() {
                   边界说明
                 </p>
                 <p className="mt-2 text-sm leading-7 text-theme-muted">
-                  本页只读取当前公开空间生成下一步建议；不新增持久化 Schema，不保存访客完成记录，不发放奖励，不展示任何排名。
+                  这里只给出探索建议，不记录完成进度，不发放奖励，也不展示排名。
                 </p>
               </div>
 

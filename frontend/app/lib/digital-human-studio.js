@@ -11,7 +11,7 @@ export const DIGITAL_HUMAN_DRAFT_STYLE_TAGS = [
 export const DIGITAL_HUMAN_DRAFT_FORBIDDEN = [
   "不要现实名人或他人肖像复刻",
   "不要声称未经确认的本人授权",
-  "不要索取手机号、身份证、私人地址或 API Key",
+  "不要索取手机号、身份证、私人地址或服务密钥",
   "不要直接生成真人视频、语音克隆或深度伪造",
 ]
 
@@ -88,7 +88,7 @@ export function buildDigitalHumanIdentityPack(character = {}) {
   )
   const boundary = firstFilled(
     [systemPrompt],
-    "尊重授权和隐私；不冒充未授权真人；不索取手机号、私人地址、身份证或 API Key。",
+    "尊重授权和隐私；不冒充未授权真人；不索取手机号、私人地址、身份证或服务密钥。",
   )
   const opening = firstMes || `大家好，我是${name}。今天我会用一个清晰、可复用的身份和你见面。`
   const tagsLine = tags.length ? tags.join(" / ") : "数字人 / 可迁移档案 / 视频出镜"

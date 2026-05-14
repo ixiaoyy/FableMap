@@ -82,9 +82,9 @@ export default function CreateRoute() {
     ? "AI 草稿只填入可编辑表单；店主检查并点击「创建空间」后，才会保存为数字人工作室和档案师 NPC。后续数字人档案仍需用户确认后再导出。"
     : `AI 草稿只填入可编辑表单；店主检查并点击「创建空间」后，才会保存为正式${activePlaceTypeName}和首个 NPC。`
   const activeDraftGuardrails = tavernDraftLifecycle.guardrails.map((item) =>
-    item.replace("公开 Tavern payload", `公开${activePlaceTypeName} payload`).replace("空间", activePlaceTypeName),
+    item.replace("空间", activePlaceTypeName),
   )
-  const activeRequiredChecklist = ["真实坐标", `店主确认的${activePlaceTypeName}内容`, "角色卡可导出", "API Key 不向访客暴露"]
+  const activeRequiredChecklist = ["真实坐标", `店主确认的${activePlaceTypeName}内容`, "角色卡可导出", "密钥不向访客展示"]
   const activePlaceTypeChecklist = [
     { icon: MapPinned, title: `${activePlaceTypeName}真实坐标`, text: "先钉住地图锚点、地点类型和入口规则。" },
     { icon: Sparkles, title: `${activePlaceTypeName}内容`, text: `填写店主确认的名称、简介与${activePlaceTypeName}场景氛围。` },
@@ -313,7 +313,7 @@ export default function CreateRoute() {
         <div className="rounded-[2.2rem] border border-theme-border bg-theme-card p-5 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-6">
           <div className="mb-6 flex flex-col gap-4 border-b border-theme-border pb-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-theme-accent-text">Tavernkeeper console</p>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-theme-accent-text">空间创建台</p>
               <h1 className="mt-2 text-3xl font-black text-theme-primary sm:text-4xl">开一间真实坐标上的空间</h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-theme-muted">
                 表单只保存店主确认的内容：名称、场景、坐标、访问方式和首个 NPC。平台提供结构，不替店主创作故事。
@@ -480,7 +480,7 @@ export default function CreateRoute() {
                   <div>
                     <p className="text-sm font-black text-theme-primary">特殊空间模板</p>
                     <p className="mt-1 text-xs leading-5 text-theme-muted">
-                      这是薄特殊空间类型层：只决定展示、推荐布局和 owner-confirmed 初始文案，不新增 Schema / API。
+                      这是可选的体验方向：只影响推荐文案和页面呈现，最终内容仍由店主确认。
                     </p>
                   </div>
                   <span className={`inline-flex w-fit rounded-full border px-3 py-1.5 text-xs font-bold ${activeSpecialTavernType?.badgeClass || "border-theme-border bg-theme-card text-theme-muted"}`}>
@@ -507,7 +507,7 @@ export default function CreateRoute() {
                         <span className="mt-2 block text-sm font-black text-theme-primary">{specialType.icon} {specialType.label}</span>
                         <span className="mt-1 block text-xs leading-5 text-theme-muted">{specialType.summary}</span>
                         <span className="mt-2 block text-[0.7rem] leading-5 text-theme-accent-text">
-                          推荐 place_type={specialType.place_type} · layout_style={specialType.layoutStyle}
+                          推荐方向：{specialType.label}
                         </span>
                       </button>
                     )
@@ -539,7 +539,7 @@ export default function CreateRoute() {
                   <div>
                     <p className="text-sm font-black text-theme-primary">经营意图</p>
                     <p className="mt-1 text-xs leading-5 text-theme-muted">
-                      这里选择“这间空间主要帮访客完成什么”；它不改 place_type / Schema，也不会绕过店主确认发布内容。
+                      这里选择“这间空间主要帮访客完成什么”；最终内容仍由店主确认后再发布。
                     </p>
                   </div>
                   <span className="inline-flex w-fit rounded-full border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-bold text-theme-primary">
@@ -662,7 +662,7 @@ export default function CreateRoute() {
                   </p>
                 </div>
                 <span className="w-fit rounded-full border border-emerald-300/24 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-50">
-                  不改 Schema / API
+                  由店主确认
                 </span>
               </div>
               {error ? <p className="rounded-2xl border border-red-300/30 bg-red-300/10 p-3 text-sm text-red-100">{error}</p> : null}
@@ -688,8 +688,8 @@ export default function CreateRoute() {
                 <p className="mt-1 text-xs text-theme-primary">经营意图：{activeIntent.title} · {activeIntent.summary}</p>
               </div>
             </div>
-            <section aria-label="AI 草稿生命周期" className="mb-4 rounded-2xl border border-theme-border bg-theme-card p-3">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-100/65">{activePlaceTypeName}草稿生命周期</p>
+            <section aria-label="AI 草稿确认流程" className="mb-4 rounded-2xl border border-theme-border bg-theme-card p-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-100/65">{activePlaceTypeName}草稿确认流程</p>
               <div className="mt-3 grid gap-2">
                 {tavernDraftLifecycle.steps.map((step) => (
                   <div key={step.id} className="rounded-xl border border-theme-border bg-theme-card px-3 py-2">
@@ -726,7 +726,7 @@ export default function CreateRoute() {
                     <DialogHeader>
                       <DialogTitle>配置默认 AI 服务</DialogTitle>
                       <DialogDescription>
-                        设置用于生成空间草稿的默认 AI。API Key 仅你可见，不会被其他用户看到。
+                        设置用于生成空间草稿的默认 AI。服务密钥仅你可见，不会被其他用户看到。
                       </DialogDescription>
                     </DialogHeader>
                     <div className="mt-4">

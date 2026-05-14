@@ -1,15 +1,10 @@
 import type { ClientLoaderFunctionArgs } from "react-router"
-import { ArrowRight, Copy, Share2 } from "lucide-react"
+import { Copy, Share2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { Link, useLoaderData } from "react-router"
+import { useLoaderData } from "react-router"
 
 import { TavernChatWorkbench } from "../features/tavern-chat-workbench"
-import { NeighborhoodRumorBubble } from "../components/NeighborhoodRumorBubble"
-import { TavernEngagementPanel } from "../components/TavernEngagementPanel"
-import { buildCreatorConversionLink } from "../lib/creator-conversion.js"
-import { DIGITAL_HUMAN_STUDIO_TYPE_ID } from "../lib/digital-human-studio.js"
 import { fallbackRoleplayState } from "../lib/roleplay-state"
-import { deriveSpecialTavernTypeDisplay } from "../lib/special-tavern-types.js"
 import { buildTavernShareDisplay, buildTavernSharePayload } from "../lib/tavern-share.js"
 import {
   createVisitorNote,
@@ -92,7 +87,7 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
       })
       .catch(() => {
         if (cancelled) return
-        setShareStatus("当前使用本地邀请文案；公开分享接口暂不可用。")
+        setShareStatus("当前先使用本地邀请文案；分享信息稍后再同步。")
       })
 
     return () => {
@@ -124,7 +119,7 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
               邀请链接
             </CardTitle>
             <CardDescription className="mt-2">
-              复制当前空间入口给朋友或社群。文案只使用店主公开填写的信息，不生成或改写空间内容。
+              复制这间空间的入口给朋友。邀请文案只整理店主已经公开的内容。
             </CardDescription>
           </div>
           <Button type="button" variant="secondary" onClick={handleCopyShareText}>
@@ -160,74 +155,6 @@ function TavernShareCard({ tavern }: { tavern: Tavern }) {
   )
 }
 
-function CreatorConversionCard({ tavern }: { tavern: Tavern }) {
-  const createLink = useMemo(() => buildCreatorConversionLink(tavern), [tavern])
-
-  return (
-    <Card className="min-w-0 overflow-hidden border-theme-accent-border bg-theme-accent-bg">
-      <CardHeader>
-        <CardTitle>也在附近开一间自己的空间</CardTitle>
-        <CardDescription className="mt-2">
-          只带入这处真实空间锚点的坐标/地址，不复制原空间名称、简介、角色或场景内容。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="rounded-2xl border border-theme-border bg-theme-card p-3 text-sm leading-6 text-violet-50/72">
-          如果这间空间让你有了灵感，可以用同一片现实区域开一间属于自己的空间；内容仍由你自己确认。
-        </p>
-        <Button asChild>
-          <Link to={createLink}>
-            开自己的空间
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
-function SpecialTavernTypeCard({ tavern }: { tavern: Tavern }) {
-  const specialTavernType = deriveSpecialTavernTypeDisplay(tavern)
-
-  if (!specialTavernType) return null
-  const isDigitalHumanStudio = specialTavernType.id === DIGITAL_HUMAN_STUDIO_TYPE_ID
-
-  return (
-    <Card data-special-tavern-type-card={specialTavernType.id} className="min-w-0 overflow-hidden border-amber-300/18 bg-amber-300/8">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span aria-hidden="true">{specialTavernType.icon}</span>
-          {specialTavernType.label}
-        </CardTitle>
-        <CardDescription className="mt-2">
-          {specialTavernType.summary}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="rounded-2xl border border-theme-border bg-theme-card p-3 text-sm leading-6 text-violet-50/72">
-          {specialTavernType.description}
-        </p>
-        <div className="flex flex-wrap gap-2 text-xs font-bold">
-          <span className={`rounded-full border px-2.5 py-1 ${specialTavernType.badgeClass}`}>
-            layout_style={specialTavernType.layoutStyle}
-          </span>
-          <span className="rounded-full border border-theme-border bg-theme-card px-2.5 py-1 text-theme-muted">
-            place_type={tavern.place_type || "tavern"}
-          </span>
-        </div>
-        {isDigitalHumanStudio ? (
-          <div className="rounded-2xl border border-cyan-300/18 bg-cyan-300/8 p-3 text-sm leading-6 text-cyan-50/78">
-            <p className="font-bold text-cyan-50">可迁移数字人档案</p>
-            <p className="mt-1">
-              这里的 NPC 会辅助整理身份、口吻、外观风格和授权边界；确认后可映射为 FableMap / SillyTavern 角色卡，也可复制为视频 / 短剧出镜 prompt。
-            </p>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  )
-}
-
 function VisitorFeedbackCard({ tavern }: { tavern: Tavern }) {
   const [visitorId, setVisitorId] = useState(DEFAULT_VISITOR_ID)
   const [nickname, setNickname] = useState("旅人")
@@ -254,13 +181,13 @@ function VisitorFeedbackCard({ tavern }: { tavern: Tavern }) {
       <CardHeader>
         <CardTitle>给店主的私密反馈</CardTitle>
         <CardDescription className="mt-2">
-          这不是公开留言墙：反馈只发送给本空间店主，不支持访客互相回复、点赞或私信。
+          这条反馈只会送到店主那里，不会公开展示。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid gap-3 md:grid-cols-2">
           <label className="space-y-1.5 text-sm">
-            <span className="text-theme-muted">Visitor ID</span>
+            <span className="text-theme-muted">你的访客标识</span>
             <input value={visitorId} onChange={(event) => setVisitorId(event.target.value)} className="w-full rounded-2xl border border-theme-border bg-theme-card px-4 py-3 text-theme-primary outline-none focus:border-theme-accent-border" />
           </label>
           <label className="space-y-1.5 text-sm">
@@ -298,11 +225,7 @@ export default function TavernRoute() {
             isOwner={isOwner}
             publicPanel={
               <div className="space-y-4">
-                <SpecialTavernTypeCard tavern={tavern} />
-                <TavernEngagementPanel tavern={tavern} currentUserId={currentUserId} />
                 <TavernShareCard tavern={tavern} />
-                <NeighborhoodRumorBubble tavernId={tavern.id} limit={3} />
-                <CreatorConversionCard tavern={tavern} />
                 <VisitorFeedbackCard tavern={tavern} />
               </div>
             }
@@ -317,7 +240,7 @@ export default function TavernRoute() {
             </CardHeader>
             <CardContent>
               <p className="rounded-2xl border border-theme-border bg-theme-card p-4 text-sm leading-6 text-violet-50/70">
-                请确认空间链接、访问权限或当前用户身份。店主可从管理页进入并携带 owner_id。
+                请确认空间链接是否正确，或让店主重新分享入口。
               </p>
             </CardContent>
           </Card>

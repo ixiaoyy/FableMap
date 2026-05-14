@@ -1,8 +1,8 @@
 export const NOTIFICATION_CENTER_GUARDRAILS = [
-  '只显示当前身份相关通知',
+  '只显示与你有关的通知',
   '店主/访客边界清晰',
   '不做营销推送或广告复活',
-  '不扩展频控不明的主动触达',
+  '不突然打扰访客',
 ]
 
 export const NOTIFICATION_FILTERS = [
@@ -32,7 +32,7 @@ export const NOTIFICATION_TYPE_META = {
     label: '回访反馈',
     audience: 'owner',
     tone: 'fuchsia',
-    helper: '店主侧事件：访客留下 owner-visible 反馈。',
+    helper: '店主侧事件：访客留下私密反馈。',
   },
   guest_reply: {
     icon: '↩️',
@@ -68,7 +68,7 @@ export function notificationTypeMeta(type) {
     label: '通知',
     audience: 'owner',
     tone: 'slate',
-    helper: '当前身份相关事件。',
+    helper: '与你有关的事件。',
   }
 }
 

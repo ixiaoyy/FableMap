@@ -48,11 +48,11 @@ export function NotificationCenterPanel({
           <div className="min-w-0">
             <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-100">
               <BellRing className="h-3.5 w-3.5" />
-              Notification center
+              通知中心
             </div>
             <CardTitle className="text-3xl font-black leading-tight">通知中心</CardTitle>
             <CardDescription className="mt-3 max-w-2xl text-base leading-7">
-              复用现有通知 API / WebSocket，只整理当前身份相关事件；不做营销推送、广告复活或频控不明的主动触达。
+              这里只整理与你当前身份有关的空间事件；不会推送广告或营销提醒。
             </CardDescription>
           </div>
           <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/50 p-4 text-sm text-violet-100/70">
@@ -60,7 +60,7 @@ export function NotificationCenterPanel({
               {connected ? <Wifi className="h-4 w-4 text-emerald-200" /> : <WifiOff className="h-4 w-4 text-amber-200" />}
               {connected ? "实时连接中" : loading ? "连接中..." : "等待实时连接"}
             </span>
-            <span className="text-xs">当前身份：<code className="text-cyan-100">{userId || "未识别"}</code></span>
+            <span className="text-xs">当前接收人：{userId ? "已识别" : "未识别"}</span>
           </div>
         </div>
 
@@ -77,7 +77,7 @@ export function NotificationCenterPanel({
       <CardContent className="space-y-5 p-5">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryTile label="未读" value={effectiveUnread} helper="可一键标记已读" />
-          <SummaryTile label="全部事件" value={view.total} helper="仅当前身份" />
+          <SummaryTile label="全部事件" value={view.total} helper="只与你有关" />
           <SummaryTile label="店主侧" value={view.ownerCount} helper="空间维护 / 反馈" />
           <SummaryTile label="访客侧" value={view.visitorCount} helper="个人探索事件" />
         </div>
@@ -112,11 +112,11 @@ export function NotificationCenterPanel({
         </div>
 
         {loading ? (
-          <EmptyState title="正在连接通知流" detail="会优先使用现有 WebSocket，连接后同步待处理通知。" />
+          <EmptyState title="正在连接通知流" detail="连接后会同步待处理通知。" />
         ) : filteredItems.length === 0 ? (
           <EmptyState
             title={view.total === 0 ? "暂无通知" : "当前筛选没有通知"}
-            detail="通知中心只呈现与当前身份相关的事件，不会制造公开动态或营销触达。"
+            detail="通知中心只呈现与你有关的事件，不会制造公开动态或营销触达。"
           />
         ) : (
           <div className="grid gap-3">

@@ -377,7 +377,7 @@ export default function OwnerRoute() {
             <MetricCard
               label="访客反馈"
               value={formatNumber(metrics.visitorNotes)}
-              helper="owner-visible notes，不是公开留言墙"
+              helper="私密反馈，不是公开留言墙"
               icon={ClipboardList}
             />
             <MetricCard
@@ -460,7 +460,7 @@ export default function OwnerRoute() {
             <Card>
               <CardHeader>
                 <CardTitle>最近会话</CardTitle>
-                <CardDescription>只展示 owner 可见会话摘要，不读取访客私密记忆。</CardDescription>
+                <CardDescription>只展示店主可见的会话摘要，不读取访客私密记忆。</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {summary.recentSessions.length ? summary.recentSessions.map((session) => (
@@ -488,7 +488,7 @@ export default function OwnerRoute() {
           <Card>
             <CardHeader>
               <CardTitle>访客给店主的反馈</CardTitle>
-              <CardDescription>只汇总 owner-visible notes，帮助店主复盘体验；不构成公开留言墙或访客社交。</CardDescription>
+              <CardDescription>只汇总访客私密反馈，帮助店主复盘体验；不构成公开留言墙或访客社交。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.latestFeedback.length ? summary.latestFeedback.map((note) => (

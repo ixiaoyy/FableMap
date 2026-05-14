@@ -1,8 +1,7 @@
 /**
  * SpaceCapabilityHubPanel
  *
- * Renders capability cards in "更多空间功能" section of TavernChatWorkbench.
- * Based on PRD approach D1/D2 (轻量版空间能力聚合枢纽).
+ * Renders optional visitor actions in TavernChatWorkbench.
  */
 
 import { useState } from "react"
@@ -22,7 +21,7 @@ const CATEGORY_LABELS: Record<CapabilityCard["category"], { label: string; icon:
   chat_core: { label: "聊天核心", icon: "💬", description: "邀请、回访、反馈" },
   interactive: { label: "互动玩法", icon: "🎮", description: "剧情小剧场与任务入口" },
   work_assistant: { label: "工作助手", icon: "🛠️", description: "帮你整理思路和待办" },
-  mini_game: { label: "小游戏工坊", icon: "🎯", description: "经典 OSS 小游戏白名单" },
+  mini_game: { label: "轻松小游戏", icon: "🎯", description: "想换个节奏时再打开" },
 }
 
 function CardGridItem({
@@ -113,25 +112,23 @@ export function SpaceCapabilityHubPanel({ tavern, onCapabilityClick }: SpaceCapa
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100/62">Space Capabilities</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100/62">更多入口</p>
           <p className="mt-1 text-sm font-semibold text-violet-50/72">
-            {tavern.place_type ? `${tavern.place_type} · ` : ""}{tavern.layout_style ? `${tavern.layout_style} 布局` : ""}空间能力聚合
+            这里可以继续探索这间空间
           </p>
         </div>
         <span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-xs font-bold text-violet-100">
-          {sortedCards.length} 个能力
+          {sortedCards.length} 个入口
         </span>
       </div>
 
       {/* Place type badge */}
       {tavern.place_type && (
         <div className="rounded-2xl border border-cyan-300/18 bg-cyan-300/8 p-3">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100/62">当前空间类型</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-50">
-            {tavern.place_type} {tavern.layout_style ? `· ${tavern.layout_style}` : ""}
-          </p>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100/62">空间提示</p>
+          <p className="mt-1 text-sm font-semibold text-cyan-50">已根据这间空间的氛围整理入口</p>
           <p className="mt-1 text-xs text-cyan-100/62">
-            能力卡片已按空间类型自动排序
+            选择一个想继续的方向即可
           </p>
         </div>
       )}
@@ -145,7 +142,7 @@ export function SpaceCapabilityHubPanel({ tavern, onCapabilityClick }: SpaceCapa
 
       {/* Footer hint */}
       <p className="text-center text-[0.7rem] text-violet-100/38">
-        点击卡片使用能力 · 完成可回到聊天主线
+        选择一个入口继续探索
       </p>
     </div>
   )

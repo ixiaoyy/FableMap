@@ -19,7 +19,7 @@ export const PLACE_TYPES = [
     discoverable: true,
     tone: "夜色、霓虹、吧台与旧友重逢",
     cardClass: "border-cyan-300/26 bg-cyan-300/10 text-cyan-50",
-    description: "默认兼容类型，延续当前空间主线。",
+    description: "适合常规接待、聊天和回访体验。",
   },
   {
     id: "cafe",

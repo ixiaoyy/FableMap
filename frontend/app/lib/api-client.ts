@@ -44,9 +44,9 @@ export async function readApiJson<T>(path: string, init: ApiInit = {}): Promise<
     } catch {
       const snippet = text.trim().slice(0, 80)
       if (!response.ok) {
-        throw new Error(`API 请求失败（${response.status}）：${snippet || response.statusText || "非 JSON 响应"}`)
+        throw new Error(`请求失败（${response.status}）：${snippet || response.statusText || "暂时无法读取返回内容"}`)
       }
-      throw new Error(`API 返回了无效 JSON：${snippet}`)
+      throw new Error(`返回内容暂时无法读取：${snippet}`)
     }
   }
   if (!response.ok) {

@@ -234,16 +234,16 @@ export function RelationshipGraphPanel({
       <CardHeader>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100/55">Relationship graph</p>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100/55">关系图谱</p>
             <CardTitle className="mt-1">关系图谱治理台</CardTitle>
             <CardDescription className="mt-2 max-w-3xl leading-6">
-              只在 owner-only 管理路由中维护空间/角色关系边。跨 owner 的单边声明会明确标为 perspective，不会被当成平台共同真相。
+              这里用于维护本空间与角色之间的关系。涉及其他店主空间时，只作为本店主的备注，不会变成平台共同设定。
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
               <GitBranch className="h-3.5 w-3.5" />
-              {edges.length} edges
+              {edges.length} 条关系
             </span>
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/24 bg-amber-300/10 px-3 py-1 text-xs font-black text-amber-100">
               <Sparkles className="h-3.5 w-3.5" />
@@ -255,7 +255,7 @@ export function RelationshipGraphPanel({
       <CardContent className="space-y-5">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
           <label className="space-y-1.5 text-sm">
-            <span className="text-violet-100/65">Owner ID</span>
+            <span className="text-violet-100/65">店主标识</span>
             <input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
           </label>
           <Button type="button" variant="secondary" disabled={busy === "load"} className="self-end" onClick={() => loadEdges()}>

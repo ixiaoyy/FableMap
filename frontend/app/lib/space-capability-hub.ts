@@ -1,8 +1,7 @@
 /**
  * Space Capability Hub
  *
- * Maps place_type + layout_style to a set of capability cards shown in TavernChatWorkbench.
- * Based on PRD approach D1/D2 (轻量版空间能力聚合枢纽).
+ * Maps place_type + layout_style to optional visitor action cards in TavernChatWorkbench.
  *
  * 4 layers:
  * 1. 聊天核心 (Chat Core)       — invite/revisit feedback, always shown

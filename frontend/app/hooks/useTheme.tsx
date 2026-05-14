@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
+import { useLocation } from "react-router"
 
 type Theme = "dark" | "light"
 
@@ -9,30 +10,34 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
+function savedTheme(): Theme {
+  if (typeof window === "undefined") return "dark"
+  return localStorage.getItem("fablemap-theme") === "light" ? "light" : "dark"
+}
+
+function supportsLightTheme(pathname: string) {
+  return pathname === "/" || pathname === "/discover" || pathname.startsWith("/discover/")
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("fablemap-theme") as Theme) || "dark"
-    }
-    return "dark"
-  })
+  const location = useLocation()
+  const [selectedTheme, setSelectedTheme] = useState<Theme>(savedTheme)
+  const effectiveTheme: Theme = supportsLightTheme(location.pathname) ? selectedTheme : "dark"
 
   useEffect(() => {
     const root = window.document.documentElement
-    if (theme === "light") {
-      root.classList.add("light")
-    } else {
-      root.classList.remove("light")
-    }
-    localStorage.setItem("fablemap-theme", theme)
-  }, [theme])
+    root.classList.toggle("light", effectiveTheme === "light")
+    root.classList.toggle("dark", effectiveTheme === "dark")
+    root.setAttribute("data-theme", effectiveTheme)
+    localStorage.setItem("fablemap-theme", selectedTheme)
+  }, [effectiveTheme, selectedTheme])
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"))
+    setSelectedTheme((prev) => (prev === "dark" ? "light" : "dark"))
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: effectiveTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

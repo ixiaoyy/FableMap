@@ -132,7 +132,7 @@ function RoleplayPanel({
           </div>
           <div className="grid min-w-0 gap-3">
           <label className="min-w-0 space-y-1.5 text-sm">
-            <span className="text-violet-100/65">Owner ID</span>
+            <span className="text-violet-100/65">店主标识</span>
             <input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
           </label>
           <label className="space-y-1.5 text-sm">
@@ -163,11 +163,11 @@ function RoleplayPanel({
           </div>
           <div className="grid min-w-0 gap-3">
           <label className="min-w-0 space-y-1.5 text-sm">
-            <span className="text-violet-100/65">Visitor ID</span>
+            <span className="text-violet-100/65">访客标识</span>
             <input value={visitorId} onChange={(event) => setVisitorId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
           </label>
           <label className="min-w-0 space-y-1.5 text-sm">
-            <span className="text-violet-100/65">Player name</span>
+            <span className="text-violet-100/65">访客昵称</span>
             <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
           </label>
           <label className="min-w-0 space-y-1.5 text-sm">
@@ -424,7 +424,7 @@ function PlayPackPanel({ tavern }: { tavern: Tavern }) {
 
         <section className="mt-4 space-y-3 rounded-2xl border border-amber-300/12 bg-amber-300/[0.045] p-4">
           <label className="min-w-0 space-y-1.5 text-sm">
-            <span className="text-amber-100/65">Owner ID (验证权限)</span>
+            <span className="text-amber-100/65">店主标识（用于确认权限）</span>
             <input
               value={ownerId}
               onChange={(event) => setOwnerId(event.target.value)}
@@ -496,13 +496,13 @@ function OwnerVisitorNotesPanel({ tavern }: { tavern: Tavern }) {
       <CardHeader>
         <CardTitle>访客反馈管理</CardTitle>
         <CardDescription className="mt-2">
-          只汇总 owner-visible notes，帮助店主复盘体验；这不是公开留言墙，也不支持访客互相回复、点赞或私信。
+          只汇总访客私密反馈，帮助店主复盘体验；这不是公开留言墙，也不支持访客互相回复、点赞或私信。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
           <label className="space-y-1.5 text-sm">
-            <span className="text-violet-100/65">Owner ID</span>
+            <span className="text-violet-100/65">店主标识</span>
             <input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
           </label>
           <Button type="button" variant="secondary" disabled={busy === "list"} className="self-end" onClick={handleLoadOwnerNotes}>
@@ -634,12 +634,12 @@ function PlaceHomePanel({ tavern }: { tavern: Tavern }) {
             ? "Home 是受控真实坐标空间。家庭成员默认不对话；学生-学校只是关系类型之一，送往其他地点也会先生成审批关系。"
             : isSchool
               ? "学校只展示已批准的成员摘要；跨主人入学必须由学校主人批准。"
-              : "目标地点只处理 owner 可见的待审批关系；这不是好友、私信或公开社交图谱。"}
+              : "目标地点只处理店主可见的待审批关系；这不是好友、私信或公开社交图谱。"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <label className="space-y-1.5 text-sm">
-          <span className="text-violet-100/65">Owner ID</span>
+          <span className="text-violet-100/65">店主标识</span>
           <input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-cyan-300/60" />
         </label>
 
@@ -829,7 +829,7 @@ function StateCardOwnerPanel({ tavern }: { tavern: Tavern }) {
           </div>
           <Button type="button" onClick={() => setOpen(true)}>
             <BookOpen className="h-4 w-4" />
-            打开状态卡面板
+            查看状态卡
           </Button>
         </div>
       </CardHeader>
@@ -929,15 +929,15 @@ export function TavernOwnerManagement({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100/62">Dedicated owner mode</p>
-              <CardTitle>只处理管理，不默认聊天</CardTitle>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100/62">店主管理</p>
+              <CardTitle>这里专门处理空间管理</CardTitle>
               <CardDescription className="mt-2">
-                这里是本空间 owner-only 的治理台。访客聊天、密码入场和 NPC 对话保留在独立访客视角。
+                访客聊天、密码入场和 NPC 对话保留在访客视角；这里只放店主需要处理的事项。
               </CardDescription>
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
               <UserCheck className="h-3.5 w-3.5" />
-              {tavern.owner_id || "owner"}
+              店主身份：{tavern.owner_id || "未确认"}
             </span>
           </div>
         </CardHeader>

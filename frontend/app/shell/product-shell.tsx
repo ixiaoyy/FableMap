@@ -2,10 +2,9 @@ import { ClipboardList, Compass, Home, MapPinned, PlusCircle, Sparkles, UserRoun
 import { NavLink } from "react-router"
 
 import { cn } from "../lib/utils"
-import { ThemeToggle } from "../components/ThemeToggle"
 
-// Bottom dock order: visitor-first mainline = 首页 / 发现 / 进店 / 指南 / 管理
-// 桌面顶部保留“创建空间”；移动底部只暴露访客主线标签，避免把店主创建挤进第一屏。
+// Bottom dock order keeps the visitor's everyday actions within thumb reach.
+// Desktop navigation can expose creation/management without crowding the first mobile screen.
 const bottomDockOrder = [
   { to: "/", label: "首页", icon: Home },
   { to: "/discover", label: "发现", icon: Compass },
@@ -31,8 +30,8 @@ const MOBILE_CRITICAL_FLOW_GUIDES: Record<string, {
 }> = {
   Discover: {
     title: "先找到一个可进入的坐标",
-    helper: "移动首屏只保留搜索、筛选、预览入店这一条主线，更多面板往下看。",
-    primaryLabel: "查看发现主线",
+    helper: "先搜索、筛选，再选择一个想进入的坐标。更多推荐和回访内容可以继续往下看。",
+    primaryLabel: "查看推荐坐标",
     href: "#discover-mainline",
   },
   Guide: {
@@ -44,19 +43,19 @@ const MOBILE_CRITICAL_FLOW_GUIDES: Record<string, {
   Create: {
     title: "先钉真实坐标，再填内容",
     helper: "移动端优先完成坐标、名称、首个 NPC；AI 草稿始终等店主确认。",
-    primaryLabel: "开始创建主线",
+    primaryLabel: "开始创建空间",
     href: "#create-mainline",
   },
   Tavern: {
     title: "先选 NPC，直接开聊",
-    helper: "移动首屏聚焦角色列表和聊天输入；空间资料与公开功能折叠在下方，配置/审批进入专用管理页，不把高级管理挤进第一屏。",
-    primaryLabel: "进入聊天主线",
+    helper: "先选择想聊天的角色，然后直接开始对话。空间资料、邀请和反馈入口都在下方。",
+    primaryLabel: "开始聊天",
     href: "#tavern-mainline",
   },
   Owner: {
     title: "先处理一个店主待办",
-    helper: "移动端先看经营摘要、通知和下一步建议，再展开图表与明细。",
-    primaryLabel: "查看店主主线",
+    helper: "先看最近需要处理的事项，再查看经营摘要和回访记录。",
+    primaryLabel: "查看待办",
     href: "#owner-mainline",
   },
 }
@@ -85,9 +84,6 @@ export function ProductShell({
                 <p className="text-xs text-theme-muted">Cyber life on real coordinates</p>
               </div>
             </NavLink>
-            <div className="lg:hidden">
-              <ThemeToggle />
-            </div>
           </div>
           
           <div className="flex items-center gap-4">
@@ -111,9 +107,6 @@ export function ProductShell({
                 </NavLink>
               ))}
             </nav>
-            <div className="hidden lg:block">
-              <ThemeToggle />
-            </div>
           </div>
         </div>
       </header>
@@ -153,7 +146,7 @@ export function ProductShell({
             className="mb-5 rounded-[1.75rem] border border-theme-accent-border bg-theme-accent-bg p-4 shadow-[0_18px_70px_rgba(34,211,238,0.08)] lg:hidden"
             aria-label="Mobile critical flow"
           >
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-theme-accent-text opacity-70">Mobile first-screen</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-theme-accent-text opacity-70">移动端提示</p>
             <h2 className="mt-2 text-xl font-black leading-tight text-theme-primary">{mobileGuide.title}</h2>
             <p className="mt-2 text-sm leading-6 text-theme-muted">{mobileGuide.helper}</p>
             <a
@@ -167,7 +160,7 @@ export function ProductShell({
         {children}
         <footer className="mt-16 flex flex-col gap-2 border-t border-theme-border pt-6 text-sm text-theme-muted sm:flex-row sm:items-center">
           <MapPinned className="h-4 w-4 text-theme-accent-text opacity-60" />
-          <span>Real coordinate anchored. Owner-authored. AI-powered living spaces.</span>
+          <span>真实坐标锚定 · 内容由店主确认 · AI 负责接待体验</span>
         </footer>
       </div>
     </main>

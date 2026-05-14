@@ -60,7 +60,7 @@ export const CULTIVATION_PLAY_PACK = {
         note: '阅读或留下本地札记即可推进，不会转成装备、货币或战力。',
       },
     ],
-    boundary_note: '这些要求只是本空间的本地说明模板；真正进度应保持访客私有，不进入公开 Tavern payload。',
+    boundary_note: '这些要求只是本空间的说明模板；真正进度只对游客自己可见。',
   },
 
   // NPC 建议

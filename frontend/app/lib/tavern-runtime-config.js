@@ -54,7 +54,7 @@ export function getOrCreateVisitorIdentity(storage = browserStorage()) {
 export function requireExplicitOwnerIdentity(ownerId, action = "店主操作") {
   const identity = normalizeIdentity(ownerId)
   if (!identity) {
-    throw new Error(`${action}需要明确店主身份 owner_id`)
+    throw new Error(`${action}需要先确认店主身份`)
   }
   return identity
 }

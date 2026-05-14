@@ -126,7 +126,7 @@ export function TerritoryManagementDashboard({
                       进入专属空间
                     </button>
                     <button className="flex-1 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-white font-black py-4 px-8 rounded-2xl transition-all shadow-[0_10px_20px_-10px_rgba(245,158,11,0.8)] hover:shadow-[0_15px_25px_-10px_rgba(245,158,11,1)] hover:-translate-y-1 text-lg flex items-center justify-center gap-2 border-2 border-amber-300/50">
-                      <Zap className="w-5 h-5" /> 接入 API
+                      <Zap className="w-5 h-5" /> 开放设置
                     </button>
                     <button className="p-4 bg-white text-slate-400 rounded-2xl hover:text-cyan-500 transition-colors border-2 border-slate-100 hover:border-cyan-200 shadow-sm">
                       <RefreshCw className="w-6 h-6" />
@@ -198,7 +198,7 @@ export function TerritoryManagementDashboard({
               <AnimeFeatureCard icon={<Server />} title="多NPC实例" desc="一个酒馆多人格" color="purple" />
               <AnimeFeatureCard icon={<ShieldCheck />} title="主权保护" desc="领地防碰撞" color="cyan" />
               <AnimeFeatureCard icon={<Puzzle />} title="场景插件" desc="扩展无限可能" color="green" />
-              <AnimeFeatureCard icon={<Code />} title="API接入" desc="高级玩法全支持" color="amber" />
+              <AnimeFeatureCard icon={<Code />} title="开放能力" desc="更多互动入口" color="amber" />
               <AnimeFeatureCard icon={<Users />} title="访客系统" desc="轻松管理记录" color="blue" />
               <AnimeFeatureCard icon={<FolderOpen />} title="资产管理" desc="记忆日志全掌控" color="indigo" />
               <AnimeFeatureCard icon={<Box />} title="独立运行" desc="互不干扰更稳定" color="rose" />
@@ -225,9 +225,9 @@ export function TerritoryManagementDashboard({
               </div>
 
               <div className="space-y-2">
-                <AnimeQuickAction icon={<Gift />} label="免费体验顶级 API" tag="HOT" color="pink" />
+                <AnimeQuickAction icon={<Gift />} label="查看空间礼包" tag="HOT" color="pink" />
                 <AnimeQuickAction icon={<Zap />} label="一键加载二次元预设" color="purple" />
-                <AnimeQuickAction icon={<Puzzle />} label="场景特色插件库" color="cyan" />
+                <AnimeQuickAction icon={<Puzzle />} label="空间互动模板" color="cyan" />
                 <AnimeQuickAction icon={<FolderOpen />} label="空间数字资产管理" color="indigo" />
               </div>
 

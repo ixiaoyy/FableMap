@@ -1255,6 +1255,7 @@ export default function DiscoverRoute() {
         variant="black"
         search={search}
         taverns={filteredTaverns}
+        isLoading={loading}
         sideFeedItems={sideFeedItems}
         onlineEntities={onlineEntities}
         onSearchChange={switchToCardsForSearch}
@@ -1274,6 +1275,7 @@ export default function DiscoverRoute() {
       variant="light"
       search={search}
       taverns={filteredTaverns}
+      isLoading={loading}
       sideFeedItems={sideFeedItems}
       onlineEntities={onlineEntities}
       onSearchChange={switchToCardsForSearch}

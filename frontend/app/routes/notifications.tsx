@@ -22,17 +22,17 @@ export default function NotificationsRoute() {
             <CardHeader>
               <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-theme-border bg-theme-bg px-3 py-1.5 text-xs font-black text-theme-primary">
                 <BellRing className="h-3.5 w-3.5" />
-                持久化通知中心
+                通知中心
               </div>
               <CardTitle className="text-4xl font-black leading-tight">通知中心</CardTitle>
               <CardDescription className="text-base leading-7">
-                复用持久化通知与实时连接能力，只呈现当前身份相关事件，不新增营销推送协议。
+                这里只收集与你有关的空间提醒和实时消息，不会加入广告或营销推送。
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <form className="space-y-3" method="get">
                 <label className="space-y-1.5 text-sm">
-                  <span className="text-theme-muted">当前身份 ID</span>
+                  <span className="text-theme-muted">当前接收人</span>
                   <input
                     name="user_id"
                     defaultValue={userId}
@@ -63,7 +63,7 @@ export default function NotificationsRoute() {
               <div className="rounded-3xl border border-theme-accent-border bg-theme-accent-bg p-4">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-theme-accent-text">边界</p>
                 <p className="mt-2 text-sm leading-7 text-theme-muted">
-                  通知只围绕空间访问、owner-visible 反馈、审批和个人探索状态；不会变成公开社交流，也不会用于广告复活。
+                  通知只围绕空间访问、私密反馈、审批和个人探索状态；不会变成公开社交流，也不会用于广告复活。
                 </p>
               </div>
             </CardContent>

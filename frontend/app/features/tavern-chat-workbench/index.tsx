@@ -1,12 +1,8 @@
 import {
-  Bot,
   ChevronDown,
   DoorOpen,
   LockKeyhole,
-  MapPin,
   Send,
-  ShieldCheck,
-  Sparkles,
   UsersRound,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react"
@@ -14,27 +10,18 @@ import { useSearchParams } from "react-router"
 
 import { normalizePublicWelfareNpcAssetPath } from "../../lib/tavern-runtime-config.js"
 
-import { GENDER_OPTIONS, genderLabel, normalizeGender } from "../../lib/gender.js"
-import { buildTavernFirstMinuteGuide, type TavernFirstMinuteGuide } from "../../lib/tavern-first-minute"
 import {
   enterTavern,
   errorMessage,
   sendGroupChat,
   sendTavernChat,
   type ChatMessage,
-  type NpcSocialMemory,
   type RoleplayState,
   type Tavern,
   type TavernCharacter,
 } from "../../lib/taverns"
 import { Button } from "../../ui/button"
-import {
-  CONVERSATION_INTENT_CHIPS,
-  buildConversationIntentContext,
-  buildMessageWithConversationIntent,
-  progressSignalsFromChatResult,
-  findConversationIntent,
-} from "./conversation-beats.js"
+import { progressSignalsFromChatResult } from "./conversation-beats.js"
 import {
   getGameplays,
   startGameplaySession,
@@ -42,20 +29,13 @@ import {
   abandonGameplaySession,
   listGameplaySessions,
 } from "../../lib/taverns"
-import { buildMiniGameStartPrompt, getMiniGameTemplates } from "../../product/tavernMiniGames"
-import TavernMiniGamePanel from "../../product/TavernMiniGamePanel"
+import { getMiniGameTemplates } from "../../product/tavernMiniGames"
 import OrphanSignalGameplayPanel from "../../product/OrphanSignalGameplayPanel"
 import GameplaySessionPanel from "../../product/GameplaySessionPanel"
 import { SpaceCapabilityHubPanel } from "../../components/SpaceCapabilityHubPanel"
-import { SocialMemoryCreationPanel } from "../social-memory-debug/SocialMemoryCreationPanel"
 
 
 type ChatChannel = "public" | "private"
-
-type MiniGameTemplate = {
-  id?: string
-  [key: string]: unknown
-}
 
 type TavernChatWorkbenchProps = {
   tavern: Tavern
@@ -126,30 +106,14 @@ function entranceReactionMessages(characters: TavernCharacter[], tavernName: str
   }))
 }
 
-function hasTavernTasks(tavern: Tavern) {
-  return Array.isArray(tavern.gameplay_definitions) && tavern.gameplay_definitions.length > 0
-}
-
-function hostGuideMessage(tavern: Tavern, characters: TavernCharacter[]): ChatMessage {
+function hostGuideMessage(tavern: Tavern, _characters: TavernCharacter[]): ChatMessage {
   const timestamp = new Date().toISOString()
-  const hasTasks = hasTavernTasks(tavern)
-  const otherNpcs = characters.length > 3 
-    ? `，目前 ${characters[0].name}、${characters[1].name} 等 ${characters.length} 位 NPC 都在场`
-    : characters.length > 0
-      ? `，目前 ${characters.map(c => c.name || c.id).join('、')} 都在场`
-      : ""
-
-  const mentionHint = characters.length
-    ? `也可以在公共频道输入 @NPC名，或点击左侧头像找某位 NPC 聊。`
-    : "等店主添加 NPC 后，就可以直接找他们聊天。"
 
   return {
     id: `host-guide-${timestamp}`,
     role: "assistant",
     character_id: SHOPKEEPER_CHARACTER_ID,
-    content: hasTasks
-      ? `我是店长，欢迎来到${tavern.name || "这间空间"}${otherNpcs}。可以先在公共频道和大家打招呼，${mentionHint} 这间空间现在有任务，想推进剧情或玩法时可以从任务入口开始。`
-      : `我是店长，欢迎来到${tavern.name || "这间空间"}${otherNpcs}。可以先在公共频道和大家打招呼，${mentionHint} 想单独聊，就点左侧某个 NPC 进入私聊。`,
+    content: `欢迎来到${tavern.name || "这间空间"}。`,
     timestamp,
   }
 }
@@ -195,199 +159,11 @@ function parsePublicMentionTarget(message: string, characters: TavernCharacter[]
   }
 }
 
-function characterStageSummary(character: TavernCharacter | undefined, tavernName: string) {
-  if (!character) return `${tavernName} 还没有可展示的当前 NPC。`
-  return textOrFallback(
-    character.description || character.personality || character.scenario || character.first_mes,
-    "店主还没有写下这位 NPC 的公开简介；可以先用第一句话开始认识 TA。",
-  )
-}
-
 function formatChatTime(value?: string) {
   if (!value) return ""
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ""
   return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-}
-
-function formatCoordinate(value: number | undefined) {
-  if (typeof value !== "number" || Number.isNaN(value)) return "—"
-  return value.toFixed(5)
-}
-
-function accessLabel(access?: string) {
-  const value = String(access || "public")
-  if (value === "private") return "私密"
-  if (value === "password") return "密码"
-  return "公开"
-}
-
-function roleplayModeLabel(mode?: string) {
-  return mode === "hybrid" ? "AI + 玩家扮演" : "AI NPC"
-}
-
-function isSystemPublicWelfareTavern(tavern: Tavern) {
-  const ownerId = String(tavern.owner_id || "").trim()
-  const tavernId = String(tavern.id || "").trim()
-  return ownerId === "system_public_welfare" || ownerId.startsWith("system_") || tavernId.startsWith("pw_")
-}
-
-function responseModeLabel(tavern: Tavern) {
-  const llmConfig = (tavern.llm_config || {}) as Record<string, unknown>
-  const backend = String(llmConfig.backend || "").trim().toLowerCase()
-  if (isSystemPublicWelfareTavern(tavern)) {
-    return {
-      kind: "system_public_welfare_llm",
-      label: "公益 LLM",
-      title: "公益空间",
-    }
-  }
-  if (["rules", "rule_based", "public_welfare"].includes(backend)) {
-    return {
-      kind: "llm_not_configured",
-      label: "需配置 LLM",
-      title: "规则后端不能生成 NPC 回复；店主需要配置外部模型。",
-    }
-  }
-  if (tavern.status === "closed" && backend !== "rules" && backend !== "rule_based" && backend !== "public_welfare") {
-    return {
-      kind: "missing",
-      label: "暂不开放",
-      title: "店主还没开放聊天功能，敬请期待。",
-    }
-  }
-  return {
-    kind: "llm",
-    label: "AI 对话",
-    title: "NPC 已准备好和你对话。",
-  }
-}
-
-function WorkbenchChip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/35 px-3 py-1 text-xs font-semibold text-violet-50/72">
-      {children}
-    </span>
-  )
-}
-
-function doorwayHostCharacter(characters: TavernCharacter[], selectedCharacter?: TavernCharacter) {
-  if (selectedCharacter) return selectedCharacter
-  return characters.find((character) => character?.name?.trim()) || characters[0]
-}
-
-function doorwayOpeningPrompt(character: TavernCharacter | undefined, tavern: Tavern, firstMinute: TavernFirstMinuteGuide) {
-  if (character) {
-    const name = character.name || "NPC"
-    return `${name}，我刚推门进来，能先带我看看${tavern.name || "这里"}吗？`
-  }
-  return firstMinute.tryThisFirst[0] || `我刚到${tavern.name || "这里"}，现在可以从哪里开始？`
-}
-
-function TavernDoorwayRitual({
-  tavern,
-  characters,
-  selectedCharacter,
-  firstMinute,
-  onStartChat,
-}: {
-  tavern: Tavern
-  characters: TavernCharacter[]
-  selectedCharacter?: TavernCharacter
-  firstMinute: TavernFirstMinuteGuide
-  onStartChat: (character: TavernCharacter | undefined, prompt: string) => void
-}) {
-  const hostCharacter = doorwayHostCharacter(characters, selectedCharacter)
-  const hostName = hostCharacter?.name || "驻场 NPC"
-  const hostGreeting = hostCharacter
-    ? entranceReactionContent(hostCharacter, tavern.name)
-    : "门牌已经亮起，但店主还没有安排 NPC 接待。可以先收藏这间空间，等它真正开门。"
-  const openingPrompt = doorwayOpeningPrompt(hostCharacter, tavern, firstMinute)
-
-  return (
-    <section
-      data-tavern-doorway-ritual
-      aria-label="进店前的酒馆门口"
-      className="border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.13),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.88),rgba(30,41,59,0.48))] p-4 sm:p-5"
-    >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-stretch">
-        <div className="relative overflow-hidden rounded-[1.75rem] border border-amber-200/16 bg-slate-950/45 p-4 shadow-xl shadow-black/18">
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.12),transparent_48%)]" />
-          <div className="relative">
-            <p className="flex flex-wrap items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-amber-100/72">
-              <DoorOpen className="h-3.5 w-3.5" />
-              推门进店 · 真实坐标门牌
-            </p>
-            <h2 className="mt-2 break-words text-2xl font-black text-white sm:text-3xl">
-              先在门口听一句，再和 NPC 开口
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-violet-50/72">
-              这不是一张冷冰冰的赛博海报；这间空间钉在
-              <span className="mx-1 font-black text-cyan-50">{firstMinute.anchorLine}</span>
-              ，今晚由 <span className="font-black text-white">{hostName}</span> 在吧台接待你。
-            </p>
-            <blockquote
-              data-doorway-host-greeting
-              className="mt-3 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm leading-6 text-violet-50/78"
-            >
-              “{hostGreeting}”
-            </blockquote>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button
-                type="button"
-                data-doorway-start-chat
-                disabled={!hostCharacter}
-                onClick={() => onStartChat(hostCharacter, openingPrompt)}
-                className="min-h-11"
-              >
-                <Sparkles className="h-4 w-4" />
-                {hostCharacter ? `和 ${hostName} 打招呼` : "等待 NPC 开门"}
-              </Button>
-              <button
-                type="button"
-                onClick={() => onStartChat(hostCharacter, openingPrompt)}
-                disabled={!hostCharacter}
-                className="min-h-11 rounded-2xl border border-white/12 bg-white/[0.04] px-4 text-sm font-bold text-violet-50/76 transition hover:border-cyan-300/35 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                推门进店，但由我自己发送
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-[1.75rem] border border-cyan-300/16 bg-cyan-300/8 p-4">
-          <p className="flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-cyan-100/70">
-            <MapPin className="h-3.5 w-3.5" />
-            Tonight at the bar
-          </p>
-          <p data-doorway-host-status className="mt-2 text-sm font-black text-white">
-            {hostCharacter ? `${hostName} 正在接待你` : "今晚在吧台 · 暂无 NPC"}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-violet-50/70">{firstMinute.whyHere}</p>
-          <p className="mt-2 text-xs leading-5 text-violet-100/52">{firstMinute.experienceHelper}</p>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function CharacterStagePortrait({ character }: { character?: TavernCharacter }) {
-  const src = avatarSource(character)
-  if (src && canRenderImage(src)) {
-    return (
-      <img
-        src={src}
-        alt={character?.name || "NPC avatar"}
-        className="h-24 w-24 shrink-0 rounded-[1.4rem] border border-cyan-100/18 object-cover shadow-2xl shadow-cyan-950/35 ring-1 ring-cyan-200/45 sm:h-28 sm:w-28"
-      />
-    )
-  }
-
-  return (
-    <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[1.4rem] border border-cyan-100/18 bg-gradient-to-br from-cyan-300/18 via-violet-300/10 to-fuchsia-300/16 text-3xl font-black text-cyan-50 shadow-2xl shadow-cyan-950/35 ring-1 ring-cyan-200/45 sm:h-28 sm:w-28">
-      {src || (character?.name || "?").slice(0, 1)}
-    </span>
-  )
 }
 
 function CharacterAvatar({ character, active }: { character?: TavernCharacter; active?: boolean }) {
@@ -413,132 +189,8 @@ function CharacterAvatar({ character, active }: { character?: TavernCharacter; a
   )
 }
 
-function NpcSeatGallery({
-  characters,
-  selectedCharacterId,
-  onSelectCharacter,
-  activeChatChannel,
-  onSelectNpcInPublic,
-}: {
-  characters: TavernCharacter[]
-  selectedCharacterId: string
-  onSelectCharacter: (characterId: string) => void
-  activeChatChannel: ChatChannel
-  onSelectNpcInPublic: (characterId: string) => void
-}) {
-  if (!characters.length) return null
-
-  return (
-    <div data-npc-seat-gallery aria-label="NPC 吧台席位" className="mb-4 rounded-3xl border border-white/10 bg-slate-950/32 p-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100/62">今晚在场</p>
-        <span className="text-[0.68rem] font-semibold text-violet-100/45">点击席位切换</span>
-      </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {characters.map((character) => {
-          const src = avatarSource(character)
-          const active = character.id === selectedCharacterId
-          return (
-            <button
-              key={`seat-${character.id}`}
-              type="button"
-              aria-pressed={active}
-              onClick={() => {
-                if (activeChatChannel === "public") {
-                  onSelectNpcInPublic(character.id)
-                } else {
-                  onSelectCharacter(character.id)
-                }
-              }}
-              className={`group min-w-[4.4rem] rounded-2xl border p-1.5 text-left transition hover:border-cyan-300/45 hover:bg-cyan-300/8 ${
-                active ? "border-cyan-300/55 bg-cyan-300/12" : "border-white/10 bg-white/[0.04]"
-              }`}
-            >
-              {src && canRenderImage(src) ? (
-                <img src={src} alt={character.name || "NPC 头像"} className="h-14 w-14 rounded-xl object-cover ring-1 ring-white/12" loading="lazy" decoding="async" />
-              ) : (
-                <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/[0.06] text-lg font-black text-white ring-1 ring-white/12">
-                  {(character.name || character.id || "?").slice(0, 1)}
-                </span>
-              )}
-              <span className="mt-1 block max-w-14 truncate text-[0.66rem] font-bold text-violet-50/70">{character.name || character.id}</span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function conversationScene(tavern: Tavern, character: TavernCharacter | undefined) {
-  return textOrFallback(
-    tavern.scene_prompt || tavern.description || character?.scenario || character?.description,
-    "这里还没有额外场景线索；可以直接向 NPC 打招呼，让 TA 带你进入当前氛围。",
-  )
-}
-
-function conversationStarters(character: TavernCharacter | undefined, tavern: Tavern) {
-  const name = character?.name || "你"
-  const place = tavern.name || "这里"
-  return [
-    `${name}，我刚到${place}，现在可以从哪里聊起？`,
-    "这里现在最需要我知道的一件事是什么？",
-    "我第一次来这里，最适合先观察什么？",
-  ]
-}
-
-function ChatConversationSidecar({
-  tavern,
-  character,
-  visitorName,
-  draftMessage,
-  isOwner,
-  createdMemories,
-}: {
-  tavern: Tavern
-  character?: TavernCharacter
-  visitorName: string
-  draftMessage: string
-  isOwner: boolean
-  createdMemories: NpcSocialMemory[]
-}) {
-  const starters = conversationStarters(character, tavern)
-  return (
-    <div className="space-y-3 text-sm">
-      <div className="rounded-2xl border border-cyan-300/18 bg-cyan-300/8 p-3">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100/62">正在对话</p>
-        <p className="mt-1 leading-6 text-cyan-50">
-          你正在和 <span className="font-black text-white">{character?.name || "NPC"}</span> 聊天。
-          <span className="text-cyan-50/70"> 当前身份是 {visitorName || "旅人"}。</span>
-        </p>
-      </div>
-      <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100/45">当前场景</p>
-        <p className="mt-2 line-clamp-5 leading-6 text-violet-50/70">{conversationScene(tavern, character)}</p>
-      </div>
-      <SocialMemoryCreationPanel
-        storedMemories={Array.isArray(character?.social_memories) ? character.social_memories : []}
-        createdMemories={createdMemories}
-        lastUserMessage={draftMessage}
-        visible={isOwner}
-      />
-      <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-3">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100/45">可以这样开口</p>
-        <div className="mt-2 space-y-2">
-          {starters.map((starter) => (
-            <p key={starter} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 leading-6 text-violet-50/68">
-              {starter}
-            </p>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function TavernChatWorkbench({
   tavern,
-  roleplay,
   currentUserId,
   isOwner,
   publicPanel,
@@ -553,14 +205,12 @@ export function TavernChatWorkbench({
     () => characters.find((character) => character.id === selectedCharacterId) || characters[0],
     [characters, selectedCharacterId],
   )
-  const [selectedIntentId, setSelectedIntentId] = useState("")
   const [visitorId] = useState(currentUserId)
-  const [visitorName, setVisitorName] = useState(isOwner ? "店主" : "旅人")
-  const [visitorGender, setVisitorGender] = useState("unspecified")
+  const visitorName = isOwner ? "店主" : "旅人"
+  const visitorGender = "unspecified"
   const [message, setMessage] = useState("")
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [mentionIndex, setMentionIndex] = useState(0)
-  const [targetedCharacterId, setTargetedCharacterId] = useState("") // For smart targeting
   const [visitorState, setVisitorState] = useState<any>(null)
   const mentionRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -577,13 +227,10 @@ export function TavernChatWorkbench({
   const [pendingReplyTargetName, setPendingReplyTargetName] = useState("")
 
   const [gameplayDefinitions, setGameplayDefinitions] = useState<any[]>([])
-
   const [activeSession, setActiveSession] = useState<any>(null)
   const [gameplayScene, setGameplayScene] = useState<any>({})
   const [isGameplayBusy, setIsGameplayBusy] = useState(false)
 
-  const [createdMemories, setCreatedMemories] = useState<NpcSocialMemory[]>([])
-  const [draftMessage, setDraftMessage] = useState("")
   const [coinBalance, setCoinBalance] = useState<number | null>(null)
   const [lastGift, setLastGift] = useState<{ coins: number; items: string } | null>(null)
 
@@ -593,18 +240,12 @@ export function TavernChatWorkbench({
   const visibleMessages = activeChatChannel === "public"
     ? publicMessages
     : privateMessagesByCharacterId[selectedCharacter?.id || ""] || []
-  const roleplayMode = roleplay?.roleplay_mode || tavern.roleplay_mode || "ai_only"
-  const responseMode = responseModeLabel(tavern)
-  const firstMinute = useMemo(() => buildTavernFirstMinuteGuide(tavern), [tavern])
-
   const mentionMatches = useMemo(() => {
     if (mentionQuery === null) return []
     if (!mentionQuery) return characters
     const query = mentionQuery.toLowerCase()
     return characters.filter((char) => (char.name || char.id || "").toLowerCase().includes(query))
   }, [characters, mentionQuery])
-  const selectedIntent = useMemo(() => findConversationIntent(selectedIntentId), [selectedIntentId])
-
   useEffect(() => {
     if (characters.length && !characters.some((character) => character.id === selectedCharacterId)) {
       setSelectedCharacterId(characters[0].id)
@@ -658,7 +299,9 @@ export function TavernChatWorkbench({
       return ["familiar", "friend", "close_friend", "best_friend"].includes(stage)
     })
 
-    setActiveChatChannel("public")
+    if (shouldReplaceInitialMessages) {
+      setActiveChatChannel("public")
+    }
     
     // Public greetings: Shopkeeper only. Do not overwrite an in-flight/first user message
     // when visitorState arrives after the visitor has already sent something.
@@ -788,6 +431,24 @@ export function TavernChatWorkbench({
     }
   }
 
+  function ensurePrivateEntranceMessage(character: TavernCharacter) {
+    if (!character.id) return
+    const timestamp = new Date().toISOString()
+    setPrivateMessagesByCharacterId((current) => {
+      if ((current[character.id] || []).length > 0) return current
+      return {
+        ...current,
+        [character.id]: [{
+          id: `entrance-private-${character.id}-${timestamp}`,
+          role: "assistant",
+          character_id: character.id,
+          content: entranceReactionContent(character, tavern.name),
+          timestamp,
+        }],
+      }
+    })
+  }
+
   function mapGroupResponseMessages(result: Awaited<ReturnType<typeof sendGroupChat>>): ChatMessage[] {
     const progress_signals = progressSignalsFromChatResult(result)
     const lines = (Array.isArray(result.messages) ? result.messages : [])
@@ -808,17 +469,7 @@ export function TavernChatWorkbench({
     )
   }
 
-  function toggleConversationIntent(intentId: string) {
-    const next = String(intentId || "").trim()
-    if (!next) return
-    setSelectedIntentId((current) => (current === next ? "" : next))
-  }
-
-  function clearConversationIntent() {
-    setSelectedIntentId("")
-  }
-
-  async function sendPrivateChat(cleanMessage: string, intentForTurn = selectedIntent) {
+  async function sendPrivateChat(cleanMessage: string) {
     if (!selectedCharacter) return
     const userLine = buildUserLine(cleanMessage, selectedCharacter.id)
     setPendingReplyTargetName(selectedCharacter.name || selectedCharacter.id || "NPC")
@@ -831,16 +482,12 @@ export function TavernChatWorkbench({
       visitor_gender: visitorGender,
       message: cleanMessage,
       display_message: cleanMessage,
-      extra_context: buildConversationIntentContext(intentForTurn),
     })
     const responseText = String(result.response || "").trim()
     if (responseText) {
         appendPrivateMessages(selectedCharacter.id, [buildAssistantLine(responseText, selectedCharacter.id, result)])
     } else if (result.degradation?.message) {
       setError(result.degradation.message)
-    }
-    if (result.is_fallback !== true && Array.isArray(result.created_memories) && result.created_memories.length > 0) {
-      setCreatedMemories((prev) => [...prev, ...(result.created_memories as NpcSocialMemory[])])
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const _gift = (result as any).gift
@@ -853,14 +500,10 @@ export function TavernChatWorkbench({
     }
   }
 
-  async function sendPublicChat(cleanMessage: string, intentForTurn = selectedIntent) {
+  async function sendPublicChat(cleanMessage: string) {
     const mention = parsePublicMentionTarget(cleanMessage, characters)
-    const targetedChar = characters.find(c => c.id === targetedCharacterId)
-    const targetCharacter = mention?.character || targetedChar || selectedCharacter
+    const targetCharacter = mention?.character
     setPendingReplyTargetName(targetCharacter ? characterNameById.get(targetCharacter.id) || targetCharacter.name || "NPC" : "")
-    
-    // Clear targeted character after use
-    setTargetedCharacterId("")
 
     setPublicMessages((current) => [...current, buildUserLine(cleanMessage, targetCharacter?.id)])
 
@@ -872,16 +515,12 @@ export function TavernChatWorkbench({
         visitor_gender: visitorGender,
         message: mention?.message || cleanMessage,
         display_message: cleanMessage,
-        extra_context: buildConversationIntentContext(intentForTurn),
       })
       const responseText = String(result.response || "").trim()
       if (responseText) {
         setPublicMessages((current) => [...current, buildAssistantLine(responseText, targetCharacter.id, result)])
       } else if (result.degradation?.message) {
         setError(result.degradation.message)
-      }
-      if (result.is_fallback !== true && Array.isArray(result.created_memories) && result.created_memories.length > 0) {
-        setCreatedMemories((prev) => [...prev, ...(result.created_memories as NpcSocialMemory[])])
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const _gift = (result as any).gift
@@ -897,7 +536,7 @@ export function TavernChatWorkbench({
 
     if (characters.length > 1 && Boolean((tavern as { group_chat_enabled?: unknown }).group_chat_enabled)) {
       const result = await sendGroupChat(tavern.id, {
-        message: buildMessageWithConversationIntent(cleanMessage, intentForTurn),
+        message: cleanMessage,
         visitor_id: visitorId,
         visitor_name: visitorName,
         visitor_gender: visitorGender,
@@ -924,15 +563,13 @@ export function TavernChatWorkbench({
     setMentionQuery(null)
     setMentionIndex(0)
     setBusy("send")
-    const intentForTurn = selectedIntent
-    clearConversationIntent()
     setError("")
 
     try {
       if (activeChatChannel === "public") {
-        await sendPublicChat(cleanMessage, intentForTurn)
+        await sendPublicChat(cleanMessage)
       } else {
-        await sendPrivateChat(cleanMessage, intentForTurn)
+        await sendPrivateChat(cleanMessage)
       }
     } catch (err) {
       setError(errorMessage(err))
@@ -984,70 +621,16 @@ export function TavernChatWorkbench({
     textareaRef.current?.focus()
   }
 
-  function focusComposerAfterDraft() {
-    setTimeout(() => {
-      textareaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
-      textareaRef.current?.focus()
-    }, 0)
-  }
-
-  function fillComposerDraft(prompt: string) {
-    setMessage(prompt)
-    setDraftMessage(prompt)
-    setMentionQuery(null)
-    setMentionIndex(0)
-    focusComposerAfterDraft()
-  }
-
-  function handleMiniGameStart(template: MiniGameTemplate) {
-    const prompt = buildMiniGameStartPrompt(template, {
-      tavernName: tavern.name,
-      characterName: selectedCharacter?.name || "当前 NPC",
-    })
-    if (prompt) fillComposerDraft(prompt)
-  }
-
-  function handleDoorwayStartChat(character: TavernCharacter | undefined, prompt: string) {
-    if (character?.id) {
-      selectCharacter(character.id)
-    }
-    fillComposerDraft(prompt)
-  }
-
-  function handleSelectNpcInPublic(characterId: string) {
-    const char = characters.find((c) => c.id === characterId)
-    if (!char) return
-
-    const name = char.name || char.id || ""
-    
-    // Toggle targeted state
-    if (targetedCharacterId === characterId) {
-      setTargetedCharacterId("")
-    } else {
-      setTargetedCharacterId(characterId)
-      
-      // Also insert @mention as per PRD requirements
-      const mentionText = `@${name} `
-      if (!message.includes(mentionText)) {
-        setMessage((prev) => {
-          const trimmed = prev.trim()
-          return trimmed ? `${trimmed} ${mentionText}` : mentionText
-        })
-      }
-      
-      // Focus textarea
-      setTimeout(() => {
-        textareaRef.current?.focus()
-      }, 0)
-    }
-  }
-
   function selectCharacter(characterId: string) {
+    const character = characters.find((candidate) => candidate.id === characterId)
+    if (character) {
+      ensurePrivateEntranceMessage(character)
+    }
     setSelectedCharacterId(characterId)
     setActiveChatChannel("private")
+    setMessage("")
     setMentionQuery(null)
     setMentionIndex(0)
-    setTargetedCharacterId("")
     setError("")
   }
 
@@ -1055,7 +638,6 @@ export function TavernChatWorkbench({
     setActiveChatChannel("public")
     setMentionQuery(null)
     setMentionIndex(0)
-    setTargetedCharacterId("")
     setError("")
   }
 
@@ -1136,41 +718,8 @@ export function TavernChatWorkbench({
 
     <section data-chat-workbench="sillytavern-style" data-active-chat-channel={activeChatChannel} className="space-y-6">
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/72 shadow-2xl shadow-cyan-950/20">
-        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_36%),rgba(15,23,42,0.92)] p-4 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-cyan-100/70">
-                <Sparkles className="h-4 w-4" />
-                Cyber tavern chat
-              </p>
-              <h1 className="mt-2 break-words text-3xl font-black tracking-tight text-white sm:text-4xl">{tavern.name}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-violet-50/70">
-                {textOrFallback(tavern.description, "选择 NPC 后，直接在底部输入框开始聊天。空间资料和其它公开功能已折叠在下方。")}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <WorkbenchChip>
-                <DoorOpen className="h-3.5 w-3.5 text-cyan-200" />
-                {textOrFallback(tavern.status, "unknown")} · {accessLabel(tavern.access)}
-              </WorkbenchChip>
-              <WorkbenchChip>
-                <MapPin className="h-3.5 w-3.5 text-cyan-200" />
-                {formatCoordinate(tavern.lat)}, {formatCoordinate(tavern.lon)}
-              </WorkbenchChip>
-              <WorkbenchChip>
-                <UsersRound className="h-3.5 w-3.5 text-cyan-200" />
-                {characters.length} NPC
-              </WorkbenchChip>
-              <WorkbenchChip>
-                {responseMode.kind === "system_public_welfare_llm" ? (
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-200" />
-                ) : (
-                  <Bot className="h-3.5 w-3.5 text-cyan-200" />
-                )}
-                <span title={responseMode.title}>{responseMode.label}</span>
-              </WorkbenchChip>
-            </div>
-          </div>
+        <div className="border-b border-white/10 bg-slate-950/80 px-4 py-3 sm:px-6">
+          <h1 className="break-words text-2xl font-black tracking-tight text-white sm:text-3xl">{tavern.name}</h1>
         </div>
 
         {/* ── 金币余额 & 收礼提示（作用域在 TavernChatWorkbench 内）── */}
@@ -1191,21 +740,10 @@ export function TavernChatWorkbench({
           </div>
         )}
 
-        <TavernDoorwayRitual
-          tavern={tavern}
-          characters={characters}
-          selectedCharacter={selectedCharacter}
-          firstMinute={firstMinute}
-          onStartChat={handleDoorwayStartChat}
-        />
-
         <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
           <aside className="border-b border-white/10 bg-white/[0.035] p-4 lg:border-b-0 lg:border-r" aria-label="NPC 角色列表">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-violet-100/45">Channels</p>
-                <h2 className="text-base font-black text-white">聊天频道</h2>
-              </div>
+              <h2 className="text-base font-black text-white">在场</h2>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-xs font-bold text-cyan-100">
                 {characters.length}
               </span>
@@ -1224,18 +762,8 @@ export function TavernChatWorkbench({
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-black text-white">公共聊天</span>
-                <span className="mt-1 line-clamp-2 text-xs leading-5 text-violet-50/56">
-                  默认入口，所有 NPC 打招呼；支持 @NPC名
-                </span>
               </span>
             </button>
-            <NpcSeatGallery
-              characters={characters}
-              selectedCharacterId={activeChatChannel === "private" ? selectedCharacter?.id || selectedCharacterId : ""}
-              onSelectCharacter={selectCharacter}
-              activeChatChannel={activeChatChannel}
-              onSelectNpcInPublic={handleSelectNpcInPublic}
-            />
             <div className="space-y-2">
               {characters.length ? (
                 characters.map((character) => {
@@ -1245,13 +773,7 @@ export function TavernChatWorkbench({
                       key={character.id}
                       type="button"
                       data-private-chat-channel
-                      onClick={() => {
-                        if (activeChatChannel === "public") {
-                          handleSelectNpcInPublic(character.id)
-                        } else {
-                          selectCharacter(character.id)
-                        }
-                      }}
+                      onClick={() => selectCharacter(character.id)}
                       className={`flex min-h-16 w-full min-w-0 items-center gap-3 rounded-3xl border p-3 text-left transition hover:border-cyan-300/35 hover:bg-cyan-300/8 ${
                         active ? "border-cyan-300/45 bg-cyan-300/12" : "border-white/10 bg-slate-950/30"
                       }`}
@@ -1259,9 +781,6 @@ export function TavernChatWorkbench({
                       <CharacterAvatar character={character} active={active} />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-black text-white">{character.name || character.id}</span>
-                        <span className="mt-1 line-clamp-2 text-xs leading-5 text-violet-50/56">
-                          {character.description || character.personality || character.scenario || "可对话角色"}
-                        </span>
                       </span>
                     </button>
                   )
@@ -1275,58 +794,22 @@ export function TavernChatWorkbench({
           </aside>
 
           <main className="flex min-w-0 flex-col bg-slate-950/35">
-            <div className="border-b border-white/10 p-3 sm:p-4">
+            <div className="border-b border-white/10 px-3 py-2 sm:px-4">
               <div
                 data-current-npc-stage-card
-                aria-label="当前 NPC 舞台"
-                className="relative overflow-hidden rounded-[1.7rem] border border-cyan-300/16 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(15,23,42,0.58))] p-3 shadow-xl shadow-cyan-950/12 sm:p-4"
+                aria-label={activeChatChannel === "public" ? "公共聊天" : "当前 NPC"}
+                className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2"
               >
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(217,70,239,0.16),transparent_45%)]" />
-                <div className="relative flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
-                  {activeChatChannel === "public" ? (
-                    <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[1.4rem] border border-cyan-100/18 bg-gradient-to-br from-cyan-300/18 via-violet-300/10 to-fuchsia-300/16 text-cyan-50 shadow-2xl shadow-cyan-950/35 ring-1 ring-cyan-200/45 sm:h-28 sm:w-28">
-                      <UsersRound className="h-10 w-10" />
-                    </span>
-                  ) : (
-                    <CharacterStagePortrait character={selectedCharacter} />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-cyan-100/68">
-                      <Bot className="h-3.5 w-3.5" />
-                      {activeChatChannel === "public" ? "公共频道" : "当前 NPC 舞台"}
-                    </p>
-                    <h2 className="mt-1 break-words text-xl font-black text-white sm:text-2xl">
-                      {activeChatChannel === "public" ? "公共聊天" : selectedCharacter?.name || "暂无 NPC"}
-                    </h2>
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-violet-100/62">
-                      {activeChatChannel === "public" ? (
-                        <>
-                          <span>公共频道 · 可 @NPC名</span>
-                          <span className="text-cyan-100/78">· 店长正在引导你</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{selectedCharacter ? roleplayModeLabel(String(roleplayMode)) : "请先添加角色"}</span>
-                          {selectedCharacter ? <span>· {genderLabel(selectedCharacter.gender)}</span> : null}
-                          {selectedCharacter ? <span className="text-cyan-100/78">· 正在接待你</span> : null}
-                        </>
-                      )}
-                    </p>
-                    <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-violet-50/72">
-                      {activeChatChannel === "public"
-                        ? "这里是空间公共聊天窗口。直接发言会进入公共频道；输入 @NPC名 后等对应 NPC 回复。"
-                        : characterStageSummary(selectedCharacter, tavern.name)}
-                    </p>
-                  </div>
-                  <div className="hidden shrink-0 flex-col items-end gap-2 md:flex">
-                    <span className="rounded-full border border-emerald-300/18 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-50">
-                      {activeChatChannel === "public" ? "公共频道" : "正在接待你"}
-                    </span>
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-violet-50/62">
-                      Shift+Enter 换行
-                    </span>
-                  </div>
-                </div>
+                {activeChatChannel === "public" ? (
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-100/16 bg-cyan-300/12 text-cyan-50">
+                    <UsersRound className="h-5 w-5" />
+                  </span>
+                ) : (
+                  <CharacterAvatar character={selectedCharacter} active />
+                )}
+                <h2 className="min-w-0 truncate text-base font-black text-white sm:text-lg">
+                  {activeChatChannel === "public" ? "公共聊天" : selectedCharacter?.name || "暂无 NPC"}
+                </h2>
               </div>
             </div>
 
@@ -1357,38 +840,6 @@ export function TavernChatWorkbench({
                 />
               </div>
             ) : null}
-
-            <section
-              data-first-minute-guide="tavern-workbench"
-              aria-label="游客第一分钟"
-              className="mx-4 mb-4 rounded-3xl border border-cyan-300/18 bg-cyan-300/8 p-4"
-            >
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0">
-                  <p className="flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-cyan-100/72">
-                    <MapPin className="h-3.5 w-3.5" />
-                    Why here · {firstMinute.experienceType}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-violet-50/74">{firstMinute.whyHere}</p>
-                  <p className="mt-1 text-xs leading-5 text-violet-100/50">{firstMinute.experienceHelper}</p>
-                </div>
-                <span className="w-fit shrink-0 rounded-full border border-cyan-300/24 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-50">
-                  {firstMinute.anchorLine}
-                </span>
-              </div>
-              <div className="mt-3 grid gap-2 md:grid-cols-3">
-                {firstMinute.tryThisFirst.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => fillComposerDraft(prompt)}
-                    className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-xs font-semibold leading-5 text-violet-50/72 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-50"
-                  >
-                    先试：{prompt}
-                  </button>
-                ))}
-              </div>
-            </section>
 
             {passwordLocked ? (
 
@@ -1483,7 +934,7 @@ export function TavernChatWorkbench({
                     {pendingReplyTargetName
                       ? `${pendingReplyTargetName} 正在回复…`
                       : activeChatChannel === "public"
-                        ? "公共频道正在接话…"
+                        ? "店里正在回应…"
                         : `${selectedCharacter?.name || "NPC"} 正在回复…`}
                   </div>
                 </div>
@@ -1497,102 +948,14 @@ export function TavernChatWorkbench({
             ) : null}
 
             <form onSubmit={handleSubmit} data-chat-composer="fast-entry" className="border-t border-white/10 bg-slate-950/80 p-3 sm:p-4">
-              <section
-                aria-label="对话意图"
-                data-conversation-intent-chips
-                className="mb-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5"
-              >
-                <div className="mb-2 flex items-center justify-between text-xs text-violet-100/68">
-                  <span>对话意图</span>
-                  <button
-                    type="button"
-                    onClick={clearConversationIntent}
-                    className="text-violet-100/58 transition hover:text-cyan-100"
-                  >
-                    清除
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {CONVERSATION_INTENT_CHIPS.map((intent) => {
-                    const isSelected = selectedIntentId === intent.id
-                    return (
-                      <button
-                        key={intent.id}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => toggleConversationIntent(intent.id)}
-                        data-selected-conversation-intent={isSelected ? "true" : "false"}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                          isSelected
-                            ? "border-cyan-300/65 bg-cyan-300/20 text-cyan-50"
-                            : "border-white/20 bg-white/[0.03] text-violet-50/72 hover:border-white/35"
-                        }`}
-                      >
-                        {intent.label}
-                      </button>
-                    )
-                  })}
-                </div>
-                <p className="mt-2 text-[0.7rem] text-violet-100/62">
-                  {selectedIntent
-                    ? `已选择「${selectedIntent.label}」，仍需你自己输入发言内容后点击发送。`
-                    : "未选择意图：仍需你输入自己的发言内容后再发送。"}
-                </p>
-              </section>
-              <details data-visitor-identity-settings className="mb-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-bold text-violet-100/64">
-                  <span className="truncate">发言身份：{visitorName || visitorId} · {genderLabel(visitorGender)}</span>
-                  <span className="shrink-0 text-cyan-100/72">修改</span>
-                </summary>
-                <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem]">
-                  <label className="min-w-0">
-                    <span className="sr-only">显示名</span>
-                    <input
-                      value={visitorName}
-                      onChange={(event) => setVisitorName(event.target.value)}
-                      className="min-h-11 w-full rounded-2xl border border-white/12 bg-white/[0.06] px-4 text-sm text-white outline-none focus:border-cyan-300/60"
-                      placeholder="显示名"
-                    />
-                  </label>
-                  <label>
-                    <span className="sr-only">性别</span>
-                    <select
-                      value={visitorGender}
-                      onChange={(event) => setVisitorGender(normalizeGender(event.target.value))}
-                      className="min-h-11 w-full rounded-2xl border border-white/12 bg-slate-950 px-4 text-sm text-white outline-none focus:border-cyan-300/60"
-                    >
-                      {GENDER_OPTIONS.map((option: { value: string; label: string }) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </details>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
                 <div ref={mentionRef} className="relative min-w-0 flex-1">
-                  {targetedCharacterId && activeChatChannel === "public" && (
-                    <div className="mb-2 flex items-center justify-between rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-3 py-1.5">
-                      <span className="text-xs font-bold text-cyan-100">
-                        正在对 <span className="text-white">{characterNameById.get(targetedCharacterId)}</span> 发言
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setTargetedCharacterId("")}
-                        className="text-xs text-cyan-200/60 hover:text-cyan-100"
-                      >
-                        取消点名
-                      </button>
-                    </div>
-                  )}
                   <textarea
                     ref={textareaRef}
                     value={message}
                     onChange={(event) => {
                       const val = event.target.value
                       setMessage(val)
-                      setDraftMessage(val)
                       // Detect @ mention
                       if (activeChatChannel !== "public") {
                         setMentionQuery(null)
@@ -1613,7 +976,7 @@ export function TavernChatWorkbench({
                     disabled={(activeChatChannel === "private" && !selectedCharacter) || characters.length === 0 || busy === "send" || passwordLocked}
                     rows={2}
                     maxLength={1600}
-                    placeholder={activeChatChannel === "public" ? "公共频道：直接发言，或输入 @NPC名 等回复" : `Type a message，和 ${selectedCharacter?.name || "NPC"} 私聊；Shift+Enter 换行`}
+                    placeholder={activeChatChannel === "public" ? "在这里说点什么…" : `对 ${selectedCharacter?.name || "NPC"} 说点什么…`}
                     className="min-h-14 w-full resize-none rounded-3xl border border-white/12 bg-white/[0.06] px-5 py-3 text-sm leading-6 text-white outline-none placeholder:text-violet-100/35 focus:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-55"
                   />
                   {mentionQuery !== null && mentionMatches.length > 0 && activeChatChannel === "public" && (
@@ -1628,12 +991,8 @@ export function TavernChatWorkbench({
                           }`}
                         >
                           {char.name || char.id}
-                          <span className="ml-auto text-xs text-violet-100/45">{char.description?.slice(0, 30) || "可对话角色"}</span>
                         </button>
                       ))}
-                      <div className="border-t border-white/10 px-4 py-1.5 text-center text-xs text-violet-100/45">
-                        Tab/Enter 选中 · 方向键切换 · Esc 关闭
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1646,23 +1005,8 @@ export function TavernChatWorkbench({
 
             <section data-chat-sidecar="conversation-context" data-secondary-tools="visitor-folded" className="border-t border-white/10 bg-white/[0.025] p-4">
               <div className="grid gap-3 xl:grid-cols-2">
-                <DetailSection title="聊天辅助" description="需要提示时再展开，不占用聊天主线">
-                  <ChatConversationSidecar tavern={tavern} character={selectedCharacter} visitorName={visitorName} draftMessage={message} isOwner={isOwner} createdMemories={createdMemories} />
-                </DetailSection>
-
-                <DetailSection title="更多空间功能" description="分享、公开扩展和回访入口折叠收纳">
+                <DetailSection title={publicPanel ? "邀请与反馈" : "更多空间功能"}>
                   {publicPanel || <SpaceCapabilityHubPanel tavern={tavern} />}
-                </DetailSection>
-
-                <DetailSection title="桌边小玩法" description="小游戏收在这里，不挡聊天输入">
-                  <TavernMiniGamePanel
-                    templates={miniGameTemplates}
-                    sending={busy === "send"}
-                    disabled={!selectedCharacter || passwordLocked}
-                    characterName={selectedCharacter?.name || "当前 NPC"}
-                    tavernName={tavern.name}
-                    onStart={handleMiniGameStart}
-                  />
                 </DetailSection>
               </div>
             </section>

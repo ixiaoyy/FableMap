@@ -112,7 +112,7 @@ export function RevisitCarePolicyPanel({ userId }: RevisitCarePolicyPanelProps) 
         </div>
 
         <p className="rounded-2xl border border-white/10 bg-slate-950/35 px-3 py-2 text-xs leading-6 text-violet-100/52">
-          当前身份：<code className="text-cyan-100">{userId || "未识别"}</code>。该预览不读取或保存个人偏好，未来如实现必须新增正式设置、审计和取消订阅流程。
+          当前接收人：{userId ? "已识别" : "未识别"}。这里仅展示回访提醒的设计方向，不会读取或保存个人偏好。
         </p>
       </CardContent>
     </Card>

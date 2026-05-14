@@ -134,7 +134,7 @@ export function TavernEngagementPanel({ tavern, currentUserId }: TavernEngagemen
         </div>
 
         {loading && !config && !progress ? (
-          <p className="rounded-2xl border border-theme-border bg-theme-card p-4 text-sm text-violet-50/64">正在同步纪念币与礼物面板…</p>
+          <p className="rounded-2xl border border-theme-border bg-theme-card p-4 text-sm text-violet-50/64">正在同步纪念币与礼物信息…</p>
         ) : null}
 
         {selectedCharacter ? (

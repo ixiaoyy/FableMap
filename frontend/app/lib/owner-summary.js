@@ -171,7 +171,7 @@ function buildNextActions(metrics, taverns, returningHighlights, latestFeedback)
     actions.push({
       kind: "review_owner_visible_feedback",
       title: "处理访客给店主的反馈",
-      detail: `${firstNote.visitorLabel} 留下了 owner-visible 反馈：${firstNote.content.slice(0, 28)}${firstNote.content.length > 28 ? "…" : ""}`,
+      detail: `${firstNote.visitorLabel} 留下了私密反馈：${firstNote.content.slice(0, 28)}${firstNote.content.length > 28 ? "…" : ""}`,
       tavernId: firstNote.tavernId,
     })
   }

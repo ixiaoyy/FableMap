@@ -115,7 +115,7 @@ export function SocialMemoryCreationPanel({
         className="flex w-full items-center justify-between text-left"
       >
         <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-violet-100/80">
-          🧠 社交记忆调试
+          🧠 社交记忆记录
           <span className="rounded-full border border-violet-300/30 bg-violet-300/10 px-2 py-0.5 text-[0.65rem] font-bold">
             {storedMemories.length} 条存储 · {createdMemories.length} 条新建
           </span>
@@ -126,13 +126,12 @@ export function SocialMemoryCreationPanel({
       {expanded && (
         <div className="mt-3 space-y-3">
           <p className="rounded-xl border border-amber-300/18 bg-amber-300/[0.055] p-2 text-[0.7rem] leading-5 text-amber-50/70">
-            根据当前输入预估来源名匹配、关键词/n-gram 重叠和时效性加分；后端仍是最终 prompt 注入来源。
-            仅店主可见，用于解释 NPC 社交感知，不是访客公开八卦墙。
+            根据当前对话整理可能相关的记忆线索。仅店主可见，不会成为访客公开内容。
           </p>
           {/* ── Stored memories with scoring ───────────────────────────────── */}
           <div>
             <p className="mb-2 text-[0.7rem] font-bold text-violet-100/60">
-              检索结果 (Top-3，基于当前消息评分)
+              可能相关的记忆
             </p>
             {storedMemories.length === 0 ? (
               <p className="text-xs text-white/30">该 NPC 暂无社交记忆。</p>

@@ -67,6 +67,7 @@ type Variant = "light" | "black"
 type HomeReferenceProps = {
   variant: Variant
   featuredCitySlices: { id?: string; name?: string; description?: string; visit_count?: number; image?: string; tags?: string[] }[]
+  isLoading?: boolean
   worldPulseItems?: SoulLinkFeedItem[]
   dailyQuote?: SoulLinkDailyQuote
   onlineEntities?: SoulLinkOnlineEntity[]
@@ -83,6 +84,7 @@ type DiscoverReferenceProps = {
   variant: Variant
   search: string
   taverns: Tavern[]
+  isLoading?: boolean
   onSearchChange: (value: string) => void
   onClear: () => void
   onTogglePlaceType: (placeTypeId: string) => void
@@ -316,14 +318,14 @@ const homeSharedCardBoxes = [
 ] as const
 
 const discoverSharedCardBoxes = [
-  [228, 413, 224, 224],
-  [467, 413, 224, 224],
-  [706, 413, 224, 224],
-  [945, 413, 236, 224],
-  [228, 665, 224, 224],
-  [467, 665, 224, 224],
-  [706, 665, 224, 224],
-  [945, 665, 236, 224],
+  [252, 413, 224, 224],
+  [491, 413, 224, 224],
+  [730, 413, 224, 224],
+  [969, 413, 236, 224],
+  [252, 665, 224, 224],
+  [491, 665, 224, 224],
+  [730, 665, 224, 224],
+  [969, 665, 236, 224],
 ] as const
 
 // Light / black home variants intentionally share one geometry source.
@@ -331,15 +333,15 @@ const discoverSharedCardBoxes = [
 const HOME_LAYOUT = {
   sidebar: {
     panel: { x: 0, y: 0, w: 220, h: 1024 },
-    logo: { x: 48, y: 46, w: 164, h: 62 },
+    logo: { x: 28, y: 46, w: 164, h: 62 },
     navItems: [
-      { id: "home", label: "首页", eyebrow: "HOME", to: "/", x: 42, y: 143, w: 158, h: 46 },
-      { id: "discover", label: "探索", eyebrow: "EXPLORE", to: "/discover", x: 42, y: 207, w: 158, h: 46 },
-      { id: "echoes", label: "回响", eyebrow: "ECHOES", to: "/home-me", x: 42, y: 273, w: 158, h: 46, badge: "12" },
-      { id: "memory", label: "记忆", eyebrow: "MEMORY", to: "/home-me", x: 42, y: 340, w: 158, h: 46 },
-      { id: "saved", label: "收藏", eyebrow: "SAVED", to: "/home-me", x: 42, y: 407, w: 158, h: 46 },
-      { id: "anchors", label: "我的锚点", eyebrow: "ANCHORS", to: "/home-me", x: 42, y: 474, w: 158, h: 46 },
-      { id: "create", label: "创建坐标", eyebrow: "CREATE", to: "/create", x: 42, y: 541, w: 158, h: 46 },
+      { id: "home", label: "首页", eyebrow: "HOME", to: "/", x: 24, y: 143, w: 172, h: 46 },
+      { id: "discover", label: "探索", eyebrow: "EXPLORE", to: "/discover", x: 24, y: 207, w: 172, h: 46 },
+      { id: "echoes", label: "回响", eyebrow: "ECHOES", to: "/home-me", x: 24, y: 273, w: 172, h: 46, badge: "12" },
+      { id: "memory", label: "记忆", eyebrow: "MEMORY", to: "/home-me", x: 24, y: 340, w: 172, h: 46 },
+      { id: "saved", label: "收藏", eyebrow: "SAVED", to: "/home-me", x: 24, y: 407, w: 172, h: 46 },
+      { id: "anchors", label: "我的锚点", eyebrow: "ANCHORS", to: "/home-me", x: 24, y: 474, w: 172, h: 46 },
+      { id: "create", label: "创建坐标", eyebrow: "CREATE", to: "/create", x: 24, y: 541, w: 172, h: 46 },
     ],
     invite: { x: 46, y: 712, w: 151, h: 170 },
     bottomActions: [
@@ -386,7 +388,7 @@ const SIDEBAR_MATERIALS = {
 
 const DISCOVER_LAYOUT = {
   cards: discoverSharedCardBoxes,
-  title: { x: 228, y: 34, w: 240, h: 72 },
+  title: { x: 252, y: 34, w: 240, h: 72 },
   search: { x: 540, y: 27, w: 426, h: 48 },
   topStatus: { x: 984, y: 26, w: 536, h: 64 },
   filters: {
@@ -720,7 +722,7 @@ function SoulLinkSidebar({
               style={panelBoxStyle(panel, item.x, item.y, item.w, item.h)}
             >
               <SidebarNavIcon id={item.id} variant={variant} className="h-5 w-5 shrink-0" />
-              <span className="ml-[15px] leading-none">{item.label}</span>
+              <span className="ml-[15px] min-w-0 truncate whitespace-nowrap leading-none">{item.label}</span>
               {"badge" in item && (
                 <span className={cx(
                   "ml-auto rounded-full px-2 py-1 text-xs font-bold leading-none",
@@ -864,16 +866,13 @@ function SoulLinkWorldTimeCard({ variant }: { variant: Variant }) {
   }, [])
 
   return (
-    <button
-      type="button"
+    <div
       data-soul-link-world-time-card="dynamic-text"
-      aria-label={`世界时间 ${time}`}
-      onMouseDown={suppressMouseFocus}
       className={cx(
-        "flex h-full min-w-0 touch-manipulation items-center gap-3 rounded-[1.15rem] border px-4 text-left outline-none transition focus:ring-4",
+        "flex h-full min-w-0 cursor-default items-center gap-[5%] overflow-hidden rounded-[1.15rem] border px-[6%] text-left",
         isBlack
-          ? "border-cyan-300/14 bg-[#061226]/72 text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_32px_rgba(0,0,0,0.26)] focus:ring-cyan-300/30"
-          : "border-white/90 bg-white/86 text-slate-700 shadow-[0_14px_32px_rgba(86,105,166,0.12)] backdrop-blur-xl focus:ring-violet-400/30",
+          ? "border-cyan-300/14 bg-[#061226]/72 text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_32px_rgba(0,0,0,0.26)]"
+          : "border-white/90 bg-white/86 text-slate-700 shadow-[0_14px_32px_rgba(86,105,166,0.12)] backdrop-blur-xl",
       )}
     >
       <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full border", isBlack ? "border-violet-300/34 bg-violet-300/10 text-violet-200" : "border-violet-100 bg-violet-50 text-violet-500")}>
@@ -886,8 +885,7 @@ function SoulLinkWorldTimeCard({ variant }: { variant: Variant }) {
         </span>
         <span data-soul-link-world-time-value="dynamic-text" className={cx("mt-2 block text-[17px] font-black leading-none tabular-nums", isBlack ? "text-cyan-50" : "text-slate-800")}>{time}</span>
       </span>
-      <ChevronDown size={16} strokeWidth={2.8} className={cx("shrink-0 opacity-65", isBlack ? "text-cyan-100" : "text-slate-400")} />
-    </button>
+    </div>
   )
 }
 
@@ -908,11 +906,11 @@ function SoulLinkTopStatusBar({
   return (
     <div
       data-soul-link-top-status="real-dom"
-      className="absolute z-30 grid grid-cols-[220px_48px_minmax(0,1fr)] items-center gap-4"
+      className="absolute z-30 grid grid-cols-[41%_9%_minmax(0,1fr)] items-center gap-[3%] overflow-hidden"
       style={boxStyle(artboard, box.x, box.y, box.w, box.h)}
     >
       <SoulLinkWorldTimeCard variant={variant} />
-      <div className="h-12 w-12">
+      <div className="h-full min-w-0 aspect-square">
         <SoulLinkNotificationBell variant={variant} />
       </div>
       <Link
@@ -921,13 +919,13 @@ function SoulLinkTopStatusBar({
         aria-label={`${resolvedProfile.name} 个人中心`}
         onMouseDown={suppressMouseFocus}
         className={cx(
-          "flex h-full min-w-0 touch-manipulation items-center gap-4 rounded-[1.15rem] border px-4 outline-none transition focus:ring-4",
+          "flex h-full min-w-0 touch-manipulation items-center gap-[4%] overflow-hidden rounded-[1.15rem] border px-[4%] outline-none transition focus:ring-4",
           isBlack
             ? "border-cyan-300/14 bg-[#061226]/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.28)] focus:ring-cyan-300/30"
             : "border-white/90 bg-white/88 shadow-[0_14px_34px_rgba(86,105,166,0.12)] backdrop-blur-xl focus:ring-violet-400/30",
         )}
       >
-        <span className="relative h-11 w-11 shrink-0">
+        <span className="relative h-[70%] aspect-square shrink-0">
           <span className={cx("absolute left-[-0.35rem] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full", isBlack ? "bg-violet-400 shadow-[0_0_12px_rgba(167,139,250,0.85)]" : "bg-violet-400 shadow-[0_0_10px_rgba(139,92,246,0.38)]")} />
           <SoulLinkUserAvatar avatar={resolvedProfile.avatar} name={resolvedProfile.name} variant={variant} />
         </span>
@@ -1698,6 +1696,7 @@ function SoulLinkHomeCoordinateCard({
   index,
   variant,
   to,
+  isLoading = false,
 }: {
   artboard: Artboard
   box: readonly [number, number, number, number]
@@ -1705,25 +1704,29 @@ function SoulLinkHomeCoordinateCard({
   index: number
   variant: Variant
   to?: string
+  isLoading?: boolean
 }) {
   const isBlack = variant === "black"
   const card = homeCoordinateCardData(slice, index, variant)
   const [x, y, w, h] = box
-
-  return (
-    <Link
-      to={to || targetFor(card.id)}
-      data-soul-link-home-card="real-card"
-      data-soul-link-home-light-card={variant === "light" ? "real-card" : undefined}
-      onMouseDown={suppressMouseFocus}
-      className={cx(
-        "absolute z-20 min-h-11 touch-manipulation overflow-hidden rounded-[1.2rem] border outline-none transition hover:-translate-y-1 focus:ring-4",
-        isBlack
-          ? "border-cyan-300/16 bg-[#06111f]/94 text-cyan-50 shadow-[0_16px_36px_rgba(0,0,0,0.38),0_0_26px_rgba(34,211,238,0.08)] hover:border-cyan-300/28 hover:shadow-[0_22px_46px_rgba(0,0,0,0.48),0_0_34px_rgba(34,211,238,0.12)] focus:ring-cyan-300/35"
-          : "border-white/90 bg-white text-slate-800 shadow-[0_18px_42px_rgba(108,123,178,0.14)] hover:shadow-[0_22px_48px_rgba(108,123,178,0.2)] focus:ring-violet-400/35",
-      )}
-      style={boxStyle(artboard, x, y, w, h)}
-    >
+  const isEnterable = Boolean(slice?.id || card.id)
+  const target = to || targetFor(slice?.id || card.id)
+  const badgeLabel = isEnterable ? card.tag : (isLoading ? "加载中" : "待同步")
+  const visitLabel = isEnterable ? card.visitLabel : (isLoading ? "正在同步坐标…" : "等待真实坐标")
+  const className = cx(
+    "absolute z-20 min-h-11 overflow-hidden rounded-[1.2rem] border",
+    isEnterable
+      ? "touch-manipulation outline-none transition hover:-translate-y-1 focus:ring-4"
+      : "cursor-wait select-none opacity-86",
+    isBlack
+      ? "border-cyan-300/16 bg-[#06111f]/94 text-cyan-50 shadow-[0_16px_36px_rgba(0,0,0,0.38),0_0_26px_rgba(34,211,238,0.08)]"
+      : "border-white/90 bg-white text-slate-800 shadow-[0_18px_42px_rgba(108,123,178,0.14)]",
+    isEnterable && (isBlack
+      ? "hover:border-cyan-300/28 hover:shadow-[0_22px_46px_rgba(0,0,0,0.48),0_0_34px_rgba(34,211,238,0.12)] focus:ring-cyan-300/35"
+      : "hover:shadow-[0_22px_48px_rgba(108,123,178,0.2)] focus:ring-violet-400/35"),
+  )
+  const content = (
+    <>
       <div className="relative h-[45%] overflow-hidden">
         <img src={card.image} alt={`${card.name} 坐标封面`} className={cx("h-full w-full object-cover", isBlack ? "opacity-76 saturate-[1.08]" : "")} loading="lazy" decoding="async" />
         {isBlack ? <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#06111f]/70 via-transparent to-transparent" /> : null}
@@ -1733,7 +1736,7 @@ function SoulLinkHomeCoordinateCard({
             isBlack ? "border border-cyan-200/20 bg-cyan-300/14 text-cyan-50" : "bg-violet-500/82 text-white",
           )}
         >
-          {card.tag}
+          {badgeLabel}
         </span>
       </div>
       <div className="flex h-[55%] flex-col px-[7%] py-[5%]">
@@ -1746,11 +1749,40 @@ function SoulLinkHomeCoordinateCard({
             ) : (
               <UserCutImage src={lightMessageIcon} className="h-[18px] w-[18px] shrink-0 rounded-full" scale={1.6} />
             )}
-            {card.visitLabel}
+            {visitLabel}
           </span>
-          <span aria-hidden="true" className={isBlack ? "text-cyan-300/58" : "text-violet-300"}>♡</span>
+          <span aria-hidden="true" className={isEnterable ? (isBlack ? "text-cyan-300/58" : "text-violet-300") : (isBlack ? "text-cyan-100/28" : "text-slate-300")}>♡</span>
         </div>
       </div>
+    </>
+  )
+
+  if (!isEnterable) {
+    return (
+      <div
+        data-soul-link-home-card="real-card"
+        data-soul-link-home-light-card={variant === "light" ? "real-card" : undefined}
+        data-soul-link-home-card-state={isLoading ? "loading" : "placeholder"}
+        aria-disabled="true"
+        className={className}
+        style={boxStyle(artboard, x, y, w, h)}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      to={target}
+      data-soul-link-home-card="real-card"
+      data-soul-link-home-light-card={variant === "light" ? "real-card" : undefined}
+      data-soul-link-home-card-state="enterable"
+      onMouseDown={suppressMouseFocus}
+      className={className}
+      style={boxStyle(artboard, x, y, w, h)}
+    >
+      {content}
     </Link>
   )
 }
@@ -1761,36 +1793,43 @@ function SoulLinkDiscoverCard({
   tavern,
   index,
   variant,
+  isLoading = false,
 }: {
   artboard: Artboard
   box: readonly [number, number, number, number]
   tavern?: Tavern
   index: number
   variant: Variant
+  isLoading?: boolean
 }) {
   const [x, y, w, h] = box
   const card = discoverCardData(tavern, index)
   const isBlack = variant === "black"
+  const isEnterable = Boolean(tavern?.id)
   const avatarImages = [
     DISCOVER_CARD_IMAGES[(index + 1) % DISCOVER_CARD_IMAGES.length],
     DISCOVER_CARD_IMAGES[(index + 2) % DISCOVER_CARD_IMAGES.length],
     DISCOVER_CARD_IMAGES[(index + 3) % DISCOVER_CARD_IMAGES.length],
   ]
-
-  return (
-    <Link
-      to={targetFor(tavern?.id)}
-      data-soul-link-discover-card="real-card"
-      data-soul-link-discover-card-layout="image-top"
-      onMouseDown={suppressMouseFocus}
-      className={cx(
-        "absolute z-20 flex touch-manipulation flex-col overflow-hidden rounded-[1.28rem] border outline-none transition duration-300 hover:scale-[1.015] hover:-translate-y-0.5 focus:ring-4",
-        isBlack
-          ? "border-cyan-300/14 bg-[#061226]/92 text-cyan-50 shadow-[0_18px_38px_rgba(0,0,0,0.35),0_0_26px_rgba(34,211,238,0.08)] hover:border-cyan-300/26 hover:shadow-[0_22px_46px_rgba(0,0,0,0.42),0_0_40px_rgba(34,211,238,0.18)] focus:ring-cyan-300/35"
-          : "border-white/90 bg-white/96 text-slate-800 shadow-[0_12px_32px_rgba(108,123,178,0.12)] hover:shadow-[0_16px_48px_rgba(108,123,178,0.22)] focus:ring-violet-400/35",
-      )}
-      style={boxStyle(artboard, x, y, w, h)}
-    >
+  const className = cx(
+    "absolute z-20 flex flex-col overflow-hidden rounded-[1.28rem] border",
+    isEnterable
+      ? "touch-manipulation outline-none transition duration-300 hover:scale-[1.015] hover:-translate-y-0.5 focus:ring-4"
+      : "cursor-wait select-none opacity-86",
+    isBlack
+      ? "border-cyan-300/14 bg-[#061226]/92 text-cyan-50 shadow-[0_18px_38px_rgba(0,0,0,0.35),0_0_26px_rgba(34,211,238,0.08)]"
+      : "border-white/90 bg-white/96 text-slate-800 shadow-[0_12px_32px_rgba(108,123,178,0.12)]",
+    isEnterable && (isBlack
+      ? "hover:border-cyan-300/26 hover:shadow-[0_22px_46px_rgba(0,0,0,0.42),0_0_40px_rgba(34,211,238,0.18)] focus:ring-cyan-300/35"
+      : "hover:shadow-[0_16px_48px_rgba(108,123,178,0.22)] focus:ring-violet-400/35"),
+  )
+  const content = (
+    <>
+      {!isEnterable ? (
+        <span className={cx("absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 text-[10px] font-black", isBlack ? "bg-cyan-300/12 text-cyan-100/70" : "bg-violet-50 text-violet-400")}>
+          {isLoading ? "加载中" : "待同步"}
+        </span>
+      ) : null}
       <div className={cx("relative h-[43%] w-full shrink-0 overflow-hidden", isBlack ? "bg-cyan-300/8" : "bg-violet-50")}>
         <img data-soul-link-discover-card-cover="real-image" data-soul-link-discover-square-image="512x512" src={card.image} alt={`${card.name} 封面`} className={cx("h-full w-full object-cover", isBlack && "opacity-90 saturate-[1.05]")} loading="lazy" decoding="async" />
         <span className={cx("absolute left-3 top-3 inline-flex max-w-[72%] items-center gap-1 rounded-full px-3 py-1 text-[10px] font-black shadow-[0_8px_18px_rgba(118,91,255,0.22)]", isBlack ? "border border-cyan-200/20 bg-cyan-300/14 text-cyan-50" : "bg-violet-500/82 text-white")}>
@@ -1807,7 +1846,7 @@ function SoulLinkDiscoverCard({
         <div className={cx("mt-auto flex min-w-0 items-center gap-2 text-[11px] font-black", isBlack ? "text-cyan-100/44" : "text-slate-400")}>
           <span className="flex min-w-0 items-center gap-1 truncate">
             <MessageCircle size={13} strokeWidth={2.6} className={cx("shrink-0", isBlack ? "text-cyan-300/70" : "text-violet-300")} />
-            {card.timeLabel} · {card.visitLabel}
+            {isEnterable ? `${card.timeLabel} · ${card.visitLabel}` : (isLoading ? "正在同步坐标…" : "等待真实坐标")}
           </span>
           <span aria-hidden="true" className="ml-auto flex shrink-0 -space-x-1.5">
             {avatarImages.map((image, avatarIndex) => (
@@ -1819,6 +1858,35 @@ function SoulLinkDiscoverCard({
           </span>
         </div>
       </div>
+    </>
+  )
+
+  if (!isEnterable) {
+    return (
+      <div
+        data-soul-link-discover-card="real-card"
+        data-soul-link-discover-card-layout="image-top"
+        data-soul-link-discover-card-state={isLoading ? "loading" : "placeholder"}
+        aria-disabled="true"
+        className={className}
+        style={boxStyle(artboard, x, y, w, h)}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      to={targetFor(tavern.id)}
+      data-soul-link-discover-card="real-card"
+      data-soul-link-discover-card-layout="image-top"
+      data-soul-link-discover-card-state="enterable"
+      onMouseDown={suppressMouseFocus}
+      className={className}
+      style={boxStyle(artboard, x, y, w, h)}
+    >
+      {content}
     </Link>
   )
 }
@@ -1856,10 +1924,12 @@ function SoulLinkHomeMainSurface({
   artboard,
   featuredCitySlices,
   variant,
+  isLoading = false,
 }: {
   artboard: Artboard
   featuredCitySlices: HomeReferenceProps["featuredCitySlices"]
   variant: Variant
+  isLoading?: boolean
 }) {
   const isBlack = variant === "black"
   const heroBox = HOME_LAYOUT.hero
@@ -1972,6 +2042,7 @@ function SoulLinkHomeMainSurface({
           index={index}
           variant={variant}
           to={targetFor(featuredCitySlices[index]?.id)}
+          isLoading={isLoading && !featuredCitySlices[index]?.id}
         />
       ))}
     </>
@@ -1982,10 +2053,12 @@ function SoulLinkHomeMobile({
   featuredCitySlices,
   onToggleTheme,
   variant,
+  isLoading = false,
 }: {
   featuredCitySlices: HomeReferenceProps["featuredCitySlices"]
   onToggleTheme: () => void
   variant: Variant
+  isLoading?: boolean
 }) {
   const isBlack = variant === "black"
   const cards = HOME_LAYOUT.cards.map((_, index) => homeCoordinateCardData(featuredCitySlices[index], index, variant))
@@ -2039,22 +2112,54 @@ function SoulLinkHomeMobile({
           <Link to="/discover" className={cx("text-sm font-black", isBlack ? "text-cyan-300" : "text-violet-400")}>全部 →</Link>
         </div>
         <div className="grid gap-3">
-          {cards.map((slice, index) => (
-            <Link
-              key={slice.id || `fallback-${index}`}
-              to={targetFor(slice.id)}
-              data-soul-link-home-card="real-card"
-              data-soul-link-home-light-card={variant === "light" ? "real-card" : undefined}
-              className={cx("flex min-h-28 touch-manipulation gap-3 rounded-[1.5rem] border p-3", isBlack ? "border-cyan-300/16 bg-[#061226]/90 shadow-[0_0_24px_rgba(34,211,238,0.08)]" : "border-white/80 bg-white shadow-[0_14px_34px_rgba(108,123,178,0.12)]")}
-            >
-              <img src={slice.image} alt={`${slice.name} 封面`} className="h-24 w-28 rounded-[1.15rem] object-cover" loading="lazy" decoding="async" />
-              <span className="min-w-0 flex-1 py-1">
-                <span data-soul-link-home-card-title="real-text" className={cx("block truncate font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{slice.name}</span>
-                <span className={cx("mt-2 line-clamp-2 block text-sm font-bold leading-6", isBlack ? "text-cyan-100/52" : "text-slate-400")}>{slice.description}</span>
-                <span className={cx("mt-2 block text-xs font-black", isBlack ? "text-cyan-300" : "text-violet-400")}>{slice.tag}</span>
-              </span>
-            </Link>
-          ))}
+          {cards.map((slice, index) => {
+            const isEnterable = Boolean(slice.id)
+            const cardClassName = cx(
+              "flex min-h-28 gap-3 rounded-[1.5rem] border p-3",
+              isEnterable ? "touch-manipulation" : "cursor-wait select-none opacity-86",
+              isBlack ? "border-cyan-300/16 bg-[#061226]/90 shadow-[0_0_24px_rgba(34,211,238,0.08)]" : "border-white/80 bg-white shadow-[0_14px_34px_rgba(108,123,178,0.12)]",
+            )
+            const content = (
+              <>
+                <img src={slice.image} alt={`${slice.name} 封面`} className="h-24 w-28 rounded-[1.15rem] object-cover" loading="lazy" decoding="async" />
+                <span className="min-w-0 flex-1 py-1">
+                  <span data-soul-link-home-card-title="real-text" className={cx("block truncate font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{slice.name}</span>
+                  <span className={cx("mt-2 line-clamp-2 block text-sm font-bold leading-6", isBlack ? "text-cyan-100/52" : "text-slate-400")}>{slice.description}</span>
+                  <span className={cx("mt-2 block text-xs font-black", isBlack ? "text-cyan-300" : "text-violet-400")}>
+                    {isEnterable ? slice.tag : (isLoading ? "加载中" : "待同步")}
+                  </span>
+                </span>
+              </>
+            )
+
+            if (!isEnterable) {
+              return (
+                <div
+                  key={`fallback-${index}`}
+                  data-soul-link-home-card="real-card"
+                  data-soul-link-home-light-card={variant === "light" ? "real-card" : undefined}
+                  data-soul-link-home-card-state={isLoading ? "loading" : "placeholder"}
+                  aria-disabled="true"
+                  className={cardClassName}
+                >
+                  {content}
+                </div>
+              )
+            }
+
+            return (
+              <Link
+                key={slice.id || `fallback-${index}`}
+                to={targetFor(slice.id)}
+                data-soul-link-home-card="real-card"
+                data-soul-link-home-light-card={variant === "light" ? "real-card" : undefined}
+                data-soul-link-home-card-state="enterable"
+                className={cardClassName}
+              >
+                {content}
+              </Link>
+            )
+          })}
         </div>
       </section>
     </div>
@@ -2189,7 +2294,7 @@ function SoulLinkDiscoverFilterPanel({
 
   return (
     <>
-      <div className="absolute z-20 flex items-center gap-5" style={boxStyle(artboard, 226, 118, 970, 48)}>
+      <div className="absolute z-20 flex items-center gap-5" style={boxStyle(artboard, 252, 118, 944, 48)}>
         <span className={cx("mr-3 text-[16px] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>快速探索</span>
         <DiscoverFilterChip variant={variant} label="全部" onClick={onClear} />
         <DiscoverFilterChip variant={variant} label="正在被探索" onClick={() => onOpenOnlyChange(true)} />
@@ -2204,7 +2309,7 @@ function SoulLinkDiscoverFilterPanel({
           "absolute z-20 grid grid-cols-[1.65fr_1.05fr_1fr] gap-5 rounded-[1.45rem] border p-5 shadow-[0_18px_54px_rgba(87,107,166,0.12)] backdrop-blur-xl",
           isBlack ? "border-cyan-300/14 bg-[#061226]/82 text-cyan-100" : "border-white/90 bg-white/86 text-slate-700",
         )}
-        style={boxStyle(artboard, 222, 178, 796, 166)}
+        style={boxStyle(artboard, 252, 178, 766, 166)}
       >
         {DISCOVER_FILTER_GROUPS.map((group, groupIndex) => (
           <div key={group.title} className={cx("min-w-0", groupIndex > 0 ? (isBlack ? "border-l border-cyan-300/12 pl-6" : "border-l border-slate-200/70 pl-6") : "")}>
@@ -2276,29 +2381,14 @@ function SoulLinkDiscoverFilterPanel({
   )
 }
 
-function DiscoverViewIcon({ type, className }: { type: "grid" | "list" | "map"; className?: string }) {
-  if (type === "grid") {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className={className}>
-        {[5, 10.5, 16].map((x) => (
-          [5, 10.5, 16].map((y) => (
-            <rect key={`${x}-${y}`} x={x} y={y} width="3" height="3" rx="0.6" fill="currentColor" />
-          ))
-        ))}
-      </svg>
-    )
-  }
-  if (type === "map") {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className={className}>
-        <path d="M5 5.6 9.6 4l4.8 1.9L19 4.4v14l-4.6 1.6-4.8-1.9L5 19.6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M9.6 4v14.1M14.4 5.9V20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    )
-  }
+function DiscoverViewIcon({ className }: { className?: string }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M7 7h10M7 12h10M7 17h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      {[5, 10.5, 16].map((x) => (
+        [5, 10.5, 16].map((y) => (
+          <rect key={`${x}-${y}`} x={x} y={y} width="3" height="3" rx="0.6" fill="currentColor" />
+        ))
+      ))}
     </svg>
   )
 }
@@ -2310,7 +2400,7 @@ function SoulLinkDiscoverSortControls({ variant }: { variant: Variant }) {
     ? "bg-cyan-300/12 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.1)]"
     : "bg-[#f0ecff] text-[#a36bff] shadow-[0_8px_22px_rgba(144,113,255,0.1)]"
   return (
-    <div data-soul-link-discover-sort-controls="real-dom" className={cx("flex items-center gap-6 text-[13px] font-black leading-none", mutedText)}>
+    <div data-soul-link-discover-sort-controls="real-dom" className={cx("ml-auto flex items-center justify-end gap-4 text-[13px] font-black leading-none", mutedText)}>
       <button
         type="button"
         data-soul-link-discover-sort-label="real-text"
@@ -2321,38 +2411,15 @@ function SoulLinkDiscoverSortControls({ variant }: { variant: Variant }) {
         <span>排序：推荐</span>
         <ChevronDown size={13} strokeWidth={3} className="mt-0.5 opacity-75" />
       </button>
-      <div className="flex items-center gap-3" aria-label="视图切换">
-        <button
-          type="button"
-          data-soul-link-discover-view-button="grid-active"
-          onMouseDown={suppressMouseFocus}
-          className={cx("grid h-9 w-9 place-items-center rounded-full outline-none transition focus:ring-4", activePill, isBlack ? "focus:ring-cyan-300/30" : "focus:ring-violet-400/30")}
-          aria-label="网格视图"
-          aria-pressed="true"
-        >
-          <DiscoverViewIcon type="grid" className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          data-soul-link-discover-view-button="list"
-          onMouseDown={suppressMouseFocus}
-          className={cx("grid h-9 w-9 place-items-center rounded-full outline-none transition focus:ring-4", isBlack ? "text-cyan-100/42 hover:bg-cyan-300/8 hover:text-cyan-200 focus:ring-cyan-300/30" : "text-[#90a0bb] hover:bg-white/70 hover:text-violet-400 focus:ring-violet-400/30")}
-          aria-label="列表视图"
-          aria-pressed="false"
-        >
-          <DiscoverViewIcon type="list" className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          data-soul-link-discover-view-button="map"
-          onMouseDown={suppressMouseFocus}
-          className={cx("grid h-9 w-9 place-items-center rounded-full outline-none transition focus:ring-4", isBlack ? "text-cyan-100/42 hover:bg-cyan-300/8 hover:text-cyan-200 focus:ring-cyan-300/30" : "text-[#90a0bb] hover:bg-white/70 hover:text-violet-400 focus:ring-violet-400/30")}
-          aria-label="地图视图"
-          aria-pressed="false"
-        >
-          <DiscoverViewIcon type="map" className="h-5 w-5" />
-        </button>
-      </div>
+      <span
+        data-soul-link-discover-view-button="grid-active"
+        data-soul-link-discover-view-indicator="grid-active"
+        className={cx("grid h-9 w-9 shrink-0 place-items-center rounded-full", activePill)}
+        role="img"
+        aria-label="当前为网格视图"
+      >
+        <DiscoverViewIcon className="h-4 w-4" />
+      </span>
     </div>
   )
 }
@@ -2361,15 +2428,44 @@ function SoulLinkDiscoverRightRail({
   artboard,
   taverns,
   variant,
+  isLoading = false,
 }: {
   artboard: Artboard
   taverns: Tavern[]
   variant: Variant
+  isLoading?: boolean
 }) {
   const cards = DISCOVER_LAYOUT.cards.map((_, index) => discoverCardData(taverns[index], index))
   const footprintCards = cards.slice(0, 4)
   const railPanel = { w: 316, h: 1024 }
   const isBlack = variant === "black"
+  const isInitialLoading = isLoading && taverns.length === 0
+  const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set()
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("soul-link-discover-right-rail-favorites") || "[]")
+      return new Set(Array.isArray(stored) ? stored.map(String) : [])
+    } catch {
+      return new Set()
+    }
+  })
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("soul-link-discover-right-rail-favorites", JSON.stringify([...favoriteKeys]))
+  }, [favoriteKeys])
+  function favoriteKey(kind: "echo" | "footprint", cardId: string | undefined, index: number) {
+    return `${kind}:${cardId || `pending-${index}`}`
+  }
+  function toggleFavorite(event: MouseEvent<HTMLButtonElement>, key: string, disabled = false) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (disabled) return
+    setFavoriteKeys((prev) => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
   const worldStatus = discoverWorldStatusFromTaverns(taverns)
   const worldStatusBg = isBlack ? discoverWorldStatusBgBlack : discoverWorldStatusBgLight
   const panelClass = isBlack
@@ -2429,36 +2525,67 @@ function SoulLinkDiscoverRightRail({
         </div>
       </section>
 
-      <section className={cx("pointer-events-auto absolute rounded-[1.35rem] border p-5", panelClass)} style={panelBoxStyle(railPanel, 12, 310, 286, 240)}>
-        <header className="mb-4 flex items-center justify-between">
+      <section className={cx("pointer-events-auto absolute overflow-hidden rounded-[1.35rem] border p-[clamp(8px,1.04vw,16px)]", panelClass)} style={panelBoxStyle(railPanel, 12, 310, 286, 240)}>
+        <header className="mb-[clamp(6px,0.78vw,12px)] flex items-center justify-between">
           <h2 className={cx("text-[15px] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>推荐回响</h2>
           <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("text-[11px] font-black", subtleLinkClass)}>查看全部 →</Link>
         </header>
-        <div className="space-y-4">
-          {DISCOVER_RIGHT_QUOTES.map((quote, index) => (
-            <Link
-              key={quote}
-              to={targetFor(cards[index]?.id)}
-              onMouseDown={suppressMouseFocus}
-              className={cx(
-                "grid min-h-[3.45rem] grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-3 rounded-xl outline-none transition focus:ring-4",
-                isBlack ? "hover:bg-cyan-300/8 focus:ring-cyan-300/30" : "hover:bg-violet-50/60 focus:ring-violet-400/30",
-              )}
-            >
+        <div className="space-y-[clamp(4px,0.65vw,10px)]">
+          {DISCOVER_RIGHT_QUOTES.map((quote, index) => {
+            const card = cards[index]
+            const key = favoriteKey("echo", card?.id, index)
+            const isFavorite = favoriteKeys.has(key)
+            const canEnter = Boolean(card?.id)
+            const favoriteCount = (card?.favoriteCount || 0) + (isFavorite ? 1 : 0)
+            const entryCopy = (
               <span className="min-w-0">
-                <span className={cx("block truncate text-[13px] font-black", isBlack ? "text-cyan-100" : "text-slate-600")}>“{quote}”</span>
-                <span className={cx("mt-1 block truncate text-[11px] font-bold", isBlack ? "text-cyan-100/45" : "text-slate-400")}>来自 {cards[index]?.name || "某个坐标"} · {index * 5 + 2} 分钟前</span>
+                <span className={cx("block truncate text-[clamp(7px,0.78vw,12px)] font-black leading-[1.15]", isBlack ? "text-cyan-100" : "text-slate-600")}>“{isInitialLoading ? "坐标回响同步中…" : quote}”</span>
+                <span className={cx("mt-0.5 block truncate text-[clamp(6px,0.65vw,10px)] font-bold leading-[1.15]", isBlack ? "text-cyan-100/45" : "text-slate-400")}>来自 {isInitialLoading ? "正在同步坐标" : (card?.name || "某个坐标")} · {isInitialLoading ? "加载中" : `${index * 5 + 2} 分钟前`}</span>
               </span>
-              <span
-                data-soul-link-recommended-echo-favorite="real-dom"
-                className={cx("inline-flex items-center justify-end gap-1 text-[11px] font-black", isBlack ? "text-cyan-100/58" : "text-slate-400")}
-                aria-label={`收藏 ${cards[index]?.favoriteCount || 0}`}
+            )
+            return (
+              <div
+                key={quote}
+                data-soul-link-right-rail-entry="recommended-echo"
+                data-soul-link-right-rail-entry-state={canEnter ? "enterable" : "loading"}
+                className={cx(
+                  "grid min-h-[clamp(22px,2.8vw,44px)] grid-cols-[minmax(0,1fr)_clamp(1.5rem,2.6vw,2.5rem)] items-center gap-[clamp(6px,0.65vw,10px)] rounded-xl",
+                  canEnter ? (isBlack ? "hover:bg-cyan-300/8" : "hover:bg-violet-50/60") : "cursor-wait opacity-76",
+                )}
               >
-                <Heart size={13} strokeWidth={2.6} className={cx("shrink-0", isBlack ? "text-cyan-100/56" : "text-slate-400")} />
-                <span data-soul-link-recommended-echo-favorite-count="real-text">{cards[index]?.favoriteCount || 0}</span>
-              </span>
-            </Link>
-          ))}
+                {canEnter ? (
+                  <Link
+                    to={targetFor(card.id)}
+                    data-soul-link-right-rail-entry-link="recommended-echo"
+                    onMouseDown={suppressMouseFocus}
+                    className={cx("min-w-0 rounded-xl outline-none transition focus:ring-4", isBlack ? "focus:ring-cyan-300/30" : "focus:ring-violet-400/30")}
+                  >
+                    {entryCopy}
+                  </Link>
+                ) : (
+                  <span className="min-w-0" aria-disabled="true">{entryCopy}</span>
+                )}
+                <button
+                  type="button"
+                  data-soul-link-recommended-echo-favorite="real-dom"
+                  data-soul-link-right-rail-favorite-button="recommended-echo"
+                  aria-label={isFavorite ? "取消收藏回响" : "收藏回响"}
+                  aria-pressed={isFavorite}
+                  disabled={!canEnter}
+                  onClick={(event) => toggleFavorite(event, key, !canEnter)}
+                  onMouseDown={suppressMouseFocus}
+                  className={cx(
+                    "inline-flex min-h-8 items-center justify-end gap-1 rounded-xl text-[clamp(7px,0.72vw,11px)] font-black outline-none transition focus:ring-4 disabled:cursor-wait disabled:opacity-45",
+                    isFavorite ? "text-rose-500" : (isBlack ? "text-cyan-100/58" : "text-slate-400"),
+                    isBlack ? "focus:ring-cyan-300/30" : "focus:ring-violet-400/30",
+                  )}
+                >
+                  <Heart strokeWidth={2.6} className={cx("h-[clamp(8px,0.85vw,13px)] w-[clamp(8px,0.85vw,13px)] shrink-0", isFavorite ? "fill-rose-500 text-rose-500" : (isBlack ? "text-cyan-100/56" : "text-slate-400"))} />
+                  <span data-soul-link-recommended-echo-favorite-count="real-text">{favoriteCount}</span>
+                </button>
+              </div>
+            )
+          })}
         </div>
       </section>
 
@@ -2468,16 +2595,60 @@ function SoulLinkDiscoverRightRail({
           <Link to="/discover" onMouseDown={suppressMouseFocus} className={cx("text-[11px] font-black", subtleLinkClass)}>查看全部 →</Link>
         </header>
         <div className="space-y-3">
-          {footprintCards.map((card, index) => (
-            <Link key={`${card.name}-${index}`} to={targetFor(card.id)} onMouseDown={suppressMouseFocus} className={cx("flex min-h-11 touch-manipulation items-center gap-3 rounded-xl outline-none transition focus:ring-4", isBlack ? "hover:bg-cyan-300/8 focus:ring-cyan-300/30" : "hover:bg-violet-50/60 focus:ring-violet-400/30")}>
-              <img data-soul-link-discover-square-image="512x512" src={card.image} alt={`${card.name} 缩略图`} className="h-10 w-10 rounded-xl object-cover" loading="lazy" decoding="async" />
-              <span className="min-w-0 flex-1">
-                <span className={cx("block truncate text-[13px] font-black", isBlack ? "text-cyan-50" : "text-slate-700")}>{card.name}</span>
-                <span className={cx("mt-1 block text-[11px] font-bold", isBlack ? "text-cyan-100/45" : "text-slate-400")}>{card.timeLabel}</span>
-              </span>
-              <span aria-hidden="true" className={isBlack ? "text-cyan-300/42" : "text-slate-300"}>♡</span>
-            </Link>
-          ))}
+          {footprintCards.map((card, index) => {
+            const key = favoriteKey("footprint", card.id, index)
+            const isFavorite = favoriteKeys.has(key)
+            const canEnter = Boolean(card.id)
+            const entryCopy = (
+              <>
+                <img data-soul-link-discover-square-image="512x512" src={card.image} alt={`${card.name} 缩略图`} className="h-10 w-10 rounded-xl object-cover" loading="lazy" decoding="async" />
+                <span className="min-w-0 flex-1">
+                  <span className={cx("block truncate text-[13px] font-black", isBlack ? "text-cyan-50" : "text-slate-700")}>{isInitialLoading ? "正在同步坐标" : card.name}</span>
+                  <span className={cx("mt-1 block text-[11px] font-bold", isBlack ? "text-cyan-100/45" : "text-slate-400")}>{isInitialLoading ? "加载中" : card.timeLabel}</span>
+                </span>
+              </>
+            )
+            return (
+              <div
+                key={`${card.name}-${index}`}
+                data-soul-link-right-rail-entry="footprint"
+                data-soul-link-right-rail-entry-state={canEnter ? "enterable" : "loading"}
+                className={cx(
+                  "grid min-h-11 grid-cols-[minmax(0,1fr)_2rem] items-center gap-2 rounded-xl",
+                  canEnter ? (isBlack ? "hover:bg-cyan-300/8" : "hover:bg-violet-50/60") : "cursor-wait opacity-76",
+                )}
+              >
+                {canEnter ? (
+                  <Link
+                    to={targetFor(card.id)}
+                    data-soul-link-right-rail-entry-link="footprint"
+                    onMouseDown={suppressMouseFocus}
+                    className={cx("flex min-w-0 touch-manipulation items-center gap-3 rounded-xl outline-none transition focus:ring-4", isBlack ? "focus:ring-cyan-300/30" : "focus:ring-violet-400/30")}
+                  >
+                    {entryCopy}
+                  </Link>
+                ) : (
+                  <span className="flex min-w-0 items-center gap-3" aria-disabled="true">{entryCopy}</span>
+                )}
+                <button
+                  type="button"
+                  data-soul-link-right-rail-favorite-button="footprint"
+                  aria-label={isFavorite ? "取消收藏足迹" : "收藏足迹"}
+                  aria-pressed={isFavorite}
+                  disabled={!canEnter}
+                  onClick={(event) => toggleFavorite(event, key, !canEnter)}
+                  onMouseDown={suppressMouseFocus}
+                  className={cx(
+                    "grid h-8 w-8 place-items-center rounded-xl text-sm outline-none transition focus:ring-4 disabled:cursor-wait disabled:opacity-45",
+                    isFavorite ? "text-rose-500" : (isBlack ? "text-cyan-300/42" : "text-slate-300"),
+                    isBlack ? "focus:ring-cyan-300/30" : "focus:ring-violet-400/30",
+                  )}
+                >
+                  <Heart size={15} strokeWidth={2.6} className={cx(isFavorite && "fill-rose-500 text-rose-500")} />
+                </button>
+              </div>
+            )
+          })}
         </div>
       </section>
 
@@ -2507,6 +2678,7 @@ function SoulLinkDiscoverSurface({
   artboard,
   search,
   taverns,
+  isLoading = false,
   onSearchChange,
   onClear,
   onTogglePlaceType,
@@ -2517,6 +2689,7 @@ function SoulLinkDiscoverSurface({
   variant,
 }: DiscoverReferenceProps & { artboard: Artboard }) {
   const isBlack = variant === "black"
+  const resultCountLabel = isLoading && taverns.length === 0 ? "加载中" : `${Math.max(taverns.length, DISCOVER_LAYOUT.cards.length)} 个坐标`
   return (
     <>
       <div aria-hidden="true" className={cx("absolute inset-0 z-0 overflow-hidden", isBlack ? "bg-[#030712]" : "bg-[linear-gradient(180deg,#f6f9ff_0%,#eef4ff_48%,#f7fbff_100%)]")}>
@@ -2534,7 +2707,7 @@ function SoulLinkDiscoverSurface({
           </>
         )}
       </div>
-      <div className="absolute z-10" style={boxStyle(artboard, 228, 34, 250, 66)}>
+      <div className="absolute z-10" style={boxStyle(artboard, DISCOVER_LAYOUT.title.x, DISCOVER_LAYOUT.title.y, DISCOVER_LAYOUT.title.w, DISCOVER_LAYOUT.title.h)}>
         <h1 data-soul-link-discover-title="real-text" className={cx("text-[31px] font-black leading-tight tracking-[-0.04em]", isBlack ? "text-cyan-50" : "text-slate-900")}>
           探索 <span className={isBlack ? "text-cyan-300" : "text-violet-500"}>✦</span>
         </h1>
@@ -2559,9 +2732,9 @@ function SoulLinkDiscoverSurface({
         onOpenOnlyChange={onOpenOnlyChange}
         variant={variant}
       />
-      <div className="absolute z-20 flex items-center justify-between" style={boxStyle(artboard, 226, 372, 980, 38)}>
+      <div className="absolute z-20 flex items-center justify-between" style={boxStyle(artboard, 252, 372, 954, 38)}>
         <h2 className={cx("text-[20px] font-black", isBlack ? "text-cyan-50" : "text-slate-900")}>
-          探索结果 <span className={cx("text-[13px] font-bold", isBlack ? "text-cyan-100/42" : "text-slate-400")}>{Math.max(taverns.length, DISCOVER_LAYOUT.cards.length)} 个坐标</span>
+          探索结果 <span className={cx("text-[13px] font-bold", isBlack ? "text-cyan-100/42" : "text-slate-400")}>{resultCountLabel}</span>
         </h2>
         <SoulLinkDiscoverSortControls variant={variant} />
       </div>
@@ -2637,11 +2810,13 @@ function DiscoverCardLinks({
   artboard,
   taverns,
   variant,
+  isLoading = false,
   forceVisible = false,
 }: {
   artboard: Artboard
   taverns: Tavern[]
   variant: Variant
+  isLoading?: boolean
   forceVisible?: boolean
 }) {
   return (
@@ -2658,6 +2833,7 @@ function DiscoverCardLinks({
               tavern={tavern}
               index={index}
               variant={variant}
+              isLoading={isLoading && !tavern}
             />
           )
         }
@@ -2683,6 +2859,7 @@ function DiscoverCardLinks({
 export function SoulLinkHomeReference({
   variant,
   featuredCitySlices,
+  isLoading = false,
   worldPulseItems,
   dailyQuote = DEFAULT_DAILY_QUOTE,
   onlineEntities,
@@ -2702,9 +2879,9 @@ export function SoulLinkHomeReference({
   const searchBox = HOME_LAYOUT.search
   return (
     <ArtboardShell artboard={artboard} variant={variant} kind="home">
-      <SoulLinkHomeMobile featuredCitySlices={featuredCitySlices} onToggleTheme={onToggleTheme} variant={variant} />
+      <SoulLinkHomeMobile featuredCitySlices={featuredCitySlices} isLoading={isLoading} onToggleTheme={onToggleTheme} variant={variant} />
       <div className="relative hidden h-full md:block">
-        <SoulLinkHomeMainSurface artboard={artboard} featuredCitySlices={featuredCitySlices} variant={variant} />
+        <SoulLinkHomeMainSurface artboard={artboard} featuredCitySlices={featuredCitySlices} variant={variant} isLoading={isLoading} />
         <SoulLinkSidebar artboard={artboard} variant={variant} active="home" onToggleTheme={onToggleTheme} />
         <SoulLinkUserCluster artboard={artboard} variant={variant} forceVisible />
         <SoulLinkFeedPanel
@@ -2761,11 +2938,12 @@ export function SoulLinkDiscoverReference(props: DiscoverReferenceProps) {
           actionLabel="查看全部"
         />
         <SoulLinkOnlineEntitiesPanel artboard={artboard} variant={props.variant} box={DISCOVER_RIGHT_RAIL.onlineEntities} entities={discoverOnlineEntities} />
-        <SoulLinkDiscoverRightRail artboard={artboard} taverns={props.taverns} variant={props.variant} />
+        <SoulLinkDiscoverRightRail artboard={artboard} taverns={props.taverns} variant={props.variant} isLoading={props.isLoading} />
         <DiscoverCardLinks
           artboard={artboard}
           taverns={props.taverns}
           variant={props.variant}
+          isLoading={props.isLoading}
           forceVisible
         />
       </div>

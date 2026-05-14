@@ -139,7 +139,7 @@ export function MiniGameWorkshopPanel({ onBack }: { onBack?: () => void }) {
       </div>
 
       <p className="text-center text-[0.7rem] text-emerald-100/38">
-        点击游戏卡片开始玩 · 完成后回到聊天主线
+        选择一个小游戏开始，结束后可以继续聊天
       </p>
     </div>
   )
