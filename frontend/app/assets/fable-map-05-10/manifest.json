@@ -122,5 +122,17 @@
       "sha256": "947c8e66f331c1a48be344eae7e64662bfb676e48a0c614356f5c9641914952a",
       "replacement_note": "Low-res placeholder for owner-provided SoulLink brand slice; replace with 328x124 px or higher at the same aspect ratio."
     }
+  },
+  "reference": {
+    "soullink-static-base-1536x1024": {
+      "path": "frontend/app/assets/fable-map-05-10/reference/soullink-static-base-1536x1024.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "sha256": "b0c22e9953c365ed1f0028e636cc9f69fb3c93ff5b705a843b46b2ae92776f5d",
+      "usage": "Desktop SoulLink static background/card layer with dynamic/data text stripped; dynamic text is rendered as DOM overlays.",
+      "source": "D:/work/ai-/设计问题/index.png"
+    }
   }
 }

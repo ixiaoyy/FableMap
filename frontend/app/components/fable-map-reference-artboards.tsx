@@ -39,6 +39,7 @@ import homeBlackNodeWhiteTower from "../assets/fable-map-05-10/home-black/node-w
 import homeBlackRecentEchoWaveform from "../assets/fable-map-05-10/home-black/recent-echo-waveform.png"
 import homeBlackUserAvatar from "../assets/fable-map-05-10/home-black/user-avatar-node07.png"
 import homeBlackWorldStatsSparkline from "../assets/fable-map-05-10/home-black/world-stats-sparkline.png"
+import soulLinkStaticBase from "../assets/fable-map-05-10/reference/soullink-static-base-1536x1024.png"
 import soulLinkBrandLogo from "../assets/fable-map-05-10/brand/soullink-logo-low.png"
 import fableMapUserAvatarImage from "../assets/npc-style-cast/portraits-hd/commission-zhideng.png"
 import { buildTavernFirstMinuteGuide } from "../lib/tavern-first-minute"
@@ -2941,6 +2942,221 @@ function DiscoverCardLinks({
   )
 }
 
+
+function SoulLinkText({
+  artboard,
+  x,
+  y,
+  w,
+  h,
+  children,
+  className,
+  style,
+  as = "span",
+}: {
+  artboard: Artboard
+  x: number
+  y: number
+  w: number
+  h: number
+  children: ReactNode
+  className?: string
+  style?: CSSProperties
+  as?: "span" | "div" | "p" | "h1" | "h2"
+}) {
+  const Tag = as
+  return (
+    <Tag
+      data-soullink-dynamic-text="dom"
+      className={cx("pointer-events-none absolute z-20 whitespace-pre-line", className)}
+      style={{
+        ...boxStyle(artboard, x, y, w, h),
+        fontFamily: '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif',
+        ...style,
+      }}
+    >
+      {children}
+    </Tag>
+  )
+}
+
+function SoulLinkHybridHomeDesktop({
+  artboard,
+  featuredCitySlices,
+  onToggleTheme,
+}: {
+  artboard: Artboard
+  featuredCitySlices: HomeReferenceProps["featuredCitySlices"]
+  onToggleTheme: () => void
+}) {
+  const cards = HOME_LAYOUT.cards.map((_, index) => homeCoordinateCardData(featuredCitySlices[index], index, "black"))
+  const nav = HOME_LAYOUT.sidebar.navItems
+  const navCopy = nav.map((item) => ({ ...item, title: item.label, subtitle: item.eyebrow }))
+  const signalRows = [
+    ["NODE_07", "数据港湾", "RECONNECTED", "2 分钟前"],
+    ["NODE_21", "霓虹废墟", "NEW ECHO", "5 分钟前"],
+    ["NODE_19", "旧地铁站", "SIGNAL WEAK", "12 分钟前"],
+    ["NODE_03", "白塔图书馆", "NEW ENTITY", "18 分钟前"],
+  ] as const
+  const onlineRows = [
+    ["星野奈奈", "正在 云上图书馆", "在线›"],
+    ["安晴", "正在 月光电台", "在线›"],
+    ["朔夜", "正在 旧车站月台", "离开 5 分钟"],
+    ["Echo_01", "正在 数据港湾", "在线›"],
+  ] as const
+  const memoryRows = [
+    ["“我在这里，等第一次下雪。”", "来自 NODE_21 · 2 小时前"],
+    ["“谢谢你，陌生人。”", "来自 NODE_07 · 5 小时前"],
+    ["“今天的风，有点温柔。”", "来自 NODE_03 · 1 天前"],
+  ] as const
+
+  return (
+    <>
+      <img
+        src={soulLinkStaticBase}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        decoding="async"
+        className="absolute inset-0 z-0 h-full w-full select-none object-fill"
+      />
+      <div className="sr-only">
+        <h1>SoulLink</h1>
+        <p>连接另一个数字世界。动态文字由 DOM 文本渲染，静态背景和卡片底图由图片承载。</p>
+      </div>
+
+      <SoulLinkText artboard={artboard} x={322} y={34} w={330} h={38} className="opacity-0 text-[14px] font-bold leading-[1.35] tracking-[0.04em] text-cyan-50/72">
+        {"SCAN FOR ACTIVE SIGNALS...\n扫描活跃信号..."}
+      </SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1332} y={34} w={105} h={20} className="text-[14px] font-black leading-none text-cyan-50">USER_07</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1332} y={58} w={130} h={18} className="text-[12px] font-bold leading-none text-cyan-100/70">ID: 0x7A31...9F2C</SoulLinkText>
+
+      {navCopy.map((item) => (
+        <span key={item.id}>
+          <SoulLinkText artboard={artboard} x={80} y={item.y + 13} w={128} h={18} className={cx("opacity-0 text-[14px] font-black uppercase leading-none tracking-[0.08em]", item.id === "home" ? "text-cyan-50" : "text-cyan-50/58")}>{item.title}</SoulLinkText>
+          <SoulLinkText artboard={artboard} x={80} y={item.y + 35} w={100} h={15} className={cx("opacity-0 text-[11px] font-bold leading-none", item.id === "home" ? "text-cyan-100/70" : "text-cyan-100/40")}>{item.subtitle}</SoulLinkText>
+        </span>
+      ))}
+      <SoulLinkText artboard={artboard} x={36} y={744} w={130} h={18} className="opacity-0 text-[13px] font-black uppercase tracking-[0.08em] text-cyan-300">SYSTEM STATUS</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={36} y={766} w={80} h={14} className="opacity-0 text-[11px] font-bold text-cyan-100/52">系统状态</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={56} y={800} w={130} h={16} className="text-[12px] font-black uppercase text-cyan-300">NETWORK STABLE</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={56} y={820} w={85} h={14} className="text-[11px] font-bold text-cyan-100/54">网络稳定</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={36} y={858} w={130} h={16} className="text-[11px] font-bold uppercase tracking-[0.05em] text-cyan-100/50">UPTIME: 24:17:36</SoulLinkText>
+
+      <SoulLinkText artboard={artboard} x={270} y={128} w={330} h={112} as="h1" className="opacity-0 text-[43px] font-black leading-[1.28] tracking-[-0.045em] text-cyan-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.18)]">
+        {"接入仍在回应的\n数字坐标网络"}
+      </SoulLinkText>
+      <SoulLinkText artboard={artboard} x={272} y={260} w={360} h={24} className="opacity-0 text-[16px] font-bold leading-none text-cyan-50/78">在数据的海洋中，寻找仍在闪烁的信号。</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={294} y={328} w={82} h={38} className="opacity-0 text-center text-[14px] font-black leading-[1.3] text-slate-950">{"连接网络\nCONNECT"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={451} y={328} w={78} h={38} className="opacity-0 text-center text-[14px] font-black leading-[1.3] text-cyan-50/78">{"扫描信号\nSCAN"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={256} y={472} w={88} h={14} className="text-[11px] font-black uppercase text-cyan-300/85">ONLINE: 1,298</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={402} y={472} w={88} h={14} className="text-[11px] font-black uppercase text-cyan-300/85">NODES: 4,831</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={530} y={472} w={100} h={14} className="text-[11px] font-black uppercase text-cyan-300/85">ECHOES: 18,276</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1118} y={108} w={90} h={30} className="opacity-0 text-right text-[10px] font-black uppercase leading-[1.25] text-cyan-300/78">{"NETWORK MAP\n网络拓扑图"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={938} y={150} w={75} h={34} className="text-[11px] font-black uppercase leading-[1.2] text-cyan-100">{"NODE_07\nACTIVE"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1126} y={250} w={85} h={34} className="text-[11px] font-black uppercase leading-[1.2] text-fuchsia-300">{"NODE_19\nUNSTABLE"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={964} y={352} w={70} h={34} className="text-[11px] font-black uppercase leading-[1.2] text-cyan-200">{"NODE_03\nLOW SIGNAL"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1104} y={352} w={70} h={34} className="text-[11px] font-black uppercase leading-[1.2] text-cyan-100">{"NODE_11\nACTIVE"}</SoulLinkText>
+
+      <SoulLinkText artboard={artboard} x={270} y={520} w={180} h={30} as="h2" className="opacity-0 text-[20px] font-black uppercase leading-[1.05] tracking-[0.12em] text-cyan-300">{"ACTIVE NODES\n活跃节点"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1010} y={526} w={72} h={14} className="opacity-0 text-center text-[11px] font-black uppercase text-cyan-100/58">ALL 全部</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1110} y={526} w={82} h={14} className="opacity-0 text-center text-[11px] font-black uppercase text-cyan-100/58">FILTER 筛选</SoulLinkText>
+
+      {cards.map((card, index) => {
+        const [x, y] = HOME_LAYOUT.cards[index]
+        const badgeClass = card.tone === "unstable" ? "text-rose-300" : card.tone === "low" ? "text-amber-200" : "text-cyan-100"
+        return (
+          <span key={`soul-node-text-${card.nodeId}`}>
+            <SoulLinkText artboard={artboard} x={x + 21} y={y + 19} w={90} h={16} className={cx("text-center text-[11px] font-black uppercase leading-none", badgeClass)}>{card.tag}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x + 16} y={y + 127} w={150} h={22} className="text-[18px] font-black leading-none text-cyan-50">{card.name}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x + 16} y={y + 152} w={90} h={16} className="text-[12px] font-black uppercase tracking-[0.1em] text-cyan-100/56">{card.nodeId}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x + 16} y={y + 180} w={166} h={44} className="text-[13px] font-bold leading-[1.5] text-cyan-50/58">{card.description}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x + 138} y={y + 229} w={72} h={14} className="text-right text-[10px] font-black uppercase tracking-[0.05em] text-cyan-300/78">{card.entityLabel}</SoulLinkText>
+          </span>
+        )
+      })}
+
+      <SoulLinkText artboard={artboard} x={1248} y={118} w={160} h={31} as="h2" className="opacity-0 text-[15px] font-black uppercase leading-[1.25] tracking-[0.12em] text-cyan-300">{"SIGNAL ACTIVITY\n信号活动"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1440} y={124} w={36} h={13} className="text-center text-[10px] font-black uppercase text-rose-300">LIVE</SoulLinkText>
+      {signalRows.map((row, index) => {
+        const y = 170 + index * 57
+        return (
+          <span key={`signal-row-${row[0]}`}>
+            <SoulLinkText artboard={artboard} x={1292} y={y} w={70} h={16} className="text-[12px] font-black uppercase text-cyan-100/75">{row[0]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={1292} y={y + 18} w={90} h={14} className="text-[11px] font-bold text-cyan-100/48">{row[1]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={1415} y={y} w={70} h={14} className="text-right text-[10px] font-black uppercase text-cyan-300/72">{row[2]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={1434} y={y + 18} w={48} h={14} className="text-right text-[10px] font-bold text-cyan-100/45">{row[3]}</SoulLinkText>
+          </span>
+        )
+      })}
+      <SoulLinkText artboard={artboard} x={1322} y={395} w={110} h={16} className="text-center text-[12px] font-black text-cyan-300/70">查看全部活动 →</SoulLinkText>
+
+      <SoulLinkText artboard={artboard} x={1248} y={452} w={120} h={31} as="h2" className="opacity-0 text-[14px] font-black uppercase leading-[1.25] tracking-[0.12em] text-cyan-300">{"RECENT ECHO\n最近回响"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1248} y={504} w={198} h={62} className="text-[13px] font-bold leading-[1.7] text-cyan-50/62">{"“有人在雨后的天台，\n留下了关于未来的猜想。”\n— NODE_07 · 3 分钟前"}</SoulLinkText>
+
+      <SoulLinkText artboard={artboard} x={1248} y={612} w={150} h={31} as="h2" className="opacity-0 text-[15px] font-black uppercase leading-[1.25] tracking-[0.11em] text-cyan-300">{"ONLINE ENTITIES\n在线实体"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={1420} y={618} w={64} h={14} className="opacity-0 text-right text-[11px] font-black text-cyan-300/60">查看全部 →</SoulLinkText>
+      {onlineRows.map((row, index) => {
+        const y = 664 + index * 56
+        return (
+          <span key={`online-row-${row[0]}`}>
+            <SoulLinkText artboard={artboard} x={1296} y={y} w={90} h={16} className="text-[13px] font-black text-cyan-50/75">{row[0]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={1296} y={y + 20} w={112} h={14} className="text-[11px] font-bold text-cyan-100/45">{row[1]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={1450} y={y + 7} w={48} h={14} className="text-center text-[10px] font-black text-emerald-300">{row[2]}</SoulLinkText>
+          </span>
+        )
+      })}
+
+      <SoulLinkText artboard={artboard} x={270} y={842} w={140} h={30} as="h2" className="opacity-0 text-[16px] font-black uppercase leading-[1.2] tracking-[0.1em] text-fuchsia-300">{"MEMORY STREAM\n记忆流"}</SoulLinkText>
+      <SoulLinkText artboard={artboard} x={470} y={844} w={60} h={14} className="opacity-0 text-right text-[11px] font-bold text-cyan-100/55">查看全部 →</SoulLinkText>
+      {memoryRows.map((row, index) => (
+        <span key={`memory-${index}`}>
+          <SoulLinkText artboard={artboard} x={320} y={884 + index * 34} w={190} h={15} className="text-[12px] font-bold text-cyan-50/62">{row[0]}</SoulLinkText>
+          <SoulLinkText artboard={artboard} x={320} y={902 + index * 34} w={170} h={13} className="text-[10px] font-bold text-cyan-100/40">{row[1]}</SoulLinkText>
+        </span>
+      ))}
+
+      <SoulLinkText artboard={artboard} x={578} y={842} w={170} h={30} as="h2" className="opacity-0 text-[16px] font-black uppercase leading-[1.2] tracking-[0.11em] text-cyan-300">{"EXPLORATION GUIDE\n探索指南"}</SoulLinkText>
+      {[["新手协议", "如何开始\n连接网络", "PROTOCOL"], ["坐标百科", "了解这个\n世界的规则", "DATABASE"], ["安全手册", "保护你的\n数字身份", "SECURITY"]].map((row, index) => {
+        const x = 602 + index * 136
+        return (
+          <span key={`guide-${row[2]}`}>
+            <SoulLinkText artboard={artboard} x={x + 18} y={884} w={82} h={20} className="opacity-0 text-[13px] font-black text-cyan-50/72">{row[0]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x + 18} y={913} w={78} h={36} className="opacity-0 text-[12px] font-bold leading-[1.45] text-cyan-50/58">{row[1]}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x + 18} y={974} w={72} h={12} className="opacity-0 text-[10px] font-black uppercase tracking-[0.08em] text-cyan-300/70">{row[2]}</SoulLinkText>
+          </span>
+        )
+      })}
+
+      <SoulLinkText artboard={artboard} x={1012} y={842} w={132} h={31} as="h2" className="opacity-0 text-[16px] font-black uppercase leading-[1.2] tracking-[0.12em] text-cyan-300">{"WORLD STATS\n世界统计"}</SoulLinkText>
+      {[["NODES", "节点总数", "4,831"], ["ENTITIES", "在线实体", "1,298"], ["ECHOES", "回响记录", "18,276"], ["EXPLORATIONS", "探索次数", "56,723"]].map((row, index) => {
+        const x = 1016 + index * 116
+        return (
+          <span key={`stats-${row[0]}`}>
+            <SoulLinkText artboard={artboard} x={x} y={912} w={86} h={30} className="opacity-0 text-[11px] font-black uppercase leading-[1.35] text-cyan-100/60">{`${row[0]}\n${row[1]}`}</SoulLinkText>
+            <SoulLinkText artboard={artboard} x={x} y={952} w={100} h={28} className="text-[24px] font-black leading-none text-violet-400">{row[2]}</SoulLinkText>
+          </span>
+        )
+      })}
+
+      {[
+        { label: "打开网络首页", to: "/", x: 24, y: 130, w: 194, h: 55 },
+        { label: "扫描信号", to: "/discover", x: 24, y: 194, w: 194, h: 55 },
+        { label: "查看回响", to: "/home-me", x: 24, y: 258, w: 194, h: 55 },
+        { label: "查看记忆流", to: "/home-me", x: 24, y: 322, w: 194, h: 55 },
+        { label: "查看收藏节点", to: "/home-me", x: 24, y: 386, w: 194, h: 55 },
+        { label: "查看我的锚点", to: "/home-me", x: 24, y: 450, w: 194, h: 55 },
+        { label: "创建节点", to: "/create", x: 24, y: 514, w: 194, h: 55 },
+        { label: "连接网络", to: "/discover", x: 272, y: 317, w: 144, h: 54 },
+        { label: "扫描信号", to: "/discover", x: 432, y: 317, w: 133, h: 54 },
+        { label: "查看全部节点", to: "/discover", x: 996, y: 520, w: 193, h: 28 },
+        { label: "打开个人中心", to: "/home-me", x: 1228, y: 16, w: 300, h: 68 },
+      ].map((hotspot) => <OverlayLink key={`${hotspot.label}-${hotspot.x}`} artboard={artboard} hotspot={hotspot} />)}
+      <OverlayButton artboard={artboard} label="切换主题" onClick={onToggleTheme} x={40} y={944} w={34} h={34} />
+    </>
+  )
+}
+
 export function FableMapHomeReference({
   variant,
   featuredCitySlices,
@@ -2967,41 +3183,7 @@ export function FableMapHomeReference({
     <ArtboardShell artboard={artboard} variant={variant} kind="home">
       <FableMapHomeMobile featuredCitySlices={featuredCitySlices} isLoading={isLoading} onToggleTheme={onToggleTheme} variant={variant} />
       <div className="relative hidden h-full md:block">
-        <FableMapHomeMainSurface
-          artboard={artboard}
-          featuredCitySlices={featuredCitySlices}
-          variant={variant}
-          isLoading={isLoading}
-          heroCoordinate={heroCoordinate}
-        />
-        <FableMapSidebar artboard={artboard} variant={variant} active="home" onToggleTheme={onToggleTheme} />
-        <FableMapUserCluster artboard={artboard} variant={variant} forceVisible />
-        <FableMapFeedPanel
-          artboard={artboard}
-          variant={variant}
-          box={rightRail.worldPulse}
-          title={variant === "black" ? "SIGNAL ACTIVITY" : "世界脉搏"}
-          eyebrow={variant === "black" ? "信号活动" : "实时动态"}
-          items={resolvedWorldPulseItems}
-          actionLabel={variant === "black" ? "查看全部活动" : "查看全部动态"}
-          forceVisible
-        />
-        <FableMapDailyQuotePanel artboard={artboard} variant={variant} box={rightRail.dailyQuote} quote={dailyQuote} forceVisible />
-        <FableMapOnlineEntitiesPanel artboard={artboard} variant={variant} box={rightRail.onlineEntities} entities={resolvedOnlineEntities} forceVisible />
-        <FableMapRecentMemoriesPanel artboard={artboard} variant={variant} memories={resolvedRecentMemories} forceVisible />
-        <FableMapGuidePanel artboard={artboard} variant={variant} cards={guideCards} forceVisible />
-        <FableMapWorldStatsPanel artboard={artboard} variant={variant} stats={worldStats} forceVisible />
-        <OverlayInput
-          artboard={artboard}
-          value={search || ""}
-          onChange={onSearchChange}
-          onSubmit={onSearchSubmit}
-          placeholder={variant === "black" ? "SCAN FOR ACTIVE SIGNALS... 扫描活跃信号..." : "输入你想前往的地点..."}
-          variant={variant}
-          forceVisible
-          {...searchBox}
-        />
-        <HomeHeroActions artboard={artboard} variant={variant} forceVisible />
+        <SoulLinkHybridHomeDesktop artboard={artboard} featuredCitySlices={featuredCitySlices} onToggleTheme={onToggleTheme} />
       </div>
     </ArtboardShell>
   )

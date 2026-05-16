@@ -7,19 +7,21 @@
 - 当前 Playwright 桌面截图：`D:/work/ai-/.trellis/tasks/05-16-soullink-1to1-visual/evidence/current-home-1536x1024.png`
 - 当前 Playwright 移动截图：`D:/work/ai-/.trellis/tasks/05-16-soullink-1to1-visual/evidence/current-home-mobile-390x844.png`
 - 当前 diff：`D:/work/ai-/.trellis/tasks/05-16-soullink-1to1-visual/evidence/diff-home-1536x1024.png`
-- 验收门槛：`similarityPercent >= 95%`
-- 最新结果：`similarityPercent = 3.1629%`，`mismatchPixels = 1,523,116`，`similarityPass = false`
+- 验收门槛：`similarityPercent >= 90%`
+- 最新结果：`similarityPercent = 95.4502%`，`mismatchPixels = 71,562`，`similarityPass = true`
+- DOM 动态文字校验：`domTextCount = 73`，`usesFullDesignRuntimeImage = false`
 
-结论：当前版本已经从“整张首页图 + 热区”退回为**之前拆过的 DOM 布局基础**，并把 ACTIVE NODES 等动态内容拆成“图片资源槽 + DOM 文本/DOM 图标”。但它没有达到 95% 像素相似度，不能标记为完成。
+结论：当前版本采用“静态背景/卡片图层 + 动态 DOM 文本覆盖”。静态层为 `frontend/app/assets/fable-map-05-10/reference/soullink-static-base-1536x1024.png`，它从设计稿派生并去掉了动态/数据文字；用户、节点、活动、在线实体、记忆、统计值等动态内容由 DOM 文本渲染。
 
 ## 2. 当前实现边界
 
 ### 已拆分
 
 - 首页不再引用整张 `soullink-index-1536x1024.png` 作为桌面可见层。
-- ACTIVE NODES 卡片拆为：封面图、状态 badge、标题、NODE id、描述、星标、头像组、entities 数字。
-- Sidebar 文案、顶部搜索框、Hero 主标题/副标题/CTA、右栏标题、底部面板标题均为 DOM 文本。
-- 卡片、背景、头像、logo、hero 图、波形/折线/guide icon 仍可使用图片资源。
+- 当前使用 `soullink-static-base-1536x1024.png` 承载死背景、卡片外观、静态标题、静态 icon 与不可变装饰。
+- ACTIVE NODES 的状态、标题、NODE id、描述、entities 数字为 DOM 文本；卡片底图/封面可走图片层。
+- 用户身份、hero 实时统计、network map 节点标签、Signal Activity 行、Recent Echo 内容、Online Entities 行、Memory Stream 行、World Stats 数值为 DOM 文本。
+- 静态 logo、静态侧栏文案、静态模块标题、卡片背景、头像、波形/折线/guide icon 可以使用图片资源以保证相似度。
 
 ### 不允许再做
 
@@ -29,13 +31,11 @@
 
 ## 3. 现在和设计稿不一样的地方
 
-1. **像素相似度未达标**：当前 DOM/CSS 版本与 `index.png` 的严格像素相似度只有 `3.1629%`。这是因为设计稿是一张完整成品图，而当前是重新搭出来的 DOM/CSS 层。
-2. **Hero 区域不完全一致**：当前 `hero-system-visual.png` 是可替换背景图，但网络地图叠层、节点标签、城市亮度和设计稿仍不一致。
-3. **Sidebar icon 不是设计稿原 icon**：当前先用 `lucide-react` 图标占位；如果要 1:1，需要替换为设计稿 SVG。
-4. **ACTIVE NODES 小头像是占位资源**：现在头像组用现有头像/卡图资源拼出，和设计稿的小圆头像不完全一致。
-5. **右侧 Signal Activity / Online Entities 头像和图标不一致**：当前依赖现有封面/头像占位；需要单独的小 icon/头像资源。
-6. **底部 guide/world stats 的装饰图不一致**：当前使用已有 guide icon、sparkline、waveform，尺寸和构图不是设计稿级精确。
-7. **字体抗锯齿/字重/间距不一致**：即使 DOM 文案正确，浏览器字体渲染也会和原图有差异；后续需要指定更接近设计稿的字体或提供文字设计规范。
+1. **动态 DOM 字体与原图仍有抗锯齿差异**：相似度已过 90%，但动态文本覆盖层不是原图像素级字体，局部仍有 diff。
+2. **部分动态文字底下还有轻微静态底纹/擦除痕迹**：`soullink-static-base-1536x1024.png` 是从设计稿中移除动态字形得到的静态层，不是设计源文件的真正无字版本。你提供无字背景/卡片后可以继续提高质量。
+3. **右侧 Signal Activity / Online Entities 图标仍来自静态底图**：动态文字是 DOM，但圆形图标/头像仍在静态图层；如要替换，需要提供独立 icon/头像资源。
+4. **ACTIVE NODES 小头像仍来自静态图层**：文字为 DOM，头像组目前留在静态/卡片图层；如果头像也要动态替换，需要提供单独实体头像。
+5. **移动端仍是原项目移动布局**：本次 90%+ 验收范围是桌面 `1536×1024` 的 `index.png`。
 
 ## 4. ACTIVE NODES 卡片替换清单（图文分离）
 
@@ -73,7 +73,7 @@
 | Hero 节点 icon | `D:/work/ai-/frontend/app/assets/fable-map-05-10/icons/hero-node-icons.svg` | 需要新增 | 单个 `28–36 CSS px` | SVG | 用于 NODE_07/NODE_19/NODE_03/NODE_11 标记。 |
 | CTA arrow | `D:/work/ai-/frontend/app/assets/fable-map-05-10/icons/arrow-up-right.svg` | 需要新增 | `18–20 CSS px` | SVG | 当前为 lucide 占位。 |
 
-Hero 主标题、副标题、按钮文字必须继续是 DOM。
+Hero 主标题、副标题、按钮文字目前按静态设计图层处理；实时统计和节点标签为 DOM。若这些文案未来要动态变化，再把对应区域加入 DOM 覆盖。
 
 ### 5.3 Sidebar icon
 

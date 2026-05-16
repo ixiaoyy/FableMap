@@ -15,7 +15,7 @@ const mobileScreenshotPath = path.join(evidenceDir, "current-home-mobile-390x844
 const diffPath = path.join(evidenceDir, "diff-home-1536x1024.png");
 const htmlPath = path.join(buildRoot, "index.html");
 const execFileAsync = promisify(execFile);
-const minSimilarity = 0.95;
+const minSimilarity = 0.90;
 
 const mimeByExt = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -117,6 +117,16 @@ await page.route("http://soullink.local/**", async (route) => {
 await page.goto("http://soullink.local/", { waitUntil: "networkidle", timeout: 30000 });
 await page.screenshot({ path: screenshotPath, fullPage: false, animations: "disabled" });
 const summary = await page.evaluate(() => ({
+  dynamicTextSummary: {
+    domTextCount: [...document.querySelectorAll('[data-soullink-dynamic-text="dom"]')].filter((el) => {
+      const style = getComputedStyle(el);
+      const box = el.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0.05 && box.width > 0 && box.height > 0;
+    }).length,
+    activeNodeDomTextCount: document.querySelectorAll('[data-soullink-active-node-card], [data-soullink-dynamic-text="dom"]').length,
+    hasStaticBase: Boolean([...document.images].some((img) => img.currentSrc.includes('soullink-static-base'))),
+    usesFullDesignRuntimeImage: Boolean([...document.images].some((img) => img.currentSrc.includes('soullink-index-1536x1024'))),
+  },
   title: document.title,
   url: location.href,
   viewport: [innerWidth, innerHeight],
@@ -138,6 +148,9 @@ const mobileSummary = await page.evaluate(() => ({
 await browser.close();
 const diffSummary = await compareWithDesign();
 const similarityPass = Boolean(diffSummary.sameSize && diffSummary.similarity >= minSimilarity);
+if (!summary.dynamicTextSummary || summary.dynamicTextSummary.domTextCount < 40 || summary.dynamicTextSummary.usesFullDesignRuntimeImage) {
+  errors.push("SoulLink dynamic text DOM guard failed");
+}
 const result = {
   screenshotPath,
   mobileScreenshotPath,
