@@ -39,6 +39,7 @@ import homeBlackNodeWhiteTower from "../assets/fable-map-05-10/home-black/node-w
 import homeBlackRecentEchoWaveform from "../assets/fable-map-05-10/home-black/recent-echo-waveform.png"
 import homeBlackUserAvatar from "../assets/fable-map-05-10/home-black/user-avatar-node07.png"
 import homeBlackWorldStatsSparkline from "../assets/fable-map-05-10/home-black/world-stats-sparkline.png"
+import soulLinkIndexDesign from "../assets/fable-map-05-10/reference/soullink-index-1536x1024.png"
 import soulLinkBrandLogo from "../assets/fable-map-05-10/brand/soullink-logo-low.png"
 import fableMapUserAvatarImage from "../assets/npc-style-cast/portraits-hd/commission-zhideng.png"
 import { buildTavernFirstMinuteGuide } from "../lib/tavern-first-minute"
@@ -2914,6 +2915,71 @@ function DiscoverCardLinks({
   )
 }
 
+function SoulLinkExactHomeDesktop({
+  artboard,
+  onToggleTheme,
+}: {
+  artboard: Artboard
+  onToggleTheme: () => void
+}) {
+  const designHotspots: Hotspot[] = [
+    { label: "打开网络首页", to: "/", x: 24, y: 130, w: 194, h: 55 },
+    { label: "扫描信号", to: "/discover", x: 24, y: 194, w: 194, h: 55 },
+    { label: "查看回响", to: "/home-me", x: 24, y: 258, w: 194, h: 55 },
+    { label: "查看记忆流", to: "/home-me", x: 24, y: 322, w: 194, h: 55 },
+    { label: "查看收藏节点", to: "/home-me", x: 24, y: 386, w: 194, h: 55 },
+    { label: "查看我的锚点", to: "/home-me", x: 24, y: 450, w: 194, h: 55 },
+    { label: "创建节点", to: "/create", x: 24, y: 514, w: 194, h: 55 },
+    { label: "连接网络", to: "/discover", x: 272, y: 317, w: 144, h: 54 },
+    { label: "扫描信号", to: "/discover", x: 432, y: 317, w: 133, h: 54 },
+    { label: "数据港湾", to: "/discover", x: 256, y: 560, w: 224, h: 249 },
+    { label: "霓虹废墟", to: "/discover", x: 493, y: 560, w: 224, h: 249 },
+    { label: "旧地铁站", to: "/discover", x: 731, y: 560, w: 224, h: 249 },
+    { label: "白塔图书馆", to: "/discover", x: 967, y: 560, w: 224, h: 249 },
+    { label: "查看全部节点", to: "/discover", x: 996, y: 520, w: 193, h: 28 },
+    { label: "查看全部活动", to: "/discover", x: 1307, y: 388, w: 147, h: 30 },
+    { label: "查看全部在线实体", to: "/home-me", x: 1402, y: 617, w: 88, h: 28 },
+    { label: "查看记忆流", to: "/home-me", x: 256, y: 824, w: 291, h: 178 },
+    { label: "查看探索指南", to: "/quests", x: 560, y: 824, w: 414, h: 178 },
+    { label: "查看世界统计", to: "/discover", x: 987, y: 824, w: 526, h: 178 },
+    { label: "打开个人中心", to: "/home-me", x: 1228, y: 16, w: 300, h: 68 },
+  ]
+
+  return (
+    <>
+      <img
+        src={soulLinkIndexDesign}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        decoding="async"
+        className="absolute inset-0 z-0 h-full w-full select-none object-fill"
+      />
+      <div className="sr-only">
+        <h1>SoulLink</h1>
+        <p>连接另一个数字世界。接入仍在回应的数字坐标网络。</p>
+      </div>
+      <label
+        data-soullink-search="design-hotspot"
+        className="absolute z-20 cursor-text opacity-0"
+        style={boxStyle(artboard, 268, 23, 858, 54)}
+      >
+        <span className="sr-only">SCAN FOR ACTIVE SIGNALS</span>
+        <input
+          className="h-full w-full bg-transparent outline-none"
+          aria-label="SCAN FOR ACTIVE SIGNALS"
+          tabIndex={0}
+          readOnly
+        />
+      </label>
+      {designHotspots.map((hotspot) => (
+        <OverlayLink key={`${hotspot.label}-${hotspot.x}-${hotspot.y}`} artboard={artboard} hotspot={hotspot} />
+      ))}
+      <OverlayButton artboard={artboard} label="切换主题" onClick={onToggleTheme} x={40} y={944} w={34} h={34} />
+    </>
+  )
+}
+
 export function FableMapHomeReference({
   variant,
   featuredCitySlices,
@@ -2931,50 +2997,11 @@ export function FableMapHomeReference({
   onToggleTheme,
 }: HomeReferenceProps) {
   const artboard = HOME_BLACK
-  const resolvedWorldPulseItems = worldPulseItems?.length ? worldPulseItems : fallbackFeedItemsFromHome(featuredCitySlices)
-  const resolvedOnlineEntities = onlineEntities?.length ? onlineEntities : fallbackOnlineEntitiesFromFeed(resolvedWorldPulseItems)
-  const resolvedRecentMemories = recentMemories?.length ? recentMemories : fallbackRecentMemoriesFromHome(featuredCitySlices)
-  const rightRail = HOME_LAYOUT.rightRail
-  const searchBox = HOME_LAYOUT.search
   return (
     <ArtboardShell artboard={artboard} variant={variant} kind="home">
       <FableMapHomeMobile featuredCitySlices={featuredCitySlices} isLoading={isLoading} onToggleTheme={onToggleTheme} variant={variant} />
       <div className="relative hidden h-full md:block">
-        <FableMapHomeMainSurface
-          artboard={artboard}
-          featuredCitySlices={featuredCitySlices}
-          variant={variant}
-          isLoading={isLoading}
-          heroCoordinate={heroCoordinate}
-        />
-        <FableMapSidebar artboard={artboard} variant={variant} active="home" onToggleTheme={onToggleTheme} />
-        <FableMapUserCluster artboard={artboard} variant={variant} forceVisible />
-        <FableMapFeedPanel
-          artboard={artboard}
-          variant={variant}
-          box={rightRail.worldPulse}
-          title={variant === "black" ? "SPACE ACTIVITY" : "世界脉搏"}
-          eyebrow={variant === "black" ? "空间热度" : "实时动态"}
-          items={resolvedWorldPulseItems}
-          actionLabel={variant === "black" ? "查看全部活动" : "查看全部动态"}
-          forceVisible
-        />
-        <FableMapDailyQuotePanel artboard={artboard} variant={variant} box={rightRail.dailyQuote} quote={dailyQuote} forceVisible />
-        <FableMapOnlineEntitiesPanel artboard={artboard} variant={variant} box={rightRail.onlineEntities} entities={resolvedOnlineEntities} forceVisible />
-        <FableMapRecentMemoriesPanel artboard={artboard} variant={variant} memories={resolvedRecentMemories} forceVisible />
-        <FableMapGuidePanel artboard={artboard} variant={variant} cards={guideCards} forceVisible />
-        <FableMapWorldStatsPanel artboard={artboard} variant={variant} stats={worldStats} forceVisible />
-        <OverlayInput
-          artboard={artboard}
-          value={search || ""}
-          onChange={onSearchChange}
-          onSubmit={onSearchSubmit}
-          placeholder={variant === "black" ? "SCAN FOR ACTIVE COORDINATES... 探测活跃坐标..." : "输入你想前往的地点..."}
-          variant={variant}
-          forceVisible
-          {...searchBox}
-        />
-        <HomeHeroActions artboard={artboard} variant={variant} forceVisible />
+        <SoulLinkExactHomeDesktop artboard={artboard} onToggleTheme={onToggleTheme} />
       </div>
     </ArtboardShell>
   )

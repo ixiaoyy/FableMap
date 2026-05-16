@@ -5,10 +5,10 @@ import { ThemeProvider } from "./hooks/useTheme"
 import "./styles.css"
 
 export const meta: MetaFunction = () => [
-  { title: "FableMap" },
+  { title: "SoulLink" },
   {
     name: "description",
-    content: "Turn real places into cyber taverns.",
+    content: "连接另一个数字世界。",
   },
 ]
 
@@ -43,5 +43,5 @@ export default function Root() {
 }
 
 export function HydrateFallback() {
-  return <div className="app-loading">正在进入 FableMap...</div>
+  return <div className="app-loading">正在进入 SoulLink...</div>
 }
