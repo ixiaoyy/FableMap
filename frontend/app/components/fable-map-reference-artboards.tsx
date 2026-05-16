@@ -2,8 +2,6 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, ty
 import { Link } from "react-router"
 import {
   Bell,
-  Info,
-  ArrowRight,
   ArrowUpRight,
   BookOpen,
   Bookmark,
@@ -13,7 +11,6 @@ import {
   Home as HomeIcon,
   MapPin,
   MessageCircle,
-  Play,
   Search,
   Send,
 } from "lucide-react"
@@ -28,17 +25,12 @@ import discoverCardSkyCity from "../assets/fable-map-05-10/discover/cards/card-s
 import discoverCardTrainPlatform from "../assets/fable-map-05-10/discover/cards/card-train-platform-square.png"
 import discoverWorldStatusBgBlack from "../assets/fable-map-05-10/discover/world-status/bg-black.png"
 import homeBlackInviteCard from "../assets/fable-map-05-10/home-black/invite-card.png"
-import homeBlackGuideDatabaseIcon from "../assets/fable-map-05-10/home-black/guide-database-icon.png"
-import homeBlackGuideProtocolIcon from "../assets/fable-map-05-10/home-black/guide-protocol-icon.png"
-import homeBlackGuideSecurityIcon from "../assets/fable-map-05-10/home-black/guide-security-icon.png"
 import homeBlackHeroVisual from "../assets/fable-map-05-10/home-black/hero-system-visual.png"
 import homeBlackNodeDataHarbor from "../assets/fable-map-05-10/home-black/node-data-harbor.png"
 import homeBlackNodeNeonRuins from "../assets/fable-map-05-10/home-black/node-neon-ruins.png"
 import homeBlackNodeOldPlatform from "../assets/fable-map-05-10/home-black/node-old-platform.png"
 import homeBlackNodeWhiteTower from "../assets/fable-map-05-10/home-black/node-white-tower.png"
-import homeBlackRecentEchoWaveform from "../assets/fable-map-05-10/home-black/recent-echo-waveform.png"
 import homeBlackUserAvatar from "../assets/fable-map-05-10/home-black/user-avatar-node07.png"
-import homeBlackWorldStatsSparkline from "../assets/fable-map-05-10/home-black/world-stats-sparkline.png"
 import soulLinkIndexDesign from "../assets/fable-map-05-10/reference/soullink-index-1536x1024.png"
 import soulLinkBrandLogo from "../assets/fable-map-05-10/brand/soullink-logo-low.png"
 import fableMapUserAvatarImage from "../assets/npc-style-cast/portraits-hd/commission-zhideng.png"
@@ -47,43 +39,19 @@ import type { Tavern } from "../lib/taverns"
 
 const homeLightInviteCard = homeBlackInviteCard
 const homeLightInviteCard2x = homeBlackInviteCard
-const lightMessageIcon = discoverCardPlane
-const lightPinIcon = discoverCardCompass
 const lightPlaneIcon = discoverCardPlane
-const lightPulseIcon = homeBlackWorldStatsSparkline
-const lightPlaneWash = homeBlackHeroVisual
-const lightPaperPlaneSoft = homeBlackWorldStatsSparkline
 const lightSeaLane = discoverCardSeaLane
 const lightSkyCityBalcony = homeBlackHeroVisual
 const lightTrainRainPlatform = discoverCardTrainPlatform
 const lightLibrarySunlit = discoverCardLibrarySunlit
 const lightLibraryCafeWide = discoverCardLibraryWide
-const lightGuideStarterBg = homeBlackGuideProtocolIcon
-const lightGuideEnvelopeBg = homeBlackGuideDatabaseIcon
-const lightGuideShieldBg = homeBlackGuideSecurityIcon
 
 type Variant = "light" | "black"
-
-type FableMapHeroCoordinate = {
-  name: string
-  coordinateLabel: string
-  timeLabel?: string
-}
 
 type HomeReferenceProps = {
   variant: Variant
   featuredCitySlices: { id?: string; name?: string; description?: string; visit_count?: number; image?: string; tags?: string[] }[]
   isLoading?: boolean
-  heroCoordinate?: FableMapHeroCoordinate
-  worldPulseItems?: FableMapFeedItem[]
-  dailyQuote?: FableMapDailyQuote
-  onlineEntities?: FableMapOnlineEntity[]
-  recentMemories?: FableMapRecentMemory[]
-  guideCards?: FableMapGuideCard[]
-  worldStats?: FableMapWorldStat[]
-  search?: string
-  onSearchChange?: (value: string) => void
-  onSearchSubmit?: () => void
   onToggleTheme: () => void
 }
 
@@ -148,12 +116,6 @@ type FableMapFeedItem = {
   to?: string
 }
 
-type FableMapDailyQuote = {
-  title: string
-  quote: string
-  source?: string
-}
-
 type FableMapOnlineEntity = {
   id: string
   name: string
@@ -164,55 +126,11 @@ type FableMapOnlineEntity = {
   to?: string
 }
 
-type FableMapRecentMemory = {
-  id: string
-  title: string
-  source: string
-  meta: string
-  image: string
-  to?: string
-}
-
-type FableMapGuideCard = {
-  id: string
-  title: string
-  text: string
-  to?: string
-  image?: string
-  accent?: "violet" | "blue" | "rose" | "cyan"
-}
-
-type FableMapWorldStat = {
-  id: string
-  label: string
-  value: string
-}
-
 const DEFAULT_FABLE_MAP_USER: FableMapUserProfile = {
   name: "星野奈奈",
   meta: "Lv.28",
   avatar: fableMapUserAvatarImage,
 }
-
-const DEFAULT_DAILY_QUOTE: FableMapDailyQuote = {
-  title: "每日一句",
-  quote: "世界很大，而我们在某个坐标相遇。",
-}
-
-const DEFAULT_GUIDE_CARDS: FableMapGuideCard[] = [
-  { id: "starter", title: "新手指南", text: "如何开始你的旅程", to: "/quests", accent: "violet" },
-  { id: "worldbook", title: "坐标百科", text: "了解这个世界的规则", to: "/discover", accent: "blue" },
-  { id: "safety", title: "安全指引", text: "让探索更安心", to: "/create", accent: "rose" },
-]
-
-const DEFAULT_WORLD_STATS: FableMapWorldStat[] = [
-  { id: "coordinates", label: "新增坐标", value: "12" },
-  { id: "entities", label: "活跃角色", value: "28" },
-  { id: "echoes", label: "回访记录", value: "156" },
-  { id: "explores", label: "探索次数", value: "3,214" },
-]
-
-const LIGHT_GUIDE_BACKGROUNDS = [lightGuideStarterBg, lightGuideEnvelopeBg, lightGuideShieldBg] as const
 
 const LIGHT_FALLBACK_COORDINATE_CARDS = [
   {
@@ -279,8 +197,6 @@ const BLACK_FALLBACK_COORDINATE_CARDS = [
   },
 ] as const
 
-const BLACK_GUIDE_ICONS = [homeBlackGuideProtocolIcon, homeBlackGuideDatabaseIcon, homeBlackGuideSecurityIcon] as const
-
 const HOME_BLACK: Artboard = {
   width: 1536,
   height: 1024,
@@ -320,8 +236,8 @@ const discoverSharedCardBoxes = [
   [969, 665, 236, 224],
 ] as const
 
-// Light / black home variants intentionally share one geometry source.
-// Theme differences stay in materials, copy, and color branches only.
+// Desktop home is locked to the owner-provided SoulLink artboard.
+// These shared boxes are still used by discover sidebar and mobile home cards.
 const HOME_LAYOUT = {
   sidebar: {
     panel: { x: 0, y: 0, w: 220, h: 1024 },
@@ -341,32 +257,7 @@ const HOME_LAYOUT = {
       { label: "打开回访", x: 103, y: 938, w: 34, h: 34, to: "/home-me" },
     ],
   },
-  userCluster: { x: 1234, y: 26, w: 286, h: 72 },
   cards: homeSharedCardBoxes,
-  hero: { x: 220, y: 18, w: 1000, h: 530 },
-  title: { x: 280, y: 145, w: 520, h: 178 },
-  heroDecorations: {
-    primary: { x: 830, y: 72, w: 36, h: 36 },
-    secondary: { x: 532, y: 126, w: 22, h: 22 },
-  },
-  currentCoordinate: { x: 936, y: 386, w: 264, h: 98 },
-  recommendedHeader: { x: 252, y: 560, w: 936, h: 44 },
-  search: { x: 864, y: 41, w: 335, h: 44 },
-  heroActions: {
-    primary: { x: 280, y: 330, w: 136, h: 48 },
-    secondary: { x: 438, y: 330, w: 176, h: 48 },
-  },
-  rightRailSurface: { x: 1220, y: 0, w: 316, h: 1024 },
-  rightRail: {
-    worldPulse: { x: 1248, y: 118, w: 240, h: 316 },
-    dailyQuote: { x: 1248, y: 446, w: 240, h: 108 },
-    onlineEntities: { x: 1192, y: 575, w: 286, h: 238 },
-  },
-  bottomRail: {
-    recentMemories: { x: 242, y: 840, w: 350, h: 154 },
-    guideCards: { x: 602, y: 840, w: 430, h: 154 },
-    worldStats: { x: 1048, y: 848, w: 443, h: 144 },
-  },
 } as const
 
 const SIDEBAR_MATERIALS = {
@@ -906,49 +797,6 @@ function FableMapTopStatusBar({
   )
 }
 
-function FableMapUserCluster({
-  artboard,
-  variant,
-  profile = DEFAULT_FABLE_MAP_USER,
-  forceVisible = false,
-}: {
-  artboard: Artboard
-  variant: Variant
-  profile?: FableMapUserProfile
-  forceVisible?: boolean
-}) {
-  const isBlack = variant === "black"
-  const box = HOME_LAYOUT.userCluster
-  const resolvedProfile = isBlack
-    ? { name: "USER_07", meta: "ID: 0x7A31...9F2C", avatar: homeBlackUserAvatar }
-    : profile
-  return (
-    <div
-      data-fable-map-user-cluster="shared"
-      className={cx(
-        "absolute z-30 flex items-center gap-[4%] rounded-[1.75rem] border p-[0.55%] pr-[0.75%]",
-        forceVisible ? "opacity-100" : "opacity-0",
-        isBlack
-          ? "border-cyan-300/16 bg-[#020710]/96 shadow-[0_0_30px_rgba(0,255,255,0.1)]"
-          : "border-white/80 bg-white/92 shadow-[0_14px_36px_rgba(83,103,166,0.13)] backdrop-blur-xl",
-      )}
-      style={boxStyle(artboard, box.x, box.y, box.w, box.h)}
-    >
-      <FableMapNotificationBell variant={variant} />
-      <Link
-        to="/home-me"
-        aria-label={`${resolvedProfile.name} 个人中心`}
-        onMouseDown={suppressMouseFocus}
-        className="flex h-full min-w-0 flex-1 touch-manipulation items-center gap-[7%] rounded-[1.35rem] px-[2%] outline-none transition focus:ring-4 focus:ring-violet-400/45"
-      >
-        <FableMapUserAvatar avatar={resolvedProfile.avatar} name={resolvedProfile.name} variant={variant} />
-        <FableMapUserIdentity name={resolvedProfile.name} meta={resolvedProfile.meta} variant={variant} />
-        <ChevronDown size={14} strokeWidth={3} className={cx("shrink-0 opacity-60", isBlack ? "text-cyan-300" : "text-slate-500")} />
-      </Link>
-    </div>
-  )
-}
-
 function FableMapDiscoverRailUserCard({
   variant,
   style,
@@ -984,17 +832,6 @@ function FableMapDiscoverRailUserCard({
       <ChevronDown size={17} strokeWidth={3} className={cx("shrink-0 opacity-65", isBlack ? "text-cyan-100" : "text-slate-500")} />
     </Link>
   )
-}
-
-function fallbackFeedItemsFromHome(featuredCitySlices: HomeReferenceProps["featuredCitySlices"]): FableMapFeedItem[] {
-  return featuredCitySlices.slice(0, 3).map((slice, index) => ({
-    id: slice.id || `home-feed-${index}`,
-    title: slice.name || `坐标 ${index + 1}`,
-    subtitle: slice.tags?.[2] || slice.description || "新的坐标记忆正在浮现",
-    meta: `${index * 3 + 2} 分钟前`,
-    image: slice.image || DEFAULT_FABLE_MAP_USER.avatar,
-    to: targetFor(slice.id),
-  }))
 }
 
 function fallbackFeedItemsFromTaverns(taverns: Tavern[]): FableMapFeedItem[] {
@@ -1033,28 +870,6 @@ function withDiscoverSquareOnlineImages(entities: FableMapOnlineEntity[]): Fable
     ...entity,
     avatar: DISCOVER_CARD_IMAGES[(index + 6) % DISCOVER_CARD_IMAGES.length],
     squareImage: true,
-  }))
-}
-
-function fallbackRecentMemoriesFromHome(featuredCitySlices: HomeReferenceProps["featuredCitySlices"]): FableMapRecentMemory[] {
-  const sourceItems = featuredCitySlices.length
-    ? featuredCitySlices
-    : [
-      {
-        id: "fallback-memory",
-        name: "云上图书馆",
-        description: "在这里，我第一次不再害怕黑夜。",
-        image: fableMapUserAvatarImage,
-      },
-    ]
-
-  return sourceItems.slice(0, 2).map((slice, index) => ({
-    id: `memory-${slice.id || index}`,
-    title: `“${slice.description || (index === 0 ? "在这里，我第一次不再害怕黑夜。" : "谢谢你，陪我等到了黎明。")}”`,
-    source: `来自 ${slice.name || "某个坐标"}`,
-    meta: `${index * 3 + 2} 小时前`,
-    image: slice.image || fableMapUserAvatarImage,
-    to: targetFor(slice.id),
   }))
 }
 
@@ -1177,7 +992,7 @@ function FableMapOnlineEntitiesPanel({
   return (
     <FableMapPanelShell artboard={artboard} variant={variant} box={box} forceVisible={forceVisible} className={cx("flex flex-col p-4", isCompact ? "gap-2.5" : "gap-3")}>
       <header className="flex items-center justify-between gap-3">
-        <span className={cx("block font-black leading-none", isBlack ? "text-sm text-cyan-50" : "text-[15px] text-slate-800")}>{isBlack ? "ACTIVE TAVERN ROLES" : "活跃空间角色"}</span>
+        <span className={cx("block font-black leading-none", isBlack ? "text-sm text-cyan-50" : "text-[15px] text-slate-800")}>{isBlack ? "ONLINE ENTITIES" : "活跃空间角色"}</span>
         <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("font-black leading-none outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-[10px] text-cyan-300" : "text-[11px] text-violet-300")}>
           {isBlack ? "查看全部" : "查看全部"}
         </Link>
@@ -1305,217 +1120,6 @@ function FableMapFeedPanel({
           {actionLabel}
           <span aria-hidden="true">→</span>
         </Link>
-      ) : null}
-    </FableMapPanelShell>
-  )
-}
-
-function FableMapDailyQuotePanel({
-  artboard,
-  variant,
-  box,
-  quote,
-  forceVisible = false,
-}: {
-  artboard: Artboard
-  variant: Variant
-  box: { x: number; y: number; w: number; h: number }
-  quote: FableMapDailyQuote
-  forceVisible?: boolean
-}) {
-  const isBlack = variant === "black"
-  return (
-    <FableMapPanelShell artboard={artboard} variant={variant} box={box} forceVisible={forceVisible} className={cx("overflow-hidden", !isBlack && "[padding:16px_20px]")}>
-      <div data-fable-map-daily-quote="real-text" className="relative z-10">
-        <p className={cx("text-sm font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{isBlack ? "RECENT ECHO" : quote.title}</p>
-        <blockquote className={cx("font-bold", isBlack ? "mt-4 max-w-[14rem] text-[clamp(0.82rem,0.9vw,1rem)] leading-7 text-cyan-100/62" : "mt-3 text-[clamp(0.68rem,0.76vw,0.82rem)] leading-5 text-slate-500")}>“{quote.quote}”</blockquote>
-        {quote.source ? <p className={cx("mt-2 text-xs font-bold", isBlack ? "text-cyan-100/42" : "text-slate-400")}>— {quote.source}</p> : null}
-      </div>
-      {isBlack ? (
-        <img src={homeBlackRecentEchoWaveform} alt="" aria-hidden="true" className="absolute bottom-2 right-2 h-16 w-28 object-contain opacity-70" loading="lazy" decoding="async" />
-      ) : (
-        <UserCutImage src={lightPlaneIcon} className="absolute bottom-2 right-3 h-16 w-16 rounded-full opacity-35" scale={2.2} />
-      )}
-    </FableMapPanelShell>
-  )
-}
-
-function FableMapRecentMemoryRow({ memory, variant }: { memory: FableMapRecentMemory; variant: Variant }) {
-  const isBlack = variant === "black"
-  const content = (
-    <>
-      <img
-        data-fable-map-memory-thumb="real-image"
-        src={memory.image}
-        alt={`${memory.source} 记忆缩略图`}
-        className={cx("h-9 w-11 shrink-0 rounded-xl border object-cover", isBlack ? "border-cyan-300/18" : "border-slate-100")}
-        loading="lazy"
-        decoding="async"
-      />
-      <span className="min-w-0 flex-1">
-        <span data-fable-map-memory-title="real-text" className={cx("block truncate text-[0.72rem] font-black leading-4", isBlack ? "text-cyan-50" : "text-slate-700")}>{memory.title}</span>
-        <span data-fable-map-memory-source="real-text" className={cx("mt-0.5 block truncate text-[0.6rem] font-bold", isBlack ? "text-cyan-100/46" : "text-slate-400")}>{memory.source} · {memory.meta}</span>
-      </span>
-    </>
-  )
-
-  if (memory.to) {
-    return (
-      <Link to={memory.to} onMouseDown={suppressMouseFocus} className={cx("flex min-h-10 touch-manipulation items-center gap-2 rounded-2xl outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "hover:bg-cyan-300/6" : "hover:bg-violet-50/70")}>
-        {content}
-      </Link>
-    )
-  }
-
-  return <div className="flex min-h-10 items-center gap-2 rounded-2xl">{content}</div>
-}
-
-function FableMapRecentMemoriesPanel({
-  artboard,
-  variant,
-  memories,
-  forceVisible = false,
-}: {
-  artboard: Artboard
-  variant: Variant
-  memories: FableMapRecentMemory[]
-  forceVisible?: boolean
-}) {
-  const isBlack = variant === "black"
-  const visibleMemories = memories.slice(0, 2)
-  return (
-    <FableMapPanelShell artboard={artboard} variant={variant} box={HOME_LAYOUT.bottomRail.recentMemories} forceVisible={forceVisible} className="flex flex-col gap-1.5 !p-3">
-      <header className="flex items-center justify-between gap-3">
-        <h2 className={cx("text-[0.82rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{isBlack ? "MEMORY STREAM" : "最近的记忆"}</h2>
-        <Link to="/home-me" onMouseDown={suppressMouseFocus} className={cx("text-[0.62rem] font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-slate-400")}>查看全部 →</Link>
-      </header>
-      <div data-fable-map-recent-memories="real-list" className={cx("flex flex-col gap-1.5 overflow-hidden", isBlack ? "divide-y divide-cyan-300/12" : "divide-y divide-slate-200/60")}>
-        {visibleMemories.length ? (
-          visibleMemories.map((memory) => <FableMapRecentMemoryRow key={memory.id} memory={memory} variant={variant} />)
-        ) : (
-          <p className={cx("py-7 text-center text-sm font-bold", isBlack ? "text-cyan-100/48" : "text-slate-400")}>暂时没有新的记忆</p>
-        )}
-      </div>
-    </FableMapPanelShell>
-  )
-}
-
-function guideToneClasses(accent: FableMapGuideCard["accent"], variant: Variant) {
-  const isBlack = variant === "black"
-  if (isBlack) {
-    switch (accent) {
-      case "rose":
-        return "border-rose-300/18 bg-rose-300/8 text-rose-100"
-      case "blue":
-        return "border-cyan-300/18 bg-cyan-300/8 text-cyan-100"
-      case "cyan":
-        return "border-sky-300/18 bg-sky-300/8 text-sky-100"
-      default:
-        return "border-violet-300/18 bg-violet-300/8 text-violet-100"
-    }
-  }
-
-  switch (accent) {
-    case "rose":
-      return "border-rose-100 bg-rose-50 text-rose-500"
-    case "blue":
-      return "border-sky-100 bg-sky-50 text-indigo-500"
-    case "cyan":
-      return "border-cyan-100 bg-cyan-50 text-cyan-600"
-    default:
-      return "border-violet-100 bg-violet-50 text-violet-500"
-  }
-}
-
-function FableMapGuideGlyph({ accent, variant }: { accent: FableMapGuideCard["accent"]; variant: Variant }) {
-  const isBlack = variant === "black"
-  return (
-    <svg
-      data-fable-map-guide-image="real-svg"
-      role="img"
-      aria-label="探索指南图标"
-      className={cx("absolute bottom-1.5 right-1.5 h-8 w-8 opacity-45", isBlack ? "text-current" : accent === "rose" ? "text-rose-300" : accent === "blue" ? "text-indigo-300" : "text-violet-300")}
-      viewBox="0 0 64 64"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17 15h24l7 8v26H17z" />
-      <path d="M41 15v9h8" />
-      <path d="m24 38 6-6 5 5 6-9" />
-      <path d="M22 48h18" />
-    </svg>
-  )
-}
-
-function FableMapGuideCardView({ card, variant }: { card: FableMapGuideCard; variant: Variant }) {
-  const content = (
-    <>
-      <span data-fable-map-guide-title="real-text" className="relative z-10 block text-[0.68rem] font-black">{card.title}</span>
-      <span data-fable-map-guide-text="real-text" className="relative z-10 mt-1.5 block text-[0.72rem] font-black leading-4 opacity-80">{card.text}</span>
-      {card.image && variant !== "black" ? (
-        <img data-fable-map-guide-image="real-image" src={card.image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full origin-center scale-[1.14] object-cover" loading="lazy" decoding="async" />
-      ) : card.image ? (
-        <img data-fable-map-guide-image="real-image" src={card.image} alt={`${card.title} 图标`} className="absolute bottom-1.5 right-1.5 h-8 w-8 object-contain opacity-55" loading="lazy" decoding="async" />
-      ) : (
-        <FableMapGuideGlyph accent={card.accent} variant={variant} />
-      )}
-    </>
-  )
-  const className = cx("relative h-full min-h-[4.7rem] overflow-hidden rounded-2xl border p-3 text-left outline-none transition focus:ring-4 focus:ring-violet-400/40", guideToneClasses(card.accent, variant))
-
-  if (card.to) {
-    return <Link to={card.to} onMouseDown={suppressMouseFocus} className={className}>{content}</Link>
-  }
-
-  return <div className={className}>{content}</div>
-}
-
-function FableMapGuidePanel({ artboard, variant, cards, forceVisible = false }: { artboard: Artboard; variant: Variant; cards: FableMapGuideCard[]; forceVisible?: boolean }) {
-  const isBlack = variant === "black"
-  const visibleCards = cards.slice(0, 3)
-  const cardsWithLightBackgrounds = visibleCards.map((card, index) => (
-    isBlack ? { ...card, image: card.image || BLACK_GUIDE_ICONS[index] } : { ...card, image: card.image || LIGHT_GUIDE_BACKGROUNDS[index] }
-  ))
-  return (
-    <FableMapPanelShell artboard={artboard} variant={variant} box={HOME_LAYOUT.bottomRail.guideCards} forceVisible={forceVisible} className="flex flex-col gap-2 !p-3">
-      <header className="flex items-center justify-between gap-3">
-        <h2 className={cx("text-[0.82rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{isBlack ? "EXPLORATION GUIDE" : "探索指南"}</h2>
-        <Link to="/quests" onMouseDown={suppressMouseFocus} className={cx("text-[0.62rem] font-black outline-none transition focus:ring-4 focus:ring-violet-400/40", isBlack ? "text-cyan-300" : "text-slate-400")}>查看全部 →</Link>
-      </header>
-      <div data-fable-map-guide-panel="real-cards" className="grid flex-1 grid-cols-3 gap-3 overflow-hidden">
-        {cardsWithLightBackgrounds.map((card) => <FableMapGuideCardView key={card.id} card={card} variant={variant} />)}
-      </div>
-    </FableMapPanelShell>
-  )
-}
-
-function FableMapWorldStatsPanel({ artboard, variant, stats, forceVisible = false }: { artboard: Artboard; variant: Variant; stats: FableMapWorldStat[]; forceVisible?: boolean }) {
-  const isBlack = variant === "black"
-  const visibleStats = stats.length ? stats.slice(0, 4) : DEFAULT_WORLD_STATS
-  return (
-    <FableMapPanelShell artboard={artboard} variant={variant} box={HOME_LAYOUT.bottomRail.worldStats} forceVisible={forceVisible} className="overflow-hidden p-[1.25%]">
-      {!isBlack ? (
-        <img data-fable-map-world-stats-deco="real-image" src={lightPaperPlaneSoft} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full origin-center scale-[1.18] object-cover" loading="lazy" decoding="async" />
-      ) : null}
-      <div data-fable-map-world-stats="real-data" className="relative z-10 flex h-full flex-col">
-        <header className="flex items-center gap-1.5">
-          <h2 className={cx("text-[0.9rem] font-black", isBlack ? "text-cyan-50" : "text-slate-800")}>{isBlack ? "WORLD STATS" : "今日世界统计"}</h2>
-          <Info size={12} strokeWidth={3} className={cx("shrink-0", isBlack ? "text-cyan-100/56" : "text-slate-400")} />
-        </header>
-        <div className="mt-auto grid grid-cols-4 divide-x divide-slate-200/70">
-          {visibleStats.map((stat) => (
-            <div key={stat.id} className="px-3 text-center first:pl-0 last:pr-0">
-              <p data-fable-map-world-stat-value="real-text" className={cx("text-[clamp(1rem,1.35vw,1.45rem)] font-black leading-tight", isBlack ? "text-cyan-200" : "text-violet-500")}>{stat.value}</p>
-              <p data-fable-map-world-stat-label="real-text" className={cx("mt-2 truncate text-[0.72rem] font-black", isBlack ? "text-cyan-100/46" : "text-slate-500")}>{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      {isBlack ? (
-        <img data-fable-map-world-stats-deco="real-image" src={homeBlackWorldStatsSparkline} alt="" aria-hidden="true" className="absolute bottom-0 right-2 h-20 w-56 object-contain opacity-42" loading="lazy" decoding="async" />
       ) : null}
     </FableMapPanelShell>
   )
@@ -1696,389 +1300,6 @@ function OverlayInput({
   )
 }
 
-function FableMapHomeCoordinateCard({
-  artboard,
-  box,
-  slice,
-  index,
-  variant,
-  to,
-  isLoading = false,
-}: {
-  artboard: Artboard
-  box: readonly [number, number, number, number]
-  slice?: HomeReferenceProps["featuredCitySlices"][number]
-  index: number
-  variant: Variant
-  to?: string
-  isLoading?: boolean
-}) {
-  const isBlack = variant === "black"
-  const card = homeCoordinateCardData(slice, index, variant)
-  const [x, y, w, h] = box
-  const isEnterable = Boolean(slice?.id || card.id)
-  const target = to || targetFor(slice?.id || card.id)
-  const badgeLabel = isEnterable ? card.tag : (isLoading ? "加载中" : "待同步")
-  const visitLabel = isEnterable ? card.visitLabel : (isLoading ? "正在同步坐标" : "等待真实坐标")
-  const className = cx(
-    "absolute z-20 min-h-11 overflow-hidden rounded-[1.2rem] border",
-    isEnterable
-      ? "touch-manipulation outline-none transition hover:-translate-y-1 focus:ring-4"
-      : "cursor-wait select-none opacity-86",
-    isBlack
-      ? "border-cyan-300/16 bg-[#06111f]/94 text-cyan-50 shadow-[0_16px_36px_rgba(0,0,0,0.38),0_0_26px_rgba(34,211,238,0.08)]"
-      : "border-white/90 bg-white text-slate-800 shadow-[0_18px_42px_rgba(108,123,178,0.14)]",
-    isEnterable && (isBlack
-      ? "hover:border-cyan-300/28 hover:shadow-[0_22px_46px_rgba(0,0,0,0.48),0_0_34px_rgba(34,211,238,0.12)] focus:ring-cyan-300/35"
-      : "hover:shadow-[0_22px_48px_rgba(108,123,178,0.2)] focus:ring-violet-400/35"),
-  )
-  const content = (
-    <>
-      <div className="relative h-[45%] overflow-hidden">
-        <img src={card.image} alt={`${card.name} 坐标封面`} className={cx("h-full w-full object-cover", isBlack ? "opacity-76 saturate-[1.08]" : "")} loading="lazy" decoding="async" />
-        {isBlack ? <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#06111f]/70 via-transparent to-transparent" /> : null}
-        <span
-          className={cx(
-            "absolute left-3 top-3 rounded-full px-3 py-1 text-[clamp(0.46rem,0.68vw,0.72rem)] font-black shadow-[0_8px_18px_rgba(118,91,255,0.22)]",
-            isBlack ? "border border-cyan-200/20 bg-cyan-300/14 text-cyan-50" : "bg-violet-500/82 text-white",
-          )}
-        >
-          {badgeLabel}
-        </span>
-      </div>
-      <div className="flex h-[55%] flex-col px-[7%] py-[5%]">
-        <h3 data-fable-map-home-card-title="real-text" className={cx("truncate text-[clamp(0.68rem,0.9vw,1rem)] font-black leading-tight", isBlack ? "text-cyan-50" : "text-slate-800")}>{card.name}</h3>
-        <p className={cx("mt-[5%] line-clamp-2 text-[clamp(0.5rem,0.74vw,0.82rem)] font-bold leading-5", isBlack ? "text-cyan-100/50" : "text-slate-400")}>{card.description}</p>
-        <div className={cx("mt-auto flex items-center justify-between gap-2 text-[clamp(0.48rem,0.68vw,0.72rem)] font-bold", isBlack ? "text-cyan-100/45" : "text-slate-400")}>
-          <span className="flex min-w-0 items-center gap-1 truncate">
-            {isBlack ? (
-              <MessageCircle size={14} strokeWidth={2.6} className="shrink-0 text-cyan-300/70" />
-            ) : (
-              <UserCutImage src={lightMessageIcon} className="h-[18px] w-[18px] shrink-0 rounded-full" scale={1.6} />
-            )}
-            {visitLabel}
-          </span>
-          <span aria-hidden="true" className={isEnterable ? (isBlack ? "text-cyan-300/58" : "text-violet-300") : (isBlack ? "text-cyan-100/28" : "text-slate-300")}>→</span>
-        </div>
-      </div>
-    </>
-  )
-
-  if (!isEnterable) {
-    return (
-      <div
-        data-fable-map-home-card="real-card"
-        data-fable-map-home-card-state={isLoading ? "loading" : "placeholder"}
-        aria-disabled="true"
-        className={className}
-        style={boxStyle(artboard, x, y, w, h)}
-      >
-        {content}
-      </div>
-    )
-  }
-
-  return (
-    <Link
-      to={target}
-      data-fable-map-home-card="real-card"
-      data-fable-map-home-card-state="enterable"
-      onMouseDown={suppressMouseFocus}
-      className={className}
-      style={boxStyle(artboard, x, y, w, h)}
-    >
-      {content}
-    </Link>
-  )
-}
-
-function FableMapDiscoverCard({
-  artboard,
-  box,
-  tavern,
-  index,
-  variant,
-  isLoading = false,
-}: {
-  artboard: Artboard
-  box: readonly [number, number, number, number]
-  tavern?: Tavern
-  index: number
-  variant: Variant
-  isLoading?: boolean
-}) {
-  const [x, y, w, h] = box
-  const card = discoverCardData(tavern, index)
-  const isBlack = variant === "black"
-  const isEnterable = Boolean(tavern?.id)
-  const avatarImages = [
-    DISCOVER_CARD_IMAGES[(index + 1) % DISCOVER_CARD_IMAGES.length],
-    DISCOVER_CARD_IMAGES[(index + 2) % DISCOVER_CARD_IMAGES.length],
-    DISCOVER_CARD_IMAGES[(index + 3) % DISCOVER_CARD_IMAGES.length],
-  ]
-  const className = cx(
-    "absolute z-20 flex flex-col overflow-hidden rounded-[1.28rem] border",
-    isEnterable
-      ? "touch-manipulation outline-none transition duration-300 hover:scale-[1.015] hover:-translate-y-0.5 focus:ring-4"
-      : "cursor-wait select-none opacity-86",
-    isBlack
-      ? "border-cyan-300/14 bg-[#061226]/92 text-cyan-50 shadow-[0_18px_38px_rgba(0,0,0,0.35),0_0_26px_rgba(34,211,238,0.08)]"
-      : "border-white/90 bg-white/96 text-slate-800 shadow-[0_12px_32px_rgba(108,123,178,0.12)]",
-    isEnterable && (isBlack
-      ? "hover:border-cyan-300/26 hover:shadow-[0_22px_46px_rgba(0,0,0,0.42),0_0_40px_rgba(34,211,238,0.18)] focus:ring-cyan-300/35"
-      : "hover:shadow-[0_16px_48px_rgba(108,123,178,0.22)] focus:ring-violet-400/35"),
-  )
-  const content = (
-    <>
-      {!isEnterable ? (
-        <span className={cx("absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 text-[10px] font-black", isBlack ? "bg-cyan-300/12 text-cyan-100/70" : "bg-violet-50 text-violet-400")}>
-          {isLoading ? "加载中" : "待同步"}
-        </span>
-      ) : null}
-      <div className={cx("relative h-[43%] w-full shrink-0 overflow-hidden", isBlack ? "bg-cyan-300/8" : "bg-violet-50")}>
-        <img data-fable-map-discover-card-cover="real-image" data-fable-map-discover-square-image="512x512" src={card.image} alt={`${card.name} 封面`} className={cx("h-full w-full object-cover", isBlack && "opacity-90 saturate-[1.05]")} loading="lazy" decoding="async" />
-        <span className={cx("absolute left-3 top-3 inline-flex max-w-[72%] items-center gap-1 rounded-full px-3 py-1 text-[10px] font-black shadow-[0_8px_18px_rgba(118,91,255,0.22)]", isBlack ? "border border-cyan-200/20 bg-cyan-300/14 text-cyan-50" : "bg-violet-500/82 text-white")}>
-          <span aria-hidden="true">★</span>
-          {card.tag}
-        </span>
-      </div>
-      <div data-fable-map-discover-card-copy="real-text-layer" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-4 py-3">
-        <h3 data-fable-map-discover-card-title="real-text" className={cx("truncate text-[16px] font-black leading-tight", isBlack ? "text-cyan-50" : "text-slate-800")}>{card.name}</h3>
-        <p className={cx("mt-2 line-clamp-2 text-[12px] font-bold leading-5", isBlack ? "text-cyan-100/52" : "text-slate-400")} title={card.description}>{card.description}</p>
-        <span data-first-minute-guide="fable-map-discover-card" className="sr-only">
-          Why here · {card.experienceType}：{card.whyHere}。先试：{card.tryPrompt}
-        </span>
-        <div className={cx("mt-auto flex min-w-0 items-center gap-2 text-[11px] font-black", isBlack ? "text-cyan-100/44" : "text-slate-400")}>
-          <span className="flex min-w-0 items-center gap-1 truncate">
-            <MessageCircle size={13} strokeWidth={2.6} className={cx("shrink-0", isBlack ? "text-cyan-300/70" : "text-violet-300")} />
-            {isEnterable ? `${card.timeLabel} · ${card.visitLabel}` : (isLoading ? "正在同步坐标" : "等待真实坐标")}
-          </span>
-          <span aria-hidden="true" className="ml-auto flex shrink-0 -space-x-1.5">
-            {avatarImages.map((image, avatarIndex) => (
-              <img key={`${card.name}-avatar-${avatarIndex}`} src={image} alt="" className={cx("h-5 w-5 rounded-full border object-cover", isBlack ? "border-[#061226]" : "border-white")} loading="lazy" decoding="async" />
-            ))}
-          </span>
-          <span className={cx("inline-flex shrink-0 items-center", isBlack ? "text-cyan-300/72" : "text-violet-400")} aria-label={`收藏 ${card.favoriteCount}`}>
-            <Heart size={17} strokeWidth={2.6} />
-          </span>
-        </div>
-        <span
-          data-fable-map-discover-entry-cta="visitor-primary"
-          className={cx(
-            "mt-2 inline-flex w-fit items-center rounded-full px-3 py-1 text-[11px] font-black",
-            isBlack ? "bg-cyan-300/12 text-cyan-200" : "bg-violet-50 text-violet-500",
-          )}
-        >
-          {isEnterable ? "进入这个空间 →" : "等待空间同步"}
-        </span>
-      </div>
-    </>
-  )
-
-  if (!isEnterable) {
-    return (
-      <div
-        data-fable-map-discover-card="real-card"
-        data-fable-map-discover-card-layout="image-top"
-        data-fable-map-discover-card-state={isLoading ? "loading" : "placeholder"}
-        aria-disabled="true"
-        className={className}
-        style={boxStyle(artboard, x, y, w, h)}
-      >
-        {content}
-      </div>
-    )
-  }
-
-  return (
-    <Link
-      to={targetFor(tavern.id)}
-      data-fable-map-discover-card="real-card"
-      data-fable-map-discover-card-layout="image-top"
-      data-fable-map-discover-card-state="enterable"
-      onMouseDown={suppressMouseFocus}
-      className={className}
-      style={boxStyle(artboard, x, y, w, h)}
-    >
-      {content}
-    </Link>
-  )
-}
-
-function HomeCurrentCoordinateBadge({
-  artboard,
-  variant,
-  coordinate,
-}: {
-  artboard: Artboard
-  variant: Variant
-  coordinate?: FableMapHeroCoordinate
-}) {
-  const isBlack = variant === "black"
-  const box = HOME_LAYOUT.currentCoordinate
-  const name = coordinate?.name || (isBlack ? "TAVERN_07" : "云上图书馆")
-  const coordinateLabel = coordinate?.coordinateLabel || ""
-  const timeLabel = coordinate?.timeLabel || ""
-  return (
-    <div
-      data-fable-map-current-coordinate="shared"
-      className={cx(
-        "absolute z-10 rounded-[1.25rem] border px-5 py-4",
-        isBlack
-          ? "border-cyan-300/18 bg-[#020710]/78 shadow-[0_0_28px_rgba(34,211,238,0.1)]"
-          : "border-white/90 bg-white/88 shadow-[0_18px_42px_rgba(118,133,190,0.16)]",
-      )}
-      style={boxStyle(artboard, box.x, box.y, box.w, box.h)}
-    >
-      <p className={cx("text-[clamp(0.44rem,0.62vw,0.66rem)] font-black", isBlack ? "text-cyan-100/48" : "text-slate-400")}>
-        {isBlack ? "CURRENT TAVERN" : "当前坐标"}{timeLabel ? ` · ${timeLabel}` : ""}
-      </p>
-      <p className={cx("mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-[clamp(0.66rem,0.9vw,1rem)] font-black leading-tight", isBlack ? "text-cyan-50" : "text-slate-700")}>
-        <span data-fable-map-current-coordinate-name="truncate" className="min-w-0 truncate">{name}</span>
-        {isBlack ? (
-          <MapPin size={18} strokeWidth={2.6} className="shrink-0 text-cyan-300/80" />
-        ) : (
-          <UserCutImage src={lightPinIcon} className="h-5 w-5 shrink-0 rounded-full" scale={1.7} loading="eager" />
-        )}
-      </p>
-      {coordinateLabel ? (
-        <p className={cx("mt-1 truncate text-[clamp(0.5rem,0.68vw,0.72rem)] font-bold", isBlack ? "text-cyan-100/46" : "text-slate-400")}>
-          {coordinateLabel}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
-function FableMapHomeMainSurface({
-  artboard,
-  featuredCitySlices,
-  variant,
-  isLoading = false,
-  heroCoordinate,
-}: {
-  artboard: Artboard
-  featuredCitySlices: HomeReferenceProps["featuredCitySlices"]
-  variant: Variant
-  isLoading?: boolean
-  heroCoordinate?: FableMapHeroCoordinate
-}) {
-  const isBlack = variant === "black"
-  const heroBox = HOME_LAYOUT.hero
-  const titleBox = HOME_LAYOUT.title
-  const heroDecorations = HOME_LAYOUT.heroDecorations
-  const recommendedHeaderBox = HOME_LAYOUT.recommendedHeader
-  const cardBoxes = HOME_LAYOUT.cards
-  const rightRailSurface = HOME_LAYOUT.rightRailSurface
-  return (
-    <>
-      <div aria-hidden="true" className="absolute inset-0 z-0 overflow-hidden">
-        {isBlack ? (
-          <>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_26%,rgba(34,211,238,0.18),transparent_34%),linear-gradient(180deg,#06111f_0%,#020710_60%,#020710_100%)]" />
-            <div className="absolute left-[28%] top-0 h-[72%] w-[48%] rounded-full bg-cyan-300/10 blur-3xl" />
-          </>
-        ) : (
-          <img src={lightPlaneWash} alt="" className="h-full w-full object-cover opacity-60" draggable={false} decoding="async" />
-        )}
-      </div>
-      <div
-        aria-hidden="true"
-        className={cx(
-          "absolute z-0 overflow-hidden rounded-[2rem] border shadow-[0_24px_80px_rgba(116,135,190,0.14)]",
-          isBlack ? "rounded-[0.45rem] border-transparent bg-[#020710] shadow-[0_0_34px_rgba(34,211,238,0.08)]" : "border-transparent bg-white",
-        )}
-        style={boxStyle(artboard, heroBox.x, heroBox.y, heroBox.w, heroBox.h)}
-      >
-        {isBlack ? (
-          <>
-            <div className="absolute inset-0 bg-[#020710]" />
-            <img
-              src={homeBlackHeroVisual}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-95"
-              draggable={false}
-              decoding="async"
-            />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_42%,rgba(34,211,238,0.12),transparent_32%)]" />
-          </>
-        ) : (
-          <img
-            src={lightSkyCityBalcony}
-            alt=""
-            className="h-full w-full object-cover opacity-78"
-            draggable={false}
-            decoding="async"
-          />
-        )}
-        <div className={cx("absolute inset-0", isBlack ? "bg-gradient-to-r from-[#020710]/96 via-[#020710]/44 to-[#020710]/6" : "bg-gradient-to-r from-white/92 via-white/72 to-white/22")} />
-      </div>
-      <div
-        aria-hidden="true"
-        className={cx("absolute z-0 overflow-hidden rounded-[1.75rem]", isBlack ? "bg-[#020710]" : "bg-white/92")}
-        style={boxStyle(artboard, rightRailSurface.x, rightRailSurface.y, rightRailSurface.w, rightRailSurface.h)}
-      >
-        <div className={cx("absolute inset-0", isBlack ? "bg-gradient-to-b from-cyan-300/8 via-[#020710]/70 to-[#020710]" : "bg-white/72")} />
-      </div>
-      {isBlack ? (
-        <>
-          <span aria-hidden="true" className="absolute z-10 rounded-full bg-cyan-300/18 blur-2xl" style={boxStyle(artboard, heroDecorations.primary.x, heroDecorations.primary.y, heroDecorations.primary.w, heroDecorations.primary.h)} />
-          <span aria-hidden="true" className="absolute z-10 rounded-full border border-cyan-200/15 bg-cyan-300/8" style={boxStyle(artboard, heroDecorations.secondary.x, heroDecorations.secondary.y, heroDecorations.secondary.w, heroDecorations.secondary.h)} />
-        </>
-      ) : (
-        <>
-          <UserCutImage src={lightPlaneIcon} className="absolute z-10 rounded-full opacity-85" style={boxStyle(artboard, heroDecorations.primary.x, heroDecorations.primary.y, heroDecorations.primary.w, heroDecorations.primary.h)} scale={2.2} loading="eager" />
-          <span aria-hidden="true" className="absolute z-10 text-violet-400/70" style={boxStyle(artboard, heroDecorations.secondary.x, heroDecorations.secondary.y, heroDecorations.secondary.w, heroDecorations.secondary.h)}>
-            ?          </span>
-        </>
-      )}
-      <div className="absolute z-10" style={boxStyle(artboard, titleBox.x, titleBox.y, titleBox.w, titleBox.h)}>
-        <p className={cx("text-[clamp(0.48rem,0.72vw,0.8rem)] font-black uppercase tracking-[0.24em]", isBlack ? "text-cyan-300/80" : "text-violet-400")}>{isBlack ? "FABLEMAP TAVERN PULSE" : "REAL COORDINATES / AI NPC"}</p>
-        <h1
-          data-fable-map-home-title="real-text"
-          className={cx("mt-3 max-w-[12em] text-[clamp(1.45rem,2.35vw,2.45rem)] font-black leading-[1.25] tracking-[-0.04em]", isBlack ? "text-cyan-50" : "text-slate-800")}
-        >
-          {isBlack ? (
-            <>
-              接入仍在回应
-              <br />
-              真实地图锚点
-            </>
-          ) : (
-            <>
-              在每一个坐标里
-              <br />
-              遇见另一种可能的自己
-            </>
-          )}
-        </h1>
-        <p className={cx("mt-4 max-w-[32em] text-[clamp(0.58rem,0.9vw,0.95rem)] font-bold leading-7", isBlack ? "text-cyan-100/62" : "text-slate-500")}>
-          {isBlack ? "沿真实坐标，找到仍在亮灯的空间" : "走进仍在回应的空间，探索属于你的故事"}
-        </p>
-      </div>
-      <HomeCurrentCoordinateBadge artboard={artboard} variant={variant} coordinate={heroCoordinate} />
-      <div className="absolute z-10 flex items-center justify-between" style={boxStyle(artboard, recommendedHeaderBox.x, recommendedHeaderBox.y, recommendedHeaderBox.w, recommendedHeaderBox.h)}>
-        <h2 className={cx("text-[clamp(0.72rem,1vw,1rem)] font-black", isBlack ? "uppercase tracking-[0.16em] text-cyan-50" : "text-slate-800")}>{isBlack ? "ACTIVE TAVERNS" : "为你推荐的坐标"}</h2>
-        <Link to="/discover" onMouseDown={suppressMouseFocus} className={cx("inline-flex min-h-9 touch-manipulation items-center gap-2 rounded-full px-3 text-[clamp(0.52rem,0.68vw,0.72rem)] font-black outline-none transition focus:ring-4", isBlack ? "text-cyan-300 hover:bg-cyan-300/8 focus:ring-cyan-300/35" : "text-slate-400 hover:bg-white/70 hover:text-violet-500 focus:ring-violet-400/35")}>
-          查看全部 →
-        </Link>
-      </div>
-      {cardBoxes.map((box, index) => (
-        <FableMapHomeCoordinateCard
-          key={`home-${variant}-real-card-${featuredCitySlices[index]?.id || index}`}
-          artboard={artboard}
-          box={box}
-          slice={featuredCitySlices[index]}
-          index={index}
-          variant={variant}
-          to={targetFor(featuredCitySlices[index]?.id)}
-          isLoading={isLoading && !featuredCitySlices[index]?.id}
-        />
-      ))}
-    </>
-  )
-}
-
 function FableMapHomeMobile({
   featuredCitySlices,
   onToggleTheme,
@@ -2188,66 +1409,6 @@ function FableMapHomeMobile({
         </div>
       </section>
     </div>
-  )
-}
-
-function HomeHeroActions({ artboard, variant, forceVisible = false }: { artboard: Artboard; variant: Variant; forceVisible?: boolean }) {
-  const isBlack = variant === "black"
-  const playIconSize = 14
-  const playIconStrokeWidth = 2.75
-  const actions = HOME_LAYOUT.heroActions
-  const primaryClass = isBlack
-    ? "border-cyan-200/50 bg-cyan-300 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.28)]"
-    : "border-violet-300/45 bg-[#8e83ff] text-white shadow-[0_14px_28px_rgba(126,111,255,0.22)]"
-  const secondaryClass = isBlack
-    ? "border-cyan-300/35 bg-[#061226]/88 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.12)]"
-    : "border-slate-300/60 bg-white/86 text-slate-700 shadow-[0_10px_24px_rgba(74,98,176,0.1)]"
-
-  return (
-    <>
-      <Link
-        to="/discover"
-        aria-label={isBlack ? "接入坐标" : "开始探险"}
-        onMouseDown={suppressMouseFocus}
-        className={cx(
-          "absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black transition hover:-translate-y-0.5 focus:outline-none focus:ring-4",
-          forceVisible ? "opacity-100" : "opacity-0 focus:opacity-100",
-          primaryClass,
-        )}
-        style={boxStyle(artboard, actions.primary.x, actions.primary.y, actions.primary.w, actions.primary.h)}
-      >
-        <span>{isBlack ? "接入坐标" : "开始探险"}</span>
-        {isBlack ? (
-          <ArrowUpRight size={16} strokeWidth={3} className="opacity-70" />
-        ) : (
-          <ArrowRight size={16} strokeWidth={3} className="text-white" />
-        )}
-      </Link>
-      <Link
-        to="/discover"
-        aria-label={isBlack ? "浏览空间" : "观看世界介绍"}
-        onMouseDown={suppressMouseFocus}
-        className={cx(
-          "absolute z-20 flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[1.15rem] border text-sm font-black transition hover:-translate-y-0.5 focus:outline-none focus:ring-4",
-          forceVisible ? "opacity-100" : "opacity-0 focus:opacity-100",
-          secondaryClass,
-        )}
-        style={boxStyle(artboard, actions.secondary.x, actions.secondary.y, actions.secondary.w, actions.secondary.h)}
-      >
-        <span
-          aria-hidden="true"
-          className="grid h-7 w-7 shrink-0 place-items-center"
-        >
-          <Play
-            size={playIconSize}
-            fill="currentColor"
-            strokeWidth={playIconStrokeWidth}
-            className="ml-0.5"
-          />
-        </span>
-        <span>{isBlack ? "浏览空间" : "观看世界介绍"}</span>
-      </Link>
-    </>
   )
 }
 
@@ -2984,16 +2145,6 @@ export function FableMapHomeReference({
   variant,
   featuredCitySlices,
   isLoading = false,
-  heroCoordinate,
-  worldPulseItems,
-  dailyQuote = DEFAULT_DAILY_QUOTE,
-  onlineEntities,
-  recentMemories,
-  guideCards = DEFAULT_GUIDE_CARDS,
-  worldStats = DEFAULT_WORLD_STATS,
-  search,
-  onSearchChange,
-  onSearchSubmit,
   onToggleTheme,
 }: HomeReferenceProps) {
   const artboard = HOME_BLACK
