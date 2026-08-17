@@ -1,0 +1,207 @@
+name: Publish immutable media
+
+on:
+  repository_dispatch:
+    types:
+      - publish-fablespace-media
+      - publish-game-media
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish reviewed media
+    runs-on: ubuntu-latest
+    if: >-
+      vars.DEPLOY_CONFIGURED == 'true' &&
+      (github.event.action == 'publish-fablespace-media' || github.event.action == 'publish-game-media')
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.CDN_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CDN_S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.CDN_S3_REGION || 'auto' }}
+      AWS_EC2_METADATA_DISABLED: "true"
+      CDN_BASE_URL: ${{ secrets.CDN_BASE_URL }}
+      CDN_S3_BUCKET: ${{ secrets.CDN_S3_BUCKET }}
+      CDN_S3_ENDPOINT_URL: ${{ secrets.CDN_S3_ENDPOINT_URL }}
+      CDN_S3_PREFIX: ${{ vars.CDN_S3_PREFIX || 'game' }}
+      MEDIA_OBJECT_KEY: ${{ github.event.client_payload.object_key }}
+      MEDIA_CONTENT_TYPE: ${{ github.event.client_payload.content_type }}
+      MEDIA_EXPECTED_BYTES: ${{ github.event.client_payload.bytes }}
+      MEDIA_EXPECTED_SHA256: ${{ github.event.client_payload.sha256 }}
+      MEDIA_CONTENT_BASE64: ${{ github.event.client_payload.content_base64 }}
+      MEDIA_SOURCE_URL: ${{ github.event.client_payload.source_url }}
+      MEDIA_SOURCE_ENCODING: ${{ github.event.client_payload.source_encoding }}
+      MEDIA_PUBLISH_EVENT: ${{ github.event.action }}
+    steps:
+      - name: Validate and publish immutable object
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for name in \
+            AWS_ACCESS_KEY_ID \
+            AWS_SECRET_ACCESS_KEY \
+            CDN_BASE_URL \
+            CDN_S3_BUCKET \
+            CDN_S3_ENDPOINT_URL \
+            MEDIA_OBJECT_KEY \
+            MEDIA_EXPECTED_BYTES \
+            MEDIA_EXPECTED_SHA256
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required media publication value: ${name}"
+              exit 1
+            fi
+          done
+
+          if [ -n "${MEDIA_CONTENT_BASE64:-}" ] && [ -n "${MEDIA_SOURCE_URL:-}" ]; then
+            echo "::error::Use exactly one media source"
+            exit 1
+          fi
+          if [ -z "${MEDIA_CONTENT_BASE64:-}" ] && [ -z "${MEDIA_SOURCE_URL:-}" ]; then
+            echo "::error::Missing reviewed media source"
+            exit 1
+          fi
+
+          case "${CDN_BASE_URL}" in
+            https://*) ;;
+            *) echo "::error::CDN_BASE_URL must use HTTPS"; exit 1 ;;
+          esac
+          case "${CDN_S3_ENDPOINT_URL}" in
+            https://*) ;;
+            *) echo "::error::CDN_S3_ENDPOINT_URL must use HTTPS"; exit 1 ;;
+          esac
+          case "${MEDIA_OBJECT_KEY}" in
+            *..*|/*|*//*)
+              echo "::error::Object key is not normalized"
+              exit 1
+              ;;
+          esac
+          case "${MEDIA_OBJECT_KEY}" in
+            assets/vendor/ninja-adventure/2024-04-19/player-female.png)
+              if [ "${MEDIA_PUBLISH_EVENT}" != "publish-game-media" ]; then
+                echo "::error::The reviewed game avatar requires the game publication event"
+                exit 1
+              fi
+              if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
+                echo "::error::The reviewed game avatar must use image/png"
+                exit 1
+              fi
+              CDN_S3_PREFIX="${CDN_S3_PREFIX#/}"
+              CDN_S3_PREFIX="${CDN_S3_PREFIX%/}"
+              if [ "${CDN_S3_PREFIX}" != "game" ]; then
+                echo "::error::The reviewed game avatar must publish under the game prefix"
+                exit 1
+              fi
+              ;;
+            app/assets/story-worlds/*/player-roles/*/v[0-9]*/avatar.webp|app/assets/story-worlds/*/characters/*/v[0-9]*/portrait.webp)
+              if [ "${MEDIA_PUBLISH_EVENT}" != "publish-fablespace-media" ]; then
+                echo "::error::Reviewed story portraits require the legacy publication event"
+                exit 1
+              fi
+              if [ "${MEDIA_CONTENT_TYPE:-}" != "image/webp" ]; then
+                echo "::error::Reviewed story portraits must use image/webp"
+                exit 1
+              fi
+              CDN_S3_PREFIX="fablespace"
+              ;;
+            *) echo "::error::Object key is outside the reviewed media allowlist"; exit 1 ;;
+          esac
+          if ! [[ "${MEDIA_EXPECTED_BYTES}" =~ ^[1-9][0-9]{0,6}$ ]]; then
+            echo "::error::Invalid expected byte count"
+            exit 1
+          fi
+          if ! [[ "${MEDIA_EXPECTED_SHA256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::Invalid expected SHA-256"
+            exit 1
+          fi
+
+          FULL_OBJECT_KEY="${CDN_S3_PREFIX}/media/v1/${MEDIA_OBJECT_KEY}"
+          MEDIA_FILE="/tmp/reviewed-media"
+          SOURCE_FILE="/tmp/reviewed-media-source"
+          EXISTING_FILE="/tmp/existing-reviewed-media"
+          DELIVERED_FILE="/tmp/delivered-reviewed-media"
+
+          if [ -n "${MEDIA_CONTENT_BASE64:-}" ]; then
+            printf '%s' "${MEDIA_CONTENT_BASE64}" | base64 --decode > "${MEDIA_FILE}"
+          else
+            if [ "${MEDIA_OBJECT_KEY}" = "assets/vendor/ninja-adventure/2024-04-19/player-female.png" ]; then
+              if [ "${MEDIA_SOURCE_URL}" != "https://raw.githubusercontent.com/pixel-boy/NinjaAdventure/6ac78232d5aedcc85ce5f27d060ea92366f7c24a/content/character/samurai_green/samurai_green.png" ]; then
+                echo "::error::The game avatar source URL is not the reviewed immutable upstream object"
+                exit 1
+              fi
+            else
+              case "${MEDIA_SOURCE_URL}" in
+                https://gist.githubusercontent.com/*) ;;
+                *) echo "::error::Source URL is outside the approved temporary GitHub host"; exit 1 ;;
+              esac
+            fi
+            curl \
+              --fail \
+              --location \
+              --silent \
+              --show-error \
+              --proto '=https' \
+              --tlsv1.2 \
+              --output "${SOURCE_FILE}" \
+              "${MEDIA_SOURCE_URL}"
+            case "${MEDIA_SOURCE_ENCODING:-raw}" in
+              raw) mv "${SOURCE_FILE}" "${MEDIA_FILE}" ;;
+              base64) base64 --decode "${SOURCE_FILE}" > "${MEDIA_FILE}" ;;
+              *) echo "::error::Unsupported temporary source encoding"; exit 1 ;;
+            esac
+          fi
+          ACTUAL_BYTES="$(wc -c < "${MEDIA_FILE}" | tr -d ' ')"
+          ACTUAL_SHA256="$(sha256sum "${MEDIA_FILE}" | cut -d' ' -f1)"
+          if [ "${ACTUAL_BYTES}" != "${MEDIA_EXPECTED_BYTES}" ]; then
+            echo "::error::Decoded byte count does not match the reviewed value"
+            exit 1
+          fi
+          if [ "${ACTUAL_SHA256}" != "${MEDIA_EXPECTED_SHA256}" ]; then
+            echo "::error::Decoded SHA-256 does not match the reviewed value"
+            exit 1
+          fi
+
+          if aws s3api head-object \
+            --bucket "${CDN_S3_BUCKET}" \
+            --key "${FULL_OBJECT_KEY}" \
+            --endpoint-url "${CDN_S3_ENDPOINT_URL}" >/dev/null 2>&1
+          then
+            aws s3api get-object \
+              --bucket "${CDN_S3_BUCKET}" \
+              --key "${FULL_OBJECT_KEY}" \
+              --endpoint-url "${CDN_S3_ENDPOINT_URL}" \
+              "${EXISTING_FILE}" >/dev/null
+            EXISTING_SHA256="$(sha256sum "${EXISTING_FILE}" | cut -d' ' -f1)"
+            if [ "${EXISTING_SHA256}" != "${MEDIA_EXPECTED_SHA256}" ]; then
+              echo "::error::Immutable object key already exists with different bytes"
+              exit 1
+            fi
+          else
+            aws s3api put-object \
+              --bucket "${CDN_S3_BUCKET}" \
+              --key "${FULL_OBJECT_KEY}" \
+              --body "${MEDIA_FILE}" \
+              --content-type "${MEDIA_CONTENT_TYPE}" \
+              --cache-control "public,max-age=31536000,immutable" \
+              --endpoint-url "${CDN_S3_ENDPOINT_URL}" >/dev/null
+          fi
+
+          MEDIA_URL="${CDN_BASE_URL%/}/${FULL_OBJECT_KEY}"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 8 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --output "${DELIVERED_FILE}" \
+            "${MEDIA_URL}"
+          DELIVERED_SHA256="$(sha256sum "${DELIVERED_FILE}" | cut -d' ' -f1)"
+          if [ "${DELIVERED_SHA256}" != "${MEDIA_EXPECTED_SHA256}" ]; then
+            echo "::error::CDN-delivered bytes do not match the reviewed object"
+            exit 1
+          fi
+
+          echo "Published ${MEDIA_OBJECT_KEY} (${MEDIA_EXPECTED_BYTES} bytes)"

@@ -1,0 +1,452 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/api/**"
+      - "apps/web/**"
+      - "deploy/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/repair-story-run-schema.yml"
+      - ".github/workflows/apply-multi-story-009.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: fablespace-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FRONTEND_IMAGE: fablespace-frontend:local
+
+jobs:
+  changes:
+    name: Detect deploy scope
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      media: ${{ steps.filter.outputs.media }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/api/**'
+            frontend:
+              - 'apps/web/**'
+            infrastructure:
+              - 'deploy/schema-revision.txt'
+              - 'deploy/server/**'
+              - 'deploy/docker-compose.shared.yml'
+              - 'deploy/docker-compose.llm-proxy.yml'
+              - 'docker-compose.yml'
+              - '.github/workflows/deploy.yml'
+              - '.github/workflows/repair-story-run-schema.yml'
+              - '.github/workflows/apply-multi-story-009.yml'
+            media:
+              - 'deploy/cdn/**'
+              - '.github/workflows/deploy.yml'
+
+  build-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      vars.DEPLOY_ENABLED == 'true' &&
+      vars.DEPLOY_CONFIGURED == 'true' &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infrastructure == 'true' || needs.changes.outputs.media == 'true')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Validate CDN configuration
+        id: cdn
+        env:
+          CDN_BASE_URL: ${{ secrets.CDN_BASE_URL }}
+          CDN_S3_BUCKET: ${{ secrets.CDN_S3_BUCKET }}
+          CDN_S3_ENDPOINT_URL: ${{ secrets.CDN_S3_ENDPOINT_URL }}
+          CDN_S3_ACCESS_KEY_ID: ${{ secrets.CDN_S3_ACCESS_KEY_ID }}
+          CDN_S3_SECRET_ACCESS_KEY: ${{ secrets.CDN_S3_SECRET_ACCESS_KEY }}
+          CDN_S3_PREFIX: ${{ vars.CDN_S3_PREFIX || 'game' }}
+          VERIFY_MEDIA: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.media == 'true' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CDN_BASE_URL:-}" ]; then
+            echo "::error::Missing required GitHub Actions secret: CDN_BASE_URL"
+            exit 1
+          fi
+          case "${CDN_BASE_URL}" in
+            https://*) ;;
+            *) echo "::error::CDN_BASE_URL must use HTTPS"; exit 1 ;;
+          esac
+          CDN_S3_PREFIX="${CDN_S3_PREFIX#/}"
+          CDN_S3_PREFIX="${CDN_S3_PREFIX%/}"
+          if [ -z "${CDN_S3_PREFIX}" ] || [[ "${CDN_S3_PREFIX}" == *".."* ]]; then
+            echo "::error::CDN_S3_PREFIX must be a non-empty object-key directory"
+            exit 1
+          fi
+          if [ "${CDN_BASE_URL%/}" != "https://img.pingxingxian.space" ]; then
+            echo "::error::CDN_BASE_URL must match the reviewed game media origin"
+            exit 1
+          fi
+          if [ "${CDN_S3_PREFIX}" != "game" ]; then
+            echo "::error::CDN_S3_PREFIX must be game for the reviewed runtime proxy"
+            exit 1
+          fi
+          if [ "${VERIFY_MEDIA}" = "true" ]; then
+            for name in CDN_S3_BUCKET CDN_S3_ENDPOINT_URL CDN_S3_ACCESS_KEY_ID CDN_S3_SECRET_ACCESS_KEY; do
+              if [ -z "${!name:-}" ]; then
+                echo "::error::Missing required GitHub Actions secret for media verification: ${name}"
+                exit 1
+              fi
+            done
+            case "${CDN_S3_ENDPOINT_URL}" in
+              https://*) ;;
+              *) echo "::error::CDN_S3_ENDPOINT_URL must use HTTPS"; exit 1 ;;
+            esac
+          fi
+          MEDIA_BASE_URL="${CDN_BASE_URL%/}/${CDN_S3_PREFIX}/media/v1"
+          echo "media_base_url=${MEDIA_BASE_URL}" >> "${GITHUB_OUTPUT}"
+          echo "s3_prefix=${CDN_S3_PREFIX}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          build-args: |
+            VITE_MEDIA_BASE_URL=/game-media/v1
+            VITE_FORUM_URL=${{ vars.FORUM_URL || 'https://pingxingxian.space' }}
+          tags: ${{ env.FRONTEND_IMAGE }}
+          load: true
+          cache-from: type=gha,scope=fablespace-web
+          cache-to: type=gha,mode=max,scope=fablespace-web
+
+      - name: Verify media manifest and CDN delivery
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.media == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CDN_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CDN_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.CDN_S3_REGION || 'auto' }}
+          AWS_EC2_METADATA_DISABLED: "true"
+          CDN_S3_BUCKET: ${{ secrets.CDN_S3_BUCKET }}
+          CDN_S3_ENDPOINT_URL: ${{ secrets.CDN_S3_ENDPOINT_URL }}
+          CDN_S3_PREFIX: ${{ steps.cdn.outputs.s3_prefix }}
+          MEDIA_BASE_URL: ${{ steps.cdn.outputs.media_base_url }}
+        run: |
+          set -euo pipefail
+          aws s3api list-objects-v2 \
+            --bucket "${CDN_S3_BUCKET}" \
+            --prefix "${CDN_S3_PREFIX}/media/v1/" \
+            --endpoint-url "${CDN_S3_ENDPOINT_URL}" \
+            --output json > /tmp/game-media-objects.json
+          python deploy/cdn/verify_media_manifest.py \
+            --manifest deploy/cdn/game-media-manifest.json \
+            --objects /tmp/game-media-objects.json \
+            --s3-prefix "${CDN_S3_PREFIX}/media/v1" \
+            --media-base-url "${MEDIA_BASE_URL}" \
+            --samples-output /tmp/game-media-samples.txt
+          python deploy/cdn/verify_cdn_assets.py \
+            --manifest deploy/cdn/game-media-manifest.json
+
+      - name: Export frontend image archive
+        run: |
+          set -euo pipefail
+          docker save "${FRONTEND_IMAGE}" | gzip -1 > "fablespace-frontend-${GITHUB_SHA}.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fablespace-frontend-${{ github.sha }}
+          path: fablespace-frontend-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy-backend:
+    name: Deploy backend
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      vars.DEPLOY_ENABLED == 'true' &&
+      vars.DEPLOY_CONFIGURED == 'true' &&
+      github.event_name != 'workflow_dispatch' &&
+      needs.changes.outputs.backend == 'true'
+    steps:
+      - name: Validate server configuration
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required GitHub Actions secret: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Update backend service
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL: ${{ secrets.FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          envs: OPENCODE_API_KEY,FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL
+          command_timeout: 20m
+          script: |
+            set -eu
+            if [ -z "${OPENCODE_API_KEY:-}" ]; then
+              echo "Missing required GitHub Actions secret: OPENCODE_API_KEY"
+              exit 1
+            fi
+            if [ -z "${FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL:-}" ]; then
+              echo "Missing required GitHub Actions secret: FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL"
+              exit 1
+            fi
+            FABLESPACE_PATH="${{ vars.DEPLOY_PATH || '/opt/fablespace' }}"
+            EXPECTED_SHA="${{ github.sha }}"
+            EXPECTED_REF="${{ github.ref }}"
+            if [ "${EXPECTED_REF}" != "refs/heads/main" ]; then
+              echo "Deploy must be dispatched from main"
+              exit 1
+            fi
+            cd "${FABLESPACE_PATH}"
+            git remote set-url origin "https://github.com/${{ github.repository }}.git"
+            git fetch --prune origin main
+            if ! git cat-file -e "${EXPECTED_SHA}^{commit}" 2>/dev/null; then
+              echo "Workflow commit is unavailable after fetching main"
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "${EXPECTED_SHA}" origin/main; then
+              echo "Workflow commit is not in the approved main history"
+              exit 1
+            fi
+            TARGET_SCHEMA_MARKER="$(mktemp)"
+            TARGET_RELEASE_APPROVAL="$(mktemp)"
+            trap 'rm -f "${TARGET_SCHEMA_MARKER}" "${TARGET_RELEASE_APPROVAL}"' EXIT
+            git show "${EXPECTED_SHA}:deploy/schema-revision.txt" > "${TARGET_SCHEMA_MARKER}"
+            git show "${EXPECTED_SHA}:deploy/release-approval.txt" > "${TARGET_RELEASE_APPROVAL}"
+            if [ ! -f /opt/fablespace-schema/revision ]; then
+              echo "Verified schema revision marker is missing; run the controlled 009 workflow first"
+              exit 1
+            fi
+            if ! sudo cmp -s "${TARGET_SCHEMA_MARKER}" /opt/fablespace-schema/revision; then
+              echo "Verified schema revision does not match the workflow commit; deployment is blocked"
+              exit 1
+            fi
+            if [ ! -f /opt/fablespace-schema/release-approval ]; then
+              echo "Runtime release approval is missing; the controlled 009 workflow did not complete"
+              exit 1
+            fi
+            if ! sudo cmp -s "${TARGET_RELEASE_APPROVAL}" /opt/fablespace-schema/release-approval; then
+              echo "Runtime release approval does not match the workflow commit; deployment is blocked"
+              exit 1
+            fi
+            git reset --hard "${EXPECTED_SHA}"
+            sudo install -m 0755 deploy/server/fablelog /usr/local/bin/fablelog
+
+            CONFIG_OUTPUT="$(printf '%s' "${OPENCODE_API_KEY}" | sudo python3 deploy/server/configure_shared_services.py --cors-origin https://fable.pingxingxian.space --story-llm-key-stdin)"
+            unset OPENCODE_API_KEY
+            printf '%s\n' "${CONFIG_OUTPUT}"
+            LLM_PROXY_OUTPUT="$(printf '%s' "${FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL}" | sudo python3 deploy/server/configure_llm_proxy.py --subscription-url-stdin)"
+            unset FABLESPACE_LLM_PROXY_SUBSCRIPTION_URL
+            printf '%s\n' "${LLM_PROXY_OUTPUT}"
+            case "${CONFIG_OUTPUT}" in
+              *parallellines_changed=true*)
+                cd /opt/parallellines
+                if sudo docker compose version >/dev/null 2>&1; then
+                  PARALLELLINES_COMPOSE="sudo docker compose"
+                else
+                  PARALLELLINES_COMPOSE="sudo docker-compose"
+                fi
+                $PARALLELLINES_COMPOSE up -d --no-deps --force-recreate api worker
+                PARALLELLINES_READY=false
+                for ATTEMPT in $(seq 1 30); do
+                  if $PARALLELLINES_COMPOSE exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()" >/dev/null 2>&1; then
+                    PARALLELLINES_READY=true
+                    break
+                  fi
+                  sleep 2
+                done
+                if [ "${PARALLELLINES_READY}" != "true" ]; then
+                  $PARALLELLINES_COMPOSE logs --tail=120 api
+                  echo "ParallelLines API health check failed after SSO configuration"
+                  exit 1
+                fi
+                cd "${FABLESPACE_PATH}"
+                ;;
+            esac
+
+            if sudo docker compose version >/dev/null 2>&1; then
+              COMPOSE="sudo docker compose"
+            else
+              COMPOSE="sudo docker-compose"
+            fi
+
+            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.shared.yml -f deploy/docker-compose.llm-proxy.yml"
+            echo "Current StoryWorld LLM failure summary (redacted):"
+            $COMPOSE $COMPOSE_FILES logs --since=24h backend 2>&1 \
+              | grep -E 'StoryWorld LLM request failed|LLM backend request failed' \
+              | tail -n 40 || true
+            $COMPOSE $COMPOSE_FILES build backend memory-worker
+            $COMPOSE $COMPOSE_FILES pull llm-proxy
+            if ! $COMPOSE $COMPOSE_FILES run --rm --no-deps llm-proxy -t -d /root/.config/mihomo >/dev/null 2>&1; then
+              echo "LLM proxy configuration validation failed"
+              exit 1
+            fi
+            $COMPOSE $COMPOSE_FILES up -d --no-deps llm-proxy
+            LLM_PROXY_READY=false
+            for ATTEMPT in $(seq 1 15); do
+              if $COMPOSE $COMPOSE_FILES run --rm --no-deps backend python -c "import socket; connection=socket.create_connection(('llm-proxy', 7890), timeout=3); connection.close()" >/dev/null 2>&1; then
+                LLM_PROXY_READY=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "${LLM_PROXY_READY}" != "true" ]; then
+              echo "LLM proxy did not become reachable"
+              exit 1
+            fi
+            echo "StoryWorld LLM proxy validated"
+            $COMPOSE $COMPOSE_FILES run --rm --no-deps backend python -c "from fablespace_api.app_factory import build_system_story_llm_config; from fablespace_api.infrastructure.settings import ApiSettings; raise SystemExit(0 if build_system_story_llm_config(ApiSettings()) is not None else 1)"
+            echo "StoryWorld LLM configuration validated"
+            STORY_LLM_READY=false
+            for ATTEMPT in $(seq 1 3); do
+              if $COMPOSE $COMPOSE_FILES run --rm --no-deps backend python -m fablespace_api.story_llm_probe; then
+                STORY_LLM_READY=true
+                break
+              fi
+              sleep 10
+            done
+            if [ "${STORY_LLM_READY}" != "true" ]; then
+              echo "StoryWorld LLM provider probe failed"
+              exit 1
+            fi
+            echo "StoryWorld LLM provider call validated"
+            $COMPOSE $COMPOSE_FILES up -d --no-build backend memory-worker
+            BACKEND_READY=false
+            for ATTEMPT in $(seq 1 30); do
+              if $COMPOSE $COMPOSE_FILES exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).read()" >/dev/null 2>&1; then
+                BACKEND_READY=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "${BACKEND_READY}" != "true" ]; then
+              $COMPOSE $COMPOSE_FILES logs --tail=120 backend
+              echo "backend health check failed"
+              exit 1
+            fi
+            sudo docker image prune -f
+
+  deploy-frontend:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - build-frontend
+    if: |
+      always() &&
+      vars.DEPLOY_ENABLED == 'true' &&
+      vars.DEPLOY_CONFIGURED == 'true' &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infrastructure == 'true' || needs.changes.outputs.media == 'true') &&
+      needs.build-frontend.result == 'success'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fablespace-frontend-${{ github.sha }}
+          path: /tmp/fablespace-deploy
+
+      - name: Upload frontend image archive
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          ARCHIVE_PATH: /tmp/fablespace-deploy/fablespace-frontend-${{ github.sha }}.tar.gz
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required GitHub Actions secret: ${name}"
+              exit 1
+            fi
+          done
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${DEPLOY_PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          scp -P "${DEPLOY_PORT}" -i ~/.ssh/deploy_key \
+            "${ARCHIVE_PATH}" \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/fablespace-frontend-${GITHUB_SHA}.tar.gz"
+
+      - name: Replace frontend service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          command_timeout: 20m
+          script: |
+            set -eu
+            EXPECTED_SHA="${{ github.sha }}"
+            EXPECTED_REF="${{ github.ref }}"
+            if [ "${EXPECTED_REF}" != "refs/heads/main" ]; then
+              echo "Deploy must be dispatched from main"
+              exit 1
+            fi
+            cd "${{ vars.DEPLOY_PATH || '/opt/fablespace' }}"
+            git remote set-url origin "https://github.com/${{ github.repository }}.git"
+            git fetch --prune origin main
+            if ! git cat-file -e "${EXPECTED_SHA}^{commit}" 2>/dev/null; then
+              echo "Workflow commit is unavailable after fetching main"
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "${EXPECTED_SHA}" origin/main; then
+              echo "Workflow commit is not in the approved main history"
+              exit 1
+            fi
+            git reset --hard "${EXPECTED_SHA}"
+
+            if sudo docker compose version >/dev/null 2>&1; then
+              COMPOSE="sudo docker compose"
+            else
+              COMPOSE="sudo docker-compose"
+            fi
+            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.shared.yml -f deploy/docker-compose.llm-proxy.yml"
+
+            IMAGE_ARCHIVE="/tmp/fablespace-frontend-${{ github.sha }}.tar.gz"
+            sudo docker load -i "${IMAGE_ARCHIVE}"
+            rm -f "${IMAGE_ARCHIVE}"
+
+            $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate frontend
+
+            FRONTEND_READY=false
+            for ATTEMPT in $(seq 1 20); do
+              if $COMPOSE $COMPOSE_FILES exec -T frontend wget -qO- http://127.0.0.1/ >/dev/null 2>&1; then
+                FRONTEND_READY=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "${FRONTEND_READY}" != "true" ]; then
+              $COMPOSE $COMPOSE_FILES logs --tail=120 frontend
+              echo "frontend health check failed"
+              exit 1
+            fi
+            sudo docker image prune -f

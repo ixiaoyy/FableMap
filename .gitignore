@@ -1,0 +1,57 @@
+__pycache__/
+*.py[cod]
+
+# Node
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+apps/web/.react-router/
+apps/web/build/
+
+# Python
+.pytest_cache/
+tmp_pytest/
+tmp_pytest*/
+manual_tmp_test/
+artifacts/pytest-tmp/
+artifacts/pytest-*/
+artifacts/dev-server/
+
+# Artifacts / generated evidence
+artifacts/
+test-results/
+apps/web/scripts/playwright-discover-visual-audit.mjs
+
+# Generated outputs
+.fablespace-api/
+.fablemap-api/
+/项目参考/
+
+# IDE
+.idea/
+
+# CC-Panes session history (binary db files)
+.ccpanes/
+
+# Environment variables (sensitive)
+.env.local
+.env
+*.env
+.env.pre-shared-*
+!.env.example
+!**/.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+.fablemap-page/
+.orchids/
+
+# Local reference folders
+/设计参考/
+/设计问题/
+/图标参考/
+
+.agents/
+.codex/
+.locked-delete/
