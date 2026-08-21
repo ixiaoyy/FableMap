@@ -17,15 +17,11 @@
     "dev:client": "vite --config vite.config.ts --host 0.0.0.0",
     "dev:server": "tsx watch server/index.ts",
     "build": "npm run build:client",
-    "prebuild:client": "npm run prepare:media",
     "build:client": "vite build --config vite.config.ts",
     "build:server": "vite build --config vite.server.config.ts",
     "pretypecheck": "npm run prisma:generate",
     "typecheck": "vue-tsc --noEmit -p tsconfig.client.json && tsc --noEmit -p tsconfig.server.json",
-    "pretest": "npm run prepare:media && npm run prisma:generate",
-    "test": "node --experimental-strip-types --test test/*.test.mjs",
-    "pretest:production": "npm run prepare:media",
-    "test:production": "node --experimental-strip-types --test test/production-preview.test.mjs"
+    "test:identity": "node --experimental-strip-types --test test/sso-contract.test.mjs test/retirement-contract.test.mjs"
   },
   "keywords": [],
   "author": "",

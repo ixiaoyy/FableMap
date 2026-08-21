@@ -18,14 +18,13 @@
 ```powershell
 npm --prefix .\apps\mirror-island install
 Copy-Item .\apps\mirror-island\.env.example .\apps\mirror-island\.env
-npm --prefix .\apps\mirror-island run prisma:validate
-npm --prefix .\apps\mirror-island run dev:services:up
-npm --prefix .\apps\mirror-island run prisma:migrate:deploy
+npm --prefix .\apps\mirror-island run identity:up
 npm --prefix .\apps\mirror-island run identity:configure
-npm --prefix .\apps\mirror-island run dev:mmorpg
+npm --prefix .\apps\mirror-island run dev:server
+npm --prefix .\apps\mirror-island run dev:client
 ```
 
-本地游戏服务需要 `MIRROR_ISLAND_DATABASE_URL`。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
+首个纵向切片使用进程内 checkpoint，不读取 `MIRROR_ISLAND_DATABASE_URL`；实际 Prisma/PostgreSQL 接入需要单独评审和授权。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
 
 ## 最小检查
 

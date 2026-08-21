@@ -9,7 +9,5 @@ src/generated/prisma
 public/**/*.png
 src/**/*.png
 
-# Keep frozen RPGJS map artifacts ignored; the Phaser mainline does not load them.
+# Keep the legacy media preparation cache ignored; the Phaser mainline does not load this directory.
 src/tiled/*
-!src/tiled/simplemap.tmx
-!src/tiled/mirror-island-floor.tsx
