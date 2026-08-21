@@ -5,7 +5,7 @@
 - 游戏：`https://fable.pingxingxian.space/`
 - Keycloak：`https://fable.pingxingxian.space/identity/`
 - 论坛 OIDC 桥：`https://fable.pingxingxian.space/forum-sso/`
-- RPGJS WebSocket：`wss://fable.pingxingxian.space/parties/`
+- Colyseus WebSocket：`wss://fable.pingxingxian.space/parties/`
 - 媒体代理：`https://fable.pingxingxian.space/game-media/v1/`
 
 `/mirror-island` 和 `/mirror-island/` 只返回 308 `/`，不存在第二份前端产物。
@@ -14,10 +14,10 @@
 
 | 服务 | 职责 | 持久化 |
 |---|---|---|
-| `frontend` | Nginx 和单份 RPGJS client | 无 |
+| `frontend` | Nginx 和单份 Phaser/Vue client | 无 |
 | `keycloak` | 独立账号、Remember Me、论坛 Identity Broker | `mirror_identity_db` |
 | `mirror-identity-db` | Keycloak PostgreSQL 17 | `mirror_identity_db` volume |
-| `mirror-game` | RPGJS room、论坛 OIDC 桥、Prisma 存档/世界状态 | `mirror-game-db` |
+| `mirror-game` | Colyseus WorldRoom、论坛 OIDC 桥和 checkpoint adapter | `mirror-game-db` |
 | `mirror-game-db` | 游戏 PostgreSQL 17 | `mirror_game_db` volume |
 | `mirror-game-migrate` | 一次性 `prisma migrate deploy` | 无 |
 
@@ -41,7 +41,7 @@ Keycloak 与游戏数据库使用不同服务、database、用户、密码和 vo
 ## 迁移与发布顺序
 
 1. 构建 frontend、game server 和一次性 migration 三个镜像。
-2. 校验 `game/media/v1` manifest/CDN，并确认 game runtime 镜像不含 `image-size`、`@rpgjs/vite` 或 Prisma CLI。
+2. 校验 `game/media/v1` manifest/CDN，并确认 browser 镜像不含 Prisma/pg/secret，game runtime 镜像不含 Prisma CLI。
 3. 生成/复用两套数据库和 SSO 密钥，启动两个 PostgreSQL。
 4. 对已有的 Keycloak/game database 分别生成非空 `pg_dump` gzip 备份。
 5. 运行唯一 `20260819000000_mirror_island_baseline` migration；失败时不启动新 `mirror-game`。
@@ -67,10 +67,9 @@ GitHub runner 随后只删除 R2 `fablespace/` prefix，删除前后核对 `game
 ```powershell
 npm --prefix .\apps\mirror-island run prisma:validate
 npm --prefix .\apps\mirror-island run typecheck
-npm --prefix .\apps\mirror-island test
-npm --prefix .\apps\mirror-island run build
+npm --prefix .\apps\mirror-island run build:client
 npm --prefix .\apps\mirror-island run build:server
 docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml config
 ```
 
-发布后人工验收中文注册、论坛首次 SSO/再访直登、Remember Me、同名不合并、两玩家同房间、重启恢复和像素主题的桌面/手机/键盘/错误状态。
+迁移分支在双账号纵向切片人工验收前不部署；当前生产继续运行已封存的 RPGJS revision。切换发布后人工验收中文注册、论坛首次 SSO/再访直登、Remember Me、同名不合并、两玩家同房、同树单次结算、刷新/断线重连和像素主题的桌面/手机/键盘/错误状态。
