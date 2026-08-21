@@ -1,7 +1,17 @@
 import Phaser from "phaser";
 import { WORLD_HEIGHT_PIXELS, WORLD_WIDTH_PIXELS } from "../../../../shared/constants/simulation.ts";
-import { sendMoveIntent } from "../../network/world-connection.ts";
-import { subscribeWorldProjection, type PlayerProjection, type WorldProjection } from "../../stores/world-store.ts";
+import {
+  sendFarmPrimaryIntent,
+  sendInteractIntent,
+  sendMoveIntent,
+} from "../../network/world-connection.ts";
+import {
+  subscribeWorldProjection,
+  type FarmTileProjection,
+  type PlayerProjection,
+  type ResourceProjection,
+  type WorldProjection,
+} from "../../stores/world-store.ts";
 
 interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
@@ -9,8 +19,22 @@ interface PlayerView {
   readonly label: Phaser.GameObjects.Text;
 }
 
+interface ResourceView {
+  readonly container: Phaser.GameObjects.Container;
+  readonly crown: Phaser.GameObjects.Arc;
+  readonly label: Phaser.GameObjects.Text;
+}
+
+interface FarmView {
+  readonly container: Phaser.GameObjects.Container;
+  readonly soil: Phaser.GameObjects.Rectangle;
+  readonly label: Phaser.GameObjects.Text;
+}
+
 export class WorldScene extends Phaser.Scene {
   private readonly playerViews = new Map<string, PlayerView>();
+  private readonly resourceViews = new Map<string, ResourceView>();
+  private readonly farmViews = new Map<string, FarmView>();
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private movementKeys!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private stopProjection?: () => void;
@@ -77,6 +101,8 @@ export class WorldScene extends Phaser.Scene {
       const view = this.playerViews.get(player.sessionId) ?? this.createPlayerView(player, projection.selfSessionId);
       view.container.setPosition(player.x, player.y);
     }
+    this.renderResources(projection.resources);
+    this.renderFarmTiles(projection.farmTiles);
   }
 
   /** Creates one ephemeral player marker and stores it under the Colyseus session ID. */
@@ -92,6 +118,91 @@ export class WorldScene extends Phaser.Scene {
     const view = { container, body, label };
     this.playerViews.set(player.sessionId, view);
     return view;
+  }
+
+  /** Creates, updates and removes code-drawn resource nodes from the authoritative projection. */
+  private renderResources(resources: readonly ResourceProjection[]): void {
+    const activeIds = new Set(resources.map((resource) => resource.id));
+    for (const [id, view] of this.resourceViews) {
+      if (!activeIds.has(id)) {
+        view.container.destroy(true);
+        this.resourceViews.delete(id);
+      }
+    }
+    for (const resource of resources) {
+      const view = this.resourceViews.get(resource.id) ?? this.createResourceView(resource);
+      view.container.setPosition(resource.x, resource.y);
+      view.crown.setFillStyle(resource.available ? 0x7fbf5b : 0x4c574d, 1);
+      view.container.setAlpha(resource.available ? 1 : 0.48);
+      view.label.setText(resource.available ? "TREE" : "DEPLETED");
+    }
+  }
+
+  /** Creates one clickable tree view whose pointer action sends only the stable resource ID. */
+  private createResourceView(resource: ResourceProjection): ResourceView {
+    const trunk = this.add.rectangle(0, 7, 7, 18, 0x735033, 1);
+    const crown = this.add.circle(0, -4, 16, 0x7fbf5b, 1)
+      .setStrokeStyle(2, 0x243a2c, 1)
+      .setInteractive({ useHandCursor: true });
+    crown.on(Phaser.Input.Events.POINTER_DOWN, () => sendInteractIntent(resource.id));
+    const label = this.add.text(0, 24, "TREE", {
+      color: "#b8d9a9",
+      fontFamily: "monospace",
+      fontSize: "7px",
+    }).setOrigin(0.5);
+    const container = this.add.container(resource.x, resource.y, [trunk, crown, label]);
+    const view = { container, crown, label };
+    this.resourceViews.set(resource.id, view);
+    return view;
+  }
+
+  /** Creates, updates and removes the first-slice farm tile from its server-owned phase. */
+  private renderFarmTiles(farmTiles: readonly FarmTileProjection[]): void {
+    const activeIds = new Set(farmTiles.map((tile) => tile.id));
+    for (const [id, view] of this.farmViews) {
+      if (!activeIds.has(id)) {
+        view.container.destroy(true);
+        this.farmViews.delete(id);
+      }
+    }
+    for (const tile of farmTiles) {
+      const view = this.farmViews.get(tile.id) ?? this.createFarmView(tile);
+      const appearance = farmAppearance(tile);
+      view.container.setPosition(tile.x, tile.y);
+      view.soil.setFillStyle(appearance.color, 1);
+      view.label.setText(appearance.label);
+    }
+  }
+
+  /** Creates one clickable farm tile that sends a phase-agnostic primary interaction intent. */
+  private createFarmView(tile: FarmTileProjection): FarmView {
+    const soil = this.add.rectangle(0, 0, 28, 28, 0x52654a, 1)
+      .setStrokeStyle(2, 0x263528, 1)
+      .setInteractive({ useHandCursor: true });
+    soil.on(Phaser.Input.Events.POINTER_DOWN, () => sendFarmPrimaryIntent(tile.id));
+    const label = this.add.text(0, 23, "SOIL", {
+      color: "#d9c69b",
+      fontFamily: "monospace",
+      fontSize: "7px",
+    }).setOrigin(0.5);
+    const container = this.add.container(tile.x, tile.y, [soil, label]);
+    const view = { container, soil, label };
+    this.farmViews.set(tile.id, view);
+    return view;
+  }
+}
+
+/** Maps one farm projection to a compact code-drawn color and phase label. */
+function farmAppearance(tile: FarmTileProjection): { readonly color: number; readonly label: string } {
+  switch (tile.phase) {
+    case "untilled": return { color: 0x52654a, label: "SOIL" };
+    case "tilled": return { color: 0x73513b, label: "TILLED" };
+    case "growing": return {
+      color: tile.watered ? 0x356f67 : 0x5f7042,
+      label: tile.watered ? "GROWING" : "WATER",
+    };
+    case "mature": return { color: 0xb8ff62, label: "HARVEST" };
+    default: return { color: 0x52654a, label: "UNKNOWN" };
   }
 }
 

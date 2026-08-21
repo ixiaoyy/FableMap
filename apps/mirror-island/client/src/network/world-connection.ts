@@ -1,7 +1,16 @@
 import { Client, type Room } from "@colyseus/sdk";
-import { CLIENT_MESSAGE } from "../../../shared/messages/intents.ts";
+import {
+  CLIENT_MESSAGE,
+  SERVER_MESSAGE,
+  type ActionFeedback,
+} from "../../../shared/messages/intents.ts";
 import { WorldState } from "../../../shared/schemas/world-state.ts";
-import { applyWorldState, clearWorldState, setConnectionPhase } from "../stores/world-store.ts";
+import {
+  applyWorldState,
+  clearWorldState,
+  setActionFeedback,
+  setConnectionPhase,
+} from "../stores/world-store.ts";
 
 let room: Room<unknown, WorldState> | null = null;
 let moveSequence = 0;
@@ -27,6 +36,7 @@ export async function connectWorld(accessToken: string): Promise<void> {
     const joinedRoom = await client.joinOrCreate<WorldState>("world", { accessToken }, WorldState);
     room = joinedRoom;
     joinedRoom.onStateChange((state) => applyWorldState(state, joinedRoom.sessionId));
+    joinedRoom.onMessage<ActionFeedback>(SERVER_MESSAGE.feedback, (feedback) => setActionFeedback(feedback));
     applyWorldState(joinedRoom.state, joinedRoom.sessionId);
     joinedRoom.onDrop(() => setConnectionPhase("reconnecting"));
     joinedRoom.onReconnect(() => setConnectionPhase("connected"));
@@ -48,6 +58,21 @@ export function sendMoveIntent(xAxis: -1 | 0 | 1, yAxis: -1 | 0 | 1): void {
   if (!room) return;
   moveSequence += 1;
   room.send(CLIENT_MESSAGE.move, { sequence: moveSequence, xAxis, yAxis });
+}
+
+/** Sends a target interaction intent without predicting depletion or inventory rewards. */
+export function sendInteractIntent(targetId: string): void {
+  room?.send(CLIENT_MESSAGE.interact, { targetId });
+}
+
+/** Sends a recipe choice only; ingredient costs and output remain server-owned. */
+export function sendCraftIntent(recipeId: string): void {
+  room?.send(CLIENT_MESSAGE.craft, { recipeId });
+}
+
+/** Sends the single primary farm intent while the server resolves the legal phase transition. */
+export function sendFarmPrimaryIntent(tileId: string): void {
+  room?.send(CLIENT_MESSAGE.farm, { tileId, action: "primary" });
 }
 
 /** Leaves the current room consensually and clears only transport-owned client state. */

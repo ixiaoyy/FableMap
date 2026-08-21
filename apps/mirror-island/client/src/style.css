@@ -38,7 +38,7 @@ button {
 
 .island-shell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 14px;
   width: min(100vw, 980px);
   height: 100vh;
@@ -137,6 +137,107 @@ h1 {
   font-weight: 400;
 }
 
+.action-feedback {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  margin: 0;
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--acid);
+  color: var(--acid);
+  background: rgba(7, 16, 13, 0.9);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.action-feedback[data-tone="error"] {
+  border-color: #ff715e;
+  color: #ff9d8f;
+}
+
+.hotbar-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.hotbar-slots {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(42px, 1fr));
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hotbar-slot {
+  position: relative;
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(16, 35, 29, 0.88);
+}
+
+.hotbar-slot__index {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  color: #637b6b;
+  font-size: 8px;
+}
+
+.hotbar-slot__mark {
+  color: #f1f6d9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.hotbar-slot__quantity {
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  color: var(--acid);
+  font-size: 10px;
+}
+
+.hotbar-slot__name {
+  position: absolute;
+  inset: auto 3px 2px;
+  overflow: hidden;
+  color: #7f9486;
+  font-size: 7px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.craft-button {
+  min-width: 152px;
+  padding: 8px 14px;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  background: rgba(42, 29, 19, 0.72);
+  cursor: pointer;
+}
+
+.craft-button small {
+  display: block;
+  margin-top: 4px;
+  color: #a88e74;
+  font-size: 8px;
+}
+
+.craft-button:disabled {
+  border-color: #4c4b42;
+  color: #66675d;
+  cursor: not-allowed;
+}
+
 .field-footer {
   align-items: center;
   color: #778b7d;
@@ -181,6 +282,18 @@ h1 {
 
   .signal {
     max-width: 150px;
+  }
+
+  .hotbar-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .hotbar-slots {
+    overflow-x: auto;
+  }
+
+  .craft-button {
+    min-height: 42px;
   }
 }
 

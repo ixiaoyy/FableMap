@@ -4,6 +4,7 @@ import { initializeKeycloakSession, type AuthenticatedSession } from "./auth/key
 import { connectWorld, disconnectWorld } from "./network/world-connection.ts";
 import PhaserGame from "./PhaserGame.vue";
 import { worldUiState } from "./stores/world-store.ts";
+import Hotbar from "./ui/hotbar/Hotbar.vue";
 
 const failureMessage = ref("");
 let session: AuthenticatedSession | null = null;
@@ -56,10 +57,19 @@ onUnmounted(() => {
         <span>在线信号</span>
         <strong>{{ worldUiState.players.length.toString().padStart(2, '0') }}</strong>
       </aside>
+      <p
+        v-if="worldUiState.feedback"
+        class="action-feedback"
+        :data-tone="worldUiState.feedback.tone"
+      >
+        {{ worldUiState.feedback.message }}
+      </p>
     </section>
 
+    <Hotbar />
+
     <footer class="field-footer">
-      <span>WASD / 方向键移动</span>
+      <span>移动靠近目标 · 点击树木或农田</span>
       <span>服务端权威原型</span>
     </footer>
 
