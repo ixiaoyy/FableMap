@@ -42,15 +42,18 @@ export class FarmingSystem {
     }
   }
 
-  /** Advances watered crops whose server-owned ready time has elapsed. */
-  tick(now: number): void {
+  /** Advances watered crops whose server-owned ready time elapsed and reports whether world state changed. */
+  tick(now: number): boolean {
+    let changed = false;
     this.world.farmTiles.forEach((tile) => {
       if (tile.phase === "growing" && tile.watered && tile.readyAt > 0 && now >= tile.readyAt) {
         tile.phase = "mature";
         tile.growthStage = 1;
         tile.readyAt = 0;
+        changed = true;
       }
     });
+    return changed;
   }
 
   /** Requires the reviewed hoe and transitions untouched ground into prepared soil. */

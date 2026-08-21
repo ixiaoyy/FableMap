@@ -53,12 +53,13 @@ export class WorldRoom extends Room<{ state: WorldState; client: WorldClient }> 
   private farmingSystem!: FarmingSystem;
 
   /** Initializes the persistent room, bounded message rate and 20 Hz authoritative simulation loop. */
-  override onCreate(): void {
+  override async onCreate(): Promise<void> {
     this.autoDispose = false;
     this.maxClients = 64;
     this.maxMessagesPerSecond = 30;
     this.state = new WorldState();
     this.createInitialWorldState();
+    await this.restoreWorldCheckpoint();
     this.inventorySystem = new InventorySystem();
     this.gatheringSystem = new GatheringSystem(this.state, this.inventorySystem);
     this.craftingSystem = new CraftingSystem(this.inventorySystem);
@@ -157,19 +158,31 @@ export class WorldRoom extends Room<{ state: WorldState; client: WorldClient }> 
       const intent = decodeInteractIntent(payload);
       const player = this.playerFor(client);
       if (!intent || !player) return;
-      this.sendFeedback(client, gatheringFeedback(this.gatheringSystem.gather(player, intent.targetId)));
+      const result = this.gatheringSystem.gather(player, intent.targetId);
+      this.sendFeedback(client, gatheringFeedback(result));
+      if (result === "success") {
+        this.checkpointPlayer(client, player);
+        this.checkpointWorld();
+      }
     });
     this.onMessage(CLIENT_MESSAGE.craft, (client, payload: unknown) => {
       const intent = decodeCraftIntent(payload);
       const player = this.playerFor(client);
       if (!intent || !player) return;
-      this.sendFeedback(client, craftingFeedback(this.craftingSystem.craft(player, intent.recipeId)));
+      const result = this.craftingSystem.craft(player, intent.recipeId);
+      this.sendFeedback(client, craftingFeedback(result));
+      if (result === "success") this.checkpointPlayer(client, player);
     });
     this.onMessage(CLIENT_MESSAGE.farm, (client, payload: unknown) => {
       const intent = decodeFarmIntent(payload);
       const player = this.playerFor(client);
       if (!intent || !player) return;
-      this.sendFeedback(client, farmingFeedback(this.farmingSystem.primary(player, intent.tileId, Date.now())));
+      const result = this.farmingSystem.primary(player, intent.tileId, Date.now());
+      this.sendFeedback(client, farmingFeedback(result));
+      if (["tilled", "planted", "watered", "harvested"].includes(result)) {
+        this.checkpointPlayer(client, player);
+        this.checkpointWorld();
+      }
     });
   }
 
@@ -183,6 +196,57 @@ export class WorldRoom extends Room<{ state: WorldState; client: WorldClient }> 
     client.send(SERVER_MESSAGE.feedback, feedback);
   }
 
+  /** Writes one private process-local player checkpoint after a committed gameplay mutation. */
+  private checkpointPlayer(client: WorldClient, player: PlayerState): void {
+    void gamePersistence.savePlayer({
+      accountId: accountIdFrom(client),
+      x: player.x,
+      y: player.y,
+      inventory: this.inventorySystem.snapshot(player),
+    });
+  }
+
+  /** Writes one process-local shared-world checkpoint after a resource or farm transition. */
+  private checkpointWorld(): void {
+    void gamePersistence.saveWorld({
+      worldId: this.state.worldId,
+      resources: Array.from(this.state.resources.entries(), ([id, resource]) => ({
+        id,
+        available: resource.available,
+        revision: resource.revision,
+      })),
+      farmTiles: Array.from(this.state.farmTiles.entries(), ([id, tile]) => ({
+        id,
+        phase: tile.phase,
+        cropId: tile.cropId,
+        growthStage: tile.growthStage,
+        watered: tile.watered,
+        readyAt: tile.readyAt,
+      })),
+    });
+  }
+
+  /** Applies a process-local shared-world checkpoint only to reviewed IDs created by this Room. */
+  private async restoreWorldCheckpoint(): Promise<void> {
+    const checkpoint = await gamePersistence.loadWorld(this.state.worldId);
+    if (!checkpoint) return;
+    for (const saved of checkpoint.resources) {
+      const resource = this.state.resources.get(saved.id);
+      if (!resource) continue;
+      resource.available = saved.available;
+      resource.revision = saved.revision;
+    }
+    for (const saved of checkpoint.farmTiles) {
+      const tile = this.state.farmTiles.get(saved.id);
+      if (!tile || !isFarmPhase(saved.phase)) continue;
+      tile.phase = saved.phase;
+      tile.cropId = saved.cropId;
+      tile.growthStage = saved.growthStage;
+      tile.watered = saved.watered;
+      tile.readyAt = saved.readyAt;
+    }
+  }
+
   /** Advances authoritative movement and time-based crop growth from the single Room simulation loop. */
   private simulate(deltaMs: number): void {
     const distance = PLAYER_SPEED_PIXELS_PER_SECOND * (deltaMs / 1000);
@@ -193,8 +257,13 @@ export class WorldRoom extends Room<{ state: WorldState; client: WorldClient }> 
       player.x = clamp(player.x + (input.xAxis / magnitude) * distance, 0, WORLD_WIDTH_PIXELS);
       player.y = clamp(player.y + (input.yAxis / magnitude) * distance, 0, WORLD_HEIGHT_PIXELS);
     }
-    this.farmingSystem.tick(Date.now());
+    if (this.farmingSystem.tick(Date.now())) this.checkpointWorld();
   }
+}
+
+/** Narrows one checkpoint string to the closed first-slice farm phase union. */
+function isFarmPhase(value: string): value is FarmTileState["phase"] {
+  return value === "untilled" || value === "tilled" || value === "growing" || value === "mature";
 }
 
 /** Maps one gathering result to fixed user feedback without exposing server state or identifiers. */
