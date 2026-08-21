@@ -1,15 +1,17 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  ssr: {
-    noExternal: true,
-  },
   build: {
-    ssr: "src/node-server.ts",
+    ssr: "server/index.ts",
     outDir: "dist/runtime",
-    emptyOutDir: false,
+    emptyOutDir: true,
     target: "node22",
     minify: false,
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: "index.js",
+      },
+    },
   },
 });

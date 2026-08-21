@@ -9,7 +9,7 @@
 
 ## Open-source contract
 
-- 客户端固定 `phaser@4.2.1`、`vue@3.5.41`；服务端固定 `colyseus@0.17.10`、`@colyseus/sdk@0.17.43`、`@colyseus/schema@4.0.31`。
+- 客户端固定 `phaser@4.2.1`、`vue@3.5.41`；服务端只采用窄依赖 `@colyseus/core@0.17.50`、`@colyseus/sdk@0.17.43`、`@colyseus/schema@4.0.31`、`@colyseus/ws-transport@0.17.13`，不安装带 auth/playground/Redis 的 `colyseus` 元包。
 - 构建继续使用当前 Vite 8、TypeScript 6 和 Vue plugin 6；纵向切片完成前不追版本或使用漂移 tag。
 - 官方 Phaser Vue TS 模板固定 `2fe6c3e42a877422c0f13e85634fb6ca16fca49b`，只采用生命周期和工程结构。
 - Cabacos 固定 `79e423defc12bd99327cfcc28bf7ec0085996244`，只做规则级清洁移植；其 LICENSE holder 未澄清前不大段逐行复制。

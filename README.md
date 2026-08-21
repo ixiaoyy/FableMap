@@ -7,7 +7,7 @@
 ## 新主线底座
 
 - Phaser `4.2.1` + Vue 3 + TypeScript + Vite：地图、角色表现、输入和 Web UI。
-- Colyseus `0.17.10` + `@colyseus/sdk`：WorldRoom、服务端 tick、权威状态和断线重连。
+- Colyseus Core `0.17.50` + `@colyseus/sdk`：WorldRoom、服务端 tick、权威状态和断线重连。
 - Keycloak `26.7.1`：独立中文用户名密码、Remember Me、论坛 OIDC 身份代理。
 - `oidc-provider` `9.11.1`：将 ParallelLines 现有一次性票据适配为标准 OIDC。
 - Prisma `7.9.1` + PostgreSQL 17：玩家资料、存档、背包、动态格、区块、住宅和全服结算。

@@ -9,7 +9,7 @@ src/generated/prisma
 public/**/*.png
 src/**/*.png
 
-# Ignore unused RPGJS starter maps; only the reviewed spike map contract is versioned.
+# Keep frozen RPGJS map artifacts ignored; the Phaser mainline does not load them.
 src/tiled/*
 !src/tiled/simplemap.tmx
 !src/tiled/mirror-island-floor.tsx

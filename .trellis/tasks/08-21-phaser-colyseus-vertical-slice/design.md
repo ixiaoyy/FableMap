@@ -34,9 +34,10 @@ apps/mirror-island/
 
 - `phaser@4.2.1`
 - `vue@3.5.41`
-- `colyseus@0.17.10`
+- `@colyseus/core@0.17.50`
 - `@colyseus/sdk@0.17.43`
 - `@colyseus/schema@4.0.31`
+- `@colyseus/ws-transport@0.17.13`
 - 继续使用仓库当前 `vite@8.2.1`、`typescript@6.0.3` 和 `@vitejs/plugin-vue@6.0.8`，不从官方模板降级构建工具。
 
 版本在纵向切片完成前固定；若兼容性检查失败，先报告真实阻塞，再提出单一版本调整，不使用 `^4` 或漂移 latest。
