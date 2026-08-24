@@ -1,5 +1,9 @@
 # Phaser Colyseus 纵向切片迁移
 
+## Supersession
+
+用户于 2026-08-24 将产品主线改为单人 Stardew Core。本任务不再要求双账号、断网重连或生产部署验收；完成边界收缩为：现有五个实现 commit 保持可构建，通过一次不含 deploy job 的 CI/Docker image build，然后以 `phaser-colyseus-checkpoint-2026-08-24` 封存。后续从该 checkpoint 新建单人分支，Colyseus 代码只作为未来多人参考。
+
 ## Goal
 
 在保留镜像岛现有 Keycloak、论坛 SSO、PostgreSQL/Prisma 合同、CDN 和部署体系的前提下，以 Phaser 4.2.1 + Vue 3 + TypeScript + Vite 重建浏览器客户端，以 Colyseus 建立服务端权威共享世界，并交付“两人在线、采集、背包、制作、一种作物、刷新与断线重连恢复”的首个可玩纵向切片。

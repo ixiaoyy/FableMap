@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Superseded on 2026-08-24 by the single-player Stardew Core direction. Freeze this task after a build-only CI passes and tag phaser-colyseus-checkpoint-2026-08-24; do not deploy or spend more time on full multiplayer/manual reconnection acceptance.",
   "meta": {}
 }

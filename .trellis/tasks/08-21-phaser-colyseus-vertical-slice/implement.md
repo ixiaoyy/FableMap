@@ -16,6 +16,12 @@
 14. 人工双账号验收完整链：登录、同房、移动、同树并发、Hotbar、制作、农田、刷新、B 断线/A 离线、B 重进恢复。
 15. 人工通过后再准备生产切换计划；本任务内不部署、不新增 migration、不接 Rick 战斗模块。
 
+## 2026-08-24 封存决定
+
+- 取消第 14 项完整多人人工验收和第 15 项生产切换准备。
+- 新增一个仅执行 typecheck、三镜像 Docker build 和镜像边界检查的 feature-branch Workflow；禁止包含 deploy job、SSH、生产 secret 或环境替换。
+- CI 通过后推送 annotated tag `phaser-colyseus-checkpoint-2026-08-24`，随后从该 checkpoint 创建 `codex/phaser-singleplayer-stardew-core`。
+
 ## 提交与回滚点
 
 - Commit 1：权威文档、任务和开源迁移合同。

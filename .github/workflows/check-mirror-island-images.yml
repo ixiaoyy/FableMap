@@ -1,0 +1,61 @@
+name: Check Mirror Island images
+
+on:
+  push:
+    branches:
+      - codex/phaser-colyseus-main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Typecheck and build images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mirror-island/package-lock.json
+
+      - name: Typecheck active client and server
+        run: |
+          npm --prefix apps/mirror-island ci --ignore-scripts --legacy-peer-deps
+          npm --prefix apps/mirror-island run typecheck
+
+      - name: Build production images without deployment
+        run: |
+          set -euo pipefail
+          docker build \
+            -f apps/mirror-island/Dockerfile.web \
+            --build-arg VITE_KEYCLOAK_URL=https://fable.pingxingxian.space/identity \
+            --build-arg VITE_KEYCLOAK_REALM=mirror-island \
+            --build-arg VITE_KEYCLOAK_CLIENT_ID=mirror-island-web \
+            --build-arg VITE_MIRROR_BASE_PATH=/ \
+            -t mirror-island-frontend:checkpoint .
+          docker build \
+            -f apps/mirror-island/Dockerfile.server \
+            -t mirror-island-game:checkpoint .
+          docker build \
+            -f apps/mirror-island/Dockerfile.migrate \
+            -t mirror-island-migrate:checkpoint .
+
+      - name: Verify image boundaries
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint sh mirror-island-game:checkpoint -ec \
+            'test -f /app/node_modules/@colyseus/core/build/index.mjs \
+              && ! find /app/node_modules -type d | grep -E "/@rpgjs/|/@canvasengine/|/canvasengine($|/)" \
+              && ! find /app -type f | grep -E "prisma.config"'
+          docker run --rm --entrypoint sh mirror-island-frontend:checkpoint -ec \
+            'test -f /usr/share/nginx/html/index.html \
+              && grep -q "id=\"app\"" /usr/share/nginx/html/index.html \
+              && ! grep -q "id=\"rpg\"" /usr/share/nginx/html/index.html'
+          docker run --rm --entrypoint sh mirror-island-migrate:checkpoint -ec \
+            'test "$(find prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1'
