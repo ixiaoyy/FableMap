@@ -49,3 +49,10 @@ export async function initializeKeycloakSession(): Promise<AuthenticatedSession>
     dispose: () => window.clearInterval(refreshTimer),
   };
 }
+
+/** Derives a stable opaque local-save owner key without persisting the raw Keycloak subject. */
+export async function deriveLocalSaveOwnerKey(subject: string): Promise<string> {
+  if (!subject.trim()) throw new Error("Authenticated subject is unavailable.");
+  const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(subject));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}

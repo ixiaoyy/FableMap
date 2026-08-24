@@ -1,29 +1,26 @@
-import { Server } from "@colyseus/core";
-import { WebSocketTransport } from "@colyseus/ws-transport";
+import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import { createForumSsoBridge } from "../src/sso/provider.ts";
-import { WorldRoom } from "./rooms/WorldRoom.ts";
 
 const port = resolvePort(process.env.PORT);
 const forumSsoBridge = await createForumSsoBridge();
-const gameServer = new Server({
-  transport: new WebSocketTransport({ maxPayload: 4096 }),
-  express: (app) => {
-    app.use((request, response, next) => {
-      void forwardForumSso(request, response, next);
-    });
-    app.get("/health", (_request, response) => {
-      response.type("text/plain").status(200).send("ok");
-    });
-    app.use((_error: unknown, _request: Request, response: Response, _next: NextFunction) => {
-      response.type("text/plain").status(500).send("internal error");
-    });
-  },
-});
+const app = express();
 
-gameServer.define("world", WorldRoom);
-await gameServer.listen(port, "0.0.0.0");
-console.log(`Mirror Island Colyseus server listening on ${port}.`);
+app.use((request, response, next) => {
+  void forwardForumSso(request, response, next);
+});
+app.get("/health", (_request, response) => {
+  response.type("text/plain").status(200).send("ok");
+});
+app.use((_request, response) => {
+  response.type("text/plain").status(404).send("not found");
+});
+app.use((_error: unknown, _request: Request, response: Response, _next: NextFunction) => {
+  response.type("text/plain").status(500).send("internal error");
+});
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Mirror Island identity runtime listening on ${port}.`);
+});
 
 /** Parses the configured TCP port and rejects values outside the valid listener range. */
 function resolvePort(rawPort: string | undefined): number {
@@ -34,7 +31,7 @@ function resolvePort(rawPort: string | undefined): number {
   return value;
 }
 
-/** Gives the existing forum OIDC bridge first refusal, then continues into Colyseus matchmaking routes. */
+/** Gives the existing forum OIDC bridge first refusal, then continues into narrow HTTP routes. */
 async function forwardForumSso(
   request: Request,
   response: Response,

@@ -7,7 +7,7 @@
   "include": [
     "client/src/**/*.ts",
     "client/src/**/*.vue",
-    "shared/**/*.ts",
+    "domain/**/*.ts",
     "vite.config.ts"
   ]
 }

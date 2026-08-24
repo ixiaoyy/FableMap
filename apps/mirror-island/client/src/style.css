@@ -89,7 +89,8 @@ h1 {
   box-shadow: 0 0 0 3px rgba(83, 100, 90, 0.16);
 }
 
-.signal[data-phase="connected"] .signal__lamp {
+.signal[data-phase="menu"] .signal__lamp,
+.signal[data-phase="playing"] .signal__lamp {
   background: var(--acid);
   box-shadow: 0 0 14px rgba(184, 255, 98, 0.7);
 }
@@ -105,6 +106,77 @@ h1 {
   border: 1px solid var(--line);
   background: #0b1714;
   box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.26);
+}
+
+.start-panel {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  padding: clamp(28px, 8vw, 88px);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, rgba(184, 255, 98, 0.055), transparent 42%),
+    rgba(11, 23, 20, 0.9);
+  box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.26);
+}
+
+.start-panel > div {
+  width: min(520px, 100%);
+}
+
+.start-panel__kicker {
+  margin: 0 0 12px;
+  color: var(--acid);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+
+.start-panel h2 {
+  margin: 0 0 16px;
+  color: #f1f6d9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 5vw, 52px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.start-panel p:not(.start-panel__kicker) {
+  max-width: 48ch;
+  color: #9aae9f;
+  line-height: 1.7;
+}
+
+.start-panel small {
+  display: block;
+  margin-top: 16px;
+  color: #718678;
+}
+
+.start-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.primary-action,
+.secondary-action {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid var(--acid);
+  color: var(--ink);
+  background: var(--acid);
+  cursor: pointer;
+}
+
+.secondary-action {
+  color: #dbe8d0;
+  background: transparent;
+}
+
+.secondary-action:disabled {
+  border-color: #415047;
+  color: #5f7166;
+  cursor: not-allowed;
 }
 
 .game-canvas,
@@ -133,7 +205,7 @@ h1 {
 
 .telemetry strong {
   color: var(--acid);
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 400;
 }
 
@@ -298,8 +370,8 @@ h1 {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .signal[data-phase="connecting"] .signal__lamp,
-  .signal[data-phase="reconnecting"] .signal__lamp {
+  .signal[data-phase="authenticating"] .signal__lamp,
+  .signal[data-phase="loading"] .signal__lamp {
     animation: pulse 1.2s steps(2, end) infinite;
   }
 }

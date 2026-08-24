@@ -26,7 +26,7 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "description": "Authoritative Phaser and Colyseus shared world for Mirror Island",
+  "description": "Single-player Phaser and Vue farming world for Mirror Island",
   "devDependencies": {
     "@types/express": "5.0.6",
     "@types/node": "22.20.1",
@@ -42,10 +42,6 @@
   },
   "private": true,
   "dependencies": {
-    "@colyseus/schema": "4.0.31",
-    "@colyseus/sdk": "0.17.43",
-    "@colyseus/core": "0.17.50",
-    "@colyseus/ws-transport": "0.17.13",
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
     "express": "5.2.1",

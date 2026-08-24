@@ -6,7 +6,6 @@
   },
   "include": [
     "server/**/*.ts",
-    "shared/**/*.ts",
     "src/sso/**/*.ts",
     "vite.server.config.ts",
     "prisma.config.ts"

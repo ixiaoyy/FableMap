@@ -4,13 +4,13 @@ import {
   HOTBAR_SLOT_COUNT,
   ITEM_ID,
   getItemDefinition,
-} from "../../../../shared/items/definitions.ts";
-import { RECIPE_ID } from "../../../../shared/recipes/definitions.ts";
-import { sendCraftIntent } from "../../network/world-connection.ts";
-import { worldUiState } from "../../stores/world-store.ts";
+} from "../../../../domain/items/definitions.ts";
+import { RECIPE_ID } from "../../../../domain/recipes/definitions.ts";
+import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
+import { gameUiState } from "../../stores/game-store.ts";
 
 const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index) => {
-  const slot = worldUiState.inventory[index];
+  const slot = gameUiState.inventory[index];
   const definition = getItemDefinition(slot?.itemId);
   return {
     index,
@@ -19,13 +19,13 @@ const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index
   };
 }));
 
-const woodQuantity = computed(() => worldUiState.inventory
+const woodQuantity = computed(() => gameUiState.inventory
   .filter((slot) => slot.itemId === ITEM_ID.wood)
   .reduce((total, slot) => total + slot.quantity, 0));
 
 /** Requests the reviewed wooden-axe recipe without calculating inventory changes in Vue. */
 function craftWoodenAxe(): void {
-  sendCraftIntent(RECIPE_ID.woodenAxe);
+  dispatchLocalGameCommand({ type: "craft", recipeId: RECIPE_ID.woodenAxe });
 }
 </script>
 

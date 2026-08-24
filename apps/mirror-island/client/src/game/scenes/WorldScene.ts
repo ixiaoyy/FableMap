@@ -1,22 +1,21 @@
 import Phaser from "phaser";
-import { WORLD_HEIGHT_PIXELS, WORLD_WIDTH_PIXELS } from "../../../../shared/constants/simulation.ts";
+import type {
+  FarmTileState,
+  GameState,
+  ResourceState,
+} from "../../../../domain/state/game-state.ts";
 import {
-  sendFarmPrimaryIntent,
-  sendInteractIntent,
-  sendMoveIntent,
-} from "../../network/world-connection.ts";
+  WORLD_HEIGHT_PIXELS,
+  WORLD_WIDTH_PIXELS,
+} from "../../../../domain/world/movement.ts";
 import {
-  subscribeWorldProjection,
-  type FarmTileProjection,
-  type PlayerProjection,
-  type ResourceProjection,
-  type WorldProjection,
-} from "../../stores/world-store.ts";
+  dispatchLocalGameCommand,
+  getLocalGameSession,
+  tickLocalGameSession,
+} from "../../session/local-game-session.ts";
 
 interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
-  readonly body: Phaser.GameObjects.Arc;
-  readonly label: Phaser.GameObjects.Text;
 }
 
 interface ResourceView {
@@ -32,33 +31,31 @@ interface FarmView {
 }
 
 export class WorldScene extends Phaser.Scene {
-  private readonly playerViews = new Map<string, PlayerView>();
+  private playerView: PlayerView | null = null;
   private readonly resourceViews = new Map<string, ResourceView>();
   private readonly farmViews = new Map<string, FarmView>();
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private movementKeys!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private stopProjection?: () => void;
-  private previousXAxis: -1 | 0 | 1 = 0;
-  private previousYAxis: -1 | 0 | 1 = 0;
-  private lastInputSentAt = 0;
 
+  /** Creates the only first-slice Phaser scene for the active local GameSession. */
   constructor() {
     super("World");
   }
 
-  /** Creates the code-drawn world surface, input bindings and typed projection subscription. */
+  /** Creates the code-drawn world surface, input bindings and local state subscription. */
   create(): void {
     this.drawWorld();
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Keyboard input is unavailable.");
     this.cursors = keyboard.createCursorKeys();
     this.movementKeys = keyboard.addKeys("W,A,S,D") as Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
-    this.stopProjection = subscribeWorldProjection((projection) => this.renderProjection(projection));
+    this.stopProjection = getLocalGameSession().subscribe((state) => this.renderState(state));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopProjection?.());
   }
 
-  /** Converts keyboard state into digital intent only when the axes change. */
-  override update(time: number): void {
+  /** Applies local movement for the elapsed frame and advances time-based domain rules. */
+  override update(_time: number, delta: number): void {
     const xAxis = toAxis(
       Number(this.cursors.right.isDown || this.movementKeys.D.isDown)
       - Number(this.cursors.left.isDown || this.movementKeys.A.isDown),
@@ -67,15 +64,13 @@ export class WorldScene extends Phaser.Scene {
       Number(this.cursors.down.isDown || this.movementKeys.S.isDown)
       - Number(this.cursors.up.isDown || this.movementKeys.W.isDown),
     );
-    const axesChanged = xAxis !== this.previousXAxis || yAxis !== this.previousYAxis;
-    if (!axesChanged && time - this.lastInputSentAt < 250) return;
-    this.previousXAxis = xAxis;
-    this.previousYAxis = yAxis;
-    this.lastInputSentAt = time;
-    sendMoveIntent(xAxis, yAxis);
+    if (xAxis !== 0 || yAxis !== 0) {
+      dispatchLocalGameCommand({ type: "move", xAxis, yAxis, deltaMs: delta });
+    }
+    tickLocalGameSession(Date.now());
   }
 
-  /** Draws a restrained alien field grid without introducing unreviewed image assets. */
+  /** Draws the temporary field grid that will be replaced by the fixed farm and town Tiled maps. */
   private drawWorld(): void {
     this.cameras.main.setBackgroundColor("#0b1714");
     const graphics = this.add.graphics();
@@ -88,40 +83,29 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH_PIXELS, WORLD_HEIGHT_PIXELS);
   }
 
-  /** Creates, moves and removes player views from a complete authoritative projection. */
-  private renderProjection(projection: WorldProjection): void {
-    const activeIds = new Set(projection.players.map((player) => player.sessionId));
-    for (const [sessionId, view] of this.playerViews) {
-      if (!activeIds.has(sessionId)) {
-        view.container.destroy(true);
-        this.playerViews.delete(sessionId);
-      }
-    }
-    for (const player of projection.players) {
-      const view = this.playerViews.get(player.sessionId) ?? this.createPlayerView(player, projection.selfSessionId);
-      view.container.setPosition(player.x, player.y);
-    }
-    this.renderResources(projection.resources);
-    this.renderFarmTiles(projection.farmTiles);
+  /** Projects one complete local state snapshot into the player, resource and farm views. */
+  private renderState(state: GameState): void {
+    const playerView = this.playerView ?? this.createPlayerView();
+    playerView.container.setPosition(state.player.x, state.player.y);
+    this.renderResources(Object.values(state.resources));
+    this.renderFarmTiles(Object.values(state.farmTiles));
   }
 
-  /** Creates one ephemeral player marker and stores it under the Colyseus session ID. */
-  private createPlayerView(player: PlayerProjection, selfSessionId: string): PlayerView {
-    const isSelf = player.sessionId === selfSessionId;
-    const body = this.add.circle(0, 0, 8, isSelf ? 0xb8ff62 : 0xffb65a, 1).setStrokeStyle(2, 0x07100d, 1);
-    const label = this.add.text(0, -17, isSelf ? "YOU" : "SIGNAL", {
-      color: isSelf ? "#dfffad" : "#ffd6a1",
+  /** Creates the temporary local-player marker used before reviewed sprite assets are wired. */
+  private createPlayerView(): PlayerView {
+    const body = this.add.circle(0, 0, 8, 0xb8ff62, 1).setStrokeStyle(2, 0x07100d, 1);
+    const label = this.add.text(0, -17, "YOU", {
+      color: "#dfffad",
       fontFamily: "monospace",
       fontSize: "8px",
     }).setOrigin(0.5);
-    const container = this.add.container(player.x, player.y, [body, label]);
-    const view = { container, body, label };
-    this.playerViews.set(player.sessionId, view);
+    const view = { container: this.add.container(0, 0, [body, label]) };
+    this.playerView = view;
     return view;
   }
 
-  /** Creates, updates and removes code-drawn resource nodes from the authoritative projection. */
-  private renderResources(resources: readonly ResourceProjection[]): void {
+  /** Creates, updates and removes code-drawn resources from the local domain snapshot. */
+  private renderResources(resources: readonly ResourceState[]): void {
     const activeIds = new Set(resources.map((resource) => resource.id));
     for (const [id, view] of this.resourceViews) {
       if (!activeIds.has(id)) {
@@ -138,26 +122,31 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Creates one clickable tree view whose pointer action sends only the stable resource ID. */
-  private createResourceView(resource: ResourceProjection): ResourceView {
+  /** Creates one clickable resource whose pointer action dispatches its stable local ID. */
+  private createResourceView(resource: ResourceState): ResourceView {
     const trunk = this.add.rectangle(0, 7, 7, 18, 0x735033, 1);
     const crown = this.add.circle(0, -4, 16, 0x7fbf5b, 1)
       .setStrokeStyle(2, 0x243a2c, 1)
       .setInteractive({ useHandCursor: true });
-    crown.on(Phaser.Input.Events.POINTER_DOWN, () => sendInteractIntent(resource.id));
+    crown.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      dispatchLocalGameCommand({ type: "gather", targetId: resource.id });
+    });
     const label = this.add.text(0, 24, "TREE", {
       color: "#b8d9a9",
       fontFamily: "monospace",
       fontSize: "7px",
     }).setOrigin(0.5);
-    const container = this.add.container(resource.x, resource.y, [trunk, crown, label]);
-    const view = { container, crown, label };
+    const view = {
+      container: this.add.container(resource.x, resource.y, [trunk, crown, label]),
+      crown,
+      label,
+    };
     this.resourceViews.set(resource.id, view);
     return view;
   }
 
-  /** Creates, updates and removes the first-slice farm tile from its server-owned phase. */
-  private renderFarmTiles(farmTiles: readonly FarmTileProjection[]): void {
+  /** Creates, updates and removes the first local farm tile from its domain phase. */
+  private renderFarmTiles(farmTiles: readonly FarmTileState[]): void {
     const activeIds = new Set(farmTiles.map((tile) => tile.id));
     for (const [id, view] of this.farmViews) {
       if (!activeIds.has(id)) {
@@ -174,26 +163,31 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Creates one clickable farm tile that sends a phase-agnostic primary interaction intent. */
-  private createFarmView(tile: FarmTileProjection): FarmView {
+  /** Creates one clickable farm tile that asks GameSession for its next legal primary action. */
+  private createFarmView(tile: FarmTileState): FarmView {
     const soil = this.add.rectangle(0, 0, 28, 28, 0x52654a, 1)
       .setStrokeStyle(2, 0x263528, 1)
       .setInteractive({ useHandCursor: true });
-    soil.on(Phaser.Input.Events.POINTER_DOWN, () => sendFarmPrimaryIntent(tile.id));
+    soil.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      dispatchLocalGameCommand({ type: "farm-primary", tileId: tile.id });
+    });
     const label = this.add.text(0, 23, "SOIL", {
       color: "#d9c69b",
       fontFamily: "monospace",
       fontSize: "7px",
     }).setOrigin(0.5);
-    const container = this.add.container(tile.x, tile.y, [soil, label]);
-    const view = { container, soil, label };
+    const view = {
+      container: this.add.container(tile.x, tile.y, [soil, label]),
+      soil,
+      label,
+    };
     this.farmViews.set(tile.id, view);
     return view;
   }
 }
 
-/** Maps one farm projection to a compact code-drawn color and phase label. */
-function farmAppearance(tile: FarmTileProjection): { readonly color: number; readonly label: string } {
+/** Maps one farm state to a compact temporary color and phase label. */
+function farmAppearance(tile: FarmTileState): { readonly color: number; readonly label: string } {
   switch (tile.phase) {
     case "untilled": return { color: 0x52654a, label: "SOIL" };
     case "tilled": return { color: 0x73513b, label: "TILLED" };
@@ -202,11 +196,10 @@ function farmAppearance(tile: FarmTileProjection): { readonly color: number; rea
       label: tile.watered ? "GROWING" : "WATER",
     };
     case "mature": return { color: 0xb8ff62, label: "HARVEST" };
-    default: return { color: 0x52654a, label: "UNKNOWN" };
   }
 }
 
-/** Converts one signed integer difference into the exact network axis union. */
+/** Converts one signed integer difference into the closed digital movement axis. */
 function toAxis(value: number): -1 | 0 | 1 {
   return value < 0 ? -1 : value > 0 ? 1 : 0;
 }

@@ -18,5 +18,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="gameContainer" class="game-canvas" aria-label="镜像岛共享世界画布" />
+  <div ref="gameContainer" class="game-canvas" aria-label="镜像岛单人本地世界画布" />
 </template>

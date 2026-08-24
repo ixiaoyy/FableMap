@@ -27,7 +27,7 @@ export const RECIPE_DEFINITIONS: Readonly<Record<RecipeId, RecipeDefinition>> = 
   },
 };
 
-/** Returns one reviewed recipe definition, or null when an untrusted ID is unknown. */
+/** Returns one reviewed recipe definition, or null when an unknown value is not a registered recipe ID. */
 export function getRecipeDefinition(recipeId: unknown): RecipeDefinition | null {
   if (typeof recipeId !== "string") return null;
   return RECIPE_DEFINITIONS[recipeId as RecipeId] ?? null;
