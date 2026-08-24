@@ -228,6 +228,46 @@ h1 {
   color: #ff9d8f;
 }
 
+.dialogue-panel {
+  position: absolute;
+  z-index: 4;
+  right: clamp(14px, 4vw, 36px);
+  bottom: clamp(14px, 4vw, 32px);
+  left: clamp(14px, 4vw, 36px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 18px;
+  padding: 16px 18px;
+  border: 2px solid #d4b77e;
+  color: #2b2118;
+  background: #ead9ae;
+  box-shadow: 0 8px 0 rgba(7, 16, 13, 0.38);
+}
+
+.dialogue-panel__speaker {
+  grid-column: 1 / -1;
+  color: #70502f;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dialogue-panel p {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.dialogue-panel button {
+  align-self: end;
+  padding: 6px 12px;
+  border: 1px solid #70502f;
+  color: #5b3e25;
+  background: transparent;
+  cursor: pointer;
+}
+
 .debug-dock {
   display: grid;
   grid-template-columns: 178px minmax(0, 1fr);

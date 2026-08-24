@@ -1,5 +1,5 @@
 import { GameSession } from "../../../domain/session/GameSession.ts";
-import type { GameCommand } from "../../../domain/session/commands.ts";
+import type { ActionFeedback, GameCommand } from "../../../domain/session/commands.ts";
 import type { WorldCatalog } from "../../../domain/world/regions.ts";
 import { IndexedDbSaveRepository } from "../persistence/IndexedDbSaveRepository.ts";
 import {
@@ -28,7 +28,7 @@ export function getLocalGameSession(): GameSession {
 }
 
 /** Dispatches one local gameplay command and projects its fixed feedback into Vue. */
-export function dispatchLocalGameCommand(command: GameCommand): void {
+export function dispatchLocalGameCommand(command: GameCommand): ActionFeedback | null {
   const activeSession = getLocalGameSession();
   const feedback = activeSession.dispatch(command);
   if (feedback) setActionFeedback(feedback);
@@ -41,6 +41,7 @@ export function dispatchLocalGameCommand(command: GameCommand): void {
       });
     });
   }
+  return feedback;
 }
 
 /** Advances local time-based rules using an explicit wall-clock timestamp. */

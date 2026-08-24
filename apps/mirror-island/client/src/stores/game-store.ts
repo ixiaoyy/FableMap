@@ -10,11 +10,17 @@ export interface InventorySlotProjection {
   readonly quantity: number;
 }
 
+export interface DialogueProjection {
+  readonly speaker: string;
+  readonly text: string;
+}
+
 const mutableState = reactive({
   phase: "authenticating" as GamePhase,
   saveAvailable: false,
   inventory: [] as InventorySlotProjection[],
   feedback: null as ActionFeedback | null,
+  dialogue: null as DialogueProjection | null,
 });
 
 export const gameUiState = readonly(mutableState);
@@ -43,8 +49,19 @@ export function setActionFeedback(feedback: ActionFeedback | null): void {
   mutableState.feedback = feedback;
 }
 
+/** Opens one fixed ephemeral dialogue projection above the Phaser world. */
+export function setDialogue(dialogue: DialogueProjection): void {
+  mutableState.dialogue = dialogue;
+}
+
+/** Closes the active ephemeral dialogue without touching save-owned gameplay state. */
+export function clearDialogue(): void {
+  mutableState.dialogue = null;
+}
+
 /** Clears only transient local gameplay projections when the application shell is disposed. */
 export function clearGameState(): void {
   mutableState.inventory = [];
   mutableState.feedback = null;
+  mutableState.dialogue = null;
 }

@@ -4,6 +4,8 @@ import { createWorldCatalog, decodeTiledRegion } from "./tiled-region-decoder.ts
 const REGION_SOURCES = [
   { mapKey: "region-farm", url: "/map/farm.tmj" },
   { mapKey: "region-town", url: "/map/town.tmj" },
+  { mapKey: "region-cottage", url: "/map/cottage.tmj" },
+  { mapKey: "region-seed-shop", url: "/map/seed-shop.tmj" },
 ] as const;
 
 let catalogPromise: Promise<WorldCatalog> | null = null;

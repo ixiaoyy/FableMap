@@ -31,7 +31,7 @@ function createBorder(openingSide) {
   const data = emptyLayer();
   for (let x = 0; x < columns; x += 1) {
     setTile(data, x, 0, 6);
-    setTile(data, x, rows - 1, 6);
+    if (!(openingSide === "south" && x >= 19 && x <= 20)) setTile(data, x, rows - 1, 6);
   }
   for (let y = 0; y < rows; y += 1) {
     if (!(openingSide === "west" && y >= 13 && y <= 16)) setTile(data, 0, y, 6);
@@ -140,16 +140,30 @@ const farm = createMap({
       spawns: [
         pointObject(1, "Home Yard", "spawn", 16 * tileSize, 12 * tileSize, [property("spawnId", "home-yard")]),
         pointObject(2, "East Gate", "spawn", 37 * tileSize, 14 * tileSize, [property("spawnId", "east-gate")]),
+        pointObject(7, "Cottage Door", "spawn", 11 * tileSize, 12 * tileSize, [property("spawnId", "cottage-door")]),
       ],
-      exits: [rectObject(3, "To Town", "exit", 39 * tileSize, 13 * tileSize, tileSize, 4 * tileSize, [
-        property("exitId", "farm-east-exit"),
-        property("targetRegion", "town"),
-        property("targetSpawn", "west-gate"),
-      ])],
-      interactions: [rectObject(4, "Farm Plot", "interaction", 12 * tileSize, 15 * tileSize, tileSize, tileSize, [
-        property("entityId", "farm-plot-001"),
-        property("interactionKind", "farm-plot"),
-      ])],
+      exits: [
+        rectObject(3, "To Town", "exit", 39 * tileSize, 13 * tileSize, tileSize, 4 * tileSize, [
+          property("exitId", "farm-east-exit"),
+          property("targetRegion", "town"),
+          property("targetSpawn", "west-gate"),
+        ]),
+        rectObject(8, "Into Cottage", "exit", 10 * tileSize, 10 * tileSize, 2 * tileSize, tileSize, [
+          property("exitId", "farm-cottage-entry"),
+          property("targetRegion", "cottage"),
+          property("targetSpawn", "entry"),
+        ]),
+      ],
+      interactions: [
+        rectObject(4, "Farm Plot", "interaction", 12 * tileSize, 15 * tileSize, tileSize, tileSize, [
+          property("entityId", "farm-plot-001"),
+          property("interactionKind", "farm-plot"),
+        ]),
+        rectObject(9, "Cottage Door", "interaction", 10 * tileSize, 10 * tileSize, 2 * tileSize, tileSize, [
+          property("entityId", "farm-cottage-door"),
+          property("interactionKind", "door"),
+        ]),
+      ],
       resources: [
         pointObject(5, "Tree", "resource", 20 * tileSize, 14 * tileSize, [
           property("entityId", "farm-tree-001"),
@@ -181,19 +195,76 @@ const town = createMap({
     fillRect(above, 23, 5, 8, 2, 5);
     fillRect(collision, 23, 5, 8, 6, 6);
     return {
-      spawns: [pointObject(20, "West Gate", "spawn", 2 * tileSize, 14 * tileSize, [property("spawnId", "west-gate")])],
-      exits: [rectObject(21, "To Farm", "exit", 0, 13 * tileSize, tileSize, 4 * tileSize, [
-        property("exitId", "town-west-exit"),
-        property("targetRegion", "farm"),
-        property("targetSpawn", "east-gate"),
-      ])],
+      spawns: [
+        pointObject(20, "West Gate", "spawn", 2 * tileSize, 14 * tileSize, [property("spawnId", "west-gate")]),
+        pointObject(24, "Seed Shop Door", "spawn", 12 * tileSize, 12 * tileSize, [property("spawnId", "seed-shop-door")]),
+      ],
+      exits: [
+        rectObject(21, "To Farm", "exit", 0, 13 * tileSize, tileSize, 4 * tileSize, [
+          property("exitId", "town-west-exit"),
+          property("targetRegion", "farm"),
+          property("targetSpawn", "east-gate"),
+        ]),
+        rectObject(25, "Into Seed Shop", "exit", 12 * tileSize, 11 * tileSize, tileSize, tileSize, [
+          property("exitId", "town-seed-shop-entry"),
+          property("targetRegion", "seed-shop"),
+          property("targetSpawn", "entry"),
+        ]),
+      ],
       interactions: [rectObject(22, "Seed Shop Door", "interaction", 12 * tileSize, 11 * tileSize, tileSize, tileSize, [
         property("entityId", "town-seed-shop-door"),
         property("interactionKind", "door"),
       ])],
       resources: [],
-      npcs: [pointObject(23, "Seed Keeper", "npc", 13 * tileSize, 13 * tileSize, [
-        property("entityId", "town-seed-keeper"),
+      npcs: [],
+    };
+  },
+});
+
+const cottage = createMap({
+  regionId: "cottage",
+  displayName: "玩家小屋",
+  defaultSpawn: "entry",
+  startRegion: false,
+  openingSide: "south",
+  /** Lays out the temporary cottage interior and its return doorway. */
+  decorate({ buildings, collision }) {
+    collision.forEach((gid, index) => { if (gid !== 0) buildings[index] = 4; });
+    return {
+      spawns: [pointObject(40, "Entry", "spawn", 20 * tileSize, 26 * tileSize, [property("spawnId", "entry")])],
+      exits: [rectObject(41, "To Farm", "exit", 19 * tileSize, 29 * tileSize, 2 * tileSize, tileSize, [
+        property("exitId", "cottage-exit"),
+        property("targetRegion", "farm"),
+        property("targetSpawn", "cottage-door"),
+      ])],
+      interactions: [],
+      resources: [],
+      npcs: [],
+    };
+  },
+});
+
+const seedShop = createMap({
+  regionId: "seed-shop",
+  displayName: "种子店",
+  defaultSpawn: "entry",
+  startRegion: false,
+  openingSide: "south",
+  /** Lays out the temporary seed-shop interior, owner stand and return doorway. */
+  decorate({ detail, buildings, collision }) {
+    collision.forEach((gid, index) => { if (gid !== 0) buildings[index] = 4; });
+    fillRect(detail, 14, 10, 12, 2, 2);
+    return {
+      spawns: [pointObject(50, "Entry", "spawn", 20 * tileSize, 26 * tileSize, [property("spawnId", "entry")])],
+      exits: [rectObject(51, "To Town", "exit", 19 * tileSize, 29 * tileSize, 2 * tileSize, tileSize, [
+        property("exitId", "seed-shop-exit"),
+        property("targetRegion", "town"),
+        property("targetSpawn", "seed-shop-door"),
+      ])],
+      interactions: [],
+      resources: [],
+      npcs: [pointObject(52, "Seed Keeper", "npc", 20 * tileSize, 9 * tileSize, [
+        property("entityId", "seed-shop-keeper"),
         property("npcId", "seed-keeper"),
         property("dialogueId", "seed-keeper-welcome"),
       ])],
@@ -205,5 +276,7 @@ await mkdir(outputDirectory, { recursive: true });
 await Promise.all([
   writeFile(join(outputDirectory, "farm.tmj"), `${JSON.stringify(farm)}\n`, "utf8"),
   writeFile(join(outputDirectory, "town.tmj"), `${JSON.stringify(town)}\n`, "utf8"),
+  writeFile(join(outputDirectory, "cottage.tmj"), `${JSON.stringify(cottage)}\n`, "utf8"),
+  writeFile(join(outputDirectory, "seed-shop.tmj"), `${JSON.stringify(seedShop)}\n`, "utf8"),
 ]);
-console.log("Generated farm.tmj and town.tmj.");
+console.log("Generated farm.tmj, town.tmj, cottage.tmj and seed-shop.tmj.");

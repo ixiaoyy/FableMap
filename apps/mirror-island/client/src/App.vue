@@ -22,6 +22,7 @@ import {
   setSaveAvailable,
 } from "./stores/game-store.ts";
 import DebugControls from "./ui/debug/DebugControls.vue";
+import DialoguePanel from "./ui/dialogue/DialoguePanel.vue";
 import Hotbar from "./ui/hotbar/Hotbar.vue";
 
 const failureMessage = ref("");
@@ -128,6 +129,7 @@ onUnmounted(() => {
       >
         {{ gameUiState.feedback.message }}
       </p>
+      <DialoguePanel />
     </section>
 
     <section v-else class="start-panel" aria-live="polite">
