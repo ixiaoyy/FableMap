@@ -23,7 +23,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、版本 1、store `game-saves`；不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v1，World Foundation 加 region 时必须显式迁移到 v2，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源和农田；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；ownerKey 由身份 adapter 提供。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -37,9 +37,25 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Stardew Core scope
 
 - 第一批：GameSession、IndexedDB、背包/采集/制作/种田本地化，代码绘制场景可接受。
-- 第二批：固定 Tiled 布局“农场向右连接小镇、北山、南侧河湖”，玩家动画、碰撞、建筑和地图切换。
+- 第二批 World Foundation 严格拆为 A：Tilemap Foundation，B：World Entities + ActionTimeline，C：Visual Pass；不并行铺昼夜、经济或 NPC 日程。
 - 第三批：时间/昼夜/睡觉跨日、按天成长、金币、商店和 3 个 NPC。
 - 当前禁止多人、战斗、科技树、NPC 招募、复杂剧情、书屋和《聊斋》内容。
+
+## World Foundation contract
+
+- 地图使用 16×16 正交 TMJ 区域文件；农场东侧连接小镇西侧，后续 forest/mountain/river/mine/temple/story regions 复用同一切图合同，不扩成单张超级地图。
+- 每张 TMJ 固定 Tile Layers：`Ground`、`GroundDetail`、`Water`、`Buildings`、`AbovePlayer`、`Collision`；固定 Object Layers：`SpawnPoints`、`Exits`、`Interactions`、`ResourceSpawns`、`NpcSpawns`。
+- 程序不按 Tiled object name 猜行为，只消费集中 decoder 验证过的 `type` 与 properties；stable entity ID 全世界唯一。
+- Phaser 当前 parser 不支持 external tileset source，运行时 TMJ 必须内嵌 tileset metadata；先使用普通 TilemapLayer，不提前采用 TilemapGPULayer。
+- Tilemap 只拥有地面、水、道路、墙、屋顶、桥和静态装饰；玩家、NPC、树、石头、箱子、作物、门和剧情对象由 EntityFactory 从 Object Layer 创建。
+- 地图拥有 entity 静态位置，save 只保存动态状态；切图、刷新和继续游戏不得复活已耗尽资源。
+- 可复用 ActionTimeline 固定 `windup -> impact -> recovery`；只有 impact 触发一次 GameSession mutation，动画期间拒绝重复交互。
+- Commit C 后正式游戏世界是默认主视图；现有 LOCAL/grid 与指针方向盘只在显式 Debug Shell 模式出现。
+
+## Identity replaceability
+
+- 当前托管 Web 版本继续通过 Keycloak 验证账号隔离，但 domain、WorldCatalog、GameSession 与 SaveRepository 只接 opaque owner key，不导入 Keycloak。
+- Keycloak 是否为未来离线/单机产品强制前提尚未决定；不得在 World Foundation 中把登录页面或 token 固化为地图、玩法或存档格式的一部分。
 
 ## Open-source contract
 
