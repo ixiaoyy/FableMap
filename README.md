@@ -1,13 +1,14 @@
 # 镜像岛
 
-镜像岛是一个 Web 共享像素生存/农场世界。玩家通过论坛账号或独立 Keycloak 账号登录，在同一权威世界中探索、采集、制作和耕作；新主线由 Phaser/Vue 客户端、Colyseus 服务端和既有 PostgreSQL/Prisma 持久化边界组成。
+镜像岛是一个单人 Web 像素农场/生活世界。玩家通过论坛账号或独立 Keycloak 账号登录，在本地世界中采集、制作、耕作并逐步连接农场、小镇和周边山水；新主线由 Phaser/Vue、GameSession、纯 TypeScript 规则和 IndexedDB 本地存档组成。
 
-旧 React/Phaser 本地单机原型、RPGJS 运行时和 FastAPI 故事产品均已退役或冻结，不再是兼容面。公开根入口 `/` 只服务镜像岛。
+RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行时。公开根入口 `/` 只服务镜像岛单人主线。
 
 ## 新主线底座
 
 - Phaser `4.2.1` + Vue 3 + TypeScript + Vite：地图、角色表现、输入和 Web UI。
-- Colyseus Core `0.17.50` + `@colyseus/sdk`：WorldRoom、服务端 tick、权威状态和断线重连。
+- GameSession + 纯 TypeScript domain：背包、采集、制作、种田和本地状态 owner。
+- 原生 IndexedDB：版本化单人存档；不使用 localStorage 保存玩法状态。
 - Keycloak `26.7.1`：独立中文用户名密码、Remember Me、论坛 OIDC 身份代理。
 - `oidc-provider` `9.11.1`：将 ParallelLines 现有一次性票据适配为标准 OIDC。
 - Prisma `7.9.1` + PostgreSQL 17：玩家资料、存档、背包、动态格、区块、住宅和全服结算。
@@ -24,7 +25,7 @@ npm --prefix .\apps\mirror-island run dev:server
 npm --prefix .\apps\mirror-island run dev:client
 ```
 
-首个纵向切片使用进程内 checkpoint，不读取 `MIRROR_ISLAND_DATABASE_URL`；实际 Prisma/PostgreSQL 接入需要单独评审和授权。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
+单人实时玩法不读取 `MIRROR_ISLAND_DATABASE_URL`；Prisma/PostgreSQL 只为未来云存档等后端能力保留，实际接入需要单独评审和授权。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
 
 ## 最小检查
 
@@ -46,4 +47,4 @@ npm --prefix .\apps\mirror-island run build:server
 - [产品简报](docs/PRODUCT_BRIEF.md)
 - [明确不做](docs/WHAT_NOT_TO_BUILD.md)
 - [生产部署](docs/DEPLOYMENT.md)
-- [Phaser/Colyseus 运行时规范](.trellis/spec/frontend/mirror-island-phaser-colyseus.md)
+- [Phaser 单人运行时规范](.trellis/spec/frontend/mirror-island-phaser-singleplayer.md)

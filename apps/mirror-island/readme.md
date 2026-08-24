@@ -1,4 +1,4 @@
-# 镜像岛 Phaser/Colyseus
+# 镜像岛 Phaser 单人主线
 
 安装并启动本地依赖：
 
@@ -10,10 +10,10 @@ npm run dev:server
 ```
 
 - Keycloak：`http://127.0.0.1:8081`
-- Colyseus：`http://127.0.0.1:3001`
+- 身份/论坛 SSO 服务：`http://127.0.0.1:3001`（不参与实时玩法）
 - Vite：`http://127.0.0.1:8080/`
 
-正式游戏要求 Keycloak 会话，并使用 Keycloak `sub` 作为服务端私有稳定玩家 ID。首个纵向切片通过 in-memory persistence interface 恢复刷新/重连状态，不连接数据库；论坛登录仍经 `/forum-sso/` OIDC 桥进入 Keycloak。
+正式游戏要求 Keycloak 会话；本地 GameSession 通过 IndexedDB SaveRepository 保存单人状态，不启动 gameplay server。论坛登录仍经 `/forum-sso/` OIDC 桥进入 Keycloak，Prisma/PostgreSQL 保留给未来云能力。
 
 检查：
 

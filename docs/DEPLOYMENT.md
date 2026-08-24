@@ -5,7 +5,7 @@
 - 游戏：`https://fable.pingxingxian.space/`
 - Keycloak：`https://fable.pingxingxian.space/identity/`
 - 论坛 OIDC 桥：`https://fable.pingxingxian.space/forum-sso/`
-- Colyseus WebSocket：`wss://fable.pingxingxian.space/parties/`
+- 冻结多人 WebSocket：`wss://fable.pingxingxian.space/parties/`（单人主线不使用，生产切换时移除）
 - 媒体代理：`https://fable.pingxingxian.space/game-media/v1/`
 
 `/mirror-island` 和 `/mirror-island/` 只返回 308 `/`，不存在第二份前端产物。
@@ -17,7 +17,7 @@
 | `frontend` | Nginx 和单份 Phaser/Vue client | 无 |
 | `keycloak` | 独立账号、Remember Me、论坛 Identity Broker | `mirror_identity_db` |
 | `mirror-identity-db` | Keycloak PostgreSQL 17 | `mirror_identity_db` volume |
-| `mirror-game` | Colyseus WorldRoom、论坛 OIDC 桥和 checkpoint adapter | `mirror-game-db` |
+| `mirror-game` | 论坛 OIDC 桥、health 与未来云存档/成就/排行榜 API；不参与实时玩法 | `mirror-game-db` |
 | `mirror-game-db` | 游戏 PostgreSQL 17 | `mirror_game_db` volume |
 | `mirror-game-migrate` | 一次性 `prisma migrate deploy` | 无 |
 
@@ -46,7 +46,7 @@ Keycloak 与游戏数据库使用不同服务、database、用户、密码和 vo
 4. 对已有的 Keycloak/game database 分别生成非空 `pg_dump` gzip 备份。
 5. 运行唯一 `20260819000000_mirror_island_baseline` migration；失败时不启动新 `mirror-game`。
 6. 解析 ParallelLines `api` 的实际 Docker 网络，启动 Keycloak/mirror-game，并从 `mirror-game` 访问论坛 `/healthz` 后再应用 realm、主题、OIDC provider、client 和 user profile。
-7. 替换 frontend，验证 `/`、`/identity/`、`/forum-sso/`、`/parties/` 和 308 重定向。
+7. 替换 frontend，验证 `/`、`/identity/`、`/forum-sso/` 和 308 重定向；单人主线不以 `/parties/` 为健康条件。
 8. 只在新系统健康后执行旧 FableSpace 永久清退。
 
 应用启动不执行 DDL。不提供破坏性 down migration；正式接流量后的 schema 变更只能用新的 forward-fix migration。
@@ -72,4 +72,4 @@ npm --prefix .\apps\mirror-island run build:server
 docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml config
 ```
 
-迁移分支在双账号纵向切片人工验收前不部署；当前生产继续运行已封存的 RPGJS revision。切换发布后人工验收中文注册、论坛首次 SSO/再访直登、Remember Me、同名不合并、两玩家同房、同树单次结算、刷新/断线重连和像素主题的桌面/手机/键盘/错误状态。
+单人 Stardew Core 在本地新游戏/继续游戏和 IndexedDB 恢复人工验收前不部署；当前生产继续运行旧 RPGJS revision。切换发布后人工验收中文注册、论坛首次 SSO/再访直登、Remember Me、同名不合并、本地玩法闭环、刷新恢复和像素主题的桌面/手机/键盘/错误状态。
