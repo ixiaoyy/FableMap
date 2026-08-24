@@ -58,15 +58,15 @@
 
 ## Acceptance Criteria
 
-- [ ] 活跃 client graph 不导入 `@colyseus/sdk`，本地玩法不需要 game server、WebSocket 或 matchmaking。
-- [ ] GameSession 通过类型化命令唯一修改纯 TypeScript domain state，并发布只读 snapshot 给 Phaser/Vue。
-- [ ] Inventory/Gathering/Crafting/Farming 不导入 Phaser、Vue、Colyseus、Prisma 或浏览器 API。
-- [ ] 原生 IndexedDB SaveRepository 使用版本化 store，保存内容不含 token、ticket、密码或 secret。
-- [ ] 新游戏能完成“砍树 -> 木材 -> 木斧 -> 锄地 -> 播种 -> 浇水 -> 成熟 -> 收获”。
+- [x] 活跃 client graph 不导入 `@colyseus/sdk`，本地玩法不需要 game server、WebSocket 或 matchmaking。
+- [x] GameSession 通过类型化命令唯一修改纯 TypeScript domain state，并发布只读 snapshot 给 Phaser/Vue。
+- [x] Inventory/Gathering/Crafting/Farming 不导入 Phaser、Vue、Colyseus、Prisma 或浏览器 API。
+- [x] 原生 IndexedDB SaveRepository 使用版本化 store，保存内容不含 token、ticket、密码或 secret。
+- [x] 新游戏能完成“砍树 -> 木材 -> 木斧 -> 锄地 -> 播种 -> 浇水 -> 成熟 -> 收获”。
 - [ ] 有效存档时继续游戏可用；刷新后恢复背包、树木和农田，损坏/未来版本存档得到明确失败而不回退。
-- [ ] Keycloak/论坛 SSO 与 Prisma/PostgreSQL 代码保留，但不进入本地 gameplay mutation 调用链。
-- [ ] 无新 migration、无数据库连接、无生产部署。
-- [ ] 最小 TypeScript 和 client build 通过；server 仅在身份/SSO adapter 改动时做必要构建检查。
+- [x] Keycloak/论坛 SSO 与 Prisma/PostgreSQL 代码保留，但不进入本地 gameplay mutation 调用链。
+- [x] 无新 migration、无数据库连接、无生产部署。
+- [x] 最小 TypeScript 和 client build 通过；server 仅在身份/SSO adapter 改动时做必要构建检查。
 
 ## Out of Scope
 

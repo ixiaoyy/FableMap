@@ -1,6 +1,6 @@
 # 镜像岛生产运行边界
 
-游戏直接服务于 `https://fable.pingxingxian.space/`；`/mirror-island/` 只 308 到 `/`。身份位于 `/identity/`，论坛 OIDC 桥位于 `/forum-sso/`，WebSocket 位于 `/parties/`。
+游戏直接服务于 `https://fable.pingxingxian.space/`；`/mirror-island/` 只 308 到 `/`。身份位于 `/identity/`，论坛 OIDC 桥位于 `/forum-sso/`；单人玩法不开放 WebSocket 路由。
 
 Compose 运行 frontend、Keycloak、mirror-game、两个 PostgreSQL 和一次性 migration 服务。Keycloak 使用 `mirror_identity_db`，游戏使用 `mirror_game_db`；两者不共用凭据。
 

@@ -12,7 +12,7 @@ RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行
 - Keycloak `26.7.1`：独立中文用户名密码、Remember Me、论坛 OIDC 身份代理。
 - `oidc-provider` `9.11.1`：将 ParallelLines 现有一次性票据适配为标准 OIDC。
 - Prisma `7.9.1` + PostgreSQL 17：玩家资料、存档、背包、动态格、区块、住宅和全服结算。
-- Nginx：`/`、`/identity/`、`/forum-sso/`、`/parties/` 和 `/game-media/v1/` 同域路由。
+- Nginx：`/`、`/identity/`、`/forum-sso/` 和 `/game-media/v1/` 同域路由；单人玩法不提供 WebSocket 路由。
 
 ## 本地开发
 

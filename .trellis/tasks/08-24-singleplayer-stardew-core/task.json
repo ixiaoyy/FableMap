@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-08-24 first batch implemented in 9b7cf24f: pure domain, GameSession, native IndexedDB, local Phaser/Vue wiring and Colyseus active-graph removal. Typecheck/client/server builds and narrow domain restore diagnostic passed. Browser IndexedDB refresh acceptance remains manual; local Docker image recheck was unavailable because Docker Desktop was not running.",
   "meta": {}
 }

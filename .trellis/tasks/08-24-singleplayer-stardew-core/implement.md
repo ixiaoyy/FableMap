@@ -13,6 +13,13 @@
 11. 运行最小 TypeScript、client build、必要 server build 和 Compose 配置解析；不运行数据库测试或大规模自动化矩阵。
 12. 人工浏览器验收新游戏、继续按钮、完整本地闭环、退出/刷新和损坏存档错误状态。
 
+## 2026-08-24 进度
+
+- 步骤 1–11 已完成，生产代码提交为 `9b7cf24f`。
+- 一次性纯 domain 诊断已跑通完整采集/制作/种田闭环，并以新 GameSession 恢复同一存档快照。
+- `typecheck`、client build、server build 和 Compose 配置解析通过；未连接数据库、未新增 migration、未部署生产。
+- 步骤 12 保留为人工浏览器验收。Docker Desktop 未运行，因此本机 production image 复核未完成，不记为通过。
+
 ## 提交与回滚点
 
 - Commit 1：单人主线合同和 IndexedDB 采用记录。
