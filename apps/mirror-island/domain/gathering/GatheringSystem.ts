@@ -1,6 +1,7 @@
 import { ITEM_ID } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { GameState } from "../state/game-state.ts";
+import type { WorldCatalog } from "../world/regions.ts";
 
 const GATHER_DISTANCE_PIXELS = 42;
 const TREE_WOOD_YIELD = 3;
@@ -14,14 +15,19 @@ export type GatheringResult =
 
 export class GatheringSystem {
   /** Creates a pure gathering rule service backed only by the supplied inventory operations. */
-  constructor(private readonly inventory: InventorySystem) {}
+  constructor(
+    private readonly inventory: InventorySystem,
+    private readonly catalog: WorldCatalog,
+  ) {}
 
   /** Atomically depletes one nearby tree before awarding its unique wood yield. */
   gather(state: GameState, targetId: string): GatheringResult {
+    const spawn = this.catalog.resource(targetId);
     const resource = state.resources[targetId];
-    if (!resource) return "missing-target";
+    if (!spawn || !resource || spawn.kind !== "tree" || resource.kind !== "tree") return "missing-target";
     if (!resource.available) return "depleted";
-    if (Math.hypot(state.player.x - resource.x, state.player.y - resource.y) > GATHER_DISTANCE_PIXELS) {
+    if (state.player.regionId !== spawn.regionId) return "missing-target";
+    if (Math.hypot(state.player.x - spawn.x, state.player.y - spawn.y) > GATHER_DISTANCE_PIXELS) {
       return "too-far";
     }
     if (!this.inventory.canAdd(state.inventory, ITEM_ID.wood, TREE_WOOD_YIELD)) {

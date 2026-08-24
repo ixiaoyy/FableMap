@@ -1,6 +1,7 @@
 import { ITEM_ID } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { FarmTileState, GameState } from "../state/game-state.ts";
+import type { WorldCatalog } from "../world/regions.ts";
 
 const FARM_INTERACTION_DISTANCE_PIXELS = 42;
 const CROP_GROWTH_DURATION_MS = 5_000;
@@ -19,13 +20,20 @@ export type FarmingResult =
 
 export class FarmingSystem {
   /** Creates a pure farming state machine backed only by the supplied inventory operations. */
-  constructor(private readonly inventory: InventorySystem) {}
+  constructor(
+    private readonly inventory: InventorySystem,
+    private readonly catalog: WorldCatalog,
+  ) {}
 
   /** Applies the next legal primary action for one nearby tile from its current local phase. */
   primary(state: GameState, tileId: string, now: number): FarmingResult {
+    const interaction = this.catalog.interaction(tileId);
     const tile = state.farmTiles[tileId];
-    if (!tile) return "missing-tile";
-    if (Math.hypot(state.player.x - tile.x, state.player.y - tile.y) > FARM_INTERACTION_DISTANCE_PIXELS) {
+    if (!interaction || interaction.kind !== "farm-plot" || !tile) return "missing-tile";
+    if (state.player.regionId !== interaction.regionId) return "missing-tile";
+    const targetX = interaction.x + interaction.width / 2;
+    const targetY = interaction.y + interaction.height / 2;
+    if (Math.hypot(state.player.x - targetX, state.player.y - targetY) > FARM_INTERACTION_DISTANCE_PIXELS) {
       return "too-far";
     }
     switch (tile.phase) {

@@ -6,6 +6,7 @@ import {
   type AuthenticatedSession,
 } from "./auth/keycloak.ts";
 import PhaserGame from "./PhaserGame.vue";
+import { loadWorldCatalog } from "./game/world/world-catalog.ts";
 import {
   removeRetiredLocalStorageSaves,
 } from "./persistence/IndexedDbSaveRepository.ts";
@@ -75,7 +76,8 @@ onMounted(async () => {
   try {
     removeRetiredLocalStorageSaves();
     authenticatedSession = await initializeKeycloakSession();
-    initializeLocalGameSession(await deriveLocalSaveOwnerKey(authenticatedSession.subject));
+    const catalog = await loadWorldCatalog();
+    initializeLocalGameSession(await deriveLocalSaveOwnerKey(authenticatedSession.subject), catalog);
     localSessionReady.value = true;
     window.addEventListener("pagehide", checkpointOnPageHide);
   } catch {

@@ -1,12 +1,12 @@
 import type { GameState } from "../state/game-state.ts";
+import type { WorldCatalog } from "./regions.ts";
 
-export const WORLD_WIDTH_PIXELS = 512;
-export const WORLD_HEIGHT_PIXELS = 512;
 export const PLAYER_SPEED_PIXELS_PER_SECOND = 96;
 
 /** Applies bounded digital movement for one elapsed frame and returns whether position changed. */
 export function movePlayer(
   state: GameState,
+  catalog: WorldCatalog,
   xAxis: -1 | 0 | 1,
   yAxis: -1 | 0 | 1,
   deltaMs: number,
@@ -17,8 +17,11 @@ export function movePlayer(
   const distance = PLAYER_SPEED_PIXELS_PER_SECOND * (boundedDeltaMs / 1000);
   const previousX = state.player.x;
   const previousY = state.player.y;
-  state.player.x = clamp(previousX + (xAxis / magnitude) * distance, 0, WORLD_WIDTH_PIXELS);
-  state.player.y = clamp(previousY + (yAxis / magnitude) * distance, 0, WORLD_HEIGHT_PIXELS);
+  const region = catalog.requireRegion(state.player.regionId);
+  const nextX = clamp(previousX + (xAxis / magnitude) * distance, 5, region.widthPixels - 5);
+  if (!catalog.isBlocked(state.player.regionId, nextX, previousY)) state.player.x = nextX;
+  const nextY = clamp(previousY + (yAxis / magnitude) * distance, 4, region.heightPixels - 4);
+  if (!catalog.isBlocked(state.player.regionId, state.player.x, nextY)) state.player.y = nextY;
   return state.player.x !== previousX || state.player.y !== previousY;
 }
 

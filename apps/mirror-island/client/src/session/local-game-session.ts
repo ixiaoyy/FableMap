@@ -1,5 +1,6 @@
 import { GameSession } from "../../../domain/session/GameSession.ts";
 import type { GameCommand } from "../../../domain/session/commands.ts";
+import type { WorldCatalog } from "../../../domain/world/regions.ts";
 import { IndexedDbSaveRepository } from "../persistence/IndexedDbSaveRepository.ts";
 import {
   applyGameState,
@@ -12,10 +13,10 @@ let repository: IndexedDbSaveRepository | null = null;
 let stopStoreProjection: (() => void) | null = null;
 
 /** Initializes one browser-local GameSession after identity has produced an opaque owner key. */
-export function initializeLocalGameSession(ownerKey: string): GameSession {
+export function initializeLocalGameSession(ownerKey: string, catalog: WorldCatalog): GameSession {
   if (session) throw new Error("Local GameSession is already initialized.");
   repository = new IndexedDbSaveRepository();
-  session = new GameSession(repository, ownerKey);
+  session = new GameSession(repository, ownerKey, catalog);
   stopStoreProjection = session.subscribe((state) => applyGameState(state));
   return session;
 }

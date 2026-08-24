@@ -10,9 +10,11 @@ import {
 import {
   cloneGameState,
   createInitialGameState,
+  reconcileGameStateWithCatalog,
   type GameState,
 } from "../state/game-state.ts";
 import { movePlayer } from "../world/movement.ts";
+import type { WorldCatalog } from "../world/regions.ts";
 import type { ActionFeedback, GameCommand } from "./commands.ts";
 
 const MOVEMENT_CHECKPOINT_INTERVAL_MS = 500;
@@ -21,9 +23,9 @@ export type GameStateListener = (state: GameState) => void;
 
 export class GameSession {
   private readonly inventory = new InventorySystem();
-  private readonly gathering = new GatheringSystem(this.inventory);
+  private readonly gathering: GatheringSystem;
   private readonly crafting = new CraftingSystem(this.inventory);
-  private readonly farming = new FarmingSystem(this.inventory);
+  private readonly farming: FarmingSystem;
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState | null = null;
   private movementDirty = false;
@@ -35,10 +37,13 @@ export class GameSession {
   constructor(
     private readonly repository: SaveRepository,
     private readonly ownerKey: string,
+    private readonly catalog: WorldCatalog,
     private readonly slotId = MAIN_SAVE_SLOT,
     private readonly now: () => number = Date.now,
   ) {
     if (!ownerKey.trim() || !slotId.trim()) throw new Error("Local save identity is invalid.");
+    this.gathering = new GatheringSystem(this.inventory, catalog);
+    this.farming = new FarmingSystem(this.inventory, catalog);
   }
 
   /** Reports whether this authenticated browser profile has a valid local save record. */
@@ -49,7 +54,7 @@ export class GameSession {
   /** Replaces the current slot with a deterministic starter world and persists it before play begins. */
   async newGame(): Promise<GameState> {
     await this.flush();
-    const state = createInitialGameState();
+    const state = createInitialGameState(this.catalog);
     await this.repository.save(this.ownerKey, this.slotId, createStoredGame(state, this.now()));
     this.state = state;
     this.lastSaveError = null;
@@ -65,10 +70,12 @@ export class GameSession {
     const stored = await this.repository.load(this.ownerKey, this.slotId);
     if (!stored) throw new Error("No local save exists for this account.");
     this.state = stored.state;
+    reconcileGameStateWithCatalog(this.state, this.catalog);
     this.lastSaveError = null;
     this.movementDirty = false;
     this.lastMovementCheckpointAt = this.now();
-    if (this.farming.tick(this.state, this.now())) this.queueSave();
+    this.farming.tick(this.state, this.now());
+    this.queueSave();
     this.publish();
     return this.snapshot();
   }
@@ -78,7 +85,7 @@ export class GameSession {
     const state = this.requireState();
     switch (command.type) {
       case "move": {
-        if (movePlayer(state, command.xAxis, command.yAxis, command.deltaMs)) {
+        if (movePlayer(state, this.catalog, command.xAxis, command.yAxis, command.deltaMs)) {
           this.movementDirty = true;
           this.publish();
         }
@@ -100,6 +107,22 @@ export class GameSession {
           this.commitCriticalChange();
         }
         return farmingFeedback(result);
+      }
+      case "transition-region": {
+        const exit = this.catalog.exitAt(
+          state.player.regionId,
+          state.player.x,
+          state.player.y,
+        );
+        if (exit?.id !== command.exitId) {
+          return { tone: "error", code: "missing-exit", message: "区域出口不存在。" };
+        }
+        const spawn = this.catalog.requireSpawn(exit.targetRegionId, exit.targetSpawnId);
+        state.player.regionId = exit.targetRegionId;
+        state.player.x = spawn.x;
+        state.player.y = spawn.y;
+        this.commitCriticalChange();
+        return null;
       }
     }
   }

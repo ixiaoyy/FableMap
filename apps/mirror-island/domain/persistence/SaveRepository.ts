@@ -1,10 +1,11 @@
 import {
   cloneGameState,
   decodeGameState,
+  migrateLegacyGameStateV1,
   type GameState,
 } from "../state/game-state.ts";
 
-export const SAVE_FORMAT_VERSION = 1 as const;
+export const SAVE_FORMAT_VERSION = 2 as const;
 export const MAIN_SAVE_SLOT = "main";
 
 export interface StoredGame {
@@ -37,10 +38,17 @@ export function createStoredGame(state: GameState, updatedAt: number): StoredGam
 /** Validates an unknown persistence payload and rejects corrupt or future save formats. */
 export function decodeStoredGame(value: unknown): StoredGame {
   const game = recordFrom(value);
-  if (game.version !== SAVE_FORMAT_VERSION) throw new Error("Save format is unsupported.");
   if (typeof game.updatedAt !== "number" || !Number.isFinite(game.updatedAt) || game.updatedAt < 0) {
     throw new Error("Save timestamp is invalid.");
   }
+  if (game.version === 1) {
+    return {
+      version: SAVE_FORMAT_VERSION,
+      updatedAt: game.updatedAt,
+      state: migrateLegacyGameStateV1(game.state),
+    };
+  }
+  if (game.version !== SAVE_FORMAT_VERSION) throw new Error("Save format is unsupported.");
   return {
     version: SAVE_FORMAT_VERSION,
     updatedAt: game.updatedAt,
