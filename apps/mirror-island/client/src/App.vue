@@ -20,6 +20,7 @@ import {
   setGamePhase,
   setSaveAvailable,
 } from "./stores/game-store.ts";
+import DebugControls from "./ui/debug/DebugControls.vue";
 import Hotbar from "./ui/hotbar/Hotbar.vue";
 
 const failureMessage = ref("");
@@ -170,7 +171,10 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <Hotbar v-if="gameUiState.phase === 'playing'" />
+    <div v-if="gameUiState.phase === 'playing'" class="debug-dock">
+      <DebugControls />
+      <Hotbar />
+    </div>
 
     <footer class="field-footer">
       <span>{{ gameUiState.phase === 'playing' ? '移动靠近目标 · 点击树木或农田' : '单人世界 · 本地存档' }}</span>

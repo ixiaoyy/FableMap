@@ -63,7 +63,7 @@
 - [x] Inventory/Gathering/Crafting/Farming 不导入 Phaser、Vue、Colyseus、Prisma 或浏览器 API。
 - [x] 原生 IndexedDB SaveRepository 使用版本化 store，保存内容不含 token、ticket、密码或 secret。
 - [x] 新游戏能完成“砍树 -> 木材 -> 木斧 -> 锄地 -> 播种 -> 浇水 -> 成熟 -> 收获”。
-- [ ] 有效存档时继续游戏可用；刷新后恢复背包、树木和农田，损坏/未来版本存档得到明确失败而不回退。
+- [x] 有效存档时继续游戏可用；刷新后恢复背包、树木和农田，损坏/未来版本存档得到明确失败而不回退。
 - [x] Keycloak/论坛 SSO 与 Prisma/PostgreSQL 代码保留，但不进入本地 gameplay mutation 调用链。
 - [x] 无新 migration、无数据库连接、无生产部署。
 - [x] 最小 TypeScript 和 client build 通过；server 仅在身份/SSO adapter 改动时做必要构建检查。
@@ -75,3 +75,7 @@
 - Colyseus 多人、好友参观、双人模式、联机副本和完整断线重连验收。
 - 枪械、科技树、怪物战斗、NPC 招募、复杂剧情、大地图和云存档。
 - 书屋异闻、《乔女》《画皮》《聂小倩》或任何《聊斋》故事内容。
+
+## Deferred manual evidence
+
+- 不同 Keycloak subject 的实际浏览器隔离仍未完成：第二次登录恢复了完全相同的第一账号存档，说明实际仍使用了同一 subject。代码继续保持 `SHA-256(subject) + slot` 隔离合同，但该人工证据不写成已通过，也不再阻塞用户已批准的 World Foundation 开发。

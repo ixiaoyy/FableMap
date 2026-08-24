@@ -20,6 +20,12 @@
 - `typecheck`、client build、server build 和 Compose 配置解析通过；未连接数据库、未新增 migration、未部署生产。
 - 步骤 12 保留为人工浏览器验收。Docker Desktop 未运行，因此本机 production image 复核未完成，不记为通过。
 
+## 2026-08-24 浏览器验收补记
+
+- Chrome 已实际跑通树木采集、木斧制作、开垦、播种、浇水、成熟、收获，以及刷新后继续游戏。
+- 刷新后木斧、荧光果、树木耗尽和农田阶段均恢复；为 Debug Shell 增加了只发送既有 `move` 命令的可点击方向控制。
+- 第二次登录仍读取第一份存档，说明没有切换到不同 Keycloak subject；账号隔离人工证据保留为未完成，按用户最新指示不阻塞 World Foundation。
+
 ## 提交与回滚点
 
 - Commit 1：单人主线合同和 IndexedDB 采用记录。
