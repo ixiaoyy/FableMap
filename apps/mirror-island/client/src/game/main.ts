@@ -6,8 +6,8 @@ export function startGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: 512,
-    height: 512,
+    width: 640,
+    height: 480,
     backgroundColor: "#0b1714",
     pixelArt: true,
     render: {

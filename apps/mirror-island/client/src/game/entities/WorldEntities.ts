@@ -5,12 +5,19 @@ import type {
   NpcSpawnDefinition,
   ResourceSpawnDefinition,
 } from "../../../../domain/world/regions.ts";
+import {
+  FLOOR_FRAMES,
+  MEDIA_KEYS,
+  VILLAGE_FRAMES,
+} from "../assets/media-catalog.ts";
 
 export class TreeEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
-  private readonly crown: Phaser.GameObjects.Arc;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly tree: Phaser.GameObjects.Image;
+  private readonly stump: Phaser.GameObjects.Image;
+  private available = true;
+  private impactAnimating = false;
 
   /** Creates one clickable tree view at a Tiled-owned spawn without owning persistent availability. */
   constructor(
@@ -19,24 +26,32 @@ export class TreeEntity {
     onInteract: (entity: TreeEntity) => void,
   ) {
     this.entityId = spawn.entityId;
-    const trunk = scene.add.rectangle(0, 7, 7, 18, 0x735033, 1);
-    this.crown = scene.add.circle(0, -4, 16, 0x7fbf5b, 1)
-      .setStrokeStyle(2, 0x243a2c, 1)
+    this.tree = scene.add.image(0, 0, MEDIA_KEYS.village, VILLAGE_FRAMES.tree.name)
+      .setOrigin(0.5, 1)
       .setInteractive({ useHandCursor: true });
-    this.crown.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
-    this.label = scene.add.text(0, 24, "TREE", textStyle("#b8d9a9")).setOrigin(0.5);
-    this.container = scene.add.container(spawn.x, spawn.y, [trunk, this.crown, this.label]).setDepth(18);
+    this.tree.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.stump = scene.add.image(0, 0, MEDIA_KEYS.village, VILLAGE_FRAMES.stump.name)
+      .setOrigin(0.5, 1)
+      .setVisible(false);
+    this.container = scene.add.container(spawn.x, spawn.y, [this.stump, this.tree]).setDepth(100 + spawn.y);
   }
 
   /** Projects save-owned availability without calculating or mutating resource state. */
   project(state: ResourceState): void {
-    this.crown.setFillStyle(state.available ? 0x7fbf5b : 0x4c574d, 1);
-    this.container.setAlpha(state.available ? 1 : 0.48);
-    this.label.setText(state.available ? "TREE" : "DEPLETED");
+    this.available = state.available;
+    if (!this.impactAnimating) this.applyProjection();
   }
 
-  /** Plays one visible hit shake and emits temporary code-drawn wood chips at impact. */
-  playImpact(): void {
+  /** Commits one impact while keeping the tree visible through its shake, then projects depletion. */
+  playImpact(commit: () => boolean): void {
+    this.impactAnimating = true;
+    this.tree.setVisible(true);
+    this.stump.setVisible(false);
+    if (!commit()) {
+      this.impactAnimating = false;
+      this.applyProjection();
+      return;
+    }
     this.scene.tweens.killTweensOf(this.container);
     this.scene.tweens.add({
       targets: this.container,
@@ -45,6 +60,12 @@ export class TreeEntity {
       yoyo: true,
       repeat: 2,
       ease: "Sine.InOut",
+      onStart: () => this.tree.setTint(0xffe3a1),
+      onComplete: () => {
+        this.tree.clearTint();
+        this.impactAnimating = false;
+        this.applyProjection();
+      },
     });
     for (let index = 0; index < 5; index += 1) {
       const chip = this.scene.add.rectangle(this.spawn.x, this.spawn.y - 2, 3, 2, 0xc99754, 1).setDepth(25);
@@ -64,6 +85,13 @@ export class TreeEntity {
   destroy(): void {
     this.container.destroy(true);
   }
+
+  /** Applies the latest save-owned availability after any impact animation releases its visual lock. */
+  private applyProjection(): void {
+    this.tree.setVisible(this.available);
+    this.stump.setVisible(!this.available);
+    this.container.setAlpha(1);
+  }
 }
 
 export class RockEntity {
@@ -73,10 +101,8 @@ export class RockEntity {
   /** Creates one non-minable rock view so EntityFactory covers the reviewed resource kind without adding mining. */
   constructor(scene: Phaser.Scene, readonly spawn: ResourceSpawnDefinition) {
     this.entityId = spawn.entityId;
-    const body = scene.add.polygon(0, 0, [-10, 7, -7, -7, 2, -12, 11, -4, 9, 8], 0x768078, 1)
-      .setStrokeStyle(2, 0x37423b, 1);
-    const label = scene.add.text(0, 17, "ROCK", textStyle("#aeb7ad")).setOrigin(0.5);
-    this.container = scene.add.container(spawn.x, spawn.y, [body, label]).setDepth(17);
+    const body = scene.add.image(0, 0, MEDIA_KEYS.village, VILLAGE_FRAMES.rock.name).setOrigin(0.5, 1);
+    this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
   }
 
   /** Destroys the complete temporary rock view. */
@@ -88,8 +114,7 @@ export class RockEntity {
 export class FarmPlotEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
-  private readonly soil: Phaser.GameObjects.Rectangle;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly soil: Phaser.GameObjects.Image;
 
   /** Creates one clickable farm plot at a Tiled interaction rectangle. */
   constructor(
@@ -98,23 +123,21 @@ export class FarmPlotEntity {
     onInteract: (entity: FarmPlotEntity) => void,
   ) {
     this.entityId = interaction.entityId;
-    this.soil = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0x52654a, 1)
-      .setStrokeStyle(2, 0x263528, 1)
+    this.soil = scene.add.image(0, 0, MEDIA_KEYS.floor, FLOOR_FRAMES.tilled.name)
       .setInteractive({ useHandCursor: true });
     this.soil.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
-    this.label = scene.add.text(0, interaction.height / 2 + 10, "SOIL", textStyle("#d9c69b")).setOrigin(0.5);
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      [this.soil, this.label],
-    ).setDepth(16);
+      [this.soil],
+    ).setDepth(100 + interaction.y + interaction.height);
   }
 
   /** Projects save-owned farming phase into the temporary plot view. */
   project(tile: FarmTileState): void {
     const appearance = farmAppearance(tile);
-    this.soil.setFillStyle(appearance.color, 1);
-    this.label.setText(appearance.label);
+    this.soil.setTint(appearance.tint);
+    this.soil.setAlpha(appearance.alpha);
   }
 
   /** Plays one short impact pulse shared by tilling, planting, watering and harvesting. */
@@ -143,14 +166,13 @@ export class NpcEntity {
   /** Creates one fixed-position NPC marker whose dialogue metadata remains catalog-owned. */
   constructor(scene: Phaser.Scene, readonly spawn: NpcSpawnDefinition) {
     this.entityId = spawn.entityId;
-    const body = scene.add.circle(0, 0, 7, 0xffc66d, 1).setStrokeStyle(2, 0x3d2918, 1);
+    const body = scene.add.sprite(0, 0, MEDIA_KEYS.shopkeeper, 0).setScale(2).setOrigin(0.5, 0.75);
     const prompt = scene.add.text(0, -16, "E", {
       ...textStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
       padding: { x: 3, y: 1 },
     }).setOrigin(0.5);
-    const label = scene.add.text(0, 14, "KEEPER", textStyle("#e4c99b")).setOrigin(0.5);
-    this.container = scene.add.container(spawn.x, spawn.y, [body, prompt, label]).setDepth(19);
+    this.container = scene.add.container(spawn.x, spawn.y, [body, prompt]).setDepth(100 + spawn.y);
   }
 
   /** Returns Euclidean world distance from this NPC spawn to one player position. */
@@ -198,14 +220,14 @@ function textStyle(color: string): Phaser.Types.GameObjects.Text.TextStyle {
 }
 
 /** Maps one save-owned farm phase to the temporary B-stage appearance. */
-function farmAppearance(tile: FarmTileState): { readonly color: number; readonly label: string } {
+function farmAppearance(tile: FarmTileState): { readonly tint: number; readonly alpha: number } {
   switch (tile.phase) {
-    case "untilled": return { color: 0x52654a, label: "SOIL" };
-    case "tilled": return { color: 0x73513b, label: "TILLED" };
+    case "untilled": return { tint: 0x73944c, alpha: 0.42 };
+    case "tilled": return { tint: 0xffffff, alpha: 1 };
     case "growing": return {
-      color: tile.watered ? 0x356f67 : 0x5f7042,
-      label: tile.watered ? "GROWING" : "WATER",
+      tint: tile.watered ? 0x67b5a6 : 0x9fc65d,
+      alpha: 1,
     };
-    case "mature": return { color: 0xb8ff62, label: "HARVEST" };
+    case "mature": return { tint: 0xd9ff6f, alpha: 1 };
   }
 }

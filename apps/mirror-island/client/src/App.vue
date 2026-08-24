@@ -28,6 +28,7 @@ import Hotbar from "./ui/hotbar/Hotbar.vue";
 const failureMessage = ref("");
 const localSessionReady = ref(false);
 let authenticatedSession: AuthenticatedSession | null = null;
+const debugMode = computed(() => new URLSearchParams(window.location.search).get("debug") === "1");
 
 const phaseLabel = computed(() => ({
   authenticating: "正在确认身份",
@@ -103,8 +104,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="island-shell">
-    <header class="field-header">
+  <main
+    class="island-shell"
+    :class="{ 'island-shell--game': gameUiState.phase === 'playing' && !debugMode }"
+  >
+    <header v-if="gameUiState.phase !== 'playing' || debugMode" class="field-header">
       <div>
         <p class="eyebrow">MIRROR ISLAND / LOCAL FIELD 01</p>
         <h1>镜像岛</h1>
@@ -115,9 +119,13 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <section v-if="gameUiState.phase === 'playing'" class="world-frame">
+    <section
+      v-if="gameUiState.phase === 'playing'"
+      class="world-frame"
+      :class="{ 'world-frame--game': !debugMode }"
+    >
       <PhaserGame />
-      <aside class="telemetry">
+      <aside v-if="debugMode" class="telemetry">
         <span>运行模式</span>
         <strong>LOCAL</strong>
       </aside>
@@ -130,6 +138,9 @@ onUnmounted(() => {
         {{ gameUiState.feedback.message }}
       </p>
       <DialoguePanel />
+      <div v-if="!debugMode" class="game-hud">
+        <Hotbar />
+      </div>
     </section>
 
     <section v-else class="start-panel" aria-live="polite">
@@ -175,14 +186,14 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <div v-if="gameUiState.phase === 'playing'" class="debug-dock">
+    <div v-if="gameUiState.phase === 'playing' && debugMode" class="debug-dock">
       <DebugControls />
       <Hotbar />
     </div>
 
-    <footer class="field-footer">
+    <footer v-if="gameUiState.phase !== 'playing' || debugMode" class="field-footer">
       <span>{{ gameUiState.phase === 'playing' ? '移动靠近目标 · 点击树木或农田' : '单人世界 · 本地存档' }}</span>
-      <span>Stardew Core / Batch 01</span>
+      <span>World Foundation</span>
     </footer>
   </main>
 </template>

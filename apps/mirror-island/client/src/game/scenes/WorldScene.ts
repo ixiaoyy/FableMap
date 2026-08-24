@@ -7,6 +7,13 @@ import {
   tickLocalGameSession,
 } from "../../session/local-game-session.ts";
 import { setActionFeedback, setDialogue } from "../../stores/game-store.ts";
+import {
+  FLOOR_FRAMES,
+  MEDIA_KEYS,
+  MEDIA_URLS,
+  PLAYER_FRAMES,
+  VILLAGE_FRAMES,
+} from "../assets/media-catalog.ts";
 import { getDialogueDefinition } from "../dialogue/definitions.ts";
 import { ActionTimeline } from "../entities/ActionTimeline.ts";
 import {
@@ -18,16 +25,17 @@ import {
 } from "../entities/WorldEntities.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
 
-const FOUNDATION_TEXTURE_KEY = "foundation-test-tiles";
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
 
 interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
-  readonly tool: Phaser.GameObjects.Rectangle;
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly tool: Phaser.GameObjects.Container;
 }
 
 type TransitionPhase = "idle" | "fading-out" | "fading-in";
+type Facing = "down" | "up" | "left" | "right";
 
 export class WorldScene extends Phaser.Scene {
   private readonly catalog: WorldCatalog = getWorldCatalog();
@@ -47,6 +55,7 @@ export class WorldScene extends Phaser.Scene {
   private transitionPhase: TransitionPhase = "idle";
   private entityFactory!: EntityFactory;
   private actionTimeline!: ActionTimeline;
+  private facing: Facing = "down";
 
   /** Creates the Tiled-backed scene with catalog entities and one shared player action timeline. */
   constructor() {
@@ -55,12 +64,27 @@ export class WorldScene extends Phaser.Scene {
 
   /** Queues every reviewed region map under the same keys used by the validated WorldCatalog. */
   preload(): void {
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      setActionFeedback({
+        tone: "error",
+        code: "media-load-failed",
+        message: `游戏素材 ${file.key} 加载失败，请刷新重试。`,
+      });
+    });
+    this.load.image(MEDIA_KEYS.floor, MEDIA_URLS.floor);
+    this.load.image(MEDIA_KEYS.village, MEDIA_URLS.village);
+    this.load.image(MEDIA_KEYS.interiorFloor, MEDIA_URLS.interiorFloor);
+    this.load.image(MEDIA_KEYS.wall, MEDIA_URLS.wall);
+    this.load.spritesheet(MEDIA_KEYS.hero, MEDIA_URLS.hero, { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet(MEDIA_KEYS.shopkeeper, MEDIA_URLS.shopkeeper, { frameWidth: 16, frameHeight: 16 });
     for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
   }
 
   /** Creates test tiles, input, entity services and the local state subscription. */
   create(): void {
-    this.createFoundationTexture();
+    this.createTilemapFloorTexture();
+    this.registerMediaFrames();
+    this.createPlayerAnimations();
     this.entityFactory = new EntityFactory(this);
     this.actionTimeline = new ActionTimeline(this);
     const keyboard = this.input.keyboard;
@@ -84,7 +108,10 @@ export class WorldScene extends Phaser.Scene {
       - Number(this.cursors.up.isDown || this.movementKeys.W.isDown),
     );
     if (xAxis !== 0 || yAxis !== 0) {
+      this.setMovementAnimation(xAxis, yAxis);
       dispatchLocalGameCommand({ type: "move", xAxis, yAxis, deltaMs: delta });
+    } else {
+      this.setIdleFrame();
     }
     tickLocalGameSession(Date.now());
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.openNearestNpcDialogue();
@@ -100,6 +127,7 @@ export class WorldScene extends Phaser.Scene {
     const playerView = this.playerView ?? this.createPlayerView();
     if (state.player.regionId !== this.activeRegionId) this.renderRegion(state.player.regionId, playerView);
     playerView.container.setPosition(state.player.x, state.player.y);
+    playerView.container.setDepth(100 + Math.floor(state.player.y));
     const region = this.catalog.requireRegion(state.player.regionId);
     this.renderResources(region.id, state);
     this.renderFarmPlots(region.id, state);
@@ -111,26 +139,33 @@ export class WorldScene extends Phaser.Scene {
     this.destroyRegionViews();
     const region = this.catalog.requireRegion(regionId);
     const map = this.make.tilemap({ key: region.mapKey });
-    const tileset = map.addTilesetImage("foundation", FOUNDATION_TEXTURE_KEY, 16, 16, 0, 0);
-    if (!tileset) throw new Error(`Tileset could not be created for region ${regionId}.`);
+    const tilesets = [
+      map.addTilesetImage("floor", MEDIA_KEYS.floorTilemap, 16, 16, 0, 0),
+      map.addTilesetImage("village", MEDIA_KEYS.village, 16, 16, 0, 0),
+      map.addTilesetImage("interior-floor", MEDIA_KEYS.interiorFloor, 16, 16, 0, 0),
+      map.addTilesetImage("wall", MEDIA_KEYS.wall, 16, 16, 0, 0),
+    ];
+    if (tilesets.some((tileset) => !tileset)) throw new Error(`Tilesets could not be created for region ${regionId}.`);
     const depths: Readonly<Record<string, number>> = {
       Ground: 0,
       GroundDetail: 2,
       Water: 4,
       Buildings: 8,
-      AbovePlayer: 30,
+      AbovePlayer: 10_000,
     };
     for (const layerName of ["Ground", "GroundDetail", "Water", "Buildings", "AbovePlayer"] as const) {
-      const layer = map.createLayer(layerName, tileset, 0, 0);
+      const layer = map.createLayer(layerName, tilesets.filter((tileset) => tileset !== null), 0, 0);
       if (!layer || !(layer instanceof Phaser.Tilemaps.TilemapLayer)) {
         throw new Error(`Tilemap layer ${layerName} did not use the reviewed standard renderer.`);
       }
       layer.setDepth(depths[layerName]!);
+      if (layerName === "Water") {
+        this.tweens.add({ targets: layer, alpha: { from: 0.88, to: 1 }, duration: 1100, yoyo: true, repeat: -1 });
+      }
       this.tileLayers.push(layer);
     }
     this.activeMap = map;
     this.activeRegionId = regionId;
-    playerView.container.setDepth(20);
     this.cameras.main.setBounds(0, 0, region.widthPixels, region.heightPixels);
     this.cameras.main.startFollow(playerView.container, true, 1, 1);
     if (this.transitionPhase === "fading-out") {
@@ -142,33 +177,72 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Creates one six-color runtime test tileset without adding image binaries to Git. */
-  private createFoundationTexture(): void {
-    if (this.textures.exists(FOUNDATION_TEXTURE_KEY)) return;
-    const texture = this.textures.createCanvas(FOUNDATION_TEXTURE_KEY, 96, 16);
-    if (!texture) throw new Error("Foundation test texture could not be created.");
-    const colors = ["#244c36", "#8e7a4e", "#315d68", "#76573c", "#9b7852", "#18251e"];
-    colors.forEach((color, index) => {
-      texture.context.fillStyle = color;
-      texture.context.fillRect(index * 16, 0, 16, 16);
-    });
+  /** Creates the reviewed player sprite and a code-drawn tool overlay used by ActionTimeline. */
+  private createPlayerView(): PlayerView {
+    const sprite = this.add.sprite(0, 0, MEDIA_KEYS.hero, PLAYER_FRAMES.idle.down)
+      .setScale(2)
+      .setOrigin(0.5, 0.72);
+    const handle = this.add.rectangle(0, 0, 3, 18, 0x7e512e, 1).setOrigin(0.5, 0.85);
+    const blade = this.add.rectangle(4, -7, 8, 6, 0xd9e3d4, 1).setOrigin(0.5);
+    const tool = this.add.container(10, -2, [handle, blade]).setVisible(false);
+    const view = { container: this.add.container(0, 0, [sprite, tool]), sprite, tool };
+    this.playerView = view;
+    return view;
+  }
+
+  /** Crops the source floor atlas's unused final pixel row into a warning-free runtime tilemap texture. */
+  private createTilemapFloorTexture(): void {
+    if (this.textures.exists(MEDIA_KEYS.floorTilemap)) return;
+    const source = this.textures.get(MEDIA_KEYS.floor).getSourceImage();
+    if (!(source instanceof HTMLImageElement) && !(source instanceof HTMLCanvasElement)) {
+      throw new Error("Source floor texture is not canvas-compatible.");
+    }
+    const texture = this.textures.createCanvas(MEDIA_KEYS.floorTilemap, 352, 416);
+    if (!texture) throw new Error("Tilemap floor texture could not be created.");
+    texture.context.drawImage(source, 0, 0, 352, 416, 0, 0, 352, 416);
     texture.refresh();
   }
 
-  /** Creates the temporary player marker and visible tool used by the shared action timeline. */
-  private createPlayerView(): PlayerView {
-    const body = this.add.circle(0, 0, 7, 0xd8f47b, 1).setStrokeStyle(2, 0x07100d, 1);
-    const label = this.add.text(0, -15, "YOU", {
-      color: "#edf8c9",
-      fontFamily: "monospace",
-      fontSize: "7px",
-    }).setOrigin(0.5);
-    const tool = this.add.rectangle(9, -2, 3, 16, 0xe8d19b, 1)
-      .setOrigin(0.5, 0.9)
-      .setVisible(false);
-    const view = { container: this.add.container(0, 0, [body, label, tool]).setDepth(20), tool };
-    this.playerView = view;
-    return view;
+  /** Registers reviewed atlas subframes used by formal tree, rock and farm entity views. */
+  private registerMediaFrames(): void {
+    const village = this.textures.get(MEDIA_KEYS.village);
+    for (const frame of Object.values(VILLAGE_FRAMES)) {
+      if (!village.has(frame.name)) village.add(frame.name, 0, frame.x, frame.y, frame.width, frame.height);
+    }
+    const floor = this.textures.get(MEDIA_KEYS.floor);
+    for (const frame of Object.values(FLOOR_FRAMES)) {
+      if (!floor.has(frame.name)) floor.add(frame.name, 0, frame.x, frame.y, frame.width, frame.height);
+    }
+  }
+
+  /** Creates four directional walk animations from the official source frame contract. */
+  private createPlayerAnimations(): void {
+    for (const facing of ["down", "up", "left", "right"] as const) {
+      const key = `hero-walk-${facing}`;
+      if (this.anims.exists(key)) continue;
+      this.anims.create({
+        key,
+        frames: PLAYER_FRAMES.walk[facing].map((frame) => ({ key: MEDIA_KEYS.hero, frame })),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+  }
+
+  /** Updates ephemeral facing and starts the matching directional walk cycle. */
+  private setMovementAnimation(xAxis: -1 | 0 | 1, yAxis: -1 | 0 | 1): void {
+    const player = this.playerView;
+    if (!player) return;
+    if (Math.abs(xAxis) >= Math.abs(yAxis) && xAxis !== 0) this.facing = xAxis < 0 ? "left" : "right";
+    else if (yAxis !== 0) this.facing = yAxis < 0 ? "up" : "down";
+    player.sprite.play(`hero-walk-${this.facing}`, true);
+  }
+
+  /** Stops walking and projects the official idle frame for the latest facing. */
+  private setIdleFrame(): void {
+    const player = this.playerView;
+    if (!player || this.actionTimeline.isBusy()) return;
+    player.sprite.stop().setFrame(PLAYER_FRAMES.idle[this.facing]);
   }
 
   /** Creates and projects all catalog resources in the active region through EntityFactory. */
@@ -222,8 +296,9 @@ export class WorldScene extends Phaser.Scene {
   /** Runs one tree windup/impact/recovery sequence and mutates gathering only on impact. */
   private playTreeAction(entity: TreeEntity): void {
     this.playToolAction(entity.spawn.x, 0xe8d19b, () => {
-      const feedback = dispatchLocalGameCommand({ type: "gather", targetId: entity.entityId });
-      if (feedback?.code === "success") entity.playImpact();
+      entity.playImpact(() => (
+        dispatchLocalGameCommand({ type: "gather", targetId: entity.entityId })?.code === "success"
+      ));
     });
   }
 
@@ -241,18 +316,25 @@ export class WorldScene extends Phaser.Scene {
     const playerView = this.playerView;
     if (!playerView) return;
     const direction = targetX >= playerView.container.x ? 1 : -1;
+    this.facing = direction > 0 ? "right" : "left";
     this.actionTimeline.play({
-      windupMs: 130,
-      impactMs: 110,
-      recoveryMs: 150,
+      windupMs: 220,
+      impactMs: 160,
+      recoveryMs: 220,
       onWindup: () => {
         this.tweens.killTweensOf(playerView.tool);
-        playerView.tool.setFillStyle(color, 1).setVisible(true).setAlpha(1);
+        playerView.sprite.stop().setFrame(PLAYER_FRAMES.attack[this.facing]);
+        playerView.tool.list.forEach((child, index) => {
+          if (child instanceof Phaser.GameObjects.Rectangle) {
+            child.setFillStyle(index === 0 ? 0x7e512e : color, 1);
+          }
+        });
+        playerView.tool.setVisible(true).setAlpha(1);
         playerView.tool.setPosition(direction * 9, -2).setRotation(direction > 0 ? -1.05 : 1.05);
         this.tweens.add({
           targets: playerView.tool,
           rotation: direction > 0 ? -0.45 : 0.45,
-          duration: 130,
+          duration: 220,
           ease: "Quad.Out",
         });
       },
@@ -260,15 +342,18 @@ export class WorldScene extends Phaser.Scene {
         this.tweens.add({
           targets: playerView.tool,
           rotation: direction > 0 ? 1.0 : -1.0,
-          duration: 90,
+          duration: 130,
           ease: "Quad.In",
         });
         onImpact();
       },
       onRecovery: () => {
-        this.tweens.add({ targets: playerView.tool, alpha: 0, duration: 120 });
+        this.tweens.add({ targets: playerView.tool, alpha: 0, duration: 180 });
       },
-      onComplete: () => playerView.tool.setVisible(false).setAlpha(1),
+      onComplete: () => {
+        playerView.tool.setVisible(false).setAlpha(1);
+        this.setIdleFrame();
+      },
     });
   }
 

@@ -46,6 +46,14 @@ button {
   padding: clamp(14px, 3vw, 28px);
 }
 
+.island-shell--game {
+  display: block;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  padding: 0;
+}
+
 .field-header,
 .field-footer {
   display: flex;
@@ -106,6 +114,13 @@ h1 {
   border: 1px solid var(--line);
   background: #0b1714;
   box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.26);
+}
+
+.world-frame--game {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  box-shadow: none;
 }
 
 .start-panel {
@@ -179,10 +194,44 @@ h1 {
   cursor: not-allowed;
 }
 
-.game-canvas,
+.game-canvas {
+  width: 100%;
+  height: 100%;
+}
+
 .game-canvas canvas {
-  width: 100% !important;
-  height: 100% !important;
+  display: block;
+  margin: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.game-hud {
+  position: absolute;
+  z-index: 3;
+  right: 50%;
+  bottom: 18px;
+  width: min(760px, calc(100vw - 28px));
+  transform: translateX(50%);
+  filter: drop-shadow(0 8px 14px rgba(22, 31, 20, 0.35));
+}
+
+.game-hud .hotbar-panel {
+  padding: 7px;
+  border: 1px solid rgba(233, 214, 166, 0.52);
+  background: rgba(43, 51, 35, 0.78);
+  backdrop-filter: blur(7px);
+}
+
+.game-hud .hotbar-slot {
+  border-color: rgba(233, 214, 166, 0.38);
+  background: rgba(29, 38, 26, 0.74);
+}
+
+.game-hud .craft-button {
+  border-color: #e4bd73;
+  color: #f1d18d;
+  background: rgba(78, 55, 31, 0.84);
 }
 
 .telemetry {
@@ -223,6 +272,13 @@ h1 {
   white-space: nowrap;
 }
 
+.world-frame--game .action-feedback {
+  bottom: 92px;
+  border-color: #f0d18c;
+  color: #fff0c8;
+  background: rgba(44, 51, 34, 0.88);
+}
+
 .action-feedback[data-tone="error"] {
   border-color: #ff715e;
   color: #ff9d8f;
@@ -242,6 +298,12 @@ h1 {
   color: #2b2118;
   background: #ead9ae;
   box-shadow: 0 8px 0 rgba(7, 16, 13, 0.38);
+}
+
+.world-frame--game .dialogue-panel {
+  bottom: 112px;
+  width: min(720px, calc(100vw - 28px));
+  margin: 0 auto;
 }
 
 .dialogue-panel__speaker {
@@ -486,6 +548,23 @@ h1 {
 
   .craft-button {
     min-height: 42px;
+  }
+
+  .island-shell--game {
+    padding: 0;
+  }
+
+  .game-hud {
+    bottom: 8px;
+    width: calc(100vw - 16px);
+  }
+
+  .game-hud .hotbar-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .world-frame--game .action-feedback {
+    bottom: 130px;
   }
 }
 

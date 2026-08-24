@@ -58,3 +58,12 @@ git diff --check
 - Commit B：World Entities + ActionTimeline + interiors/dialogue。
 - Commit C：统一素材与正式主视图。
 - 规格/任务合同在 A 前单独提交，避免实现提交混入决策漂移。
+
+## 2026-08-24 progress
+
+- Contract commit：`e8f0c8ff`。
+- Commit A：`38c9fbb6`，完成集中 TMJ decoder、四区域 catalog 基础、Collision、region transition、save v1→v2。
+- Commit B：`377fc569`，完成 EntityFactory、ActionTimeline、树木 impact 单次结算、cottage/seed-shop 和单店主 Dialogue 管线。
+- Commit C 已实现并暂存：统一 Ninja Adventure CC0、官方 4×7 角色 frame、正式 Tilemap GID、树/石/农田视觉、水面呼吸、全屏 GameView 与 `?debug=1`。
+- Chrome 已验证正式素材加载、默认/Debug 视图、第二棵树砍伐后木材 `3 -> 6`，当前控制台零 error/warn。
+- 仍按 PRD `Remaining manual acceptance` 保留长路径、窄屏/200% 和不同 subject 证据；不因用户要求继续而伪报完成。

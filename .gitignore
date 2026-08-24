@@ -6,6 +6,8 @@ apps/mirror-island/node_modules/
 apps/mirror-island/dist/
 apps/mirror-island/lib/
 apps/mirror-island/src/generated/prisma/
+apps/mirror-island/public/game-media/
+apps/mirror-island/src/tiled/*.png
 
 # Python / verification
 .pytest_cache/

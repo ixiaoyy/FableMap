@@ -7,6 +7,29 @@ const outputDirectory = join(root, "public", "map");
 const columns = 40;
 const rows = 30;
 const tileSize = 16;
+const FLOOR_FIRST_GID = 1;
+const VILLAGE_FIRST_GID = 1001;
+const INTERIOR_FIRST_GID = 2001;
+const WALL_FIRST_GID = 3001;
+const FLOOR_COLUMNS = 22;
+const VILLAGE_COLUMNS = 20;
+const INTERIOR_COLUMNS = 22;
+const WALL_COLUMNS = 10;
+
+/** Returns one global Tiled ID for a reviewed atlas grid coordinate. */
+function atlasGid(firstGid, atlasColumns, x, y) {
+  return firstGid + y * atlasColumns + x;
+}
+
+const TILE = {
+  grass: atlasGid(FLOOR_FIRST_GID, FLOOR_COLUMNS, 11, 12),
+  dirt: atlasGid(FLOOR_FIRST_GID, FLOOR_COLUMNS, 11, 14),
+  water: atlasGid(FLOOR_FIRST_GID, FLOOR_COLUMNS, 1, 22),
+  cottageFloor: atlasGid(INTERIOR_FIRST_GID, INTERIOR_COLUMNS, 11, 5),
+  shopFloor: atlasGid(INTERIOR_FIRST_GID, INTERIOR_COLUMNS, 12, 7),
+  interiorWall: atlasGid(WALL_FIRST_GID, WALL_COLUMNS, 2, 7),
+  collision: FLOOR_FIRST_GID,
+};
 
 /** Creates one zero-filled finite tile layer data array. */
 function emptyLayer() {
@@ -30,12 +53,12 @@ function fillRect(data, x, y, width, height, gid) {
 function createBorder(openingSide) {
   const data = emptyLayer();
   for (let x = 0; x < columns; x += 1) {
-    setTile(data, x, 0, 6);
-    if (!(openingSide === "south" && x >= 19 && x <= 20)) setTile(data, x, rows - 1, 6);
+    setTile(data, x, 0, TILE.collision);
+    if (!(openingSide === "south" && x >= 19 && x <= 20)) setTile(data, x, rows - 1, TILE.collision);
   }
   for (let y = 0; y < rows; y += 1) {
-    if (!(openingSide === "west" && y >= 13 && y <= 16)) setTile(data, 0, y, 6);
-    if (!(openingSide === "east" && y >= 13 && y <= 16)) setTile(data, columns - 1, y, 6);
+    if (!(openingSide === "west" && y >= 13 && y <= 16)) setTile(data, 0, y, TILE.collision);
+    if (!(openingSide === "east" && y >= 13 && y <= 16)) setTile(data, columns - 1, y, TILE.collision);
   }
   return data;
 }
@@ -65,9 +88,24 @@ function rectObject(id, name, type, x, y, width, height, properties) {
   return { id, name, type, x, y, width, height, rotation: 0, visible: true, properties };
 }
 
+/** Reconstructs one reviewed village atlas rectangle while placing its roof rows above the player. */
+function stampVillageBuilding(buildings, above, destinationX, destinationY, sourceX, sourceY, width, height, roofRows) {
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const target = y < roofRows ? above : buildings;
+      setTile(
+        target,
+        destinationX + x,
+        destinationY + y,
+        atlasGid(VILLAGE_FIRST_GID, VILLAGE_COLUMNS, sourceX + x, sourceY + y),
+      );
+    }
+  }
+}
+
 /** Builds one valid embedded-tileset TMJ document from reviewed layer/object data. */
-function createMap({ regionId, displayName, defaultSpawn, startRegion, openingSide, decorate }) {
-  const ground = Array.from({ length: columns * rows }, () => 1);
+function createMap({ regionId, displayName, defaultSpawn, startRegion, openingSide, groundGid = TILE.grass, decorate }) {
+  const ground = Array.from({ length: columns * rows }, () => groundGid);
   const detail = emptyLayer();
   const water = emptyLayer();
   const buildings = emptyLayer();
@@ -93,19 +131,60 @@ function createMap({ regionId, displayName, defaultSpawn, startRegion, openingSi
       property("defaultSpawn", defaultSpawn),
       property("startRegion", startRegion, "bool"),
     ],
-    tilesets: [{
-      firstgid: 1,
-      name: "foundation",
-      tilewidth: tileSize,
-      tileheight: tileSize,
-      tilecount: 6,
-      columns: 6,
-      margin: 0,
-      spacing: 0,
-      image: "foundation.png",
-      imagewidth: tileSize * 6,
-      imageheight: tileSize,
-    }],
+    tilesets: [
+      {
+        firstgid: FLOOR_FIRST_GID,
+        name: "floor",
+        tilewidth: tileSize,
+        tileheight: tileSize,
+        tilecount: 22 * 26,
+        columns: 22,
+        margin: 0,
+        spacing: 0,
+        image: "../../src/tiled/floor.png",
+        imagewidth: 352,
+        imageheight: 416,
+      },
+      {
+        firstgid: VILLAGE_FIRST_GID,
+        name: "village",
+        tilewidth: tileSize,
+        tileheight: tileSize,
+        tilecount: 20 * 12,
+        columns: 20,
+        margin: 0,
+        spacing: 0,
+        image: "../../src/tiled/village.png",
+        imagewidth: 320,
+        imageheight: 192,
+      },
+      {
+        firstgid: INTERIOR_FIRST_GID,
+        name: "interior-floor",
+        tilewidth: tileSize,
+        tileheight: tileSize,
+        tilecount: 22 * 17,
+        columns: 22,
+        margin: 0,
+        spacing: 0,
+        image: "../../src/tiled/interior-floor.png",
+        imagewidth: 352,
+        imageheight: 272,
+      },
+      {
+        firstgid: WALL_FIRST_GID,
+        name: "wall",
+        tilewidth: tileSize,
+        tileheight: tileSize,
+        tilecount: 10 * 11,
+        columns: 10,
+        margin: 0,
+        spacing: 0,
+        image: "../../src/tiled/wall.png",
+        imagewidth: 160,
+        imageheight: 176,
+      },
+    ],
     layers: [
       tileLayer(1, "Ground", ground),
       tileLayer(2, "GroundDetail", detail),
@@ -130,12 +209,17 @@ const farm = createMap({
   openingSide: "east",
   /** Lays out the temporary farm landmarks and property-owned world objects. */
   decorate({ detail, water, buildings, above, collision }) {
-    fillRect(water, 7, 20, 6, 5, 3);
-    fillRect(collision, 7, 20, 6, 5, 6);
-    fillRect(buildings, 7, 4, 8, 6, 4);
-    fillRect(above, 7, 4, 8, 2, 5);
-    fillRect(collision, 7, 4, 8, 6, 6);
-    for (let x = 16; x < 40; x += 1) setTile(detail, x, 14, 2);
+    fillRect(water, 8, 20, 4, 1, TILE.water);
+    fillRect(water, 7, 21, 6, 1, TILE.water);
+    fillRect(water, 6, 22, 8, 3, TILE.water);
+    fillRect(water, 7, 25, 6, 1, TILE.water);
+    fillRect(collision, 8, 20, 4, 1, TILE.collision);
+    fillRect(collision, 7, 21, 6, 1, TILE.collision);
+    fillRect(collision, 6, 22, 8, 3, TILE.collision);
+    fillRect(collision, 7, 25, 6, 1, TILE.collision);
+    stampVillageBuilding(buildings, above, 8, 4, 12, 6, 4, 5, 3);
+    fillRect(collision, 8, 4, 4, 4, TILE.collision);
+    for (let x = 16; x < 40; x += 1) setTile(detail, x, 14, TILE.dirt);
     return {
       spawns: [
         pointObject(1, "Home Yard", "spawn", 16 * tileSize, 12 * tileSize, [property("spawnId", "home-yard")]),
@@ -155,21 +239,27 @@ const farm = createMap({
         ]),
       ],
       interactions: [
-        rectObject(4, "Farm Plot", "interaction", 12 * tileSize, 15 * tileSize, tileSize, tileSize, [
-          property("entityId", "farm-plot-001"),
-          property("interactionKind", "farm-plot"),
-        ]),
+        ...Array.from({ length: 8 }, (_, index) => {
+          const x = 12 + index % 4;
+          const y = 15 + Math.floor(index / 4);
+          return rectObject(30 + index, `Farm Plot ${index + 1}`, "interaction", x * tileSize, y * tileSize, tileSize, tileSize, [
+            property("entityId", `farm-plot-${String(index + 1).padStart(3, "0")}`),
+            property("interactionKind", "farm-plot"),
+          ]);
+        }),
         rectObject(9, "Cottage Door", "interaction", 10 * tileSize, 10 * tileSize, 2 * tileSize, tileSize, [
           property("entityId", "farm-cottage-door"),
           property("interactionKind", "door"),
         ]),
       ],
       resources: [
-        pointObject(5, "Tree", "resource", 20 * tileSize, 14 * tileSize, [
-          property("entityId", "farm-tree-001"),
+        ...[
+          [20, 14], [4, 7], [4, 13], [34, 6], [35, 12], [4, 23], [34, 24], [22, 26],
+        ].map(([x, y], index) => pointObject(50 + index, `Tree ${index + 1}`, "resource", x * tileSize, y * tileSize, [
+          property("entityId", `farm-tree-${String(index + 1).padStart(3, "0")}`),
           property("resourceKind", "tree"),
-        ]),
-        pointObject(6, "Rock", "resource", 10 * tileSize, 25 * tileSize, [
+        ])),
+        pointObject(6, "Rock", "resource", 15 * tileSize, 24 * tileSize, [
           property("entityId", "farm-rock-001"),
           property("resourceKind", "stone"),
         ]),
@@ -187,13 +277,11 @@ const town = createMap({
   openingSide: "west",
   /** Lays out the temporary town main street and property-owned world objects. */
   decorate({ detail, buildings, above, collision }) {
-    fillRect(detail, 0, 14, 40, 3, 2);
-    fillRect(buildings, 8, 4, 9, 7, 4);
-    fillRect(above, 8, 4, 9, 2, 5);
-    fillRect(collision, 8, 4, 9, 7, 6);
-    fillRect(buildings, 23, 5, 8, 6, 4);
-    fillRect(above, 23, 5, 8, 2, 5);
-    fillRect(collision, 23, 5, 8, 6, 6);
+    fillRect(detail, 0, 14, 40, 3, TILE.dirt);
+    stampVillageBuilding(buildings, above, 11, 4, 14, 0, 3, 6, 3);
+    fillRect(collision, 11, 4, 3, 5, TILE.collision);
+    stampVillageBuilding(buildings, above, 24, 5, 17, 6, 3, 6, 3);
+    fillRect(collision, 24, 5, 3, 5, TILE.collision);
     return {
       spawns: [
         pointObject(20, "West Gate", "spawn", 2 * tileSize, 14 * tileSize, [property("spawnId", "west-gate")]),
@@ -227,9 +315,10 @@ const cottage = createMap({
   defaultSpawn: "entry",
   startRegion: false,
   openingSide: "south",
+  groundGid: TILE.cottageFloor,
   /** Lays out the temporary cottage interior and its return doorway. */
   decorate({ buildings, collision }) {
-    collision.forEach((gid, index) => { if (gid !== 0) buildings[index] = 4; });
+    collision.forEach((gid, index) => { if (gid !== 0) buildings[index] = TILE.interiorWall; });
     return {
       spawns: [pointObject(40, "Entry", "spawn", 20 * tileSize, 26 * tileSize, [property("spawnId", "entry")])],
       exits: [rectObject(41, "To Farm", "exit", 19 * tileSize, 29 * tileSize, 2 * tileSize, tileSize, [
@@ -250,10 +339,11 @@ const seedShop = createMap({
   defaultSpawn: "entry",
   startRegion: false,
   openingSide: "south",
+  groundGid: TILE.shopFloor,
   /** Lays out the temporary seed-shop interior, owner stand and return doorway. */
   decorate({ detail, buildings, collision }) {
-    collision.forEach((gid, index) => { if (gid !== 0) buildings[index] = 4; });
-    fillRect(detail, 14, 10, 12, 2, 2);
+    collision.forEach((gid, index) => { if (gid !== 0) buildings[index] = TILE.interiorWall; });
+    fillRect(detail, 14, 10, 12, 2, TILE.cottageFloor);
     return {
       spawns: [pointObject(50, "Entry", "spawn", 20 * tileSize, 26 * tileSize, [property("spawnId", "entry")])],
       exits: [rectObject(51, "To Town", "exit", 19 * tileSize, 29 * tileSize, 2 * tileSize, tileSize, [

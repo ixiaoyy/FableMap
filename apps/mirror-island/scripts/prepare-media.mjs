@@ -9,23 +9,56 @@ const assets = [
   {
     name: "male player",
     url: `${mediaBaseUrl}/player.png`,
-    output: "public/spritesheets/hero.png",
+    outputs: ["public/game-media/v1/assets/vendor/ninja-adventure/2024-04-19/player.png"],
     bytes: 6139,
     sha256: "f2dd61a264c251b81e63da7a28ab0fdccd261b807e5fa7d1832a468e14a21078",
   },
   {
     name: "female player",
     url: `${mediaBaseUrl}/player-female.png`,
-    output: "public/spritesheets/female.png",
+    outputs: ["public/game-media/v1/assets/vendor/ninja-adventure/2024-04-19/player-female.png"],
     bytes: 4784,
     sha256: "552e1af74a8d565408519ced8c5bb309d291a9d3002e4e37c881d2181f413e96",
   },
   {
     name: "floor tileset",
     url: `${mediaBaseUrl}/floor.png`,
-    output: "src/tiled/floor.png",
+    outputs: [
+      "public/game-media/v1/assets/vendor/ninja-adventure/2024-04-19/floor.png",
+      "src/tiled/floor.png",
+    ],
     bytes: 29615,
     sha256: "e111065065edf806e7e893330086e68efc8755175d92f14d087b42d40a331e16",
+  },
+  {
+    name: "village tileset",
+    url: `${mediaBaseUrl}/village.png`,
+    outputs: [
+      "public/game-media/v1/assets/vendor/ninja-adventure/2024-04-19/village.png",
+      "src/tiled/village.png",
+    ],
+    bytes: 31779,
+    sha256: "6787c6e22a4d44ceee4f158309b2519707bdb70c59aca00b3d49006cadcca06e",
+  },
+  {
+    name: "interior floor tileset",
+    url: `${mediaBaseUrl}/interior-floor.png`,
+    outputs: [
+      "public/game-media/v1/assets/vendor/ninja-adventure/2024-04-19/interior-floor.png",
+      "src/tiled/interior-floor.png",
+    ],
+    bytes: 13012,
+    sha256: "e281598e2d90f43b31fd557b94c2d2abb00d307758a053b7df301575bf535e3a",
+  },
+  {
+    name: "interior wall tileset",
+    url: `${mediaBaseUrl}/wall.png`,
+    outputs: [
+      "public/game-media/v1/assets/vendor/ninja-adventure/2024-04-19/wall.png",
+      "src/tiled/wall.png",
+    ],
+    bytes: 5149,
+    sha256: "ad5eb80ab4d5e65dbcda9dc012f9981323b277717349cdab012fc65ce06e43b2",
   },
 ];
 
@@ -50,9 +83,11 @@ async function downloadVerifiedAsset(asset) {
     throw new Error(`${asset.name} SHA-256 mismatch: expected ${asset.sha256}, received ${digest}.`);
   }
 
-  const outputPath = join(root, asset.output);
-  await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, buffer);
+  await Promise.all(asset.outputs.map(async (output) => {
+    const outputPath = join(root, output);
+    await mkdir(dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, buffer);
+  }));
 }
 
 await Promise.all(assets.map(downloadVerifiedAsset));
