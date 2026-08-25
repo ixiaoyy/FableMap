@@ -6,7 +6,7 @@
 - 日期：2026-08-24
 - 视觉状态：Gate C 样板通过，停止继续增加装饰。
 - 游玩状态：2026-08-25 真实生产浏览器人工验收通过。
-- 许可状态：用户已批准按“游戏内嵌使用”解释发布最小派生 atlas；作者书面确认仍 pending。
+- 许可状态：用户已批准 Web runtime 直接使用 6 张官方 Original/16×16 PNG；作者书面确认仍 pending。
 
 > 这是一张视觉样板场景，用于确认正式美术方向；不代表整个 World Foundation 已全部完工。
 
@@ -31,7 +31,7 @@
 
 Checkpoint TMJ 是文本布局合同，不包含 VectoRaith PNG。它只在合法取得官方 v1.08 ZIP 并放回文档声明的 ignored artifact 路径后可本地渲染。
 
-正式 compact Farm TMJ 为 `apps/mirror-island/public/map/farm.tmj`，SHA-256 `991dda56b447416b151c2b0d43981cfecaaed4d0ed1f7a1793c174d69f55a207`；它与 checkpoint Tilemap 像素一致，只把 GID 重映射到实际使用 tile 的最小生产图集。
+正式 Farm TMJ 为 `apps/mirror-island/public/map/farm.tmj`，SHA-256 `80ffb11b904d238dbb12aa83f37dd9e51cc2a8fd1edd232d1bfed7890bc86e8a`；它直接使用官方完整 16-column tileset metadata 与原始 GID，Tile/Object/Collision 像素合同与 checkpoint 一致。
 
 ## Local visual evidence
 
@@ -52,14 +52,14 @@ Checkpoint TMJ 是文本布局合同，不包含 VectoRaith PNG。它只在合�
 - `apps/mirror-island/client/src/game/scenes/WorldScene.ts`
 - `apps/mirror-island/client/src/game/world/world-catalog.ts`
 
-Farm 在开发与生产均使用 VectoRaith compact profile；GameSession、GameState、SaveRepository 和 IndexedDB 不保存 profile、texture key 或 frame。
+Farm 在开发与生产均直接使用 VectoRaith Original/16×16 full-sheet profile；GameSession、GameState、SaveRepository 和 IndexedDB 不保存 profile、texture key 或 frame。
 
 ## Source and license
 
 - 来源记录：[VectoRaith Farming Sim v1.08](../../assets/vectoraith-farming-sim-v1.08.md)
 - 官方 ZIP、完整原始图集与截图不进入 Git，也不上传 CDN。
-- 生产只发布 5 个项目专用最小 PNG：3 个 used-tile tileset、1 个 EntityFactory atlas 和 1 个完整使用的 farmer sheet；无素材下载入口。
-- 用户于 2026-08-25 明确批准按“Web 游戏内嵌使用”解释许可并接受作者回复前的残余风险；作者书面确认继续作为后续证据。
+- 生产只发布运行时直接引用的 6 张官方 PNG：terrain、buildings、details、orchard、crops 与 farmer；bytes 与归档原文件一致，无素材浏览/下载入口。
+- 用户于 2026-08-25 最新明确要求删除全部裁剪/重排产物，并批准完整官方 PNG 作为 Web 游戏运行时资源；作者书面确认继续作为后续证据。
 
 ## Remaining gates
 

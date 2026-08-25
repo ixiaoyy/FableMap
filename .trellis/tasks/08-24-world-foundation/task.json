@@ -18,7 +18,9 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "08-25-town-showcase-v1"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "Farm Showcase Checkpoint is frozen under docs/checkpoints/farm-showcase-v1 and adopted as production Farm v1. User approved embedded-use interpretation; five minimal VectoRaith derived PNGs are manifest/CDN assets while original ZIP/full sheets remain private. Preserve all 23 stable objects, GameSession, SaveRepository and IndexedDB; only real play findings justify small Farm fixes. Manual browser acceptance and author written permission evidence remain pending; no Town polish, Gate D, DB or new system.",

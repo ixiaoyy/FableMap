@@ -29,10 +29,10 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 ## VectoRaith Farming Sim Farm v1
 
-- VectoRaith Farming Sim v1.08 已作为 Farm v1 正式美术底座；Town/室内仍是技术占位，不代表全世界迁移。
-- 官方页面允许免费/商业项目使用与修改，并禁止素材包式原样再分发。用户已批准把 Web runtime 下载最小派生 atlas 视为游戏内嵌使用；作者书面确认继续 pending。
-- 原始 ZIP、完整图集和截图只位于 Git ignored 本地目录。正式 CDN 只保存 5 个实际运行所需的最小派生 PNG，不提供原包、完整 sheet 或素材下载入口。
-- 每个派生图集记录官方来源、原归档 SHA-256、选取/重排方式、最终尺寸/bytes/SHA-256；使用 Original/16×16，不放大后再当底层 tileset。
+- VectoRaith Farming Sim v1.08 已作为 Farm v1 正式美术底座，并进入 Town 视觉主街本地候选；室内仍是技术占位。
+- 官方页面允许免费/商业项目使用与修改，并禁止素材包式原样再分发。用户于 2026-08-25 最新明确要求 Web runtime 直接使用完整官方 PNG，并批准浏览器公开下载这些完整 sheet；作者书面确认继续 pending。
+- 原始 ZIP、截图和未采用目录只位于 Git ignored 本地目录。正式 CDN 只保存 6 张被运行时直接引用的官方 Original/16×16 PNG，不上传 ZIP 或创建素材浏览/下载入口。
+- CDN 对象必须与官方归档内文件 bytes/SHA-256 完全一致，`transformation` 记录为 none；禁止收集 used tiles、重排 atlas、合并 entity sheet、重编码或放大。
 
 采用记录见 `docs/assets/vectoraith-farming-sim-v1.08.md`。
 

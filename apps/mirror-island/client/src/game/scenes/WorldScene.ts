@@ -94,7 +94,8 @@ export class WorldScene extends Phaser.Scene {
     this.load.image(VECTORAITH_MEDIA_KEYS.terrain, VECTORAITH_MEDIA_URLS.terrain);
     this.load.image(VECTORAITH_MEDIA_KEYS.buildings, VECTORAITH_MEDIA_URLS.buildings);
     this.load.image(VECTORAITH_MEDIA_KEYS.details, VECTORAITH_MEDIA_URLS.details);
-    this.load.image(VECTORAITH_MEDIA_KEYS.entities, VECTORAITH_MEDIA_URLS.entities);
+    this.load.image(VECTORAITH_MEDIA_KEYS.orchard, VECTORAITH_MEDIA_URLS.orchard);
+    this.load.image(VECTORAITH_MEDIA_KEYS.crops, VECTORAITH_MEDIA_URLS.crops);
     this.load.spritesheet(VECTORAITH_MEDIA_KEYS.farmer, VECTORAITH_MEDIA_URLS.farmer, {
       frameWidth: 16,
       frameHeight: 32,

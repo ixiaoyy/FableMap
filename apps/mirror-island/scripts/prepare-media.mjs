@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const vendorBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/vendor";
 const ninjaBaseUrl = `${vendorBaseUrl}/ninja-adventure/2024-04-19`;
-const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08`;
+const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08/original/16x16`;
 const assets = [
   {
     name: "male player",
@@ -63,48 +63,55 @@ const assets = [
     sha256: "ad5eb80ab4d5e65dbcda9dc012f9981323b277717349cdab012fc65ce06e43b2",
   },
   {
-    name: "VectoRaith Farm terrain",
-    url: `${vectoraithBaseUrl}/farm-terrain.png`,
+    name: "VectoRaith original terrain",
+    url: `${vectoraithBaseUrl}/tilesets-compact/vectoraith_tileset_farmingsims_terrain_spring_expanded.png`,
     outputs: [
-      "public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png",
-      "src/tiled/farm-terrain.png",
+      "public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_terrain_spring_expanded.png",
+      "src/tiled/vectoraith_tileset_farmingsims_terrain_spring_expanded.png",
     ],
-    bytes: 3469,
-    sha256: "7eb50c6588605efeb54e3d5f6aefa6dfa105b827f95aaad8322d9d8bfadab5d6",
+    bytes: 21694,
+    sha256: "e86e6c9b5f003b0e74a7cbac261cd89df2bd56a0df6af90c6cd08e046a9dbffa",
   },
   {
-    name: "VectoRaith Farm buildings",
-    url: `${vectoraithBaseUrl}/farm-buildings.png`,
+    name: "VectoRaith original buildings",
+    url: `${vectoraithBaseUrl}/tilesets-compact/vectoraith_tileset_farmingsims_buildings.png`,
     outputs: [
-      "public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png",
-      "src/tiled/farm-buildings.png",
+      "public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_buildings.png",
+      "src/tiled/vectoraith_tileset_farmingsims_buildings.png",
     ],
-    bytes: 3063,
-    sha256: "3f3c121917067bbe5056574f6ccf800308a2d98b486d7e299b4d543aa46ff357",
+    bytes: 16502,
+    sha256: "cf4670e091ab1a4e6b84b7f88c96de7304f33730c54fc9f6956f1051bf07b69a",
   },
   {
-    name: "VectoRaith Farm details",
-    url: `${vectoraithBaseUrl}/farm-details.png`,
+    name: "VectoRaith original details",
+    url: `${vectoraithBaseUrl}/tilesets-compact/vectoraith_tileset_farmingsims_details.png`,
     outputs: [
-      "public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png",
-      "src/tiled/farm-details.png",
+      "public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_details.png",
+      "src/tiled/vectoraith_tileset_farmingsims_details.png",
     ],
-    bytes: 5322,
-    sha256: "40f48f1e5469156988af5e46363f62af44b9b3ec394b54141b1153be4f4fd5bd",
+    bytes: 27372,
+    sha256: "d0e32b626904506b027ce9cb7eb4fb1ac5a70fe74572bdea75983cd06c728c9e",
   },
   {
-    name: "VectoRaith Farm entities",
-    url: `${vectoraithBaseUrl}/farm-entities.png`,
-    outputs: ["public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png"],
-    bytes: 2867,
-    sha256: "0a0d2a6ca099ebcbc898bae482b6407cd22fbead3265d624f162a213de018833",
+    name: "VectoRaith original orchard",
+    url: `${vectoraithBaseUrl}/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png`,
+    outputs: ["public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png"],
+    bytes: 11487,
+    sha256: "5488f4107c9bb136e057be2f1b95a6b3688d80026f295b940bd057e3396788fb",
   },
   {
-    name: "VectoRaith farmer",
-    url: `${vectoraithBaseUrl}/farmer.png`,
-    outputs: ["public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farmer.png"],
-    bytes: 2950,
-    sha256: "864bd89bb8386f5a79324dca6b9eecd4289f2e30d966e5a501d4b2ae44f3113a",
+    name: "VectoRaith original crops",
+    url: `${vectoraithBaseUrl}/tilesets-compact/vectoraith_tileset_farmingsims_crops.png`,
+    outputs: ["public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png"],
+    bytes: 13655,
+    sha256: "ac174d7c0a45afb6525f1210f06fad86d6fce1112f5ced5d5f472590fe6d3d61",
+  },
+  {
+    name: "VectoRaith original farmer",
+    url: `${vectoraithBaseUrl}/sprites/$farmer.png`,
+    outputs: ["public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/sprites/$farmer.png"],
+    bytes: 3059,
+    sha256: "85fe4b7350f2ccf9a6225c2bec6fe1bc9f5dfa00909605cc4ec3962d1c006f08",
   },
 ];
 

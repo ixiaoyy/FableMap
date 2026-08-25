@@ -1,0 +1,32 @@
+{
+  "id": "town-showcase-v1",
+  "name": "town-showcase-v1",
+  "title": "Town Showcase v1 视觉主街",
+  "description": "先恢复 VectoRaith 官方完整 16×16 原图运行时并清退裁剪链，再保持 Farm↔Town、Seed Shop、stable ID 与玩法合同完成 Town 视觉主街 Gate A。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": "apps/mirror-island,deploy/cdn,docs/checkpoints/town-showcase-v1",
+  "package": null,
+  "priority": "P1",
+  "creator": "fable",
+  "assignee": "fable",
+  "createdAt": "2026-08-25",
+  "completedAt": null,
+  "branch": "codex/town-showcase-v1",
+  "base_branch": "codex/town-showcase-v1",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-24-world-foundation",
+  "relatedFiles": [
+    "apps/mirror-island/public/map/farm.tmj",
+    "apps/mirror-island/public/map/town.tmj",
+    "apps/mirror-island/client/src/game/assets/visual-profile.ts",
+    "deploy/cdn/game-media-manifest.json",
+    ".github/workflows/publish-media.yml"
+  ],
+  "notes": "Gate 0 removes all packed/cropped VectoRaith runtime outputs only after originals are live. Gate A is visual composition only; no NPC or new systems.",
+  "meta": {}
+}

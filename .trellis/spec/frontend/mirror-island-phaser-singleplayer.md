@@ -187,11 +187,11 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - Farm 固定扩为 64×48；核心构图集中在出生镜头附近，依次建立小屋、水塘/农田和东向道路三个视觉焦点。Gate A 只审大块构图，用户确认前禁止提前堆细节或新玩法实体。
 - Gate A v2 与 VectoRaith 方向验证已通过；Gate B 冻结 23 个 stable object，只允许在 ignored 候选 TMJ 完成岸线、院落/石板、弯曲道路、农田边界、小桥、林缘、Collision 与 AbovePlayer。截图确认前不得进入 Gate C、装饰或新系统。
 
-## Local art prototype profile
+## Direct Original/16×16 art profile
 
-**What**：正式 Farm 默认使用 VectoRaith compact map、tileset binding、玩家与实体 atlas；非 Farm 区域继续使用占位 profile。profile 选择仍只存在 client 表现层。
+**What**：正式 Farm 直接使用 VectoRaith 官方完整 terrain/buildings/details/orchard/crops/farmer PNG、原始 GID 和原始 frame 坐标；Town visual candidate 复用同一完整素材，其他区域继续使用占位 profile。profile 选择仍只存在 client 表现层。
 
-**Why**：用户已批准最小派生图集作为 Web 游戏内嵌 runtime 资源公开交付并接受作者书面回复前的残余风险；该许可决定仍不得渗入 domain 或存档。
+**Why**：用户明确否决 used-tile 裁剪、重排 atlas、合并 entities 和重编码 farmer，要求现成官方文件直接作为运行时资源；该发布决定仍不得渗入 domain 或存档。
 
 ```typescript
 // Correct: presentation shell resolves a local profile; domain receives only the decoded catalog.
@@ -202,11 +202,77 @@ const factory = new EntityFactory(scene, entityMediaForRegion(regionId));
 gameState.player.tileset = "vectoraith";
 ```
 
-- Production source root：同源 `/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/`；只含 5 个 manifest 登记的最小派生 PNG。
+- Production source root：同源 `/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/`；只含 6 个 manifest 登记并保持官方 bytes 的完整 PNG。
 - Runtime source tiles remain original 16×16; Phaser uses `pixelArt`、`roundPixels` 与 2× integer camera zoom，不采用 32/48px upscaled tileset。
+- 禁止为发布再次 pack used tiles、重排 GID、裁切/合并 entity frames 或重编码 PNG；Tiled 直接使用原始 16-column metadata，EntityFactory 直接注册原 sheet frame。
 - Missing local file or decoder failure → visible media/startup error；不得静默回退未知素材。
 - Required checks：candidate decoder + 23 stable object equality + route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
 - Checkpoint 后只有真实游玩发现的明确碰撞、树脚、路径或院落操作问题允许修改 Farm v1；不以偏好性微调重开 Gate A/B/C。
+
+### 1. Scope / Trigger
+
+- Trigger：用户要求删除全部 VectoRaith used-tile packing/cropping，并让 Farm/Town 直接使用官方 Original/16×16 完整 PNG。
+
+### 2. Signatures
+
+```typescript
+const VECTORAITH_MEDIA_KEYS = {
+  terrain: "vectoraith-terrain",
+  buildings: "vectoraith-buildings",
+  details: "vectoraith-details",
+  orchard: "vectoraith-orchard",
+  crops: "vectoraith-crops",
+  farmer: "vectoraith-farmer",
+} as const;
+
+interface TilesetBinding {
+  readonly tiledName: "vectoraith-terrain" | "vectoraith-buildings" | "vectoraith-details";
+  readonly textureKey: string;
+}
+```
+
+### 3. Contracts
+
+- CDN key 保留官方文件名，位于 `farming-sim-v1.08/original/16x16/`；manifest 的 bytes/SHA-256 必须等于归档原文件。
+- Farm/Town TMJ 使用原始 16-column metadata；Farm firstgid 固定 terrain=1、buildings=257、details=513。
+- EntityFactory frame 直接指向 orchard/details/crops/terrain 原 sheet 坐标，不创建合并 atlas。
+- Git 不跟踪图片；`prepare-media` 只从 CDN 验证下载 exact originals 到 ignored runtime/Tiled 路径。
+- 原图全部部署并验证后，精确删除 5 个旧 packed CDN keys；禁止递归删除 VectoRaith prefix。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 原图 bytes/hash 与 manifest 不同 | prepare/build/deploy 失败，不回退到 packed key |
+| Farm layer/GID 与 original candidate 不同 | 不部署，不删除旧派生 |
+| 任一 original CDN key 缺失 | 删除工作流拒绝执行 |
+| runtime bundle 仍含旧 packed key | 不删除旧对象 |
+| 图片出现在 Git diff | 质量门禁失败 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Tiled 从完整 sheet 选 tile，Phaser 直接加载同一官方 PNG，Farm 像素/Collision/objects 不变。
+- Base：Town candidate 在 ignored artifacts 使用完整 sheets，未确认前不进入正式 map。
+- Bad：为每张地图重新收集 used tiles、重排 GID、裁切 entity 或重编码 PNG。
+
+### 6. Tests Required
+
+- 6 个 CDN objects：dimensions、bytes、SHA-256、MIME、immutable cache。
+- formal Farm 与 full-original candidate：全部 tile/object layers 相同，59-tile route replay 通过。
+- Life Loop contracts、typecheck、client build、真实 Phaser Farm screenshot。
+- Git tracked image binaries=0，代码/manifest/文档无旧 packed key 引用。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: runtime depends on a project-repacked entity atlas.
+tree.textureKey = "vectoraith-entities";
+tree.frame = { x: 0, y: 0, width: 48, height: 48 };
+
+// Correct: runtime references the official orchard sheet directly.
+tree.textureKey = "vectoraith-orchard";
+tree.frame = { x: 5 * 16, y: 0, width: 3 * 16, height: 3 * 16 };
+```
 
 ## Scenario: Stardew Life Loop v3
 
@@ -314,7 +380,7 @@ farmTile.frameName = "vectoraith-crop-mature";
 - Phaser/Vue 和既有固定开源来源继续锁版本；规则迁移以当前 checkpoint 源码为依据，不建立复制分叉。
 - 已评审 `idb@8.0.3`，许可证 ISC 不在默认 allowlist，且当前接口窄，因此采用受控原生 IndexedDB 薄层并记录拒绝原因。
 - 图片仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 图片二进制为零。
-- VectoRaith v1.08 采用自定义项目使用许可。用户已批准把最小派生 atlas 的 Web runtime delivery 视为游戏内嵌使用并接受作者回复前的残余风险；禁止原 ZIP、完整 sheet、素材下载入口或素材包式再分发。作者回复若附加条件则 forward-fix。
+- VectoRaith v1.08 采用自定义项目使用许可。用户已批准 Web runtime 直接下载 6 张官方完整 sheet 并接受作者回复前的残余风险；禁止原 ZIP、未采用目录、素材浏览/下载入口或素材包式产品。作者回复若附加条件则 forward-fix。
 
 ## Verification
 

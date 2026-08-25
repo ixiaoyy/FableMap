@@ -17,27 +17,28 @@
 - 只替换 Farm 出生镜头可见的草地、水面/岸线、道路、小屋、农田和树木/林缘。
 - Gate B 在同一候选内增加院落石板、弯曲 Town 道路、农田后 fence、小桥、Collision 与 AbovePlayer；不增加新素材来源或 gameplay state。
 - Gate C 继续只用同一 Original/16x16 包，增加稀疏生活 Props、水生植物/岸石/波纹、作物 frame、桥头景观与一棵静态粉色地标树。
-- Town、Cottage、Seed Shop、NPC、玩法规则、GameSession、SaveRepository 与存档 schema 均不变。
-- 原包、完整 PNG 和截图保存在 Git ignored `artifacts/vectoraith-farming-sim-v1.08-1957927a/`，不进入 Git 或 CDN。
+- Town 进入同素材体系的视觉主街 Gate A；Cottage、Seed Shop、NPC、玩法规则、GameSession、SaveRepository 与存档 schema 均不变。
+- 原 ZIP、截图和未采用目录保存在 Git ignored `artifacts/vectoraith-farming-sim-v1.08-1957927a/`，不进入 Git；6 张被运行时直接引用的官方 PNG 按原始 bytes 上传 CDN。
 
-## Production derivatives
+## Direct production originals
 
-只发布实际运行需要的最小派生 PNG：
+运行时直接加载官方归档内的完整 Original/16×16 PNG，不裁剪、不重排、不合图、不重编码：
 
 | Object key | 尺寸 | Bytes | SHA-256 | 处理 |
 |---|---:|---:|---|---|
-| `assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png` | 128×64 | 3,469 | `7eb50c6588605efeb54e3d5f6aefa6dfa105b827f95aaad8322d9d8bfadab5d6` | 只重排 Gate C 实际使用的 spring terrain tiles |
-| `assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png` | 128×80 | 3,063 | `3f3c121917067bbe5056574f6ccf800308a2d98b486d7e299b4d543aa46ff357` | 只重排实际使用的建筑/Props tiles |
-| `assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png` | 128×80 | 5,322 | `40f48f1e5469156988af5e46363f62af44b9b3ec394b54141b1153be4f4fd5bd` | 只重排实际使用的 fence/bridge/tree/water-detail tiles |
-| `assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png` | 64×96 | 2,867 | `0a0d2a6ca099ebcbc898bae482b6407cd22fbead3265d624f162a213de018833` | 只合并 tree/stump/rock/growing/mature frames |
-| `assets/vendor/vectoraith/farming-sim-v1.08/farmer.png` | 48×128 | 2,950 | `864bd89bb8386f5a79324dca6b9eecd4289f2e30d966e5a501d4b2ae44f3113a` | 完整使用的 farmer sheet，重编码但不缩放 |
+| `.../original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_terrain_spring_expanded.png` | 256×256 | 21,694 | `e86e6c9b5f003b0e74a7cbac261cd89df2bd56a0df6af90c6cd08e046a9dbffa` | none |
+| `.../original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_buildings.png` | 256×256 | 16,502 | `cf4670e091ab1a4e6b84b7f88c96de7304f33730c54fc9f6956f1051bf07b69a` | none |
+| `.../original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_details.png` | 256×256 | 27,372 | `d0e32b626904506b027ce9cb7eb4fb1ac5a70fe74572bdea75983cd06c728c9e` | none |
+| `.../original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png` | 256×256 | 11,487 | `5488f4107c9bb136e057be2f1b95a6b3688d80026f295b940bd057e3396788fb` | none |
+| `.../original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png` | 256×256 | 13,655 | `ac174d7c0a45afb6525f1210f06fad86d6fce1112f5ced5d5f472590fe6d3d61` | none |
+| `.../original/16x16/sprites/$farmer.png` | 48×128 | 3,059 | `85fe4b7350f2ccf9a6225c2bec6fe1bc9f5dfa00909605cc4ec3962d1c006f08` | none |
 
-生产 TMJ 把 GID 重映射到上述 compact tilesets；Tiled 1.12.2 渲染与批准 checkpoint 像素一致。所有源 tile 保持 Original/16×16，由 Phaser NEAREST 与整数 camera zoom 放大。
+生产 TMJ 保留官方 16-column metadata 与原始 GID；Tiled 1.12.2 渲染与批准 checkpoint 像素一致。Phaser 直接注册原 sheet frame，并使用 NEAREST 与整数 camera zoom 放大。
 
 ## License decision
 
 官方页面允许在免费与商业项目中使用并修改素材，同时禁止原样再分发、转售或再许可素材文件及衍生文件，并禁止 NFT 与 AI learning。ZIP 内没有独立 LICENSE/README。
 
-项目把仅供游戏运行的最小派生 atlas 视为许可所允许的项目内使用，而不是素材包式再分发。用户于 2026-08-25 明确批准该解释并接受作者书面回复前的残余风险。
+用户于 2026-08-25 最新明确要求删除全部裁剪/重排/合图/重编码产物，并批准 6 张官方完整 PNG 作为浏览器运行时资源直接公开下载，同时接受作者书面回复前的残余风险。
 
-边界固定为：不上传原 ZIP/完整 sheets，不提供素材目录或下载入口，不转售/再许可，不主张所有权；作者回复若要求署名、额外包装或扩展许可，则使用 forward-fix 更新。
+边界固定为：不上传原 ZIP、截图或未采用目录，不提供素材目录/浏览入口，不转售/再许可，不主张所有权；作者回复若要求署名、额外包装或扩展许可，则使用 forward-fix 更新。

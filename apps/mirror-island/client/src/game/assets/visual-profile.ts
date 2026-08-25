@@ -4,7 +4,7 @@ import {
   VILLAGE_FRAMES,
 } from "./media-catalog.ts";
 
-const VECTORAITH_MEDIA_BASE = "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08";
+const VECTORAITH_MEDIA_BASE = "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16";
 
 export interface AtlasFrameDefinition {
   readonly name: string;
@@ -53,16 +53,18 @@ export const VECTORAITH_MEDIA_KEYS = {
   terrain: "vectoraith-terrain",
   buildings: "vectoraith-buildings",
   details: "vectoraith-details",
-  entities: "vectoraith-entities",
+  orchard: "vectoraith-orchard",
+  crops: "vectoraith-crops",
   farmer: "vectoraith-farmer",
 } as const;
 
 export const VECTORAITH_MEDIA_URLS = {
-  terrain: `${VECTORAITH_MEDIA_BASE}/farm-terrain.png?v=7eb50c65`,
-  buildings: `${VECTORAITH_MEDIA_BASE}/farm-buildings.png?v=3f3c1219`,
-  details: `${VECTORAITH_MEDIA_BASE}/farm-details.png?v=40f48f1e`,
-  entities: `${VECTORAITH_MEDIA_BASE}/farm-entities.png?v=0a0d2a6c`,
-  farmer: `${VECTORAITH_MEDIA_BASE}/farmer.png?v=864bd89b`,
+  terrain: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_terrain_spring_expanded.png?v=e86e6c9b`,
+  buildings: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_buildings.png?v=cf4670e0`,
+  details: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_details.png?v=d0e32b62`,
+  orchard: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png?v=5488f410`,
+  crops: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c`,
+  farmer: `${VECTORAITH_MEDIA_BASE}/sprites/$farmer.png?v=85fe4b73`,
 } as const;
 
 const NINJA_ENTITY_MEDIA: EntityMediaProfile = {
@@ -79,23 +81,23 @@ const NINJA_ENTITY_MEDIA: EntityMediaProfile = {
 
 const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
   tree: {
-    textureKey: VECTORAITH_MEDIA_KEYS.entities,
-    frame: { name: "vectoraith-tree", x: 0, y: 0, width: 3 * 16, height: 3 * 16 },
-    stumpTextureKey: VECTORAITH_MEDIA_KEYS.entities,
-    stumpFrame: { name: "vectoraith-stump", x: 0, y: 3 * 16, width: 3 * 16, height: 16 },
+    textureKey: VECTORAITH_MEDIA_KEYS.orchard,
+    frame: { name: "vectoraith-tree", x: 5 * 16, y: 0, width: 3 * 16, height: 3 * 16 },
+    stumpTextureKey: VECTORAITH_MEDIA_KEYS.details,
+    stumpFrame: { name: "vectoraith-stump", x: 5 * 16, y: 5 * 16, width: 3 * 16, height: 16 },
   },
   rock: {
-    textureKey: VECTORAITH_MEDIA_KEYS.entities,
-    frame: { name: "vectoraith-rock", x: 0, y: 4 * 16, width: 3 * 16, height: 2 * 16 },
+    textureKey: VECTORAITH_MEDIA_KEYS.details,
+    frame: { name: "vectoraith-rock", x: 1 * 16, y: 4 * 16, width: 3 * 16, height: 2 * 16 },
   },
   farmSoil: {
     textureKey: VECTORAITH_MEDIA_KEYS.terrain,
-    frame: { name: "vectoraith-soil", x: 7 * 16, y: 0, width: 16, height: 16 },
+    frame: { name: "vectoraith-soil", x: 1 * 16, y: 3 * 16, width: 16, height: 16 },
   },
   farmCrop: {
-    textureKey: VECTORAITH_MEDIA_KEYS.entities,
-    growingFrame: { name: "vectoraith-crop-growing", x: 3 * 16, y: 0, width: 16, height: 16 },
-    matureFrame: { name: "vectoraith-crop-mature", x: 3 * 16, y: 1 * 16, width: 16, height: 16 },
+    textureKey: VECTORAITH_MEDIA_KEYS.crops,
+    growingFrame: { name: "vectoraith-crop-growing", x: 5 * 16, y: 1 * 16, width: 16, height: 16 },
+    matureFrame: { name: "vectoraith-crop-mature", x: 7 * 16, y: 1 * 16, width: 16, height: 16 },
   },
   npcTextureKey: MEDIA_KEYS.shopkeeper,
 };
@@ -131,7 +133,7 @@ const VECTORAITH_TILESET_BINDINGS: readonly TilesetBinding[] = [
   { tiledName: "vectoraith-details", textureKey: VECTORAITH_MEDIA_KEYS.details },
 ];
 
-/** Resolves the formal VectoRaith Farm bindings while non-Farm regions remain technical placeholders. */
+/** Resolves direct Original/16×16 VectoRaith Farm bindings while non-Farm regions remain placeholders. */
 export function tilesetBindingsForRegion(regionId: string): readonly TilesetBinding[] {
   return regionId === "farm"
     ? VECTORAITH_TILESET_BINDINGS
