@@ -72,4 +72,6 @@ npm --prefix .\apps\mirror-island run build:server
 docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml config
 ```
 
-单人 Stardew Core 在本地新游戏/继续游戏和 IndexedDB 恢复人工验收前不部署；当前生产继续运行旧 RPGJS revision。切换发布后人工验收中文注册、论坛首次 SSO/再访直登、Remember Me、同名不合并、本地玩法闭环、刷新恢复和像素主题的桌面/手机/键盘/错误状态。
+当前生产运行 Phaser/Vue Farm Showcase。Life Loop 发布除上述自动检查外，还必须验证全新账号与已有 v2 IndexedDB 账号；v2 主记录只在同一 readwrite transaction 原子保留原始 backup 后才切换为 v3。两类人工验收通过前不创建 `life-loop-v1` tag，也不进入 Expedition 实现。
+
+浏览器 v2 backup 使用现有 `mirror-island-local/game-saves` store 和 owner/slot scoped backup key，不改变 IndexedDB database version 或 SaveRepository port。该备份只用于 forward-fix 恢复，不进入玩法 snapshot；用户显式删除 slot 时主记录与 backup 同时删除。

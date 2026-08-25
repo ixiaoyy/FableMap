@@ -16,7 +16,7 @@ ENV VITE_KEYCLOAK_REALM=${VITE_KEYCLOAK_REALM}
 ENV VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID}
 ENV VITE_MIRROR_BASE_PATH=${VITE_MIRROR_BASE_PATH}
 
-RUN npm run build:client
+RUN npm run test:life-loop && npm run build:client
 
 FROM nginx:1.27-alpine AS runtime
 

@@ -31,6 +31,77 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
 - 持久化拓扑固定为 `GameSession -> SaveRepository -> IndexedDB（当前 Web）/ FileSystem（未来 Tauri）`；当前只实现 IndexedDB，不把 filesystem、Rust command 或桌面路径渗入 domain。
 
+## Scenario: atomic IndexedDB v2 backup before v3 switch
+
+### 1. Scope / Trigger
+
+- Trigger：生产首次把已发布 v2 browser save 写回 v3；必须保留可 forward-fix 的原始 v2，而不改变 SaveRepository port 或 IndexedDB schema。
+
+### 2. Signatures
+
+```typescript
+interface IndexedDbGameRecord {
+  readonly key: string;
+  readonly game: unknown;
+}
+
+interface IndexedDbSaveWritePlan {
+  readonly main: IndexedDbGameRecord;
+  readonly backup: IndexedDbGameRecord | null;
+}
+
+function planIndexedDbSave(
+  mainKey: string,
+  existingMain: IndexedDbGameRecord | undefined,
+  existingBackup: IndexedDbGameRecord | undefined,
+  validatedGame: StoredGame,
+): IndexedDbSaveWritePlan;
+```
+
+### 3. Contracts
+
+- main key 仍为 `ownerKey:slotId`；backup key 固定为 `ownerKey:slotId:backup:v2`。
+- `load()` 只从 main key 读取并用 `decodeStoredGame` 返回 v3；backup 不成为 slot。
+- `save()` 先验证传入 v3，再在一个 readwrite transaction 中同时读取 main/backup；仅当 main raw envelope 为 version 2 且 backup 缺失时，原样 put backup，然后 put v3 main。
+- 两个读取 request 必须在 transaction 创建后立即发出；两个 onsuccess 都到达后同步排队 put，不在中间 await 导致 transaction inactive。
+- backup 已存在、main 已是 v3或主记录不存在 → 只写 main。
+- `delete()` 在一个 transaction 删除 main 和 scoped backup；其他 owner/slot 不受影响。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 待写 game 不是合法 v3 | transaction 创建前失败，现有 main/backup 不变 |
+| main 是 v2、backup 缺失 | 同 transaction 写 exact raw v2 backup + v3 main |
+| main 是 v2、backup 已存在 | 保留首次 backup，只写 v3 main |
+| 任一 IDB request/put/transaction 失败 | transaction abort/reject，不允许半迁移 |
+| 显式 delete | 删除 main + backup，不保留隐藏用户数据 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：v2 continue 解码、catalog reconcile 成功后，首次 critical save 原子留下原始 v2 并切换 v3。
+- Base：全新账号与后续 v3 saves 沿用原 main key，不产生 backup。
+- Bad：`load()` 先覆盖 main 再进入 GameSession，或先写 v3 后用另一个 transaction 补 backup。
+
+### 6. Tests Required
+
+- 纯 write-plan 合同断言首次 v2 生成 exact backup、已有 backup 不覆盖、v3/new 不备份、delete keys 仅两条 scoped key。
+- Life Loop v2→v3 幂等 domain 合同继续通过。
+- typecheck、client build；生产必须由全新账号与已有 v2 账号分别人工验收。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: main can be overwritten before recovery evidence exists.
+await put(mainKey, migratedV3);
+await put(backupKey, rawV2);
+
+// Correct: IndexedDB commits both writes or neither write.
+const transaction = database.transaction("game-saves", "readwrite");
+store.put({ key: backupKey, game: rawV2 });
+store.put({ key: mainKey, game: validatedV3 });
+```
+
 ## Preserved backend boundary
 
 - Keycloak 26.7.1、keycloak-js 26.2.4、oidc-provider 9.11.1、Prisma 7.9.1、PostgreSQL 17、论坛跨 Compose 网络、CDN 和部署设施继续保留。

@@ -5,7 +5,7 @@
 - 名称：`Farm Showcase Checkpoint`
 - 日期：2026-08-24
 - 视觉状态：Gate C 样板通过，停止继续增加装饰。
-- 游玩状态：真实浏览器人工验收 pending。
+- 游玩状态：2026-08-25 真实生产浏览器人工验收通过。
 - 许可状态：用户已批准按“游戏内嵌使用”解释发布最小派生 atlas；作者书面确认仍 pending。
 
 > 这是一张视觉样板场景，用于确认正式美术方向；不代表整个 World Foundation 已全部完工。
@@ -63,6 +63,6 @@ Farm 在开发与生产均使用 VectoRaith compact profile；GameSession、Game
 
 ## Remaining gates
 
-1. 按 [真实人工验收清单](manual-acceptance.md) 完成登录与完整 Farm 路线。
+1. [真实人工验收清单](manual-acceptance.md) 已通过。
 2. 使用 [VectoRaith license inquiry draft](vectoraith-license-inquiry.md) 获得 Web/CDN 与 Tauri/Steam 分发的书面许可说明。
 3. CDN/manifest 已完成；作者回复若附加条件，使用 forward-fix 更新署名、包装或分发边界。

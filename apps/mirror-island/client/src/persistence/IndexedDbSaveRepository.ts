@@ -3,15 +3,16 @@ import {
   type SaveRepository,
   type StoredGame,
 } from "../../../domain/persistence/SaveRepository.ts";
+import {
+  indexedDbSlotKeys,
+  planIndexedDbSave,
+  v2BackupKey,
+  type IndexedDbGameRecord,
+} from "./v2-migration-backup.ts";
 
 const DATABASE_NAME = "mirror-island-local";
 const DATABASE_VERSION = 1;
 const SAVE_STORE_NAME = "game-saves";
-
-interface IndexedDbSaveRecord {
-  readonly key: string;
-  readonly game: StoredGame;
-}
 
 export class IndexedDbSaveRepository implements SaveRepository {
   private databasePromise: Promise<IDBDatabase> | null = null;
@@ -49,30 +50,55 @@ export class IndexedDbSaveRepository implements SaveRepository {
     const completion = transactionCompletion(transaction);
     const request = transaction.objectStore(SAVE_STORE_NAME).get(saveKey(ownerKey, slotId));
     await completion;
-    const rawRecord = request.result as IndexedDbSaveRecord | undefined;
+    const rawRecord = request.result as IndexedDbGameRecord | undefined;
     if (!rawRecord) return null;
     return decodeStoredGame(rawRecord.game);
   }
 
-  /** Atomically replaces one account-scoped slot with a validated versioned snapshot. */
+  /** Atomically preserves the first raw v2 payload before replacing its main slot with validated v3. */
   async save(ownerKey: string, slotId: string, game: StoredGame): Promise<void> {
+    const validatedGame = decodeStoredGame(game);
+    const mainKey = saveKey(ownerKey, slotId);
     const database = await this.openDatabase();
     const transaction = database.transaction(SAVE_STORE_NAME, "readwrite");
     const completion = transactionCompletion(transaction);
-    const record: IndexedDbSaveRecord = {
-      key: saveKey(ownerKey, slotId),
-      game: decodeStoredGame(game),
+    const store = transaction.objectStore(SAVE_STORE_NAME);
+    const mainRequest = store.get(mainKey);
+    const backupRequest = store.get(v2BackupKey(mainKey));
+    let mainReady = false;
+    let backupReady = false;
+    let writesQueued = false;
+    /** Queues the complete migration plan once both transaction-owned reads have succeeded. */
+    const queueWrites = (): void => {
+      if (!mainReady || !backupReady || writesQueued) return;
+      writesQueued = true;
+      const plan = planIndexedDbSave(
+        mainKey,
+        mainRequest.result as IndexedDbGameRecord | undefined,
+        backupRequest.result as IndexedDbGameRecord | undefined,
+        validatedGame,
+      );
+      if (plan.backup) store.put(plan.backup);
+      store.put(plan.main);
     };
-    transaction.objectStore(SAVE_STORE_NAME).put(record);
+    mainRequest.onsuccess = () => {
+      mainReady = true;
+      queueWrites();
+    };
+    backupRequest.onsuccess = () => {
+      backupReady = true;
+      queueWrites();
+    };
     await completion;
   }
 
-  /** Deletes only the requested account slot and leaves every other browser record intact. */
+  /** Deletes the requested account slot and its v2 migration backup while preserving every other record. */
   async delete(ownerKey: string, slotId: string): Promise<void> {
     const database = await this.openDatabase();
     const transaction = database.transaction(SAVE_STORE_NAME, "readwrite");
     const completion = transactionCompletion(transaction);
-    transaction.objectStore(SAVE_STORE_NAME).delete(saveKey(ownerKey, slotId));
+    const store = transaction.objectStore(SAVE_STORE_NAME);
+    for (const key of indexedDbSlotKeys(saveKey(ownerKey, slotId))) store.delete(key);
     await completion;
   }
 
