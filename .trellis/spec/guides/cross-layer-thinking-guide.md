@@ -214,6 +214,30 @@ or browser-specific implementation usually returns.
       non-sensitive counts/statuses, and make a failed assertion identify the
       exact boundary without exposing response bodies or credentials.
 
+### OIDC issuer path and application mount path
+
+An OIDC issuer with a pathname, such as `https://example.test/forum-sso`, spans
+the provider router, the Node/Express mount adapter, reverse proxy, discovery
+document, and registered client. Treat that pathname as one shared contract:
+
+- [ ] Define provider routes relative to the issuer (`/auth`, `/token`, `/jwks`);
+      do not repeat the issuer pathname in route definitions.
+- [ ] When an application strips the public prefix before dispatching to an
+      embedded provider, preserve `originalUrl` so the provider can reconstruct
+      its mount path consistently in raw Node tests and Express production.
+- [ ] Assert exact public discovery endpoints, not only HTTP 200 or issuer.
+- [ ] Exercise one registered-client authorization request after checking
+      discovery; correct metadata alone does not prove the router accepts it.
+- [ ] Run the identity contract suite while building the production server
+      image so a path-composition regression cannot reach replacement checks.
+
+**Real-world example**: Mirror Island configured an issuer ending in
+`/forum-sso` and routes beginning with `/forum-sso`. Express supplied mount
+metadata that the raw Node test harness did not, so production discovery
+published `/forum-sso/forum-sso/auth` even though the internal authorization
+probe still passed. Relative provider routes plus an adapter that preserves the
+original public URL made both environments publish the same endpoints.
+
 ## Cross-Platform Template Consistency
 
 In Trellis, command templates (e.g., `record-session.md`) exist in **multiple platforms** with identical or near-identical content. This is a cross-layer boundary.

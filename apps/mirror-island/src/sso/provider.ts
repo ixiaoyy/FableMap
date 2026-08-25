@@ -125,18 +125,20 @@ export class ForumSsoBridge {
     }
 
     if (parsed.pathname === "/forum-sso/.well-known/openid-configuration") {
-      const originalUrl = request.url;
-      request.url = `/.well-known/openid-configuration${parsed.search}`;
-      try {
-        await this.providerCallback(request, response);
-      } finally {
-        request.url = originalUrl;
-      }
+      await this.forwardToProvider(
+        request,
+        response,
+        `/.well-known/openid-configuration${parsed.search}`,
+      );
       return true;
     }
 
     if (parsed.pathname.startsWith("/forum-sso/")) {
-      await this.providerCallback(request, response);
+      await this.forwardToProvider(
+        request,
+        response,
+        `${parsed.pathname.slice("/forum-sso".length)}${parsed.search}`,
+      );
       return true;
     }
 
@@ -145,6 +147,25 @@ export class ForumSsoBridge {
       return true;
     }
     return false;
+  }
+
+  /** Forwards one public /forum-sso request to the provider while preserving its issuer mount path. */
+  private async forwardToProvider(
+    request: IncomingMessage,
+    response: ServerResponse,
+    providerUrl: string,
+  ): Promise<void> {
+    const providerRequest = request as IncomingMessage & { originalUrl?: string };
+    const originalUrl = request.url;
+    const hadOriginalUrl = providerRequest.originalUrl !== undefined;
+    if (!hadOriginalUrl) providerRequest.originalUrl = originalUrl;
+    request.url = providerUrl;
+    try {
+      await this.providerCallback(request, response);
+    } finally {
+      request.url = originalUrl;
+      if (!hadOriginalUrl) delete providerRequest.originalUrl;
+    }
   }
 
   /** Redirects a login prompt to ParallelLines or auto-confirms the narrow OIDC consent prompt. */
@@ -360,13 +381,6 @@ export async function createForumSsoBridge(
       long: { httpOnly: true, sameSite: "lax", secure: true, path: "/" },
       short: { httpOnly: true, sameSite: "lax", secure: true, path: "/" },
     },
-    discovery: {
-      authorization_endpoint: `${config.issuer}/auth`,
-      token_endpoint: `${config.issuer}/token`,
-      userinfo_endpoint: `${config.issuer}/me`,
-      jwks_uri: `${config.issuer}/jwks`,
-      end_session_endpoint: `${config.issuer}/session/end`,
-    },
     features: {
       devInteractions: { enabled: false },
     },
@@ -382,11 +396,11 @@ export async function createForumSsoBridge(
     pkce: { required: () => true },
     responseTypes: ["code"],
     routes: {
-      authorization: "/forum-sso/auth",
-      end_session: "/forum-sso/session/end",
-      jwks: "/forum-sso/jwks",
-      token: "/forum-sso/token",
-      userinfo: "/forum-sso/me",
+      authorization: "/auth",
+      end_session: "/session/end",
+      jwks: "/jwks",
+      token: "/token",
+      userinfo: "/me",
     },
     scopes: ["openid", "profile"],
     ttl: {

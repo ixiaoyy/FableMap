@@ -166,11 +166,13 @@ farmTile.frameName = "vectoraith-crop-mature";
 ## Verification
 
 - 默认只运行 TypeScript、client build、必要 server build 和配置解析；不扩建大规模自动测试矩阵。
+- 修改 Keycloak、论坛 OIDC bridge、反向代理或 server image 时，运行现有 `test:identity`；生产 server image 构建固定先执行该合同测试，确保带路径 issuer 的 discovery 与真实授权 route 一致。
 - 人工浏览器验收新游戏、继续游戏、本地玩法闭环、刷新恢复和损坏存档错误状态。
-- 不连接数据库、不新增 migration、不部署生产。
+- 默认不连接数据库、不新增 migration；生产部署只在用户明确授权后执行。
 
 ```powershell
 npm --prefix .\apps\mirror-island run typecheck
+npm --prefix .\apps\mirror-island run test:identity
 npm --prefix .\apps\mirror-island run build:client
 npm --prefix .\apps\mirror-island run build:server
 docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml config
