@@ -87,22 +87,6 @@ jobs:
                 exit 1
               fi
               ;;
-            assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png|\
-            assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png|\
-            assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png|\
-            assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png|\
-            assets/vendor/vectoraith/farming-sim-v1.08/farmer.png)
-              if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
-                echo "::error::Reviewed VectoRaith runtime media must use image/png"
-                exit 1
-              fi
-              CDN_S3_PREFIX="${CDN_S3_PREFIX#/}"
-              CDN_S3_PREFIX="${CDN_S3_PREFIX%/}"
-              if [ "${CDN_S3_PREFIX}" != "game" ]; then
-                echo "::error::Reviewed VectoRaith runtime media must publish under the game prefix"
-                exit 1
-              fi
-              ;;
             assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_terrain_spring_expanded.png|\
             assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_buildings.png|\
             assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_details.png|\

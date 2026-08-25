@@ -18,12 +18,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--s3-prefix", required=True)
     parser.add_argument("--media-base-url", required=True)
     parser.add_argument("--samples-output", type=Path, required=True)
-    parser.add_argument(
-        "--allowed-unexpected-object",
-        action="append",
-        default=[],
-        help="Temporarily allow one exact object key below --s3-prefix during an ordered media migration.",
-    )
     return parser
 
 
@@ -42,9 +36,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         if item.get("Key")
     }
     prefix = args.s3_prefix.strip("/")
-    allowed_unexpected_keys = {
-        f"{prefix}/{object_key.strip('/')}" for object_key in args.allowed_unexpected_object
-    }
     if not entries:
         unexpected = sorted(
             key
@@ -78,7 +69,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         for key in remote_objects
         if (key == prefix or key.startswith(f"{prefix}/"))
         and key not in expected_remote_keys
-        and key not in allowed_unexpected_keys
         and not key.startswith(f"{prefix}/{ADMIN_UPLOAD_PREFIX}")
     )
 
