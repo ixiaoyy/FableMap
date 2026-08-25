@@ -1,0 +1,83 @@
+name: Retire packed VectoRaith media
+
+on:
+  repository_dispatch:
+    types:
+      - retire-vectoraith-packed-media
+
+permissions:
+  contents: read
+
+jobs:
+  retire:
+    name: Delete one reviewed packed object
+    runs-on: ubuntu-latest
+    if: vars.DEPLOY_CONFIGURED == 'true' && github.event.action == 'retire-vectoraith-packed-media'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.CDN_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CDN_S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.CDN_S3_REGION || 'auto' }}
+      AWS_EC2_METADATA_DISABLED: "true"
+      CDN_S3_BUCKET: ${{ secrets.CDN_S3_BUCKET }}
+      CDN_S3_ENDPOINT_URL: ${{ secrets.CDN_S3_ENDPOINT_URL }}
+      CDN_S3_PREFIX: ${{ vars.CDN_S3_PREFIX || 'game' }}
+      RETIRED_OBJECT_KEY: ${{ github.event.client_payload.object_key }}
+    steps:
+      - name: Verify originals and delete exact packed object
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY CDN_S3_BUCKET CDN_S3_ENDPOINT_URL RETIRED_OBJECT_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required retirement value: ${name}"
+              exit 1
+            fi
+          done
+
+          CDN_S3_PREFIX="${CDN_S3_PREFIX#/}"
+          CDN_S3_PREFIX="${CDN_S3_PREFIX%/}"
+          if [ "${CDN_S3_PREFIX}" != "game" ]; then
+            echo "::error::Packed VectoRaith retirement must stay under the game prefix"
+            exit 1
+          fi
+
+          case "${RETIRED_OBJECT_KEY}" in
+            assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png|\
+            assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png|\
+            assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png|\
+            assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png|\
+            assets/vendor/vectoraith/farming-sim-v1.08/farmer.png) ;;
+            *) echo "::error::Object key is outside the retired packed-media allowlist"; exit 1 ;;
+          esac
+
+          ORIGINAL_KEYS=(
+            'assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_terrain_spring_expanded.png'
+            'assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_buildings.png'
+            'assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_details.png'
+            'assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png'
+            'assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png'
+            'assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/sprites/$farmer.png'
+          )
+          for object_key in "${ORIGINAL_KEYS[@]}"; do
+            aws s3api head-object \
+              --bucket "${CDN_S3_BUCKET}" \
+              --key "${CDN_S3_PREFIX}/media/v1/${object_key}" \
+              --endpoint-url "${CDN_S3_ENDPOINT_URL}" >/dev/null
+          done
+
+          FULL_RETIRED_KEY="${CDN_S3_PREFIX}/media/v1/${RETIRED_OBJECT_KEY}"
+          aws s3api delete-object \
+            --bucket "${CDN_S3_BUCKET}" \
+            --key "${FULL_RETIRED_KEY}" \
+            --endpoint-url "${CDN_S3_ENDPOINT_URL}" >/dev/null
+          if aws s3api head-object \
+            --bucket "${CDN_S3_BUCKET}" \
+            --key "${FULL_RETIRED_KEY}" \
+            --endpoint-url "${CDN_S3_ENDPOINT_URL}" >/dev/null 2>&1
+          then
+            echo "::error::Retired packed object is still present"
+            exit 1
+          fi
+
+          echo "retired_object=${RETIRED_OBJECT_KEY} originals_preserved=${#ORIGINAL_KEYS[@]}"
