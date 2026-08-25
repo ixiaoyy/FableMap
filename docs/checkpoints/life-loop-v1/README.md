@@ -4,8 +4,9 @@
 
 - 名称：`Life Loop v1 Checkpoint`
 - 本地完整真人验收：通过（2026-08-25）
-- 生产 main commit：pending
-- GitHub Actions run：pending
+- 生产 main commit：`7414986a71508f438ecda1c94da29562327a0f06`
+- GitHub Actions run：`32827316974`，成功
+- 公网健康：通过；首页、Life Loop/v2 backup bundle、Cottage bed、VectoRaith atlas 与 OIDC 均正常
 - 全新账号生产验收：pending
 - 已有 v2 存档账号生产验收：pending
 - Tag：`life-loop-v1` pending；两类生产验收通过前不得创建
@@ -26,7 +27,7 @@
 
 - Life Loop implementation：`673cc6d2`
 - Local manual acceptance：`06a0668a`
-- Release safety / v2 backup：pending
+- Release safety / v2 backup：source `e797a4d7`，main `7414986a`
 
 ## v2 migration safety
 

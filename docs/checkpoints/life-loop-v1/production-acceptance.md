@@ -4,10 +4,10 @@
 
 ## 公网健康
 
-- [ ] 首页、生产 bundle、四区域 TMJ 与 VectoRaith atlas 返回 200。
-- [ ] 生产 bundle 包含 Life Loop / v2 backup 代码，不包含 Ninja Farm profile。
-- [ ] Keycloak discovery 与论坛 OIDC discovery endpoint 正确。
-- [ ] GitHub Actions deploy 成功，生产 commit 与预期 main commit 一致。
+- [x] 首页、生产 bundle、Cottage TMJ 与 VectoRaith atlas 返回 200；四区域 catalog 已在 production image 合同中解码。
+- [x] 生产 bundle 包含 Life Loop / v2 backup 代码，不包含 Ninja Farm profile。
+- [x] Keycloak discovery 与论坛 OIDC discovery endpoint 正确。
+- [x] GitHub Actions deploy 成功，生产 commit 与预期 main commit 一致。
 
 ## 全新账号
 
@@ -28,9 +28,9 @@
 
 | 项目 | 结果 | 非敏感备注 |
 |---|---|---|
-| main commit | pending | |
-| deploy run | pending | |
-| 公网健康 | pending | |
+| main commit | passed | `7414986a71508f438ecda1c94da29562327a0f06` |
+| deploy run | passed | GitHub Actions `32827316974` |
+| 公网健康 | passed | bundle `index-BRQNlJwq.js`；Life Loop、backup、Cottage bed、Vecto、OIDC 正常 |
 | 全新账号 | pending | |
 | 已有 v2 账号 | pending | |
 | `life-loop-v1` tag | pending | 两类账号通过后创建 |

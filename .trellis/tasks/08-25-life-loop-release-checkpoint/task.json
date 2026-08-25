@@ -26,6 +26,6 @@
     "docs/checkpoints/life-loop-v1/README.md",
     ".github/workflows/deploy.yml"
   ],
-  "notes": "Tag only after both fresh-account and existing-v2 production acceptance. Expedition constraints are documentation-only in this task.",
+  "notes": "Deployed main 7414986a via Actions 32827316974; public health passed. Tag only after both fresh-account and existing-v2 production acceptance. Chrome profile with no local save was observed but does not count as a fresh identity. Expedition constraints are documentation-only in this task.",
   "meta": {}
 }
