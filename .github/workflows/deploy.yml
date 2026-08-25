@@ -58,6 +58,11 @@ jobs:
             --objects /tmp/game-media-objects.json \
             --s3-prefix game/media/v1 \
             --media-base-url "${MEDIA_BASE_URL}" \
+            --allowed-unexpected-object assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png \
+            --allowed-unexpected-object assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png \
+            --allowed-unexpected-object assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png \
+            --allowed-unexpected-object assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png \
+            --allowed-unexpected-object assets/vendor/vectoraith/farming-sim-v1.08/farmer.png \
             --samples-output /tmp/game-media-samples.txt
           python deploy/cdn/verify_cdn_assets.py \
             --manifest deploy/cdn/game-media-manifest.json
