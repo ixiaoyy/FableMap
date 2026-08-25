@@ -6,8 +6,8 @@
 
 ## Preconditions
 
-- `Farm Showcase Checkpoint` 已冻结视觉方向，但 `docs/checkpoints/farm-showcase-v1/manual-acceptance.md` 的真实浏览器验收必须全部通过后，本任务才能从 planning 进入 implementation。
-- VectoRaith Web/CDN 许可可以继续 pending；本任务只做本地开发，不公开素材、不部署生产。
+- `Farm Showcase Checkpoint` 已冻结视觉方向；用户于 2026-08-25 在生产入口完成真实浏览器清单并明确回复“通过”，实施门槛已解除。
+- VectoRaith 最小派生图集已按用户批准发布到生产 Web runtime；本任务不新增或重新分发素材，作者若补充许可条件则 forward-fix。
 - 旧 `.trellis/tasks/08-17-minimal-farming-loop` 基于退役 React/旧存档/无限种子假设，已被本任务取代，不作为实现依据。
 
 ## Confirmed baseline
@@ -22,11 +22,11 @@
 
 ### Day and sleep
 
-- `GameState` 保存 1-based absolute day，初始为 1；季节、年份和当季日期由纯函数确定性派生，不保存重复字段。
+- `GameState` 保存 1-based `day`，初始为 1；本轮不派生、不显示 Season、年份或日内时钟。
 - 第一批不实现日内时钟、2:00 强制睡觉、昼夜光照或 stamina；主动与 Cottage 床交互是唯一 Day+1 入口。
 - Cottage TMJ 新增一个 stable `bed` Interaction；玩家靠近后按 E 发送 typed sleep command。
-- 有效睡觉原子完成：结算作物 → day + 1 → 清除当日浇水标记 → 保存 → 把玩家放回 Cottage 安全位置。重复输入不得同一天结算两次。
-- HUD 固定显示派生日期，例如 `春 1日`、`春 2日`；不展示完整时钟。
+- 有效睡觉原子完成：结算所有 watered crops → 清除每日浇水状态 → day + 1 → 单次保存 → 把玩家放回 Cottage 安全位置。任一步失败不得留下半完成日结，重复输入不得同一天结算两次。
+- HUD 只显示 `Day 1`、`Day 2` 与 `Gold`；不展示 Season 或完整时钟。
 
 ### Day-based crop growth
 
@@ -49,22 +49,24 @@
 
 - `GameState`/StoredGame 显式升级为 v3；合法 v2 保存迁移为 day=1、gold=100，并把 inventory/FarmTile 中的 alien seed/crop ID 映射为 turnip ID。
 - v2 `readyAt` 不迁移为 wall-clock 进度；保留合法 growing/mature phase 与 watered 状态，下一次睡觉按新规则结算。
+- v2→v3 migration 必须幂等；已经是 v3 的存档重复 decode/load 不重复加钱、加天数或改变作物。
 - 未来/损坏版本明确失败，不能静默覆盖或回退旧记录。
 - GameSession 仍是唯一 mutable aggregate；Sleep/Shop/Farming domain 不导入 Phaser、Vue、IndexedDB、Keycloak 或 Tauri。
 - SaveRepository、IndexedDB database/store/ownerKey/slot 不变；不连接数据库、不新增 Prisma migration。
 
 ## Acceptance Criteria
 
-- [ ] Farm Showcase 真实人工验收全部通过并记录后，任务才进入 implementation。
-- [ ] 新游戏显示 `春 1日` 与 100g；刷新继续后 day、gold、背包和农田一致。
+- [x] Farm Showcase 真实人工验收全部通过并记录后，任务才进入 implementation。
+- [x] 新游戏显示 `Day 1` 与 `100g`；刷新继续后 day、gold、背包和农田一致。
 - [ ] Cottage 床边按 E 每次只推进 1 天；其他位置不能睡觉，快速重复输入不重复结算。
 - [ ] 萝卜只有在当日浇水后睡觉才增长一阶；3 次有效跨日后成熟，wall-clock 等待不再使其成熟。
 - [ ] Seed Keeper 打开 ShopPanel；20g 购买 1 个萝卜种子，金币/容量失败均无部分 mutation。
+- [ ] ShopPanel 打开期间 Phaser 世界移动、动作和地图交互输入全部锁定；关闭后恢复。
 - [ ] 成熟萝卜收获一次进入背包；35g 出售 1 个，库存不足时金币不变。
 - [ ] 玩家能真人连续完成“买 → 种 → 浇水/睡觉三轮 → 收 → 卖 → 再买”，并至少跨到下一天继续操作。
-- [ ] 合法 v2 存档迁移为 v3，alien 物品/作物映射为 turnip；损坏或 future save 明确失败。
-- [ ] Phaser/Vue 只发送命令和渲染 snapshot；GameSession/SaveRepository 抽象、Keycloak 与 IndexedDB 边界不被绕过。
-- [ ] 最小 typecheck、client build 和针对 day/sleep/growth/shop/migration 的窄确定性检查通过；无数据库连接、部署或大规模测试矩阵。
+- [x] 合法 v2 存档迁移为 v3，alien 物品/作物映射为 turnip；损坏或 future save 明确失败。
+- [x] Phaser/Vue 只发送命令和渲染 snapshot；GameSession/SaveRepository 抽象、Keycloak 与 IndexedDB 边界不被绕过。
+- [x] 最小 typecheck、client build 和针对 day/sleep/growth/shop/migration 的窄确定性检查通过；无数据库连接、部署或大规模测试矩阵。
 
 ## Out of Scope
 
@@ -73,7 +75,10 @@
 - NPC 日程、关系、任务、剧情、《聊斋》、Town 美术精修或新地图。
 - Shipping bin、批量买卖、价格波动、订单、成就、排行榜或云存档。
 - Tauri、Rust、Steam API、Unity/Godot 验证、多人或服务端实时玩法。
+- Expedition、灵兽、肉鸽、撤离、塔防或东方志怪实现；它们只能在 Life Loop 真人验收通过后进入独立设计评审。
 
 ## Planning decision
 
 第一批出售固定走 Seed Keeper ShopPanel，不新增 Farm shipping bin。这比新增地图对象和结算时点更窄，并复用现有 Seed Shop/NPC 路径；未来如需要夜间出货，可在独立里程碑增加。
+
+Life Loop 完成后的下一候选里程碑为 `Expedition Prototype / 异域远征最小原型`，但本任务不创建其运行时代码或通用框架。届时只先验证“安全家园 → 小型远征 → 风险收益 → 成功撤离带回战利品 → 想再出去一次”的核心感觉。

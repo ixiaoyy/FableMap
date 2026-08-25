@@ -44,7 +44,7 @@ export function dispatchLocalGameCommand(command: GameCommand): ActionFeedback |
   return feedback;
 }
 
-/** Advances local time-based rules using an explicit wall-clock timestamp. */
+/** Advances only bounded movement checkpoint timing using an explicit wall-clock timestamp. */
 export function tickLocalGameSession(now: number): void {
   getLocalGameSession().tick(now);
 }

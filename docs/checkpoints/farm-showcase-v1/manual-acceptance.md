@@ -46,16 +46,16 @@ http://127.0.0.1:8080/?debug=1
 
 | 项目 | 结果 | 备注/截图路径 |
 |---|---|---|
-| 日期与浏览器 | pending | |
-| 登录 subject 是否为预期账号 | pending | 不记录原始 subject/token |
-| 出生与小屋 | pending | |
-| 池塘 | pending | |
-| 树冠 | pending | |
-| 农田 | pending | |
-| 桥面 | pending | |
-| 进屋/出屋 | pending | |
-| Farm→Town | pending | |
-| 砍树 | pending | |
-| Console | pending | |
+| 日期与浏览器 | passed | 2026-08-25，用户在生产入口使用真实浏览器完成 |
+| 登录 subject 是否为预期账号 | passed | 用户确认；不记录原始 subject/token |
+| 出生与小屋 | passed | 用户确认完整清单通过 |
+| 池塘 | passed | 用户确认完整清单通过 |
+| 树冠 | passed | 用户确认完整清单通过 |
+| 农田 | passed | 用户确认完整清单通过 |
+| 桥面 | passed | 用户确认完整清单通过 |
+| 进屋/出屋 | passed | 用户确认完整清单通过 |
+| Farm→Town | passed | 用户确认完整清单通过 |
+| 砍树 | passed | 用户确认完整清单通过 |
+| Console | passed | 用户确认完整清单通过；未提交额外截图 |
 
-全部通过前，World Foundation 不得标记完成；`Stardew Life Loop 第一批` 可以保持 planning，但不得开始实现。
+用户已于 2026-08-25 明确回复“通过”，本清单解除 `Stardew Life Loop 第一批` 的实施前置门槛。Farm v1 继续冻结，只有真实游玩发现的明确碰撞缺陷允许窄修复。

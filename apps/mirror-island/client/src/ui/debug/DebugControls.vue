@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onUnmounted, ref } from "vue";
 import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
+import { isWorldInputLocked } from "../../stores/game-store.ts";
 
 type DebugDirection = "up" | "down" | "left" | "right";
 
@@ -16,6 +17,7 @@ let movementTimer: number | null = null;
 
 /** Dispatches one bounded movement step through the existing GameSession command boundary. */
 function nudge(direction: DebugDirection): void {
+  if (isWorldInputLocked()) return;
   const [xAxis, yAxis] = DIRECTION_AXIS[direction];
   dispatchLocalGameCommand({ type: "move", xAxis, yAxis, deltaMs: 100 });
 }
@@ -23,6 +25,7 @@ function nudge(direction: DebugDirection): void {
 /** Starts repeat movement while a pointer remains held over one debug direction button. */
 function startMoving(direction: DebugDirection): void {
   stopMoving();
+  if (isWorldInputLocked()) return;
   activeDirection.value = direction;
   nudge(direction);
   movementTimer = window.setInterval(() => nudge(direction), 80);

@@ -234,6 +234,167 @@ h1 {
   background: rgba(78, 55, 31, 0.84);
 }
 
+.life-hud {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px 14px;
+  align-items: center;
+  min-width: 146px;
+  padding: 10px 13px;
+  border: 2px solid #e0c485;
+  outline: 2px solid rgba(74, 48, 27, 0.78);
+  color: #4b321f;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 36%),
+    #efd9a5;
+  box-shadow: 5px 6px 0 rgba(42, 31, 20, 0.34);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.life-hud span {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.life-hud strong {
+  justify-self: end;
+  color: #8a5428;
+  font-size: 17px;
+}
+
+.shop-backdrop {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 28, 20, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.shop-panel {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 22px;
+  border: 3px solid #d8b878;
+  outline: 4px solid #5d3c24;
+  color: #392618;
+  background:
+    linear-gradient(rgba(119, 75, 40, 0.07) 1px, transparent 1px),
+    #efdcac;
+  background-size: 100% 22px;
+  box-shadow:
+    0 0 0 7px rgba(39, 28, 19, 0.3),
+    12px 16px 0 rgba(14, 20, 15, 0.4);
+}
+
+.shop-panel::before,
+.shop-panel::after {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 5px;
+  content: "";
+  background: repeating-linear-gradient(#7a4d2a 0 9px, #9a6637 9px 18px);
+}
+
+.shop-panel::before { left: 8px; }
+.shop-panel::after { right: 8px; }
+
+.shop-panel__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 10px 15px;
+  border-bottom: 2px solid rgba(104, 67, 37, 0.52);
+}
+
+.shop-panel__header span {
+  color: #8c5b31;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+
+.shop-panel__header h2 {
+  margin: 3px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 31px;
+  font-weight: 400;
+}
+
+.shop-panel__header strong {
+  padding: 6px 10px;
+  border: 1px solid #9d6b36;
+  color: #74451f;
+  background: rgba(255, 246, 204, 0.5);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.shop-panel__goods {
+  display: grid;
+  gap: 10px;
+  padding: 16px 10px;
+}
+
+.shop-panel__goods article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 13px 14px;
+  border: 1px solid rgba(112, 73, 39, 0.52);
+  background: rgba(255, 247, 211, 0.46);
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.22);
+}
+
+.shop-panel__goods h3 {
+  margin: 0 0 5px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+}
+
+.shop-panel__goods p {
+  margin: 0;
+  color: #765a40;
+  font-size: 10px;
+}
+
+.shop-panel__goods button,
+.shop-panel__close {
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 2px solid #76502f;
+  color: #fff3c9;
+  background: #81512b;
+  box-shadow: 3px 3px 0 #4d321f;
+  cursor: pointer;
+}
+
+.shop-panel__goods button:hover,
+.shop-panel__goods button:focus-visible,
+.shop-panel__close:hover,
+.shop-panel__close:focus-visible {
+  color: #3d2718;
+  background: #e4bd73;
+  outline: 2px solid #fff0b4;
+  outline-offset: 2px;
+}
+
+.shop-panel__close {
+  display: block;
+  margin: 0 10px 0 auto;
+  color: #5b3b25;
+  background: transparent;
+  box-shadow: none;
+}
+
 .telemetry {
   position: absolute;
   top: 14px;
@@ -566,9 +727,32 @@ h1 {
   .world-frame--game .action-feedback {
     bottom: 130px;
   }
+
+  .life-hud {
+    top: 10px;
+    right: 10px;
+    min-width: 126px;
+    padding: 8px 10px;
+  }
+
+  .shop-backdrop {
+    padding: 14px;
+  }
+
+  .shop-panel {
+    padding: 17px 13px;
+  }
+
+  .shop-panel__goods article {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .shop-panel {
+    animation: shop-arrive 140ms steps(2, end) both;
+  }
+
   .signal[data-phase="authenticating"] .signal__lamp,
   .signal[data-phase="loading"] .signal__lamp {
     animation: pulse 1.2s steps(2, end) infinite;
@@ -578,5 +762,16 @@ h1 {
 @keyframes pulse {
   50% {
     opacity: 0.25;
+  }
+}
+
+@keyframes shop-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

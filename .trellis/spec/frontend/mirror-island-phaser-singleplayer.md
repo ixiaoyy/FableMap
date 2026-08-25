@@ -25,7 +25,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v2 已包含 region，旧 v1 只通过显式 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v3 包含 region、day、gold 与按天作物状态，旧 v1/v2 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源和农田；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；ownerKey 由身份 adapter 提供。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -90,9 +90,9 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 
 - 第一批：GameSession、IndexedDB、背包/采集/制作/种田本地化，代码绘制场景可接受。
 - 第二批 World Foundation 严格拆为 A：Tilemap Foundation，B：World Entities + ActionTimeline，C：Visual Pass；不并行铺昼夜、经济或 NPC 日程。
-- 第三批：时间/昼夜/睡觉跨日、按天成长、金币、商店和 3 个 NPC。
-- A/B/C 技术提交不等于 World Foundation 通过；真人完整走通农场、城镇、室内、对话、返回、刷新恢复、200% zoom 与账号隔离前，第三批不得开始。
-- 当前禁止多人、战斗、科技树、NPC 招募、复杂剧情、书屋和《聊斋》内容。
+- 第三批当前收窄为 `Stardew Life Loop 第一批`：Day、Gold、床睡觉、按天成长和 Seed Keeper 单商品买卖；不顺势加入 Season、完整时钟、昼夜、天气或更多 NPC。
+- World Foundation 与 Farm Showcase 已由用户在 2026-08-25 的生产真实浏览器清单中确认通过，第三批实施门槛已解除。
+- 长期产品方向是家园生活 + 灵兽培养 + 轻撤离探索 + 肉鸽事件 + 阶段性守家 + 东方志怪，但当前禁止为这些后续阶段提前实现框架。Life Loop 真人验收后才允许提交小型 Expedition Prototype 设计。
 - 当前视觉里程碑为 `One Beautiful Slice`：只把 Farm 做成可作宣传截图的样板核心区；Farm 视觉确认前冻结 Town/Cottage/Seed Shop 精修与旧长链验收。
 - Ninja Adventure 从正式场景美术降级为开发/占位资源，不再为它进行 Gate C 级精修；Gate A 构图确认仍可使用现有占位画面。
 - VectoRaith Farming Sim v1.08 只在 Farm 出生镜头做本地 visual prototype；候选 TMJ 必须复用现有对象层、stable ID、Collision、EntityFactory 和 GameSession 合同，不一次迁移全项目。
@@ -120,7 +120,7 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 
 **What**：正式 Farm 默认使用 VectoRaith compact map、tileset binding、玩家与实体 atlas；非 Farm 区域继续使用占位 profile。profile 选择仍只存在 client 表现层。
 
-**Why**：许可仍 pending，需要真实 Phaser/GameSession 验证但不能让正式 runtime、manifest 或 CDN 依赖不可分发素材。
+**Why**：用户已批准最小派生图集作为 Web 游戏内嵌 runtime 资源公开交付并接受作者书面回复前的残余风险；该许可决定仍不得渗入 domain 或存档。
 
 ```typescript
 // Correct: presentation shell resolves a local profile; domain receives only the decoded catalog.
@@ -136,6 +136,88 @@ gameState.player.tileset = "vectoraith";
 - Missing local file or decoder failure → visible media/startup error；不得静默回退未知素材。
 - Required checks：candidate decoder + 23 stable object equality + route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
 - Checkpoint 后只有真实游玩发现的明确碰撞、树脚、路径或院落操作问题允许修改 Farm v1；不以偏好性微调重开 Gate A/B/C。
+
+## Scenario: Stardew Life Loop v3
+
+### 1. Scope / Trigger
+
+- Trigger：Farm Showcase 已人工通过，当前需要让玩家完成第一个可重复生活日循环。
+- 本场景只拥有 `day`、`gold`、床睡觉日结、三次有效浇水成长和 Seed Keeper 萝卜买卖；不包含 Season、Clock、天气、NPC 日程、远征或灵兽。
+
+### 2. Signatures
+
+```typescript
+interface GameStateV3 {
+  version: 3;
+  day: number;
+  gold: number;
+  player: PlayerState;
+  inventory: InventorySlot[];
+  resources: Record<string, ResourceState>;
+  farmTiles: Record<string, FarmTileStateV3>;
+}
+
+interface FarmTileStateV3 {
+  id: string;
+  phase: "untilled" | "tilled" | "growing" | "mature";
+  cropId: "" | "turnip";
+  growthStage: 0 | 1 | 2 | 3;
+  watered: boolean;
+}
+
+type LifeLoopCommand =
+  | { type: "sleep"; bedId: "cottage-bed" }
+  | { type: "buy-item"; itemId: "turnip-seed"; quantity: 1 }
+  | { type: "sell-item"; itemId: "turnip"; quantity: 1 };
+```
+
+### 3. Contracts
+
+- 新游戏固定 `day=1`、`gold=100`；HUD 只投影 `Day N` 与 `Ng`。
+- `sleep` 必须在一次同步 mutation 中依序完成：结算所有 watered crops → 清除每日 watered → `day + 1` → Cottage 安全位置；随后由 GameSession 排队一次 critical save。
+- 萝卜播种后只有“该日已浇水 + 成功睡觉”才增长 1 阶；3 次有效日结后 mature。wall-clock、刷新等待和同日重复浇水都不能额外成长。
+- `turnip-seed` 每次只买 1 个、价格 20g；`turnip` 每次只卖 1 个、价格 35g。扣款/加物与背包 mutation 必须全成或全不成。
+- ShopPanel open/closed 是 client UI state，不写入 GameState；打开期间 client shell 锁定 Phaser 世界移动、动作与地图交互输入。
+- v2→v3 在内存中迁移 `alien-seed → turnip-seed`、`alien-crop → turnip` 和 FarmTile crop ID；`readyAt` 被丢弃，合法 phase/watered 保留。v3 重复 decode 不再运行 defaults 或 remap。
+- SaveRepository、IndexedDB DB/store/ownerKey/slot 均不变；不新增数据库或 Tauri 代码。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| `day` 不是安全的 1-based 整数，或 `gold` 不是非负安全整数 | decode 明确失败，原 IndexedDB record 不覆盖 |
+| 非 Cottage、错误 bed ID、距离超限或睡觉 command 正在处理 | 拒绝睡觉，day/crops/player 不变 |
+| 作物未浇水 | 睡觉只清理 daily state 并推进 day，作物阶段不变 |
+| 购买时 gold < 20 或背包无法完整加入 1 粒 | gold 与 inventory 全部不变 |
+| 出售时没有 1 个 turnip | gold 与 inventory 全部不变 |
+| future/损坏 save | 显式错误，不静默新建或降级覆盖 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：玩家以 100g 买种，连续三次浇水后睡觉，收获 1 个萝卜并以 35g 出售；刷新后 day/gold/inventory/farmTiles 一致。
+- Base：未浇水直接睡觉，Day 仍只增加 1，萝卜不成长；商店失败命令给出 feedback 且无 mutation。
+- Bad：Vue 直接 `gold -= 20`、FarmingSystem 继续读取 `Date.now()`，或 sleep 分多次 command/save 导致半日结。
+
+### 6. Tests Required
+
+- v2 fixture decode 为 v3 后断言 day/gold、alien item/crop remap、phase/watered 保留、`readyAt` 消失；再次 decode v3 值完全相同。
+- 连续三次 watered sleep 每次只增长一阶并最终 mature；未浇水、重复浇水和 wall-clock 等待不增长。
+- buy/sell 的成功、金币不足、背包满和库存不足分别断言 gold/inventory 原子性。
+- sleep 的错误位置、快速重复输入与成功路径分别断言 day/crop/save 次数。
+- 最小门禁：窄确定性检查、typecheck、client build；最终由真实浏览器完成完整循环和刷新恢复。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: UI owns economy and sleep emits partial mutations.
+snapshot.gold -= 20;
+session.dispatch({ type: "grow-crops" });
+session.dispatch({ type: "next-day" });
+
+// Correct: UI sends one command; GameSession owns one atomic mutation.
+session.dispatch({ type: "buy-item", itemId: "turnip-seed", quantity: 1 });
+session.dispatch({ type: "sleep", bedId: "cottage-bed" });
+```
 
 ### Convention: FarmPlot visual frames remain optional presentation data
 

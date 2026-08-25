@@ -18,9 +18,12 @@ export interface DialogueProjection {
 const mutableState = reactive({
   phase: "authenticating" as GamePhase,
   saveAvailable: false,
+  day: 0,
+  gold: 0,
   inventory: [] as InventorySlotProjection[],
   feedback: null as ActionFeedback | null,
   dialogue: null as DialogueProjection | null,
+  shopOpen: false,
 });
 
 export const gameUiState = readonly(mutableState);
@@ -37,6 +40,8 @@ export function setSaveAvailable(available: boolean): void {
 
 /** Projects the session-owned inventory into a serializable Vue read model. */
 export function applyGameState(state: GameState): void {
+  mutableState.day = state.day;
+  mutableState.gold = state.gold;
   mutableState.inventory = state.inventory.map((slot, index) => ({
     index,
     itemId: slot.itemId,
@@ -51,6 +56,7 @@ export function setActionFeedback(feedback: ActionFeedback | null): void {
 
 /** Opens one fixed ephemeral dialogue projection above the Phaser world. */
 export function setDialogue(dialogue: DialogueProjection): void {
+  mutableState.shopOpen = false;
   mutableState.dialogue = dialogue;
 }
 
@@ -59,9 +65,28 @@ export function clearDialogue(): void {
   mutableState.dialogue = null;
 }
 
+/** Opens the transient Seed Keeper shop without storing UI state in GameSession. */
+export function openShop(): void {
+  mutableState.dialogue = null;
+  mutableState.shopOpen = true;
+}
+
+/** Closes the transient Seed Keeper shop without mutating inventory or gold. */
+export function closeShop(): void {
+  mutableState.shopOpen = false;
+}
+
+/** Reports whether a modal Vue panel currently owns Phaser world input. */
+export function isWorldInputLocked(): boolean {
+  return mutableState.shopOpen;
+}
+
 /** Clears only transient local gameplay projections when the application shell is disposed. */
 export function clearGameState(): void {
+  mutableState.day = 0;
+  mutableState.gold = 0;
   mutableState.inventory = [];
   mutableState.feedback = null;
   mutableState.dialogue = null;
+  mutableState.shopOpen = false;
 }

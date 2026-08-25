@@ -1,12 +1,18 @@
 import Phaser from "phaser";
 import type { GameState } from "../../../../domain/state/game-state.ts";
+import { SEED_KEEPER_ENTITY_ID } from "../../../../domain/shop/ShopSystem.ts";
 import type { WorldCatalog } from "../../../../domain/world/regions.ts";
 import {
   dispatchLocalGameCommand,
   getLocalGameSession,
   tickLocalGameSession,
 } from "../../session/local-game-session.ts";
-import { setActionFeedback, setDialogue } from "../../stores/game-store.ts";
+import {
+  isWorldInputLocked,
+  openShop,
+  setActionFeedback,
+  setDialogue,
+} from "../../stores/game-store.ts";
 import { MEDIA_KEYS, MEDIA_URLS } from "../assets/media-catalog.ts";
 import {
   activeEntityMediaProfiles,
@@ -21,6 +27,7 @@ import { getDialogueDefinition } from "../dialogue/definitions.ts";
 import { ActionTimeline } from "../entities/ActionTimeline.ts";
 import {
   EntityFactory,
+  BedEntity,
   FarmPlotEntity,
   NpcEntity,
   RockEntity,
@@ -30,6 +37,7 @@ import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
 
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
+const BED_INTERACTION_DISTANCE = 42;
 const WORLD_CAMERA_ZOOM = 2;
 
 interface PlayerView {
@@ -48,6 +56,7 @@ export class WorldScene extends Phaser.Scene {
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
   private readonly farmViews = new Map<string, FarmPlotEntity>();
+  private readonly bedViews = new Map<string, BedEntity>();
   private readonly npcViews = new Map<string, NpcEntity>();
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private activeMap: Phaser.Tilemaps.Tilemap | null = null;
@@ -110,7 +119,12 @@ export class WorldScene extends Phaser.Scene {
 
   /** Applies collision-aware movement, E interaction and one exit transition while no action owns input. */
   override update(_time: number, delta: number): void {
+    tickLocalGameSession(Date.now());
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    if (isWorldInputLocked()) {
+      this.setIdleFrame();
+      return;
+    }
     const xAxis = toAxis(
       Number(this.cursors.right.isDown || this.movementKeys.D.isDown)
       - Number(this.cursors.left.isDown || this.movementKeys.A.isDown),
@@ -125,8 +139,7 @@ export class WorldScene extends Phaser.Scene {
     } else {
       this.setIdleFrame();
     }
-    tickLocalGameSession(Date.now());
-    if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.openNearestNpcDialogue();
+    if (Phaser.Input.Keyboard.JustDown(this.interactKey)) this.interactNearestTarget();
     const player = this.latestState?.player;
     if (!player) return;
     const exit = this.catalog.exitAt(player.regionId, player.x, player.y);
@@ -143,6 +156,7 @@ export class WorldScene extends Phaser.Scene {
     const region = this.catalog.requireRegion(state.player.regionId);
     this.renderResources(region.id, state);
     this.renderFarmPlots(region.id, state);
+    this.renderBeds(region.id);
     this.renderNpcs(region.id);
   }
 
@@ -303,6 +317,20 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Creates functional bed views from the active region's decoded interaction layer. */
+  private renderBeds(regionId: string): void {
+    const beds = this.catalog.requireRegion(regionId).interactions.filter((interaction) => (
+      interaction.kind === "bed"
+    ));
+    const activeIds = new Set(beds.map((bed) => bed.entityId));
+    removeMissing(this.bedViews, activeIds);
+    for (const bed of beds) {
+      if (!this.bedViews.has(bed.entityId)) {
+        this.bedViews.set(bed.entityId, this.entityFactory.createBed(bed));
+      }
+    }
+  }
+
   /** Creates fixed-position NPC views for the active region without adding schedules or persistent AI. */
   private renderNpcs(regionId: string): void {
     const spawns = this.catalog.requireRegion(regionId).npcs;
@@ -317,6 +345,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Runs one tree windup/impact/recovery sequence and mutates gathering only on impact. */
   private playTreeAction(entity: TreeEntity): void {
+    if (isWorldInputLocked()) return;
     this.playToolAction(entity.spawn.x, 0xe8d19b, () => {
       entity.playImpact(() => (
         dispatchLocalGameCommand({ type: "gather", targetId: entity.entityId })?.code === "success"
@@ -326,6 +355,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Runs one shared tool sequence for tilling, planting, watering or harvesting. */
   private playFarmAction(entity: FarmPlotEntity): void {
+    if (isWorldInputLocked()) return;
     const targetX = entity.interaction.x + entity.interaction.width / 2;
     this.playToolAction(targetX, 0x8ed3c7, () => {
       const feedback = dispatchLocalGameCommand({ type: "farm-primary", tileId: entity.entityId });
@@ -379,15 +409,26 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  /** Opens the nearest in-range NPC's fixed Vue dialogue when E is pressed. */
-  private openNearestNpcDialogue(): void {
+  /** Resolves E against a nearby Cottage bed first, then the nearest fixed NPC. */
+  private interactNearestTarget(): void {
     const player = this.latestState?.player;
     if (!player) return;
+    const nearestBed = Array.from(this.bedViews.values())
+      .map((bed) => ({ bed, distance: bed.distanceTo(player.x, player.y) }))
+      .sort((left, right) => left.distance - right.distance)[0];
+    if (nearestBed && nearestBed.distance <= BED_INTERACTION_DISTANCE) {
+      this.beginSleep(nearestBed.bed.entityId);
+      return;
+    }
     const nearest = Array.from(this.npcViews.values())
       .map((npc) => ({ npc, distance: npc.distanceTo(player.x, player.y) }))
       .sort((left, right) => left.distance - right.distance)[0];
     if (!nearest || nearest.distance > NPC_INTERACTION_DISTANCE) {
       setActionFeedback({ tone: "error", code: "no-npc-nearby", message: "附近没有可交谈的人。" });
+      return;
+    }
+    if (nearest.npc.entityId === SEED_KEEPER_ENTITY_ID) {
+      openShop();
       return;
     }
     const dialogue = getDialogueDefinition(nearest.npc.spawn.dialogueId);
@@ -398,9 +439,24 @@ export class WorldScene extends Phaser.Scene {
     setDialogue({ speaker: dialogue.speaker, text: dialogue.text });
   }
 
+  /** Fades once around a single atomic sleep command and blocks repeat input during the transition. */
+  private beginSleep(bedId: string): void {
+    if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    this.transitionPhase = "fading-out";
+    this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      dispatchLocalGameCommand({ type: "sleep", bedId });
+      this.transitionPhase = "fading-in";
+      this.cameras.main.fadeIn(TRANSITION_DURATION_MS, 7, 16, 13);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
+        this.transitionPhase = "idle";
+      });
+    });
+  }
+
   /** Locks input, fades out, then asks GameSession to resolve one reviewed exit ID. */
   private beginRegionTransition(exitId: string): void {
-    if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
     this.transitionPhase = "fading-out";
     this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -418,6 +474,7 @@ export class WorldScene extends Phaser.Scene {
     destroyAll(this.treeViews);
     destroyAll(this.rockViews);
     destroyAll(this.farmViews);
+    destroyAll(this.bedViews);
     destroyAll(this.npcViews);
   }
 

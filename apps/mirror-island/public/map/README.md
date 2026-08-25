@@ -33,6 +33,7 @@ Tiled 保存后运行 `npm run format:tiled-maps`，只压缩 Tile Layer 的大�
 
 - Region-scoped spawn：`entry`
 - Exit：`cottage-exit`
+- Interaction：`cottage-bed`
 
 ### Seed Shop
 

@@ -1,6 +1,6 @@
 # 镜像岛
 
-镜像岛是一个单人 Web 像素农场/生活世界。玩家通过论坛账号或独立 Keycloak 账号登录，在本地世界中采集、制作、耕作并逐步连接农场、小镇和周边山水；新主线由 Phaser/Vue、GameSession、纯 TypeScript 规则和 IndexedDB 本地存档组成。
+镜像岛是一个单人 Web 2D 像素生活 RPG。当前先完成农场生活循环，长期再按独立里程碑验证灵兽收集培养、轻量撤离探索、肉鸽随机事件、阶段性守家事件和东方志怪故事；新主线由 Phaser/Vue、GameSession、纯 TypeScript 规则和 IndexedDB 本地存档组成。
 
 RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行时。公开根入口 `/` 只服务镜像岛单人主线。
 
@@ -39,7 +39,7 @@ npm --prefix .\apps\mirror-island run build:server
 
 ## 资源
 
-游戏图片优先使用经许可审核和登记的成熟开源素材；当前首批来源为 pixel-boy 官方 Ninja Adventure CC0 子集。采用项位于不可变 `game/media/v1` CDN 命名空间，署名要求随产品交付，Git 不跟踪游戏图片二进制。详见 [图片与美术规范](docs/IMAGE_ASSETS_SPEC.md)。
+游戏图片优先使用经许可审核和登记的成熟素材。正式 Farm v1 使用 VectoRaith Farming Sim v1.08 的 5 个最小派生图集，Ninja Adventure 只保留非 Farm 技术占位；采用项位于不可变 `game/media/v1` CDN 命名空间，Git 不跟踪游戏图片二进制。详见 [图片与美术规范](docs/IMAGE_ASSETS_SPEC.md)。
 
 ## 文档
 

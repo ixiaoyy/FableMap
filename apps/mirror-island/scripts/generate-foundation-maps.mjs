@@ -326,7 +326,10 @@ const cottage = createMap({
         property("targetRegion", "farm"),
         property("targetSpawn", "cottage-door"),
       ])],
-      interactions: [],
+      interactions: [rectObject(42, "Bed", "interaction", 18 * tileSize, 8 * tileSize, 2 * tileSize, 3 * tileSize, [
+        property("entityId", "cottage-bed"),
+        property("interactionKind", "bed"),
+      ])],
       resources: [],
       npcs: [],
     };

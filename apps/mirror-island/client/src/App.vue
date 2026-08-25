@@ -23,7 +23,9 @@ import {
 } from "./stores/game-store.ts";
 import DebugControls from "./ui/debug/DebugControls.vue";
 import DialoguePanel from "./ui/dialogue/DialoguePanel.vue";
+import LifeHud from "./ui/hud/LifeHud.vue";
 import Hotbar from "./ui/hotbar/Hotbar.vue";
+import ShopPanel from "./ui/shop/ShopPanel.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -137,7 +139,9 @@ onUnmounted(() => {
       >
         {{ gameUiState.feedback.message }}
       </p>
+      <LifeHud />
       <DialoguePanel />
+      <ShopPanel />
       <div v-if="!debugMode" class="game-hud">
         <Hotbar />
       </div>

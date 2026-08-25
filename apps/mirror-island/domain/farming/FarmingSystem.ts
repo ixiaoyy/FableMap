@@ -4,7 +4,6 @@ import type { FarmTileState, GameState } from "../state/game-state.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 
 const FARM_INTERACTION_DISTANCE_PIXELS = 42;
-const CROP_GROWTH_DURATION_MS = 5_000;
 
 export type FarmingResult =
   | "tilled"
@@ -26,7 +25,7 @@ export class FarmingSystem {
   ) {}
 
   /** Applies the next legal primary action for one nearby tile from its current local phase. */
-  primary(state: GameState, tileId: string, now: number): FarmingResult {
+  primary(state: GameState, tileId: string): FarmingResult {
     const interaction = this.catalog.interaction(tileId);
     const tile = state.farmTiles[tileId];
     if (!interaction || interaction.kind !== "farm-plot" || !tile) return "missing-tile";
@@ -39,23 +38,23 @@ export class FarmingSystem {
     switch (tile.phase) {
       case "untilled": return this.till(state, tile);
       case "tilled": return this.plant(state, tile);
-      case "growing": return this.water(state, tile, now);
+      case "growing": return this.water(state, tile);
       case "mature": return this.harvest(state, tile);
     }
   }
 
-  /** Advances watered crops whose local ready time elapsed and reports whether state changed. */
-  tick(state: GameState, now: number): boolean {
-    let changed = false;
+  /** Advances each watered crop by at most one stage and clears every daily watering marker. */
+  settleDay(state: GameState): number {
+    let advanced = 0;
     for (const tile of Object.values(state.farmTiles)) {
-      if (tile.phase === "growing" && tile.watered && tile.readyAt > 0 && now >= tile.readyAt) {
-        tile.phase = "mature";
-        tile.growthStage = 1;
-        tile.readyAt = 0;
-        changed = true;
+      if (tile.phase === "growing" && tile.watered) {
+        tile.growthStage = (tile.growthStage + 1) as 1 | 2 | 3;
+        if (tile.growthStage === 3) tile.phase = "mature";
+        advanced += 1;
       }
+      tile.watered = false;
     }
-    return changed;
+    return advanced;
   }
 
   /** Requires the starter hoe and transitions untouched ground into prepared soil. */
@@ -67,32 +66,29 @@ export class FarmingSystem {
 
   /** Consumes one starter seed and begins the first local crop cycle. */
   private plant(state: GameState, tile: FarmTileState): FarmingResult {
-    if (!this.inventory.consume(state.inventory, ITEM_ID.alienSeed, 1)) return "missing-seed";
+    if (!this.inventory.consume(state.inventory, ITEM_ID.turnipSeed, 1)) return "missing-seed";
     tile.phase = "growing";
-    tile.cropId = ITEM_ID.alienCrop;
+    tile.cropId = ITEM_ID.turnip;
     tile.growthStage = 0;
     tile.watered = false;
-    tile.readyAt = 0;
     return "planted";
   }
 
-  /** Requires the starter watering can and schedules growth exactly once. */
-  private water(state: GameState, tile: FarmTileState, now: number): FarmingResult {
+  /** Requires the starter watering can and marks this crop for the next sleep settlement once. */
+  private water(state: GameState, tile: FarmTileState): FarmingResult {
     if (tile.watered) return "waiting";
     if (this.inventory.quantity(state.inventory, ITEM_ID.wateringCan) < 1) return "missing-tool";
     tile.watered = true;
-    tile.readyAt = now + CROP_GROWTH_DURATION_MS;
     return "watered";
   }
 
   /** Adds one mature crop before resetting the tile to prepared soil. */
   private harvest(state: GameState, tile: FarmTileState): FarmingResult {
-    if (!this.inventory.add(state.inventory, ITEM_ID.alienCrop, 1)) return "inventory-full";
+    if (!this.inventory.add(state.inventory, ITEM_ID.turnip, 1)) return "inventory-full";
     tile.phase = "tilled";
     tile.cropId = "";
     tile.growthStage = 0;
     tile.watered = false;
-    tile.readyAt = 0;
     return "harvested";
   }
 }

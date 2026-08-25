@@ -151,7 +151,11 @@ export class FarmPlotEntity {
           ? this.growingCropFrame
           : null;
       this.crop.setVisible(cropFrame !== null);
-      if (cropFrame) this.crop.setFrame(cropFrame);
+      if (cropFrame) {
+        this.crop.setFrame(cropFrame);
+        this.crop.setScale(cropScale(tile));
+        this.crop.setAlpha(tile.phase === "growing" && tile.growthStage === 0 ? 0.72 : 1);
+      }
     }
   }
 
@@ -169,6 +173,54 @@ export class FarmPlotEntity {
   }
 
   /** Destroys the complete Phaser farm view and pointer listeners. */
+  destroy(): void {
+    this.container.destroy(true);
+  }
+}
+
+export class BedEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+
+  /** Creates one functional code-drawn Cottage bed while its stable position remains Tiled-owned. */
+  constructor(scene: Phaser.Scene, readonly interaction: InteractionDefinition) {
+    this.entityId = interaction.entityId;
+    const frame = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0x81502f, 1)
+      .setStrokeStyle(2, 0x4d311f, 1);
+    const blanket = scene.add.rectangle(
+      0,
+      interaction.height * 0.13,
+      Math.max(8, interaction.width - 6),
+      interaction.height * 0.54,
+      0x78945e,
+      1,
+    ).setStrokeStyle(1, 0x506a45, 1);
+    const pillow = scene.add.rectangle(
+      0,
+      -interaction.height * 0.31,
+      Math.max(8, interaction.width - 8),
+      Math.max(6, interaction.height * 0.18),
+      0xead9ae,
+      1,
+    );
+    const prompt = scene.add.text(0, -interaction.height / 2 - 6, "E 睡觉", {
+      ...textStyle("#ffe7b5"),
+      backgroundColor: "#3d2918",
+      padding: { x: 3, y: 1 },
+    }).setOrigin(0.5);
+    this.container = scene.add.container(
+      interaction.x + interaction.width / 2,
+      interaction.y + interaction.height / 2,
+      [frame, blanket, pillow, prompt],
+    ).setDepth(100 + interaction.y + interaction.height);
+  }
+
+  /** Returns Euclidean distance from the bed center to one player position. */
+  distanceTo(x: number, y: number): number {
+    return Math.hypot(x - this.container.x, y - this.container.y);
+  }
+
+  /** Destroys the complete temporary bed view. */
   destroy(): void {
     this.container.destroy(true);
   }
@@ -226,6 +278,11 @@ export class EntityFactory {
     return new FarmPlotEntity(this.scene, interaction, this.media, onInteract);
   }
 
+  /** Creates one functional Cottage bed from its decoded Tiled interaction. */
+  createBed(interaction: InteractionDefinition): BedEntity {
+    return new BedEntity(this.scene, interaction);
+  }
+
   /** Creates one fixed NPC entity from its catalog spawn metadata. */
   createNpc(spawn: NpcSpawnDefinition): NpcEntity {
     return new NpcEntity(this.scene, spawn, this.media);
@@ -247,5 +304,16 @@ function farmAppearance(tile: FarmTileState): { readonly tint: number; readonly 
       alpha: 1,
     };
     case "mature": return { tint: 0xd9ff6f, alpha: 1 };
+  }
+}
+
+/** Maps the three day-growth stages to a restrained presentation-only crop scale. */
+function cropScale(tile: FarmTileState): number {
+  if (tile.phase === "mature") return 1;
+  switch (tile.growthStage) {
+    case 0: return 0.5;
+    case 1: return 0.7;
+    case 2: return 0.88;
+    case 3: return 1;
   }
 }

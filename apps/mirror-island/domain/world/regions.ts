@@ -31,7 +31,7 @@ export interface ResourceSpawnDefinition extends WorldPoint {
 export interface InteractionDefinition extends WorldRect {
   readonly entityId: string;
   readonly regionId: string;
-  readonly kind: "farm-plot" | "door";
+  readonly kind: "farm-plot" | "door" | "bed";
 }
 
 export interface NpcSpawnDefinition extends WorldPoint {
@@ -102,6 +102,11 @@ export class WorldCatalog {
   /** Returns one stable interaction spawn or null when the ID is not part of the world catalog. */
   interaction(entityId: string): InteractionDefinition | null {
     return this.interactions.get(entityId) ?? null;
+  }
+
+  /** Returns one stable NPC spawn or null when the ID is not part of the world catalog. */
+  npc(entityId: string): NpcSpawnDefinition | null {
+    return this.npcs.get(entityId) ?? null;
   }
 
   /** Returns the exit containing one world-space point, or null outside all exits. */

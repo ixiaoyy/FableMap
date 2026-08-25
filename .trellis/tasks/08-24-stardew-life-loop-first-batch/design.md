@@ -43,7 +43,7 @@ interface FarmTileStateV3 {
 ```
 
 - 删除 `readyAt`；day settlement 是唯一 growth owner。
-- `deriveGameDate(day)` 为纯函数：28 天/季、春夏秋冬、4 季/年；第一批 HUD 只显示季节与当季日，不做时钟。
+- `day` 只作为 1-based 非零整数显示为 `Day N`；第一批不建立 Season、年份或日内时钟派生。
 - 金币和日期随 clone/decode/migration/save 完整 round-trip。
 
 ## Commands and results
@@ -56,7 +56,7 @@ type GameCommand =
   | { type: "sell-item"; itemId: "turnip"; quantity: 1 };
 ```
 
-- `sleep` 校验 interaction kind、region 和 42px 距离；成功后同步 settle crops/day/player，再单次 critical save。
+- `sleep` 校验 interaction kind、region 和 42px 距离；成功后在一次同步 command 中结算 crops、清除 watered、day+1 与安全位置，再由 GameSession 排队一次 critical save。
 - `ShopSystem` 使用固定 catalog `{turnip-seed: buy 20, turnip: sell 35}`；buy 先验证 gold 与完整容量，sell 先验证完整库存，再 mutation。
 - 交易结果使用 closed union，GameSession 唯一映射为中文 feedback。
 
@@ -65,7 +65,8 @@ type GameCommand =
 - `domain/world/regions.ts` 与 Tiled decoder 增加 `bed` interaction kind；Cottage TMJ 新增 stable `cottage-bed`，位置由 Tiled 人工确认且不修改其他 ID。
 - WorldScene E 输入优先级：最近 bed → sleep；Seed Shop 最近 NPC → 打开 ShopPanel；无目标时固定错误反馈。
 - ShopPanel state 只包含 open/closed、snapshot gold 与 inventory projection；按钮 dispatch typed buy/sell command。
-- HUD 在现有 GameView/DebugShell 复用同一个 derived date/gold projection，不在 Phaser/Vue 各自计算 calendar。
+- ShopPanel 打开时由 client shell 锁定 Phaser 世界输入；关闭面板才恢复，domain 不保存 UI open/closed。
+- HUD 在现有 GameView/DebugShell 直接消费 snapshot 的 day/gold projection，不在 Phaser/Vue 重复经济或日结规则。
 
 ## v2 to v3 migration
 
@@ -74,6 +75,7 @@ type GameCommand =
 - FarmTile crop ID 同样映射；合法 phase 保留，`growthStage` 规范到 0–3，删除 `readyAt`。
 - day=1、gold=100；watered 原值保留，使用户下一次主动睡觉决定是否增长。
 - migration 只在内存返回 v3；下一次保存写回 v3。失败不覆盖原 IndexedDB record。
+- v3 decode 只验证并返回当前值，不再次运行 v2 defaults 或 item remap，保证重复 load 幂等。
 
 ## Compatibility and rollback
 
@@ -84,11 +86,10 @@ type GameCommand =
 
 ## Open-source review boundary
 
-- 实现前检索维护中的 TypeScript calendar/economy/state-machine 方案并记录许可证与退出成本。
-- 当前规则仅为整数日期派生、固定 1 商品价格和已有 closed state machine；若库的接入面积大于这些纯函数/薄 domain service，记录拒绝原因并最小自研。
+- 已评估维护中的 XState、date-fns 与 Dinero.js，均为 MIT 且仍维护；XState 的 actor/statechart owner、date-fns 的真实日期模型、Dinero 的货币精度/格式能力都显著超过本轮整数 day、既有 closed phase 和两项固定金币交易，且会扩大 GameSession 边界，因此不引入依赖，采用最小纯函数/薄 domain service。
 
 ## Verification
 
-- 自动：typecheck、client build、v2→v3 decode、三次 watered sleep、未浇水不增长、buy/sell 原子失败与成功。
+- 自动：typecheck、client build、v2→v3 decode 与幂等重载、三次 watered sleep、未浇水不增长、buy/sell 原子失败与成功。
 - 人工：登录后完整 10 分钟循环、床交互、HUD、ShopPanel、刷新继续与 Farm/Town/Cottage/Seed Shop 往返。
-- 不连接 PostgreSQL、不新增 Prisma migration、不部署生产。
+- 不连接 PostgreSQL、不新增 Prisma migration；完成后先本地/真实浏览器验收，是否再次部署生产需单独明确授权。

@@ -9,11 +9,13 @@ import {
   type WorldCatalog,
 } from "../world/regions.ts";
 
-export const GAME_STATE_VERSION = 2 as const;
+export const GAME_STATE_VERSION = 3 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
 const LEGACY_TREE_ID = "tree-01";
 const LEGACY_FARM_TILE_ID = "farm-01";
+const LEGACY_ALIEN_SEED_ID = "alien-seed";
+const LEGACY_ALIEN_CROP_ID = "alien-crop";
 
 export interface InventorySlot {
   itemId: ItemId | "";
@@ -33,36 +35,39 @@ export interface ResourceState {
 }
 
 export type FarmPhase = "untilled" | "tilled" | "growing" | "mature";
+export type CropGrowthStage = 0 | 1 | 2 | 3;
 
 export interface FarmTileState {
   readonly id: string;
   phase: FarmPhase;
-  cropId: typeof ITEM_ID.alienCrop | "";
-  growthStage: number;
+  cropId: typeof ITEM_ID.turnip | "";
+  growthStage: CropGrowthStage;
   watered: boolean;
-  readyAt: number;
 }
 
 export interface GameState {
   readonly version: typeof GAME_STATE_VERSION;
+  day: number;
+  gold: number;
   player: PlayerState;
   inventory: InventorySlot[];
   resources: Record<string, ResourceState>;
   farmTiles: Record<string, FarmTileState>;
 }
 
-/** Creates a deterministic v2 game state from the validated Tiled-derived world catalog. */
+/** Creates a deterministic v3 game state from the validated Tiled-derived world catalog. */
 export function createInitialGameState(catalog: WorldCatalog): GameState {
   const inventory: InventorySlot[] = Array.from(
     { length: INVENTORY_SLOT_COUNT },
     () => ({ itemId: "", quantity: 0 }),
   );
   inventory[0] = { itemId: ITEM_ID.hoe, quantity: 1 };
-  inventory[1] = { itemId: ITEM_ID.alienSeed, quantity: 1 };
-  inventory[2] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
+  inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
   const start = catalog.requireDefaultSpawn(catalog.startRegionId);
   const state: GameState = {
     version: GAME_STATE_VERSION,
+    day: 1,
+    gold: 100,
     player: { regionId: catalog.startRegionId, ...start },
     inventory,
     resources: {},
@@ -117,6 +122,8 @@ export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCa
 export function cloneGameState(state: GameState): GameState {
   return {
     version: GAME_STATE_VERSION,
+    day: state.day,
+    gold: state.gold,
     player: { ...state.player },
     inventory: state.inventory.map((slot) => ({ ...slot })),
     resources: Object.fromEntries(
@@ -128,27 +135,37 @@ export function cloneGameState(state: GameState): GameState {
   };
 }
 
-/** Validates one unknown value as a complete version-2 game state and returns a defensive clone. */
+/** Validates one unknown value as a complete version-3 game state and returns a defensive clone. */
 export function decodeGameState(value: unknown): GameState {
   const state = recordFrom(value, "Game state is invalid.");
   if (state.version !== GAME_STATE_VERSION) throw new Error("Game state version is unsupported.");
-  const player = recordFrom(state.player, "Player state is invalid.");
-  const regionId = stringFrom(player.regionId, "Player region is invalid.");
-  assertStableId(regionId, "Player region ID");
   return {
     version: GAME_STATE_VERSION,
-    player: {
-      regionId,
-      x: finiteNumber(player.x, "Player X is invalid."),
-      y: finiteNumber(player.y, "Player Y is invalid."),
-    },
-    inventory: decodeInventory(state.inventory),
-    resources: decodeResourcesV2(state.resources),
-    farmTiles: decodeFarmTilesV2(state.farmTiles),
+    day: positiveSafeInteger(state.day, "Game day is invalid."),
+    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
+    player: decodePlayerState(state.player),
+    inventory: decodeInventory(state.inventory, false),
+    resources: decodeResources(state.resources),
+    farmTiles: decodeFarmTilesV3(state.farmTiles),
   };
 }
 
-/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v2 world IDs. */
+/** Explicitly migrates a released v2 state into the day-based v3 life-loop contract. */
+export function migrateGameStateV2(value: unknown): GameState {
+  const state = recordFrom(value, "Version-2 game state is invalid.");
+  if (state.version !== 2) throw new Error("Version-2 game state is unsupported.");
+  return {
+    version: GAME_STATE_VERSION,
+    day: 1,
+    gold: 100,
+    player: decodePlayerState(state.player),
+    inventory: decodeInventory(state.inventory, true),
+    resources: decodeResources(state.resources),
+    farmTiles: decodeFarmTilesV2(state.farmTiles, true),
+  };
+}
+
+/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v3 world IDs. */
 export function migrateLegacyGameStateV1(value: unknown): GameState {
   const state = recordFrom(value, "Legacy game state is invalid.");
   if (state.version !== 1) throw new Error("Legacy game state version is unsupported.");
@@ -157,31 +174,26 @@ export function migrateLegacyGameStateV1(value: unknown): GameState {
   const legacyFarmTiles = recordFrom(state.farmTiles, "Legacy farm state is invalid.");
   const resources: Record<string, ResourceState> = {};
   for (const [id, rawResource] of Object.entries(legacyResources)) {
-    const resource = recordFrom(rawResource, "Legacy resource state is invalid.");
-    if (
-      resource.id !== id
-      || (resource.kind !== "tree" && resource.kind !== "stone")
-      || typeof resource.available !== "boolean"
-    ) {
-      throw new Error("Legacy resource state is invalid.");
-    }
+    const resource = decodeResource(rawResource, id);
     const migratedId = id === LEGACY_TREE_ID ? TREE_ID : id;
     assertStableId(migratedId, "Migrated resource ID");
-    resources[migratedId] = { id: migratedId, kind: resource.kind, available: resource.available };
+    resources[migratedId] = { ...resource, id: migratedId };
   }
   const farmTiles: Record<string, FarmTileState> = {};
   for (const [id, rawTile] of Object.entries(legacyFarmTiles)) {
     const migratedId = id === LEGACY_FARM_TILE_ID ? FARM_TILE_ID : id;
-    farmTiles[migratedId] = decodeFarmTile(rawTile, migratedId, true);
+    farmTiles[migratedId] = decodeFarmTileV2(rawTile, migratedId, false);
   }
   return {
     version: GAME_STATE_VERSION,
+    day: 1,
+    gold: 100,
     player: {
       regionId: "farm",
       x: finiteNumber(player.x, "Legacy player X is invalid."),
       y: finiteNumber(player.y, "Legacy player Y is invalid."),
     },
-    inventory: decodeInventory(state.inventory),
+    inventory: decodeInventory(state.inventory, true),
     resources,
     farmTiles,
   };
@@ -189,63 +201,156 @@ export function migrateLegacyGameStateV1(value: unknown): GameState {
 
 /** Creates the reviewed default state for one catalog-owned farm plot. */
 function createUntilledFarmTile(id: string): FarmTileState {
-  return { id, phase: "untilled", cropId: "", growthStage: 0, watered: false, readyAt: 0 };
+  return { id, phase: "untilled", cropId: "", growthStage: 0, watered: false };
 }
 
-/** Validates the fixed-length inventory and every registered item stack. */
-function decodeInventory(value: unknown): InventorySlot[] {
+/** Validates one player position and stable region identifier. */
+function decodePlayerState(value: unknown): PlayerState {
+  const player = recordFrom(value, "Player state is invalid.");
+  const regionId = stringFrom(player.regionId, "Player region is invalid.");
+  assertStableId(regionId, "Player region ID");
+  return {
+    regionId,
+    x: finiteNumber(player.x, "Player X is invalid."),
+    y: finiteNumber(player.y, "Player Y is invalid."),
+  };
+}
+
+/** Validates the fixed-length inventory and optionally maps the two released placeholder item IDs. */
+function decodeInventory(value: unknown, migrateLegacyItems: boolean): InventorySlot[] {
   const inventory = Array.isArray(value) ? value : null;
   if (!inventory || inventory.length !== INVENTORY_SLOT_COUNT) throw new Error("Inventory state is invalid.");
-  return inventory.map((rawSlot) => decodeInventorySlot(rawSlot));
+  return inventory.map((rawSlot) => decodeInventorySlot(rawSlot, migrateLegacyItems));
 }
 
-/** Validates one unknown inventory slot against registered items and bounded stack quantities. */
-function decodeInventorySlot(value: unknown): InventorySlot {
+/** Validates one inventory slot after applying only the explicit v1/v2 item aliases. */
+function decodeInventorySlot(value: unknown, migrateLegacyItems: boolean): InventorySlot {
   const slot = recordFrom(value, "Inventory slot is invalid.");
   if (slot.itemId === "" && slot.quantity === 0) return { itemId: "", quantity: 0 };
-  const definition = getItemDefinition(slot.itemId);
-  if (!definition || !Number.isInteger(slot.quantity) || Number(slot.quantity) < 1 || Number(slot.quantity) > definition.maxStack) {
+  const itemId = migrateLegacyItems ? migrateLegacyItemId(slot.itemId) : slot.itemId;
+  const definition = getItemDefinition(itemId);
+  if (
+    !definition
+    || !Number.isInteger(slot.quantity)
+    || Number(slot.quantity) < 1
+    || Number(slot.quantity) > definition.maxStack
+  ) {
     throw new Error("Inventory slot is invalid.");
   }
   return { itemId: definition.id, quantity: Number(slot.quantity) };
 }
 
-/** Validates sparse v2 resource state without duplicating catalog-owned positions. */
-function decodeResourcesV2(value: unknown): Record<string, ResourceState> {
+/** Maps only the two retired farming placeholders without accepting other unknown item IDs. */
+function migrateLegacyItemId(value: unknown): unknown {
+  if (value === LEGACY_ALIEN_SEED_ID) return ITEM_ID.turnipSeed;
+  if (value === LEGACY_ALIEN_CROP_ID) return ITEM_ID.turnip;
+  return value;
+}
+
+/** Validates sparse resource state without duplicating catalog-owned positions. */
+function decodeResources(value: unknown): Record<string, ResourceState> {
   const source = recordFrom(value, "Resource state is invalid.");
   const result: Record<string, ResourceState> = {};
   for (const [id, rawResource] of Object.entries(source)) {
-    const resource = recordFrom(rawResource, "Resource state is invalid.");
-    if (resource.id !== id || (resource.kind !== "tree" && resource.kind !== "stone") || typeof resource.available !== "boolean") {
-      throw new Error("Resource state is invalid.");
-    }
+    const resource = decodeResource(rawResource, id);
     assertStableId(id, "Saved resource ID");
-    result[id] = { id, kind: resource.kind, available: resource.available };
+    result[id] = resource;
   }
   return result;
 }
 
-/** Validates sparse v2 farm state without duplicating catalog-owned positions. */
-function decodeFarmTilesV2(value: unknown): Record<string, FarmTileState> {
-  const source = recordFrom(value, "Farm state is invalid.");
-  return Object.fromEntries(Object.entries(source).map(([id, rawTile]) => [id, decodeFarmTile(rawTile, id, false)]));
+/** Validates one resource entry against its record key and closed resource kinds. */
+function decodeResource(value: unknown, id: string): ResourceState {
+  const resource = recordFrom(value, "Resource state is invalid.");
+  if (
+    resource.id !== id
+    || (resource.kind !== "tree" && resource.kind !== "stone")
+    || typeof resource.available !== "boolean"
+  ) {
+    throw new Error("Resource state is invalid.");
+  }
+  return { id, kind: resource.kind, available: resource.available };
 }
 
-/** Validates one farm state and its closed phase/crop/timer invariants. */
-function decodeFarmTile(value: unknown, id: string, legacy: boolean): FarmTileState {
-  const tile = recordFrom(value, legacy ? "Legacy farm state is invalid." : "Farm state is invalid.");
-  if ((!legacy && tile.id !== id) || !isFarmPhase(tile.phase) || (tile.cropId !== "" && tile.cropId !== ITEM_ID.alienCrop) || typeof tile.watered !== "boolean") {
+/** Validates sparse v3 farm state with day-growth stages and no wall-clock fields. */
+function decodeFarmTilesV3(value: unknown): Record<string, FarmTileState> {
+  const source = recordFrom(value, "Farm state is invalid.");
+  return Object.fromEntries(
+    Object.entries(source).map(([id, rawTile]) => [id, decodeFarmTileV3(rawTile, id)]),
+  );
+}
+
+/** Validates one current farm tile and its phase, crop, growth-stage and watering invariants. */
+function decodeFarmTileV3(value: unknown, id: string): FarmTileState {
+  const tile = recordFrom(value, "Farm state is invalid.");
+  if (tile.id !== id || !isFarmPhase(tile.phase) || typeof tile.watered !== "boolean") {
     throw new Error("Farm state is invalid.");
   }
   assertStableId(id, "Saved farm ID");
-  const growthStage = finiteInteger(tile.growthStage, "Farm growth stage is invalid.");
-  const readyAt = finiteNumber(tile.readyAt, "Farm ready time is invalid.");
-  if (growthStage < 0 || growthStage > 1 || readyAt < 0) throw new Error("Farm state is invalid.");
-  const cropId = tile.cropId as FarmTileState["cropId"];
-  if ((tile.phase === "growing" || tile.phase === "mature") !== (cropId === ITEM_ID.alienCrop)) {
+  const growthStage = cropGrowthStage(tile.growthStage, "Farm growth stage is invalid.");
+  const hasCrop = tile.cropId === ITEM_ID.turnip;
+  const shouldHaveCrop = tile.phase === "growing" || tile.phase === "mature";
+  if (
+    (tile.cropId !== "" && !hasCrop)
+    || hasCrop !== shouldHaveCrop
+    || ((tile.phase === "untilled" || tile.phase === "tilled") && growthStage !== 0)
+    || (tile.phase === "growing" && growthStage === 3)
+    || (tile.phase === "mature" && growthStage !== 3)
+  ) {
     throw new Error("Farm state is inconsistent.");
   }
-  return { id, phase: tile.phase, cropId, growthStage, watered: tile.watered, readyAt };
+  return {
+    id,
+    phase: tile.phase,
+    cropId: hasCrop ? ITEM_ID.turnip : "",
+    growthStage,
+    watered: tile.watered,
+  };
+}
+
+/** Migrates sparse v1/v2 farm state while validating the retired timer contract. */
+function decodeFarmTilesV2(value: unknown, requireMatchingId: boolean): Record<string, FarmTileState> {
+  const source = recordFrom(value, "Version-2 farm state is invalid.");
+  return Object.fromEntries(
+    Object.entries(source).map(([id, rawTile]) => [
+      id,
+      decodeFarmTileV2(rawTile, id, requireMatchingId),
+    ]),
+  );
+}
+
+/** Converts one valid timer-based farm tile into the equivalent day-growth v3 state. */
+function decodeFarmTileV2(value: unknown, id: string, requireMatchingId: boolean): FarmTileState {
+  const tile = recordFrom(value, "Version-2 farm state is invalid.");
+  if (
+    (requireMatchingId && tile.id !== id)
+    || !isFarmPhase(tile.phase)
+    || (tile.cropId !== "" && tile.cropId !== LEGACY_ALIEN_CROP_ID)
+    || typeof tile.watered !== "boolean"
+  ) {
+    throw new Error("Version-2 farm state is invalid.");
+  }
+  assertStableId(id, "Saved farm ID");
+  const legacyGrowthStage = finiteSafeInteger(tile.growthStage, "Farm growth stage is invalid.");
+  const readyAt = finiteNumber(tile.readyAt, "Farm ready time is invalid.");
+  if (legacyGrowthStage < 0 || legacyGrowthStage > 1 || readyAt < 0) {
+    throw new Error("Version-2 farm state is invalid.");
+  }
+  const hasCrop = tile.cropId === LEGACY_ALIEN_CROP_ID;
+  if ((tile.phase === "growing" || tile.phase === "mature") !== hasCrop) {
+    throw new Error("Version-2 farm state is inconsistent.");
+  }
+  return {
+    id,
+    phase: tile.phase,
+    cropId: hasCrop ? ITEM_ID.turnip : "",
+    growthStage: tile.phase === "mature"
+      ? 3
+      : tile.phase === "growing"
+        ? legacyGrowthStage as 0 | 1
+        : 0,
+    watered: tile.watered,
+  };
 }
 
 /** Narrows one unknown phase to the complete local farming state machine. */
@@ -271,9 +376,30 @@ function finiteNumber(value: unknown, message: string): number {
   return value;
 }
 
-/** Requires one finite integer and returns it without coercion. */
-function finiteInteger(value: unknown, message: string): number {
+/** Requires one finite safe integer without coercion. */
+function finiteSafeInteger(value: unknown, message: string): number {
   const number = finiteNumber(value, message);
-  if (!Number.isInteger(number)) throw new Error(message);
+  if (!Number.isSafeInteger(number)) throw new Error(message);
   return number;
+}
+
+/** Requires one positive safe integer used by the 1-based life-loop day. */
+function positiveSafeInteger(value: unknown, message: string): number {
+  const number = finiteSafeInteger(value, message);
+  if (number < 1) throw new Error(message);
+  return number;
+}
+
+/** Requires one non-negative safe integer used by local gold balances. */
+function nonNegativeSafeInteger(value: unknown, message: string): number {
+  const number = finiteSafeInteger(value, message);
+  if (number < 0) throw new Error(message);
+  return number;
+}
+
+/** Narrows one decoded integer to the four supported turnip growth stages. */
+function cropGrowthStage(value: unknown, message: string): CropGrowthStage {
+  const stage = finiteSafeInteger(value, message);
+  if (stage < 0 || stage > 3) throw new Error(message);
+  return stage as CropGrowthStage;
 }

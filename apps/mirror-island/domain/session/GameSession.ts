@@ -13,11 +13,19 @@ import {
   reconcileGameStateWithCatalog,
   type GameState,
 } from "../state/game-state.ts";
+import {
+  ShopSystem,
+  type BuyResult,
+  type SellResult,
+} from "../shop/ShopSystem.ts";
 import { movePlayer } from "../world/movement.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 import type { ActionFeedback, GameCommand } from "./commands.ts";
 
 const MOVEMENT_CHECKPOINT_INTERVAL_MS = 500;
+const SLEEP_INTERACTION_DISTANCE_PIXELS = 42;
+
+type SleepResult = "slept" | "missing-bed" | "too-far" | "already-saving" | "day-limit";
 
 export type GameStateListener = (state: GameState) => void;
 
@@ -26,12 +34,14 @@ export class GameSession {
   private readonly gathering: GatheringSystem;
   private readonly crafting = new CraftingSystem(this.inventory);
   private readonly farming: FarmingSystem;
+  private readonly shop: ShopSystem;
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState | null = null;
   private movementDirty = false;
   private lastMovementCheckpointAt = 0;
   private saveQueue: Promise<void> = Promise.resolve();
   private lastSaveError: unknown = null;
+  private sleepPending = false;
 
   /** Creates the sole mutable session owner for one opaque account key and local save slot. */
   constructor(
@@ -44,6 +54,7 @@ export class GameSession {
     if (!ownerKey.trim() || !slotId.trim()) throw new Error("Local save identity is invalid.");
     this.gathering = new GatheringSystem(this.inventory, catalog);
     this.farming = new FarmingSystem(this.inventory, catalog);
+    this.shop = new ShopSystem(this.inventory, catalog);
   }
 
   /** Reports whether this authenticated browser profile has a valid local save record. */
@@ -58,13 +69,14 @@ export class GameSession {
     await this.repository.save(this.ownerKey, this.slotId, createStoredGame(state, this.now()));
     this.state = state;
     this.lastSaveError = null;
+    this.sleepPending = false;
     this.movementDirty = false;
     this.lastMovementCheckpointAt = this.now();
     this.publish();
     return cloneGameState(state);
   }
 
-  /** Loads and validates the current slot, including crop progress elapsed while the page was closed. */
+  /** Loads, validates and reconciles the current slot without advancing day-owned crop progress. */
   async continueGame(): Promise<GameState> {
     await this.flush();
     const stored = await this.repository.load(this.ownerKey, this.slotId);
@@ -72,9 +84,9 @@ export class GameSession {
     this.state = stored.state;
     reconcileGameStateWithCatalog(this.state, this.catalog);
     this.lastSaveError = null;
+    this.sleepPending = false;
     this.movementDirty = false;
     this.lastMovementCheckpointAt = this.now();
-    this.farming.tick(this.state, this.now());
     this.queueSave();
     this.publish();
     return this.snapshot();
@@ -102,11 +114,29 @@ export class GameSession {
         return craftingFeedback(result);
       }
       case "farm-primary": {
-        const result = this.farming.primary(state, command.tileId, this.now());
+        const result = this.farming.primary(state, command.tileId);
         if (["tilled", "planted", "watered", "harvested"].includes(result)) {
           this.commitCriticalChange();
         }
         return farmingFeedback(result);
+      }
+      case "sleep": {
+        const result = this.sleep(state, command.bedId);
+        if (result === "slept") {
+          this.sleepPending = true;
+          void this.commitCriticalChange().finally(() => { this.sleepPending = false; });
+        }
+        return sleepFeedback(result);
+      }
+      case "buy-item": {
+        const result = this.shop.buyTurnipSeed(state);
+        if (result === "bought") this.commitCriticalChange();
+        return buyFeedback(result);
+      }
+      case "sell-item": {
+        const result = this.shop.sellTurnip(state);
+        if (result === "sold") this.commitCriticalChange();
+        return sellFeedback(result);
       }
       case "transition-region": {
         const exit = this.catalog.exitAt(
@@ -127,10 +157,9 @@ export class GameSession {
     }
   }
 
-  /** Advances time-based rules and periodically checkpoints movement without saving every frame. */
+  /** Periodically checkpoints movement without advancing any day-owned gameplay rule. */
   tick(now = this.now()): void {
-    const state = this.requireState();
-    if (this.farming.tick(state, now)) this.commitCriticalChange();
+    this.requireState();
     if (this.movementDirty && now - this.lastMovementCheckpointAt >= MOVEMENT_CHECKPOINT_INTERVAL_MS) {
       this.queueSave();
       this.movementDirty = false;
@@ -163,15 +192,17 @@ export class GameSession {
     }
   }
 
-  /** Publishes a committed gameplay mutation and queues a durable snapshot immediately. */
-  private commitCriticalChange(): void {
+  /** Publishes a committed gameplay mutation, queues one durable snapshot and returns its completion. */
+  private commitCriticalChange(): Promise<void> {
+    this.movementDirty = false;
+    this.lastMovementCheckpointAt = this.now();
     this.publish();
-    this.queueSave();
+    return this.queueSave();
   }
 
-  /** Serializes all repository writes so an older asynchronous snapshot cannot overwrite a newer one. */
-  private queueSave(): void {
-    if (!this.state) return;
+  /** Serializes all repository writes and returns the queue tail for callers that need an input lock. */
+  private queueSave(): Promise<void> {
+    if (!this.state) return this.saveQueue;
     const stored = createStoredGame(this.state, this.now());
     this.saveQueue = this.saveQueue.then(
       () => this.repository.save(this.ownerKey, this.slotId, stored),
@@ -180,6 +211,34 @@ export class GameSession {
       () => { this.lastSaveError = null; },
       (error: unknown) => { this.lastSaveError = error; },
     );
+    return this.saveQueue;
+  }
+
+  /** Atomically settles one reviewed sleep request and moves the player to the Cottage safe spawn. */
+  private sleep(state: GameState, bedId: string): SleepResult {
+    if (this.sleepPending) return "already-saving";
+    const bed = this.catalog.interaction(bedId);
+    if (
+      !bed
+      || bed.kind !== "bed"
+      || bed.regionId !== "cottage"
+      || state.player.regionId !== bed.regionId
+    ) {
+      return "missing-bed";
+    }
+    const targetX = bed.x + bed.width / 2;
+    const targetY = bed.y + bed.height / 2;
+    if (Math.hypot(state.player.x - targetX, state.player.y - targetY) > SLEEP_INTERACTION_DISTANCE_PIXELS) {
+      return "too-far";
+    }
+    if (state.day >= Number.MAX_SAFE_INTEGER) return "day-limit";
+    const safeSpawn = this.catalog.requireDefaultSpawn("cottage");
+    this.farming.settleDay(state);
+    state.day += 1;
+    state.player.regionId = "cottage";
+    state.player.x = safeSpawn.x;
+    state.player.y = safeSpawn.y;
+    return "slept";
   }
 
   /** Sends isolated snapshots to every renderer and UI projection listener. */
@@ -221,14 +280,45 @@ function farmingFeedback(result: FarmingResult): ActionFeedback {
   const error = (message: string): ActionFeedback => ({ tone: "error", code: result, message });
   switch (result) {
     case "tilled": return success("土地已经开垦。");
-    case "planted": return success("荧光种子已经播下。");
-    case "watered": return success("作物已经浇水，正在生长。");
-    case "harvested": return success("收获了一个荧光果。");
-    case "waiting": return error("作物还在生长。");
+    case "planted": return success("萝卜种子已经播下。");
+    case "watered": return success("作物已浇水，睡觉后会成长。");
+    case "harvested": return success("收获了一个萝卜。");
+    case "waiting": return error("今天已经浇过水了。");
     case "too-far": return error("离农田太远。");
     case "missing-tool": return error("缺少所需工具。");
     case "missing-seed": return error("没有可用种子。");
     case "inventory-full": return error("背包已满。");
     case "missing-tile": return error("农田不存在。");
+  }
+}
+
+/** Maps one atomic sleep result to fixed local UI feedback. */
+function sleepFeedback(result: SleepResult): ActionFeedback {
+  switch (result) {
+    case "slept": return { tone: "success", code: result, message: "新的一天开始了。" };
+    case "missing-bed": return { tone: "error", code: result, message: "这里只能在自己的床上睡觉。" };
+    case "too-far": return { tone: "error", code: result, message: "需要再靠近床一些。" };
+    case "already-saving": return { tone: "error", code: result, message: "这一天正在结算，请稍候。" };
+    case "day-limit": return { tone: "error", code: result, message: "日期已经达到存档上限。" };
+  }
+}
+
+/** Maps one fixed seed purchase result to local UI feedback without exposing pricing logic to Vue. */
+function buyFeedback(result: BuyResult): ActionFeedback {
+  switch (result) {
+    case "bought": return { tone: "success", code: result, message: "购买了 1 粒萝卜种子。" };
+    case "not-at-shop": return { tone: "error", code: result, message: "需要在种子店老板旁交易。" };
+    case "insufficient-gold": return { tone: "error", code: result, message: "金币不足。" };
+    case "inventory-full": return { tone: "error", code: result, message: "背包已满。" };
+  }
+}
+
+/** Maps one fixed turnip sale result to local UI feedback without exposing pricing logic to Vue. */
+function sellFeedback(result: SellResult): ActionFeedback {
+  switch (result) {
+    case "sold": return { tone: "success", code: result, message: "出售了 1 个萝卜。" };
+    case "not-at-shop": return { tone: "error", code: result, message: "需要在种子店老板旁交易。" };
+    case "missing-item": return { tone: "error", code: result, message: "背包里没有可出售的萝卜。" };
+    case "gold-limit": return { tone: "error", code: result, message: "金币已经达到存档上限。" };
   }
 }

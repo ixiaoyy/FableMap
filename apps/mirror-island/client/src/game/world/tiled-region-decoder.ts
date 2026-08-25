@@ -203,7 +203,9 @@ function decodeInteractions(layer: Record<string, unknown>, regionId: string): r
     const entityId = requiredString(properties, "entityId");
     const kind = requiredString(properties, "interactionKind");
     assertStableId(entityId, "Interaction entity ID");
-    if (kind !== "farm-plot" && kind !== "door") throw new Error("Interaction kind is invalid.");
+    if (kind !== "farm-plot" && kind !== "door" && kind !== "bed") {
+      throw new Error("Interaction kind is invalid.");
+    }
     return { entityId, regionId, kind, ...rectFrom(object) };
   });
 }
