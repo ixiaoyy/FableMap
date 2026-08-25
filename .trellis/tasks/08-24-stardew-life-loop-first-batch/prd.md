@@ -58,12 +58,12 @@
 
 - [x] Farm Showcase 真实人工验收全部通过并记录后，任务才进入 implementation。
 - [x] 新游戏显示 `Day 1` 与 `100g`；刷新继续后 day、gold、背包和农田一致。
-- [ ] Cottage 床边按 E 每次只推进 1 天；其他位置不能睡觉，快速重复输入不重复结算。
-- [ ] 萝卜只有在当日浇水后睡觉才增长一阶；3 次有效跨日后成熟，wall-clock 等待不再使其成熟。
-- [ ] Seed Keeper 打开 ShopPanel；20g 购买 1 个萝卜种子，金币/容量失败均无部分 mutation。
-- [ ] ShopPanel 打开期间 Phaser 世界移动、动作和地图交互输入全部锁定；关闭后恢复。
-- [ ] 成熟萝卜收获一次进入背包；35g 出售 1 个，库存不足时金币不变。
-- [ ] 玩家能真人连续完成“买 → 种 → 浇水/睡觉三轮 → 收 → 卖 → 再买”，并至少跨到下一天继续操作。
+- [x] Cottage 床边按 E 每次只推进 1 天；其他位置不能睡觉，快速重复输入不重复结算。
+- [x] 萝卜只有在当日浇水后睡觉才增长一阶；3 次有效跨日后成熟，wall-clock 等待不再使其成熟。
+- [x] Seed Keeper 打开 ShopPanel；20g 购买 1 个萝卜种子，金币/容量失败均无部分 mutation。
+- [x] ShopPanel 打开期间 Phaser 世界移动、动作和地图交互输入全部锁定；关闭后恢复。
+- [x] 成熟萝卜收获一次进入背包；35g 出售 1 个，库存不足时金币不变。
+- [x] 玩家能真人连续完成“买 → 种 → 浇水/睡觉三轮 → 收 → 卖 → 再买”，并至少跨到下一天继续操作。
 - [x] 合法 v2 存档迁移为 v3，alien 物品/作物映射为 turnip；损坏或 future save 明确失败。
 - [x] Phaser/Vue 只发送命令和渲染 snapshot；GameSession/SaveRepository 抽象、Keycloak 与 IndexedDB 边界不被绕过。
 - [x] 最小 typecheck、client build 和针对 day/sleep/growth/shop/migration 的窄确定性检查通过；无数据库连接、部署或大规模测试矩阵。
