@@ -18,5 +18,10 @@
 - 云存档、通用 ECS、大型全局状态库、地图编辑平台或无界程序生成框架；本地 GameSession 只服务 Stardew Core 当前闭环。
 - 书屋、异闻世界和《乔女》《画皮》《聂小倩》等《聊斋》内容当前不做；《聊斋》未来作为书库中的一本书单独规划。
 - 昼夜、经济、NPC 日程、天气和剧情不进入 World Foundation A/B/C；唯一店主只验证 spawn、E 交互与 Vue Dialogue 管线。
+- World Foundation 完整人工游玩门槛通过前，不开始 Day、睡觉跨日、作物按天成长、金币或商店闭环；自动检查不能替代地图体感验收。
+- Farm showcase 的 Gate A 截图未获确认前，不精修 Town/Cottage/Seed Shop，不新增地图，不提前摆花草、灯笼、荷叶、竹林等细节，也不混入第二套风格不一致素材。
+- Gate B 不新增图片素材、互动对象或 gameplay state；花草、灯笼、荷叶、樱花、竹林、水动画和阴影继续后置到单独视觉评审。
+- 当前不做 Tauri/Rust/FileSystem adapter/Steam API，不做 Unity 或 Godot 技术验证；未来桌面目标只保留架构边界。
+- VectoRaith 本轮只做 Farm 出生镜头 visual prototype，不迁移 Town、不重构 GameSession、不修改存档 schema，也不在许可澄清前上传 CDN。
 
 新通用能力必须先评估成熟开源方案、许可证、维护状态、体积、数据归属和退出成本；不为一个小需求引入整套平台。

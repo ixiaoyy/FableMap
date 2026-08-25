@@ -5,11 +5,7 @@ import type {
   NpcSpawnDefinition,
   ResourceSpawnDefinition,
 } from "../../../../domain/world/regions.ts";
-import {
-  FLOOR_FRAMES,
-  MEDIA_KEYS,
-  VILLAGE_FRAMES,
-} from "../assets/media-catalog.ts";
+import type { EntityMediaProfile } from "../assets/visual-profile.ts";
 
 export class TreeEntity {
   readonly entityId: string;
@@ -19,18 +15,19 @@ export class TreeEntity {
   private available = true;
   private impactAnimating = false;
 
-  /** Creates one clickable tree view at a Tiled-owned spawn without owning persistent availability. */
+  /** Creates one clickable tree view from the supplied regional atlas without owning persistent availability. */
   constructor(
     private readonly scene: Phaser.Scene,
     readonly spawn: ResourceSpawnDefinition,
+    media: EntityMediaProfile,
     onInteract: (entity: TreeEntity) => void,
   ) {
     this.entityId = spawn.entityId;
-    this.tree = scene.add.image(0, 0, MEDIA_KEYS.village, VILLAGE_FRAMES.tree.name)
+    this.tree = scene.add.image(0, 0, media.tree.textureKey, media.tree.frame.name)
       .setOrigin(0.5, 1)
       .setInteractive({ useHandCursor: true });
     this.tree.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
-    this.stump = scene.add.image(0, 0, MEDIA_KEYS.village, VILLAGE_FRAMES.stump.name)
+    this.stump = scene.add.image(0, 0, media.tree.stumpTextureKey, media.tree.stumpFrame.name)
       .setOrigin(0.5, 1)
       .setVisible(false);
     this.container = scene.add.container(spawn.x, spawn.y, [this.stump, this.tree]).setDepth(100 + spawn.y);
@@ -98,10 +95,10 @@ export class RockEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
 
-  /** Creates one non-minable rock view so EntityFactory covers the reviewed resource kind without adding mining. */
-  constructor(scene: Phaser.Scene, readonly spawn: ResourceSpawnDefinition) {
+  /** Creates one non-minable rock from the supplied regional atlas without adding mining behavior. */
+  constructor(scene: Phaser.Scene, readonly spawn: ResourceSpawnDefinition, media: EntityMediaProfile) {
     this.entityId = spawn.entityId;
-    const body = scene.add.image(0, 0, MEDIA_KEYS.village, VILLAGE_FRAMES.rock.name).setOrigin(0.5, 1);
+    const body = scene.add.image(0, 0, media.rock.textureKey, media.rock.frame.name).setOrigin(0.5, 1);
     this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
   }
 
@@ -115,21 +112,30 @@ export class FarmPlotEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
   private readonly soil: Phaser.GameObjects.Image;
+  private readonly crop: Phaser.GameObjects.Image | null;
+  private readonly growingCropFrame: string | null;
+  private readonly matureCropFrame: string | null;
 
-  /** Creates one clickable farm plot at a Tiled interaction rectangle. */
+  /** Creates one clickable farm plot at a Tiled rectangle using the supplied presentation-only soil frame. */
   constructor(
     private readonly scene: Phaser.Scene,
     readonly interaction: InteractionDefinition,
+    media: EntityMediaProfile,
     onInteract: (entity: FarmPlotEntity) => void,
   ) {
     this.entityId = interaction.entityId;
-    this.soil = scene.add.image(0, 0, MEDIA_KEYS.floor, FLOOR_FRAMES.tilled.name)
+    this.soil = scene.add.image(0, 0, media.farmSoil.textureKey, media.farmSoil.frame.name)
       .setInteractive({ useHandCursor: true });
     this.soil.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.crop = media.farmCrop
+      ? scene.add.image(0, -4, media.farmCrop.textureKey, media.farmCrop.growingFrame.name).setVisible(false)
+      : null;
+    this.growingCropFrame = media.farmCrop?.growingFrame.name ?? null;
+    this.matureCropFrame = media.farmCrop?.matureFrame.name ?? null;
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      [this.soil],
+      this.crop ? [this.soil, this.crop] : [this.soil],
     ).setDepth(100 + interaction.y + interaction.height);
   }
 
@@ -138,6 +144,15 @@ export class FarmPlotEntity {
     const appearance = farmAppearance(tile);
     this.soil.setTint(appearance.tint);
     this.soil.setAlpha(appearance.alpha);
+    if (this.crop) {
+      const cropFrame = tile.phase === "mature"
+        ? this.matureCropFrame
+        : tile.phase === "growing"
+          ? this.growingCropFrame
+          : null;
+      this.crop.setVisible(cropFrame !== null);
+      if (cropFrame) this.crop.setFrame(cropFrame);
+    }
   }
 
   /** Plays one short impact pulse shared by tilling, planting, watering and harvesting. */
@@ -163,10 +178,10 @@ export class NpcEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
 
-  /** Creates one fixed-position NPC marker whose dialogue metadata remains catalog-owned. */
-  constructor(scene: Phaser.Scene, readonly spawn: NpcSpawnDefinition) {
+  /** Creates one fixed NPC from the supplied atlas while dialogue metadata remains catalog-owned. */
+  constructor(scene: Phaser.Scene, readonly spawn: NpcSpawnDefinition, media: EntityMediaProfile) {
     this.entityId = spawn.entityId;
-    const body = scene.add.sprite(0, 0, MEDIA_KEYS.shopkeeper, 0).setScale(2).setOrigin(0.5, 0.75);
+    const body = scene.add.sprite(0, 0, media.npcTextureKey, 0).setScale(2).setOrigin(0.5, 0.75);
     const prompt = scene.add.text(0, -16, "E", {
       ...textStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
@@ -187,17 +202,20 @@ export class NpcEntity {
 }
 
 export class EntityFactory {
-  /** Creates one scene-bound entity factory without retaining persistent GameState. */
-  constructor(private readonly scene: Phaser.Scene) {}
+  /** Creates one scene-bound entity factory with presentation-only atlas bindings and no persistent state. */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly media: EntityMediaProfile,
+  ) {}
 
   /** Creates the reviewed tree entity kind and wires its typed interaction callback. */
   createTree(spawn: ResourceSpawnDefinition, onInteract: (entity: TreeEntity) => void): TreeEntity {
-    return new TreeEntity(this.scene, spawn, onInteract);
+    return new TreeEntity(this.scene, spawn, this.media, onInteract);
   }
 
   /** Creates the reviewed non-minable rock entity kind. */
   createRock(spawn: ResourceSpawnDefinition): RockEntity {
-    return new RockEntity(this.scene, spawn);
+    return new RockEntity(this.scene, spawn, this.media);
   }
 
   /** Creates one farm plot entity from an interaction definition. */
@@ -205,12 +223,12 @@ export class EntityFactory {
     interaction: InteractionDefinition,
     onInteract: (entity: FarmPlotEntity) => void,
   ): FarmPlotEntity {
-    return new FarmPlotEntity(this.scene, interaction, onInteract);
+    return new FarmPlotEntity(this.scene, interaction, this.media, onInteract);
   }
 
   /** Creates one fixed NPC entity from its catalog spawn metadata. */
   createNpc(spawn: NpcSpawnDefinition): NpcEntity {
-    return new NpcEntity(this.scene, spawn);
+    return new NpcEntity(this.scene, spawn, this.media);
   }
 }
 

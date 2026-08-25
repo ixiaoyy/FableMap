@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Commit A 38c9fbb6 added four-region Tiled foundation, save v2 migration, collision and transition commands. Commit B 377fc569 added EntityFactory, ActionTimeline, interiors and one Vue dialogue. Visual Pass is staged: one fixed Ninja Adventure CC0 source, official player frame contract, full-screen default GameView, explicit ?debug=1 shell, formal farm layout and SHA-verified local media preparation. Real Chrome verified v1->v2 farm load, default/Debug views, formal texture load with zero console errors/warnings, and a second-tree impact increasing wood 3->6. Still manual: physical Farm/Town/interior round trips, seed-shop E dialogue, narrow viewport/200% zoom, and different Keycloak-subject isolation. No DB, migration or production deploy.",
+  "notes": "Farm Showcase Checkpoint is frozen under docs/checkpoints/farm-showcase-v1 and adopted as production Farm v1. User approved embedded-use interpretation; five minimal VectoRaith derived PNGs are manifest/CDN assets while original ZIP/full sheets remain private. Preserve all 23 stable objects, GameSession, SaveRepository and IndexedDB; only real play findings justify small Farm fixes. Manual browser acceptance and author written permission evidence remain pending; no Town polish, Gate D, DB or new system.",
   "meta": {}
 }

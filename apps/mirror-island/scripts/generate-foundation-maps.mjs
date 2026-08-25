@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const outputDirectory = join(root, "public", "map");
+const outputDirectory = join(root, "..", "..", "artifacts", "world-foundation-map-fixtures");
 const columns = 40;
 const rows = 30;
 const tileSize = 16;
@@ -369,4 +369,4 @@ await Promise.all([
   writeFile(join(outputDirectory, "cottage.tmj"), `${JSON.stringify(cottage)}\n`, "utf8"),
   writeFile(join(outputDirectory, "seed-shop.tmj"), `${JSON.stringify(seedShop)}\n`, "utf8"),
 ]);
-console.log("Generated farm.tmj, town.tmj, cottage.tmj and seed-shop.tmj.");
+console.log("Generated disposable World Foundation map fixtures outside public/map.");

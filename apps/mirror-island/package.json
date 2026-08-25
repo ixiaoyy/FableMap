@@ -4,7 +4,8 @@
   "main": "dist/runtime/index.js",
   "scripts": {
     "prepare:media": "node scripts/prepare-media.mjs",
-    "generate:foundation-maps": "node scripts/generate-foundation-maps.mjs",
+    "generate:foundation-map-fixtures": "node scripts/generate-foundation-maps.mjs",
+    "format:tiled-maps": "node scripts/format-tiled-maps.mjs",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate:deploy": "prisma migrate deploy",

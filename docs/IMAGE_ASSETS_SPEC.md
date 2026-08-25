@@ -27,6 +27,15 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 当前采用记录见 `docs/assets/ninja-adventure-2024-04-19.md`。
 
+## VectoRaith Farming Sim Farm v1
+
+- VectoRaith Farming Sim v1.08 已作为 Farm v1 正式美术底座；Town/室内仍是技术占位，不代表全世界迁移。
+- 官方页面允许免费/商业项目使用与修改，并禁止素材包式原样再分发。用户已批准把 Web runtime 下载最小派生 atlas 视为游戏内嵌使用；作者书面确认继续 pending。
+- 原始 ZIP、完整图集和截图只位于 Git ignored 本地目录。正式 CDN 只保存 5 个实际运行所需的最小派生 PNG，不提供原包、完整 sheet 或素材下载入口。
+- 每个派生图集记录官方来源、原归档 SHA-256、选取/重排方式、最终尺寸/bytes/SHA-256；使用 Original/16×16，不放大后再当底层 tileset。
+
+采用记录见 `docs/assets/vectoraith-farming-sim-v1.08.md`。
+
 ## Eligible open-source assets
 
 - 可新增成熟、现成、允许商用与再分发的开源素材。默认许可范围：CC0-1.0、CC-BY-3.0/4.0、MIT、BSD-2-Clause、BSD-3-Clause、Apache-2.0。

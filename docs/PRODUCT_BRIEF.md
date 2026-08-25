@@ -12,6 +12,9 @@
 - 房屋、伙伴工作和基地权限保留为后续主线能力，不进入首个纵向切片。
 - 当前托管 Web 入口支持 ParallelLines 论坛账号或独立中文用户名密码；两类账号不自动合并。未来单机产品是否强制登录另行决定，玩法与存档合同不得依赖 Keycloak。
 - 玩家存档、背包和世界状态由本地 GameSession 处理并写入 IndexedDB；实时玩法不经过服务端。
+- 当前先交付 `One Beautiful Slice`：一张 64×48 的精美 Farm 样板核心区。Farm 截图质量未确认前，不以扩 Town、增加地图数量或继续系统开发制造进度感。
+- 客户端技术栈固定为 Phaser 4 + Vue 3 + TypeScript + Vite + Tiled。未来桌面版与 Steam 目标采用 Tauri 2，但当前不引入 Tauri/Rust/Steam；GameSession 通过 SaveRepository 与当前 IndexedDB、未来 FileSystem adapter 解耦。
+- Ninja Adventure 只保留 Town/室内技术占位；VectoRaith Farming Sim Gate C 已冻结并正式成为 Farm v1 美术底座，生产只加载最小派生图集。
 
 ## 登录体验
 
@@ -31,6 +34,8 @@
 - 中文独立注册、论坛首次 SSO、再访直登和 Remember Me 可验证。
 - 不启动游戏后端时，玩家仍能完成采集、背包、制作、锄地、播种、浇水、生长和收获。
 - “新游戏”创建本地世界；“继续游戏”从 IndexedDB 恢复玩家、背包、资源和农田。
-- World Foundation 完成后，默认主视图是 16px Tiled 游戏世界；玩家从农场向右进入小镇，切图返回与刷新后实体状态保持。
+- World Foundation 只有在真人从农场向右进入小镇、进出种子店、返回农场并刷新恢复后才算完成；默认主视图是 16px Tiled 游戏世界，正式 TMJ 由 Tiled 手工维护。
+- 在恢复上述长链验收前，先通过 Farm showcase 的整图构图和 2× 出生镜头视觉确认；美感本身计入当前里程碑进度。
+- Farm Gate A v2 已通过；当前 Gate B 只把相同构图从色块提升为可读的岸线、院落、道路、田地和林缘结构，不扩地图数量或玩法系统。
 - 后续完整 Stardew Core 覆盖小屋醒来、农场、小镇、3 个 NPC、商店、睡觉、第二天成长、收获和出售。
 - 旧 backend、database、volume、备份和 `fablespace/` 对象前缀不存在；论坛、镜像岛两个数据库和 `game/` 媒体完整。

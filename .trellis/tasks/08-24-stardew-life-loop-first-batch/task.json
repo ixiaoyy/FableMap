@@ -1,0 +1,32 @@
+{
+  "id": "stardew-life-loop-first-batch",
+  "name": "stardew-life-loop-first-batch",
+  "title": "Stardew Life Loop 第一批",
+  "description": "完成买种子→种植→睡觉→按天成长→收获→出售→继续下一天的最小生活循环；实施前必须通过 Farm Showcase 真实人工验收。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": "apps/mirror-island",
+  "package": null,
+  "priority": "P1",
+  "creator": "fable",
+  "assignee": "fable",
+  "createdAt": "2026-08-24",
+  "completedAt": null,
+  "branch": "codex/stardew-life-loop-first-batch",
+  "base_branch": "codex/world-foundation",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-24-singleplayer-stardew-core",
+  "relatedFiles": [
+    "docs/checkpoints/farm-showcase-v1/manual-acceptance.md",
+    "apps/mirror-island/domain/session/GameSession.ts",
+    "apps/mirror-island/domain/state/game-state.ts",
+    "apps/mirror-island/domain/farming/FarmingSystem.ts",
+    "apps/mirror-island/public/map/cottage.tmj"
+  ],
+  "notes": "Planning only. Supersedes 08-17-minimal-farming-loop and implements the third Stardew Core batch with one turnip, day/sleep, 100g, Seed Keeper buy/sell and v2→v3 local-save migration. Do not start until Farm Showcase manual browser acceptance is fully recorded.",
+  "meta": {}
+}

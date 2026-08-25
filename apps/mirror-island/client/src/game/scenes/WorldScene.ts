@@ -7,13 +7,16 @@ import {
   tickLocalGameSession,
 } from "../../session/local-game-session.ts";
 import { setActionFeedback, setDialogue } from "../../stores/game-store.ts";
+import { MEDIA_KEYS, MEDIA_URLS } from "../assets/media-catalog.ts";
 import {
-  FLOOR_FRAMES,
-  MEDIA_KEYS,
-  MEDIA_URLS,
-  PLAYER_FRAMES,
-  VILLAGE_FRAMES,
-} from "../assets/media-catalog.ts";
+  activeEntityMediaProfiles,
+  entityMediaForRegion,
+  playerMediaProfile,
+  tilesetBindingsForRegion,
+  VECTORAITH_MEDIA_KEYS,
+  VECTORAITH_MEDIA_URLS,
+  type AtlasFrameDefinition,
+} from "../assets/visual-profile.ts";
 import { getDialogueDefinition } from "../dialogue/definitions.ts";
 import { ActionTimeline } from "../entities/ActionTimeline.ts";
 import {
@@ -27,6 +30,7 @@ import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
 
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
+const WORLD_CAMERA_ZOOM = 2;
 
 interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
@@ -39,6 +43,7 @@ type Facing = "down" | "up" | "left" | "right";
 
 export class WorldScene extends Phaser.Scene {
   private readonly catalog: WorldCatalog = getWorldCatalog();
+  private readonly playerMedia = playerMediaProfile();
   private playerView: PlayerView | null = null;
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
@@ -77,6 +82,14 @@ export class WorldScene extends Phaser.Scene {
     this.load.image(MEDIA_KEYS.wall, MEDIA_URLS.wall);
     this.load.spritesheet(MEDIA_KEYS.hero, MEDIA_URLS.hero, { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet(MEDIA_KEYS.shopkeeper, MEDIA_URLS.shopkeeper, { frameWidth: 16, frameHeight: 16 });
+    this.load.image(VECTORAITH_MEDIA_KEYS.terrain, VECTORAITH_MEDIA_URLS.terrain);
+    this.load.image(VECTORAITH_MEDIA_KEYS.buildings, VECTORAITH_MEDIA_URLS.buildings);
+    this.load.image(VECTORAITH_MEDIA_KEYS.details, VECTORAITH_MEDIA_URLS.details);
+    this.load.image(VECTORAITH_MEDIA_KEYS.entities, VECTORAITH_MEDIA_URLS.entities);
+    this.load.spritesheet(VECTORAITH_MEDIA_KEYS.farmer, VECTORAITH_MEDIA_URLS.farmer, {
+      frameWidth: 16,
+      frameHeight: 32,
+    });
     for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
   }
 
@@ -85,7 +98,6 @@ export class WorldScene extends Phaser.Scene {
     this.createTilemapFloorTexture();
     this.registerMediaFrames();
     this.createPlayerAnimations();
-    this.entityFactory = new EntityFactory(this);
     this.actionTimeline = new ActionTimeline(this);
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Keyboard input is unavailable.");
@@ -139,12 +151,9 @@ export class WorldScene extends Phaser.Scene {
     this.destroyRegionViews();
     const region = this.catalog.requireRegion(regionId);
     const map = this.make.tilemap({ key: region.mapKey });
-    const tilesets = [
-      map.addTilesetImage("floor", MEDIA_KEYS.floorTilemap, 16, 16, 0, 0),
-      map.addTilesetImage("village", MEDIA_KEYS.village, 16, 16, 0, 0),
-      map.addTilesetImage("interior-floor", MEDIA_KEYS.interiorFloor, 16, 16, 0, 0),
-      map.addTilesetImage("wall", MEDIA_KEYS.wall, 16, 16, 0, 0),
-    ];
+    const tilesets = tilesetBindingsForRegion(regionId).map((binding) => (
+      map.addTilesetImage(binding.tiledName, binding.textureKey, 16, 16, 0, 0)
+    ));
     if (tilesets.some((tileset) => !tileset)) throw new Error(`Tilesets could not be created for region ${regionId}.`);
     const depths: Readonly<Record<string, number>> = {
       Ground: 0,
@@ -159,14 +168,16 @@ export class WorldScene extends Phaser.Scene {
         throw new Error(`Tilemap layer ${layerName} did not use the reviewed standard renderer.`);
       }
       layer.setDepth(depths[layerName]!);
-      if (layerName === "Water") {
+      if (layerName === "Water" && regionId !== "farm") {
         this.tweens.add({ targets: layer, alpha: { from: 0.88, to: 1 }, duration: 1100, yoyo: true, repeat: -1 });
       }
       this.tileLayers.push(layer);
     }
+    this.entityFactory = new EntityFactory(this, entityMediaForRegion(regionId));
     this.activeMap = map;
     this.activeRegionId = regionId;
     this.cameras.main.setBounds(0, 0, region.widthPixels, region.heightPixels);
+    this.cameras.main.setZoom(WORLD_CAMERA_ZOOM);
     this.cameras.main.startFollow(playerView.container, true, 1, 1);
     if (this.transitionPhase === "fading-out") {
       this.transitionPhase = "fading-in";
@@ -179,9 +190,9 @@ export class WorldScene extends Phaser.Scene {
 
   /** Creates the reviewed player sprite and a code-drawn tool overlay used by ActionTimeline. */
   private createPlayerView(): PlayerView {
-    const sprite = this.add.sprite(0, 0, MEDIA_KEYS.hero, PLAYER_FRAMES.idle.down)
-      .setScale(2)
-      .setOrigin(0.5, 0.72);
+    const sprite = this.add.sprite(0, 0, this.playerMedia.textureKey, this.playerMedia.frames.idle.down)
+      .setScale(this.playerMedia.scale)
+      .setOrigin(0.5, this.playerMedia.originY);
     const handle = this.add.rectangle(0, 0, 3, 18, 0x7e512e, 1).setOrigin(0.5, 0.85);
     const blade = this.add.rectangle(4, -7, 8, 6, 0xd9e3d4, 1).setOrigin(0.5);
     const tool = this.add.container(10, -2, [handle, blade]).setVisible(false);
@@ -205,14 +216,22 @@ export class WorldScene extends Phaser.Scene {
 
   /** Registers reviewed atlas subframes used by formal tree, rock and farm entity views. */
   private registerMediaFrames(): void {
-    const village = this.textures.get(MEDIA_KEYS.village);
-    for (const frame of Object.values(VILLAGE_FRAMES)) {
-      if (!village.has(frame.name)) village.add(frame.name, 0, frame.x, frame.y, frame.width, frame.height);
+    for (const media of activeEntityMediaProfiles()) {
+      this.registerAtlasFrame(media.tree.textureKey, media.tree.frame);
+      this.registerAtlasFrame(media.tree.stumpTextureKey, media.tree.stumpFrame);
+      this.registerAtlasFrame(media.rock.textureKey, media.rock.frame);
+      this.registerAtlasFrame(media.farmSoil.textureKey, media.farmSoil.frame);
+      if (media.farmCrop) {
+        this.registerAtlasFrame(media.farmCrop.textureKey, media.farmCrop.growingFrame);
+        this.registerAtlasFrame(media.farmCrop.textureKey, media.farmCrop.matureFrame);
+      }
     }
-    const floor = this.textures.get(MEDIA_KEYS.floor);
-    for (const frame of Object.values(FLOOR_FRAMES)) {
-      if (!floor.has(frame.name)) floor.add(frame.name, 0, frame.x, frame.y, frame.width, frame.height);
-    }
+  }
+
+  /** Registers one reviewed named atlas frame on a preloaded texture exactly once. */
+  private registerAtlasFrame(textureKey: string, frame: AtlasFrameDefinition): void {
+    const texture = this.textures.get(textureKey);
+    if (!texture.has(frame.name)) texture.add(frame.name, 0, frame.x, frame.y, frame.width, frame.height);
   }
 
   /** Creates four directional walk animations from the official source frame contract. */
@@ -222,7 +241,10 @@ export class WorldScene extends Phaser.Scene {
       if (this.anims.exists(key)) continue;
       this.anims.create({
         key,
-        frames: PLAYER_FRAMES.walk[facing].map((frame) => ({ key: MEDIA_KEYS.hero, frame })),
+        frames: this.playerMedia.frames.walk[facing].map((frame) => ({
+          key: this.playerMedia.textureKey,
+          frame,
+        })),
         frameRate: 6,
         repeat: -1,
       });
@@ -242,7 +264,7 @@ export class WorldScene extends Phaser.Scene {
   private setIdleFrame(): void {
     const player = this.playerView;
     if (!player || this.actionTimeline.isBusy()) return;
-    player.sprite.stop().setFrame(PLAYER_FRAMES.idle[this.facing]);
+    player.sprite.stop().setFrame(this.playerMedia.frames.idle[this.facing]);
   }
 
   /** Creates and projects all catalog resources in the active region through EntityFactory. */
@@ -323,7 +345,7 @@ export class WorldScene extends Phaser.Scene {
       recoveryMs: 220,
       onWindup: () => {
         this.tweens.killTweensOf(playerView.tool);
-        playerView.sprite.stop().setFrame(PLAYER_FRAMES.attack[this.facing]);
+        playerView.sprite.stop().setFrame(this.playerMedia.frames.attack[this.facing]);
         playerView.tool.list.forEach((child, index) => {
           if (child instanceof Phaser.GameObjects.Rectangle) {
             child.setFillStyle(index === 0 ? 0x7e512e : color, 1);

@@ -33,7 +33,7 @@ export const VILLAGE_FRAMES = {
 } as const;
 
 export const FLOOR_FRAMES = {
-  tilled: { name: "tilled", x: 11 * 16, y: 14 * 16, width: 16, height: 16 },
+  tilled: { name: "tilled", x: 0, y: 11 * 16, width: 16, height: 16 },
 } as const;
 
 export const PLAYER_FRAMES = {
