@@ -118,8 +118,9 @@ export class ForumSsoBridge {
     const interactionMatch = /^\/forum-sso\/interaction\/([A-Za-z0-9_-]{8,256})$/.exec(
       parsed.pathname,
     );
-    if (interactionMatch) {
-      await this.continueInteraction(request, response, interactionMatch[1]);
+    const interactionUid = interactionMatch?.[1];
+    if (interactionUid) {
+      await this.continueInteraction(request, response, interactionUid);
       return true;
     }
 

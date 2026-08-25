@@ -1,40 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["dom", "esnext"],
+    "target": "ES2022",
+    "lib": ["ES2023"],
     "module": "ESNext",
-    "outDir": "./lib",
-    "rootDir": ".",
-    "strict": true,
-    "sourceMap": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": false,
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
-    "removeComments": false,
-    "noUnusedParameters": false,
-    "noUnusedLocals": false,
-    "noImplicitThis": false,
-    "noImplicitAny": false,
-    "noImplicitReturns": false,
-    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "stripInternal": true,
+    "useDefineForClassFields": false,
     "skipLibCheck": true,
-    "types": ["vite/client"]
-  },
-  "include": [
-    "src/**/*.ts",
-    "vite.config.ts",
-    "vite.server.config.ts"
-  ],
-  "exclude": [
-    "src/tiled/**/*.tsx"
-  ],
-  "typeRoots": [
-      "node_modules/@types",
-      "src/types"
-  ],
+    "noEmit": true
+  }
 }

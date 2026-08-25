@@ -1,0 +1,28 @@
+{
+  "id": "singleplayer-stardew-core",
+  "name": "singleplayer-stardew-core",
+  "title": "Stardew Core 单人本地规则迁移",
+  "description": "将已封存的 Phaser/Colyseus 采集、背包、制作和种田规则迁为本地 GameSession + IndexedDB 单人架构，保留身份与后端基础设施但移出实时游戏循环。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": "apps/mirror-island",
+  "package": null,
+  "priority": "P1",
+  "creator": "fable",
+  "assignee": "fable",
+  "createdAt": "2026-08-24",
+  "completedAt": null,
+  "branch": "codex/phaser-singleplayer-stardew-core",
+  "base_branch": "phaser-colyseus-checkpoint-2026-08-24",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-24-stardew-life-loop-first-batch"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "2026-08-24 first batch implemented in 9b7cf24f: pure domain, GameSession, native IndexedDB, local Phaser/Vue wiring and Colyseus active-graph removal. Real Chrome verified gather/craft/farm/harvest plus refresh/continue recovery for one Keycloak subject. Debug Shell pointer movement controls are staged. A second login restored the same save, proving the same subject was reused rather than proving cross-account isolation; user explicitly instructed World Foundation to continue without marking that item passed. Local Docker image recheck was unavailable because Docker Desktop was not running.",
+  "meta": {}
+}

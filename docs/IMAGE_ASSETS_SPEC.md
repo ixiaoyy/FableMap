@@ -19,7 +19,7 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 ## Ninja Adventure
 
-- 首片只采用 Pixel-Boy 官方 `Ninja Adventure - Asset Pack`，正式来源为 `https://pixel-boy.itch.io/ninja-adventure-asset-pack`。
+- 当前首批采用 Pixel-Boy 官方 `Ninja Adventure - Asset Pack`，正式来源为 `https://pixel-boy.itch.io/ninja-adventure-asset-pack`；它是已登记来源，不再是唯一允许来源。
 - 采用项必须来自官方 itch 包或作者官方 GitHub 仓库的固定提交；禁止引用浮动 `main`、镜像、二次打包和预览截图裁切。
 - 授权记录为 CC0-1.0；第三方 CC0 素材不需要 prompt sidecar，但必须有文本来源记录。
 - 来源记录至少保存作者、官方 URL、固定提交或归档日期、原始相对路径、原始/归档 SHA-256、裁切/合图/转码说明和最终对象映射。
@@ -27,9 +27,27 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 当前采用记录见 `docs/assets/ninja-adventure-2024-04-19.md`。
 
+## VectoRaith Farming Sim Farm v1
+
+- VectoRaith Farming Sim v1.08 已作为 Farm v1 正式美术底座；Town/室内仍是技术占位，不代表全世界迁移。
+- 官方页面允许免费/商业项目使用与修改，并禁止素材包式原样再分发。用户已批准把 Web runtime 下载最小派生 atlas 视为游戏内嵌使用；作者书面确认继续 pending。
+- 原始 ZIP、完整图集和截图只位于 Git ignored 本地目录。正式 CDN 只保存 5 个实际运行所需的最小派生 PNG，不提供原包、完整 sheet 或素材下载入口。
+- 每个派生图集记录官方来源、原归档 SHA-256、选取/重排方式、最终尺寸/bytes/SHA-256；使用 Original/16×16，不放大后再当底层 tileset。
+
+采用记录见 `docs/assets/vectoraith-farming-sim-v1.08.md`。
+
+## Eligible open-source assets
+
+- 可新增成熟、现成、允许商用与再分发的开源素材。默认许可范围：CC0-1.0、CC-BY-3.0/4.0、MIT、BSD-2-Clause、BSD-3-Clause、Apache-2.0。
+- “代码仓库开源”不等于其中图片自动开源；必须找到明确覆盖目标素材文件的官方许可证或作者声明。
+- CC-BY 采用项必须保存作者、作品名、官方 URL、许可版本、修改说明，并同步到随产品发布的 `THIRD_PARTY_NOTICES` 或等价 Credits 页面；只写仓库内部文档不算完成用户侧署名。
+- 禁止 NC、ND、来源不明、仅允许个人使用或未明确允许再分发的素材。CC-BY-SA、GPL/LGPL/AGPL 等强 copyleft 素材必须先提交传播/组合方式和分发义务评审，得到明确批准后才能采用。
+- 候选必须来自作者官网、作者官方仓库或官方发行包；版本、tag、commit 或归档快照必须固定。禁止引用漂移分支、素材镜像、转载网盘、二次打包和搜索预览图。
+- 评审同时核对像素尺寸、风格一致性、运行时体积、所需裁切/合图、升级与替换成本；优先只采用满足当前场景的最小子集。
+
 ## Project-original and generated art
 
-- RPGJS/Canvas/CSS 在运行时绘制的简单光影或 UI 图形属于代码生成的项目原创图形，不产生静态图片二进制；颜色、尺寸和用途应在代码或主题 token 中可审查。
+- Phaser/Canvas/CSS 在运行时绘制的简单光影或 UI 图形属于代码生成的项目原创图形，不产生静态图片二进制；颜色、尺寸和用途应在代码或主题 token 中可审查。
 - 人工绘制或 AI 生成并正式采用的静态图片仍须上传对象存储、登记新游戏 manifest，并记录制作或生成来源。
 - AI 生成角色/精灵仍须保留 prompt sidecar；无法取得原 prompt 时使用 `reverse-engineered` 并明确说明。
 - `.codex/generated_images`、临时目录、浏览器下载和聊天预览只算候选来源，不能被生产代码直接引用。
@@ -38,7 +56,7 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 - 资源 URL 由 `deploy/cdn/game-media-manifest.json` 和 `apps/mirror-island/scripts/prepare-media.mjs` 集中管理；场景不得散落硬编码 CDN 地址。
 - 男角色使用已登记的 `ninja_blue/sprite.png`；女角色使用同一固定提交的 `samurai_green/samurai_green.png`。两者都按 16×16 frame 加载并只表示外观。
-- RPGJS 加载前，上游资源必须可通过 HTTPS 读取。默认同源代理必须能完整回读对象；只有改为浏览器跨域直连时，才额外要求 CDN 返回 Canvas/WebGL 所需的 CORS 头。
+- Phaser 加载前，上游资源必须可通过 HTTPS 读取。默认同源代理必须能完整回读对象；只有改为浏览器跨域直连时，才额外要求 CDN 返回 Canvas/WebGL 所需的 CORS 头。
 - 使用像素素材时开启 nearest-neighbor/pixelArt；不得通过模糊缩放掩盖尺寸不匹配。
 - 资源加载失败必须进入可重试状态，不得显示空白 canvas 或静默换成来源不明的占位图。
 
@@ -49,6 +67,7 @@ assets/original/<asset-version>/<purpose>.<ext>
 3. 选择新游戏不可变对象 key；若远端已有同 key，必须先证明哈希相同，禁止覆盖不同内容。
 4. 上传时设置正确 `Content-Type` 与 `Cache-Control: public,max-age=31536000,immutable`。
 5. 更新 `game-media-manifest.json` 和来源记录，运行时基址只映射 manifest 对应对象。
+   需要署名时同时更新随产品交付的 `THIRD_PARTY_NOTICES`/Credits，并验证生产 URL 可访问。
 6. 从 CDN 重新读取并核对 SHA-256 与缓存头；使用同源代理时再从代理路径回读，使用跨域直连时核对 CORS。
 7. 确认 Git 跟踪图片二进制为零，再运行前端 build。
 
@@ -57,9 +76,11 @@ assets/original/<asset-version>/<purpose>.<ext>
 ## Delivery checklist
 
 - [ ] 资源来自官方或可证明的原创来源，授权允许当前用途。
+- [ ] 许可证在默认 allowlist 内；否则已有单独评审与批准。
+- [ ] 署名义务已随产品交付，不只存在于仓库内部文档。
 - [ ] 新游戏资源位于 `game/media/v1`，未复用旧 FableSpace 对象 key。
 - [ ] manifest 的 URL、bytes、MIME 和 SHA-256 与 CDN 实际内容一致。
 - [ ] 来源记录覆盖原始路径、固定版本和任何处理步骤。
-- [ ] RPGJS 场景只通过已登记和构建前核验的资源加载采用项。
+- [ ] Phaser 场景只通过已登记和构建前核验的资源加载采用项。
 - [ ] Git 跟踪图片二进制为零。
 - [ ] 前端 typecheck、build 与浏览器资源加载验收使用本轮新鲜结果。

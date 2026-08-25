@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-13T00:00:00Z",
+  "generated_at": "2026-08-25T00:00:00Z",
   "media_base_url": "https://img.pingxingxian.space/game/media/v1",
-  "tracked_image_count": 6,
-  "tracked_image_bytes": 90478,
+  "tracked_image_count": 11,
+  "tracked_image_bytes": 108149,
   "entries": [
     {
       "source": "content/character/ninja_blue/sprite.png",
@@ -82,6 +82,76 @@
       "content_type": "image/png",
       "object_key": "assets/vendor/ninja-adventure/2024-04-19/wall.png",
       "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/ninja-adventure/2024-04-19/wall.png"
+    },
+    {
+      "source": "Original/16x16/Tilesets (Compact)/vectoraith_tileset_farmingsims_terrain_spring_expanded.png (used tiles only)",
+      "source_url": "https://vectoraith.itch.io/farming-sim-asset-pack",
+      "source_archive_sha256": "1957927a1b740fb598f3f302032f4c96a7efcfd61259048b4b9508dac8fcd6fd",
+      "license": "VectoRaith custom project-use license",
+      "transformation": "Repacked only Gate C-used Original 16x16 tiles into an 8-column production tileset; no rescaling.",
+      "width": 128,
+      "height": 64,
+      "bytes": 3469,
+      "sha256": "7eb50c6588605efeb54e3d5f6aefa6dfa105b827f95aaad8322d9d8bfadab5d6",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-terrain.png"
+    },
+    {
+      "source": "Original/16x16/Tilesets (Compact)/vectoraith_tileset_farmingsims_buildings.png (used tiles only)",
+      "source_url": "https://vectoraith.itch.io/farming-sim-asset-pack",
+      "source_archive_sha256": "1957927a1b740fb598f3f302032f4c96a7efcfd61259048b4b9508dac8fcd6fd",
+      "license": "VectoRaith custom project-use license",
+      "transformation": "Repacked only Gate C-used Original 16x16 building and prop tiles into an 8-column production tileset; no rescaling.",
+      "width": 128,
+      "height": 80,
+      "bytes": 3063,
+      "sha256": "3f3c121917067bbe5056574f6ccf800308a2d98b486d7e299b4d543aa46ff357",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-buildings.png"
+    },
+    {
+      "source": "Original/16x16/Tilesets (Compact)/vectoraith_tileset_farmingsims_details.png (used tiles only)",
+      "source_url": "https://vectoraith.itch.io/farming-sim-asset-pack",
+      "source_archive_sha256": "1957927a1b740fb598f3f302032f4c96a7efcfd61259048b4b9508dac8fcd6fd",
+      "license": "VectoRaith custom project-use license",
+      "transformation": "Repacked only Gate C-used Original 16x16 detail tiles into an 8-column production tileset; no rescaling.",
+      "width": 128,
+      "height": 80,
+      "bytes": 5322,
+      "sha256": "40f48f1e5469156988af5e46363f62af44b9b3ec394b54141b1153be4f4fd5bd",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-details.png"
+    },
+    {
+      "source": "Original/16x16 orchard/details/crops selected entity frames",
+      "source_url": "https://vectoraith.itch.io/farming-sim-asset-pack",
+      "source_archive_sha256": "1957927a1b740fb598f3f302032f4c96a7efcfd61259048b4b9508dac8fcd6fd",
+      "license": "VectoRaith custom project-use license",
+      "transformation": "Packed only the tree, stump, rock and two crop frames used by EntityFactory into one transparent runtime atlas; no rescaling.",
+      "width": 64,
+      "height": 96,
+      "bytes": 2867,
+      "sha256": "0a0d2a6ca099ebcbc898bae482b6407cd22fbead3265d624f162a213de018833",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farm-entities.png"
+    },
+    {
+      "source": "Original/16x16/Sprites/$farmer.png",
+      "source_url": "https://vectoraith.itch.io/farming-sim-asset-pack",
+      "source_archive_sha256": "1957927a1b740fb598f3f302032f4c96a7efcfd61259048b4b9508dac8fcd6fd",
+      "license": "VectoRaith custom project-use license",
+      "transformation": "Re-encoded the fully used Original 16x16-base farmer spritesheet without rescaling.",
+      "width": 48,
+      "height": 128,
+      "bytes": 2950,
+      "sha256": "864bd89bb8386f5a79324dca6b9eecd4289f2e30d966e5a501d4b2ae44f3113a",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/vectoraith/farming-sim-v1.08/farmer.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/vectoraith/farming-sim-v1.08/farmer.png"
     }
   ]
 }
