@@ -24,7 +24,8 @@
     "build:server": "vite build --config vite.server.config.ts",
     "pretypecheck": "npm run prisma:generate",
     "typecheck": "vue-tsc --noEmit -p tsconfig.client.json && tsc --noEmit -p tsconfig.server.json",
-    "test:identity": "node --experimental-strip-types --test test/sso-contract.test.mjs test/retirement-contract.test.mjs"
+    "test:identity": "node --experimental-strip-types --test test/sso-contract.test.mjs test/retirement-contract.test.mjs",
+    "test:oidc": "node --experimental-strip-types --test test/sso-contract.test.mjs"
   },
   "keywords": [],
   "author": "",
