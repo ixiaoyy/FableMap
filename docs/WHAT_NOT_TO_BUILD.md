@@ -22,7 +22,7 @@
 - Farm showcase 的 Gate A 截图未获确认前，不精修 Town/Cottage/Seed Shop，不新增地图，不提前摆花草、灯笼、荷叶、竹林等细节，也不混入第二套风格不一致素材。
 - Gate B 不新增图片素材、互动对象或 gameplay state；花草、灯笼、荷叶、樱花、竹林、水动画和阴影继续后置到单独视觉评审。
 - 当前不做 Tauri/Rust/FileSystem adapter/Steam API，不做 Unity 或 Godot 技术验证；未来桌面目标只保留架构边界。
-- VectoRaith 已成为生产 Farm v1 并用于 Town 本地视觉候选；不提交 ZIP、截图或图片二进制到 Git。用户已要求运行时直接使用 6 张官方 Original/16×16 PNG，禁止再次裁剪、重排、合图或重编码；作者若补充许可条件则 forward-fix。
+- VectoRaith 已成为生产 Farm v1 与 Town Gate A 的正式美术底座；不提交 ZIP、截图或图片二进制到 Git。用户已要求运行时直接使用 6 张官方 Original/16×16 PNG，禁止再次裁剪、重排、合图或重编码；作者若补充许可条件则 forward-fix。
 
 Life Loop 完成并经真实浏览器验收前，不创建或实现 `Expedition Prototype`。远征阶段即使获准，也只先验证一张小型区域、2～3 种敌人、少量材料、一次三选一事件、一个可捕获生物和继续/撤离决策，不提前建设完整随机地图、宠物养成或战斗框架。
 

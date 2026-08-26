@@ -169,6 +169,7 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - VectoRaith Farming Sim v1.08 只在 Farm 出生镜头做本地 visual prototype；候选 TMJ 必须复用现有对象层、stable ID、Collision、EntityFactory 和 GameSession 合同，不一次迁移全项目。
 - Gate B 视觉已通过，当前进入本地 Gate C；大构图、小屋、水塘、农田、道路、河流、林缘和 Collision 冻结，只允许稀疏 Props、水生植物/岸石/波纹、作物表现、道路边缘草花、桥头景观、既有素材阴影和一处非交互地标树。
 - Gate C 视觉样板已通过并冻结为 `docs/checkpoints/farm-showcase-v1/`，并正式成为生产 Farm v1；停止继续增加装饰。该 checkpoint 不等于 World Foundation 或完整世界美术完成。
+- Town Gate A 已通过 reference study、40×30 空间蓝图和 ignored 候选视觉确认；正式 Town 固定为西入口→弯曲主街→桥头粉色地标→唯一河桥→Seed Shop，并保留南侧小巷与河畔次区回路。未经真实碰撞问题不得重开大构图。
 
 ## World Foundation contract
 
@@ -189,7 +190,7 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 
 ## Direct Original/16×16 art profile
 
-**What**：正式 Farm 直接使用 VectoRaith 官方完整 terrain/buildings/details/orchard/crops/farmer PNG、原始 GID 和原始 frame 坐标；Town visual candidate 复用同一完整素材，其他区域继续使用占位 profile。profile 选择仍只存在 client 表现层。
+**What**：正式 Farm 与 Town 直接使用 VectoRaith 官方完整 terrain/buildings/details/orchard/crops/farmer PNG、原始 GID 和原始 frame 坐标；Cottage、Seed Shop 等室内区域继续使用占位 profile。profile 选择仍只存在 client 表现层。
 
 **Why**：用户明确否决 used-tile 裁剪、重排 atlas、合并 entities 和重编码 farmer，要求现成官方文件直接作为运行时资源；该发布决定仍不得渗入 domain 或存档。
 
@@ -206,7 +207,7 @@ gameState.player.tileset = "vectoraith";
 - Runtime source tiles remain original 16×16; Phaser uses `pixelArt`、`roundPixels` 与 2× integer camera zoom，不采用 32/48px upscaled tileset。
 - 禁止为发布再次 pack used tiles、重排 GID、裁切/合并 entity frames 或重编码 PNG；Tiled 直接使用原始 16-column metadata，EntityFactory 直接注册原 sheet frame。
 - Missing local file or decoder failure → visible media/startup error；不得静默回退未知素材。
-- Required checks：candidate decoder + 23 stable object equality + route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
+- Required checks：formal decoder + Farm 23 stable object/Town 5 stable object equality + Farm/Town route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
 - Checkpoint 后只有真实游玩发现的明确碰撞、树脚、路径或院落操作问题允许修改 Farm v1；不以偏好性微调重开 Gate A/B/C。
 
 ### 1. Scope / Trigger
@@ -244,7 +245,7 @@ interface TilesetBinding {
 | 条件 | 结果 |
 |---|---|
 | 原图 bytes/hash 与 manifest 不同 | prepare/build/deploy 失败，不回退到 packed key |
-| Farm layer/GID 与 original candidate 不同 | 不部署，不删除旧派生 |
+| Farm 或 Town layer/GID 与已确认 original candidate 不同 | 不部署，不替换正式地图 |
 | 任一 original CDN key 缺失 | 删除工作流拒绝执行 |
 | runtime bundle 仍含旧 packed key | 不删除旧对象 |
 | 图片出现在 Git diff | 质量门禁失败 |
@@ -252,13 +253,13 @@ interface TilesetBinding {
 ### 5. Good/Base/Bad Cases
 
 - Good：Tiled 从完整 sheet 选 tile，Phaser 直接加载同一官方 PNG，Farm 像素/Collision/objects 不变。
-- Base：Town candidate 在 ignored artifacts 使用完整 sheets，未确认前不进入正式 map。
+- Base：Town Gate A 的 ignored candidate 获确认后只机械投影 tileset image path，正式 tile/object data 与候选一致。
 - Bad：为每张地图重新收集 used tiles、重排 GID、裁切 entity 或重编码 PNG。
 
 ### 6. Tests Required
 
 - 6 个 CDN objects：dimensions、bytes、SHA-256、MIME、immutable cache。
-- formal Farm 与 full-original candidate：全部 tile/object layers 相同，59-tile route replay 通过。
+- formal Farm/Town 与各自 full-original candidate：tile/object layers 相同；Farm→Town、主街→桥→Seed Shop、小巷→次区→桥头回路通过。
 - Life Loop contracts、typecheck、client build、真实 Phaser Farm screenshot。
 - Git tracked image binaries=0，代码/manifest/文档无旧 packed key 引用。
 

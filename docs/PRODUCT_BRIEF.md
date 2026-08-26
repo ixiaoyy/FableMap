@@ -14,7 +14,7 @@
 - 玩家存档、背包和世界状态由本地 GameSession 处理并写入 IndexedDB；实时玩法不经过服务端。
 - `One Beautiful Slice` 已在真实生产浏览器通过验收并冻结为 Farm v1；除明确碰撞缺陷外，不再重排构图或继续添加装饰。
 - 客户端技术栈固定为 Phaser 4 + Vue 3 + TypeScript + Vite + Tiled。未来桌面版与 Steam 目标采用 Tauri 2，但当前不引入 Tauri/Rust/Steam；GameSession 通过 SaveRepository 与当前 IndexedDB、未来 FileSystem adapter 解耦。
-- Ninja Adventure 只保留室内技术占位；VectoRaith Farming Sim Gate C 已冻结并正式成为 Farm v1 美术底座，生产直接加载 6 张官方 Original/16×16 图集。Town 当前进入同素材体系的视觉主街 Gate A。
+- Ninja Adventure 只保留室内技术占位；VectoRaith Farming Sim Gate C 已冻结并正式成为 Farm v1 美术底座，Town Gate A 也已按同一完整图集正式化。生产直接加载 6 张官方 Original/16×16 图集。
 
 ## 长期玩法方向
 

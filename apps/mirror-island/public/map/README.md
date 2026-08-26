@@ -11,7 +11,7 @@ Tiled 保存后运行 `npm run format:tiled-maps`，只压缩 Tile Layer 的大�
 - 行为只由 object `type` 与 properties 决定，object `name` 仅供编辑器阅读。
 - ID 是存档身份，坐标是地图布局。可以移动对象、重画 tile 或修改显示名，不能因移动而更换下列 ID。
 - tileset metadata 必须继续内嵌在 TMJ 中；运行时不接受 external TSJ `source`。
-- Farm 当前正式尺寸为 64×48，直接使用 VectoRaith v1.08 Original/16×16 完整 tilesets 与原始 GID；Town 保持 40×30 并进入视觉主街候选，Cottage 与 Seed Shop 保持占位功能。
+- Farm 当前正式尺寸为 64×48；Town Gate A 当前正式尺寸为 40×30。两者都直接使用 VectoRaith v1.08 Original/16×16 完整 tilesets 与原始 GID；Cottage 与 Seed Shop 保持占位功能。
 - Farm v1 大构图和 Gate C 密度已由 `docs/checkpoints/farm-showcase-v1/` 冻结；只有实际游玩发现的明确碰撞、路径、树脚或院落问题允许小修。
 
 ## Frozen IDs

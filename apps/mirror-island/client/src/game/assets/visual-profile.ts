@@ -133,9 +133,9 @@ const VECTORAITH_TILESET_BINDINGS: readonly TilesetBinding[] = [
   { tiledName: "vectoraith-details", textureKey: VECTORAITH_MEDIA_KEYS.details },
 ];
 
-/** Resolves direct Original/16×16 VectoRaith Farm bindings while non-Farm regions remain placeholders. */
+/** Resolves direct Original/16×16 VectoRaith tilemap bindings for the formal Farm and Town regions. */
 export function tilesetBindingsForRegion(regionId: string): readonly TilesetBinding[] {
-  return regionId === "farm"
+  return regionId === "farm" || regionId === "town"
     ? VECTORAITH_TILESET_BINDINGS
     : NINJA_TILESET_BINDINGS;
 }
