@@ -171,6 +171,7 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - Gate C 视觉样板已通过并冻结为 `docs/checkpoints/farm-showcase-v1/`，并正式成为生产 Farm v1；停止继续增加装饰。该 checkpoint 不等于 World Foundation 或完整世界美术完成。
 - Town Gate A 已通过 reference study、40×30 空间蓝图和 ignored 候选视觉确认；正式 Town 固定为西入口→弯曲主街→桥头粉色地标→唯一河桥→Seed Shop，并保留南侧小巷与河畔次区回路。未经真实碰撞问题不得重开大构图。
 - Town Gate B 建筑密度已于 2026-08-26 通过用户视觉确认：正式 40×30 Town 固定为 1 个蓝顶杂货铺、1 个红色大体量铁匠铺和 5 栋民宅，共 7 个建筑体量；石质粮仓已明确否决。允许橙顶/棕顶民宅非相邻复用，但相邻建筑不得完全同形；新增住宅只用短支路接入，河流、唯一桥、粉树广场、西入口、Seed Shop 出口和 5 个 stable object 保持不变。
+- Town Gate C 已于 2026-08-26 通过用户视觉确认：生活感只通过成组静态 Props 建立，杂货铺使用货箱/招牌/门槛，铁匠铺使用灯具/木料/矿石，五栋民宅使用至少三类非均匀院落，粉树广场保留单一公告设施，桥头只放少量引导物。正式 Town 停止继续增加建筑或均匀铺装饰；后续只因真实通行、Collision、AbovePlayer 或功能入口问题窄修。
 
 ## World Foundation contract
 
