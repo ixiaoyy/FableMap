@@ -5,11 +5,12 @@
 - 名称：`Life Loop v1 Checkpoint`
 - 本地完整真人验收：通过（2026-08-25）
 - 生产 main commit：`7414986a71508f438ecda1c94da29562327a0f06`
+- 最终生产验收基线：`37c51953f426febbbe49506a30a6527ecabfaf91`（包含已通过的 Town Gate C）
 - GitHub Actions run：`32827316974`，成功
 - 公网健康：通过；首页、Life Loop/v2 backup bundle、Cottage bed、VectoRaith atlas 与 OIDC 均正常
-- 全新账号生产验收：pending
-- 已有 v2 存档账号生产验收：pending
-- Tag：`life-loop-v1` pending；两类生产验收通过前不得创建
+- 全新账号生产验收：通过（用户于 2026-08-26 确认）
+- 已有 v2 存档账号生产验收：通过（用户于 2026-08-26 确认）
+- Tag：`life-loop-v1`，指向包含本验收记录的最终已验证 main checkpoint
 
 > 本 checkpoint 只表示第一个生活日循环达到可发布状态，不代表 Town 美术、Expedition、灵兽、战斗、肉鸽、塔防或东方志怪内容完成。
 

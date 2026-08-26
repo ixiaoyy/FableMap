@@ -11,18 +11,18 @@
 
 ## 全新账号
 
-- [ ] 使用没有镜像岛存档的全新账号登录；不记录 username/subject/token。
-- [ ] 新游戏显示 Day 1 / 100g，Hotbar 只有锄头和浇水壶。
-- [ ] 完成买种、种植、浇水、睡觉、成长、刷新继续的最小链路。
-- [ ] 重新登录后 owner 隔离正确，不出现其他账号存档。
+- [x] 使用没有镜像岛存档的全新账号登录；不记录 username/subject/token。
+- [x] 新游戏显示 Day 1 / 100g，Hotbar 只有锄头和浇水壶。
+- [x] 完成买种、种植、浇水、睡觉、成长、刷新继续的最小链路。
+- [x] 重新登录后 owner 隔离正确，不出现其他账号存档。
 
 ## 已有 v2 存档账号
 
-- [ ] 发布前确认该账号在当前生产能够“继续游戏”；不导出或提交原始 payload。
-- [ ] 发布后继续游戏成功，region/position、Inventory、资源与 FarmPlot 状态可用。
-- [ ] migration defaults 为 Day 1 / 100g，alien seed/crop 映射为 turnip。
-- [ ] 首次 v3 保存、刷新与再次继续成功；未出现损坏/未来版本错误。
-- [ ] 完成一次买种或出售与一次睡觉，确认迁移后仍可继续生活循环。
+- [x] 发布前确认该账号在当前生产能够“继续游戏”；不导出或提交原始 payload。
+- [x] 发布后继续游戏成功，region/position、Inventory、资源与 FarmPlot 状态可用。
+- [x] migration defaults 为 Day 1 / 100g，alien seed/crop 映射为 turnip。
+- [x] 首次 v3 保存、刷新与再次继续成功；未出现损坏/未来版本错误。
+- [x] 完成一次买种或出售与一次睡觉，确认迁移后仍可继续生活循环。
 
 ## Evidence record
 
@@ -31,6 +31,7 @@
 | main commit | passed | `7414986a71508f438ecda1c94da29562327a0f06` |
 | deploy run | passed | GitHub Actions `32827316974` |
 | 公网健康 | passed | bundle `index-BRQNlJwq.js`；Life Loop、backup、Cottage bed、Vecto、OIDC 正常 |
-| 全新账号 | pending | |
-| 已有 v2 账号 | pending | |
-| `life-loop-v1` tag | pending | 两类账号通过后创建 |
+| 全新账号 | passed | 用户于 2026-08-26 确认；未记录身份或存档原文 |
+| 已有 v2 账号 | passed | 用户于 2026-08-26 确认迁移、保存与继续游戏正常 |
+| Town Gate C | passed | 用户于 2026-08-26 确认生产通行正常 |
+| `life-loop-v1` tag | passed | 指向包含本验收记录的最终已验证 main checkpoint |
