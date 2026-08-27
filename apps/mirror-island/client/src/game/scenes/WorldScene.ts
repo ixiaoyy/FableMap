@@ -16,6 +16,14 @@ import {
 } from "../../stores/game-store.ts";
 import { MEDIA_KEYS, MEDIA_URLS } from "../assets/media-catalog.ts";
 import {
+  HELLO_RUMIN_TOOL_FRAMES,
+  isToolArtCandidateEnabled,
+  TOOL_ART_CANDIDATE_KEYS,
+  TOOL_ART_CANDIDATE_URLS,
+  VECTORAITH_PLOWING_FRAMES,
+  type CandidateToolAction,
+} from "../assets/tool-art-candidate.ts";
+import {
   activeEntityMediaProfiles,
   entityMediaForRegion,
   playerMediaProfile,
@@ -45,6 +53,8 @@ interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly tool: Phaser.GameObjects.Container;
+  readonly candidateTool: Phaser.GameObjects.Sprite | null;
+  readonly candidatePlowing: Phaser.GameObjects.Sprite | null;
 }
 
 type TransitionPhase = "idle" | "fading-out" | "fading-in";
@@ -53,6 +63,7 @@ type Facing = "down" | "up" | "left" | "right";
 export class WorldScene extends Phaser.Scene {
   private readonly catalog: WorldCatalog = getWorldCatalog();
   private readonly playerMedia = playerMediaProfile();
+  private readonly toolArtCandidateEnabled = isToolArtCandidateEnabled();
   private playerView: PlayerView | null = null;
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
@@ -101,6 +112,16 @@ export class WorldScene extends Phaser.Scene {
       frameHeight: 32,
     });
     this.load.image(VECTORAITH_MEDIA_KEYS.npcs, VECTORAITH_MEDIA_URLS.npcs);
+    if (this.toolArtCandidateEnabled) {
+      this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.plowing, TOOL_ART_CANDIDATE_URLS.plowing, {
+        frameWidth: 32,
+        frameHeight: 32,
+      });
+      this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.helloTools, TOOL_ART_CANDIDATE_URLS.helloTools, {
+        frameWidth: 32,
+        frameHeight: 32,
+      });
+    }
     for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
   }
 
@@ -205,7 +226,7 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Creates the reviewed player sprite and a code-drawn tool overlay used by ActionTimeline. */
+  /** Creates the reviewed player plus default and explicitly enabled candidate action layers. */
   private createPlayerView(): PlayerView {
     const sprite = this.add.sprite(0, 0, this.playerMedia.textureKey, this.playerMedia.frames.idle.down)
       .setScale(this.playerMedia.scale)
@@ -213,7 +234,26 @@ export class WorldScene extends Phaser.Scene {
     const handle = this.add.rectangle(0, 0, 3, 18, 0x7e512e, 1).setOrigin(0.5, 0.85);
     const blade = this.add.rectangle(4, -7, 8, 6, 0xd9e3d4, 1).setOrigin(0.5);
     const tool = this.add.container(10, -2, [handle, blade]).setVisible(false);
-    const view = { container: this.add.container(0, 0, [sprite, tool]), sprite, tool };
+    const candidateTool = this.toolArtCandidateEnabled
+      ? this.add.sprite(0, 0, TOOL_ART_CANDIDATE_KEYS.helloTools, HELLO_RUMIN_TOOL_FRAMES.axe)
+        .setOrigin(0.5, this.playerMedia.originY)
+        .setVisible(false)
+      : null;
+    const candidatePlowing = this.toolArtCandidateEnabled
+      ? this.add.sprite(0, 0, TOOL_ART_CANDIDATE_KEYS.plowing, VECTORAITH_PLOWING_FRAMES.down[0])
+        .setOrigin(0.5, this.playerMedia.originY)
+        .setVisible(false)
+      : null;
+    const children: Phaser.GameObjects.GameObject[] = [sprite, tool];
+    if (candidateTool) children.push(candidateTool);
+    if (candidatePlowing) children.push(candidatePlowing);
+    const view = {
+      container: this.add.container(0, 0, children),
+      sprite,
+      tool,
+      candidateTool,
+      candidatePlowing,
+    };
     this.playerView = view;
     return view;
   }
@@ -267,6 +307,18 @@ export class WorldScene extends Phaser.Scene {
         })),
         frameRate: 6,
         repeat: -1,
+      });
+      if (!this.toolArtCandidateEnabled) continue;
+      const plowingKey = `tool-art-plowing-${facing}`;
+      if (this.anims.exists(plowingKey)) continue;
+      this.anims.create({
+        key: plowingKey,
+        frames: VECTORAITH_PLOWING_FRAMES[facing].map((frame) => ({
+          key: TOOL_ART_CANDIDATE_KEYS.plowing,
+          frame,
+        })),
+        frameRate: 7,
+        repeat: 0,
       });
     }
   }
@@ -352,7 +404,7 @@ export class WorldScene extends Phaser.Scene {
   /** Runs one tree windup/impact/recovery sequence and mutates gathering only on impact. */
   private playTreeAction(entity: TreeEntity): void {
     if (isWorldInputLocked()) return;
-    this.playToolAction(entity.spawn.x, 0xe8d19b, () => {
+    this.playToolAction(entity.spawn.x, 0xe8d19b, "axe", () => {
       entity.playImpact(() => (
         dispatchLocalGameCommand({ type: "gather", targetId: entity.entityId })?.code === "success"
       ));
@@ -363,14 +415,27 @@ export class WorldScene extends Phaser.Scene {
   private playFarmAction(entity: FarmPlotEntity): void {
     if (isWorldInputLocked()) return;
     const targetX = entity.interaction.x + entity.interaction.width / 2;
-    this.playToolAction(targetX, 0x8ed3c7, () => {
+    const phase = this.latestState?.farmTiles[entity.entityId]?.phase;
+    const action: CandidateToolAction = phase === "untilled"
+      ? "plow"
+      : phase === "tilled"
+        ? "plant"
+        : phase === "growing"
+          ? "water"
+          : "harvest";
+    this.playToolAction(targetX, 0x8ed3c7, action, () => {
       const feedback = dispatchLocalGameCommand({ type: "farm-primary", tileId: entity.entityId });
       if (feedback?.tone === "success") entity.playImpact();
     });
   }
 
   /** Plays the one shared player tool pose while executing exactly one supplied impact callback. */
-  private playToolAction(targetX: number, color: number, onImpact: () => void): void {
+  private playToolAction(
+    targetX: number,
+    color: number,
+    action: CandidateToolAction,
+    onImpact: () => void,
+  ): void {
     const playerView = this.playerView;
     if (!playerView) return;
     const direction = targetX >= playerView.container.x ? 1 : -1;
@@ -380,39 +445,119 @@ export class WorldScene extends Phaser.Scene {
       impactMs: 160,
       recoveryMs: 220,
       onWindup: () => {
-        this.tweens.killTweensOf(playerView.tool);
-        playerView.sprite.stop().setFrame(this.playerMedia.frames.attack[this.facing]);
-        playerView.tool.list.forEach((child, index) => {
-          if (child instanceof Phaser.GameObjects.Rectangle) {
-            child.setFillStyle(index === 0 ? 0x7e512e : color, 1);
-          }
-        });
-        playerView.tool.setVisible(true).setAlpha(1);
-        playerView.tool.setPosition(direction * 9, -2).setRotation(direction > 0 ? -1.05 : 1.05);
-        this.tweens.add({
-          targets: playerView.tool,
-          rotation: direction > 0 ? -0.45 : 0.45,
-          duration: 220,
-          ease: "Quad.Out",
-        });
+        if (this.toolArtCandidateEnabled) this.beginCandidateToolVisual(playerView, action, direction);
+        else this.beginDefaultToolVisual(playerView, direction, color);
       },
       onImpact: () => {
-        this.tweens.add({
-          targets: playerView.tool,
-          rotation: direction > 0 ? 1.0 : -1.0,
-          duration: 130,
-          ease: "Quad.In",
-        });
+        if (this.toolArtCandidateEnabled) this.impactCandidateToolVisual(playerView, action, direction);
+        else this.impactDefaultToolVisual(playerView, direction);
         onImpact();
       },
       onRecovery: () => {
-        this.tweens.add({ targets: playerView.tool, alpha: 0, duration: 180 });
+        const target = this.toolArtCandidateEnabled
+          ? action === "plow" ? playerView.candidatePlowing : playerView.candidateTool
+          : playerView.tool;
+        if (target) this.tweens.add({ targets: target, alpha: 0, duration: 180 });
       },
       onComplete: () => {
-        playerView.tool.setVisible(false).setAlpha(1);
+        this.resetPlayerActionVisuals(playerView);
         this.setIdleFrame();
       },
     });
+  }
+
+  /** Starts the legacy code-drawn placeholder used whenever the local candidate flag is absent. */
+  private beginDefaultToolVisual(playerView: PlayerView, direction: 1 | -1, color: number): void {
+    this.tweens.killTweensOf(playerView.tool);
+    playerView.sprite.stop().setFrame(this.playerMedia.frames.attack[this.facing]);
+    playerView.tool.list.forEach((child, index) => {
+      if (child instanceof Phaser.GameObjects.Rectangle) {
+        child.setFillStyle(index === 0 ? 0x7e512e : color, 1);
+      }
+    });
+    playerView.tool.setVisible(true).setAlpha(1);
+    playerView.tool.setPosition(direction * 9, -2).setRotation(direction > 0 ? -1.05 : 1.05);
+    this.tweens.add({
+      targets: playerView.tool,
+      rotation: direction > 0 ? -0.45 : 0.45,
+      duration: 220,
+      ease: "Quad.Out",
+    });
+  }
+
+  /** Commits the visual swing of the legacy placeholder without owning the gameplay impact. */
+  private impactDefaultToolVisual(playerView: PlayerView, direction: 1 | -1): void {
+    this.tweens.add({
+      targets: playerView.tool,
+      rotation: direction > 0 ? 1.0 : -1.0,
+      duration: 130,
+      ease: "Quad.In",
+    });
+  }
+
+  /** Starts one ignored local candidate pose while leaving command and save state untouched. */
+  private beginCandidateToolVisual(
+    playerView: PlayerView,
+    action: CandidateToolAction,
+    direction: 1 | -1,
+  ): void {
+    this.resetPlayerActionVisuals(playerView);
+    if (action === "plow" && playerView.candidatePlowing) {
+      playerView.sprite.setVisible(false);
+      playerView.candidatePlowing
+        .setVisible(true)
+        .setAlpha(1)
+        .setFlipX(false)
+        .play(`tool-art-plowing-${this.facing}`, true);
+      return;
+    }
+    playerView.sprite.stop().setFrame(this.playerMedia.frames.attack[this.facing]);
+    if ((action === "axe" || action === "water") && playerView.candidateTool) {
+      const frame = action === "axe" ? HELLO_RUMIN_TOOL_FRAMES.axe : HELLO_RUMIN_TOOL_FRAMES.watering;
+      playerView.candidateTool
+        .stop()
+        .setFrame(frame)
+        .setFlipX(direction < 0)
+        .setPosition(direction * 2, 0)
+        .setVisible(true)
+        .setAlpha(1);
+      this.tweens.add({
+        targets: playerView.candidateTool,
+        x: direction * 4,
+        duration: 220,
+        ease: "Quad.Out",
+      });
+      return;
+    }
+    this.tweens.add({ targets: playerView.sprite, scale: 0.94, duration: 160, yoyo: true });
+  }
+
+  /** Advances one candidate overlay at impact while GameSession remains the only mutation owner. */
+  private impactCandidateToolVisual(
+    playerView: PlayerView,
+    action: CandidateToolAction,
+    direction: 1 | -1,
+  ): void {
+    if ((action === "axe" || action === "water") && playerView.candidateTool) {
+      this.tweens.add({
+        targets: playerView.candidateTool,
+        x: direction * 7,
+        y: 2,
+        duration: 130,
+        ease: "Quad.In",
+      });
+    }
+  }
+
+  /** Hides every ephemeral action layer and restores the reviewed walking sprite defaults. */
+  private resetPlayerActionVisuals(playerView: PlayerView): void {
+    this.tweens.killTweensOf(playerView.tool);
+    if (playerView.candidateTool) this.tweens.killTweensOf(playerView.candidateTool);
+    if (playerView.candidatePlowing) this.tweens.killTweensOf(playerView.candidatePlowing);
+    playerView.tool.setVisible(false).setAlpha(1).setPosition(10, -2).setRotation(0);
+    playerView.candidateTool?.stop().setVisible(false).setAlpha(1).setPosition(0, 0).setFlipX(false);
+    playerView.candidatePlowing?.stop().setVisible(false).setAlpha(1).setPosition(0, 0).setFlipX(false);
+    playerView.sprite.setVisible(true).setScale(this.playerMedia.scale).setAlpha(1);
   }
 
   /** Resolves E against a nearby Cottage bed first, then the nearest fixed NPC. */
@@ -473,7 +618,7 @@ export class WorldScene extends Phaser.Scene {
   /** Destroys current map/entity views and cancels ephemeral actions before rendering another region. */
   private destroyRegionViews(): void {
     this.actionTimeline?.cancel();
-    if (this.playerView) this.playerView.tool.setVisible(false).setAlpha(1);
+    if (this.playerView) this.resetPlayerActionVisuals(this.playerView);
     for (const layer of this.tileLayers.splice(0)) layer.destroy();
     this.activeMap?.destroy();
     this.activeMap = null;

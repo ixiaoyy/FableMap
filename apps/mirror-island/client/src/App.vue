@@ -6,6 +6,7 @@ import {
   type AuthenticatedSession,
 } from "./auth/keycloak.ts";
 import PhaserGame from "./PhaserGame.vue";
+import { isToolArtPreviewEnabled } from "./game/assets/tool-art-candidate.ts";
 import { loadWorldCatalog } from "./game/world/world-catalog.ts";
 import {
   removeRetiredLocalStorageSaves,
@@ -31,6 +32,7 @@ const failureMessage = ref("");
 const localSessionReady = ref(false);
 let authenticatedSession: AuthenticatedSession | null = null;
 const debugMode = computed(() => new URLSearchParams(window.location.search).get("debug") === "1");
+const toolArtPreviewMode = isToolArtPreviewEnabled();
 
 const phaseLabel = computed(() => ({
   authenticating: "正在确认身份",
@@ -77,6 +79,22 @@ function checkpointOnPageHide(): void {
 }
 
 onMounted(async () => {
+  if (toolArtPreviewMode) {
+    try {
+      removeRetiredLocalStorageSaves();
+      const catalog = await loadWorldCatalog();
+      initializeLocalGameSession("tool-art-preview", catalog);
+      localSessionReady.value = true;
+      window.addEventListener("pagehide", checkpointOnPageHide);
+      await getLocalGameSession().newGame();
+      setSaveAvailable(true);
+      setGamePhase("playing");
+    } catch {
+      failureMessage.value = "工具美术本地预览无法启动，请确认候选原图和 IndexedDB 可用。";
+      setGamePhase("error");
+    }
+    return;
+  }
   try {
     removeRetiredLocalStorageSaves();
     authenticatedSession = await initializeKeycloakSession();

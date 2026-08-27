@@ -615,6 +615,13 @@ h1 {
   font-size: 20px;
 }
 
+.hotbar-slot__image {
+  width: 32px;
+  height: 32px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
 .hotbar-slot__quantity {
   position: absolute;
   right: 5px;

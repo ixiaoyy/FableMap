@@ -299,7 +299,7 @@ function textStyle(color: string): Phaser.Types.GameObjects.Text.TextStyle {
 /** Maps one save-owned farm phase to the temporary B-stage appearance. */
 function farmAppearance(tile: FarmTileState): { readonly tint: number; readonly alpha: number } {
   switch (tile.phase) {
-    case "untilled": return { tint: 0x73944c, alpha: 0.42 };
+    case "untilled": return { tint: 0xffffff, alpha: 0 };
     case "tilled": return { tint: 0xffffff, alpha: 1 };
     case "growing": return {
       tint: tile.watered ? 0x67b5a6 : 0x9fc65d,
