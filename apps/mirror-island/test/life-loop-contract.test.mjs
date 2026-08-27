@@ -68,7 +68,8 @@ function createLifeLoopCatalog() {
       regionId: "cottage",
       npcId: "seed-keeper",
       dialogueId: "seed-keeper-welcome",
-      x: 32,
+      interactionType: "shop",
+      x: 64,
       y: 32,
     }],
   }]);

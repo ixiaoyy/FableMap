@@ -61,6 +61,7 @@ export class ShopSystem {
     return Boolean(
       keeper
       && keeper.npcId === "seed-keeper"
+      && keeper.interactionType === "shop"
       && state.player.regionId === keeper.regionId
       && Math.hypot(state.player.x - keeper.x, state.player.y - keeper.y)
         <= SHOP_INTERACTION_DISTANCE_PIXELS,

@@ -233,8 +233,10 @@ export class NpcEntity {
   /** Creates one fixed NPC from the supplied atlas while dialogue metadata remains catalog-owned. */
   constructor(scene: Phaser.Scene, readonly spawn: NpcSpawnDefinition, media: EntityMediaProfile) {
     this.entityId = spawn.entityId;
-    const body = scene.add.sprite(0, 0, media.npcTextureKey, 0).setScale(2).setOrigin(0.5, 0.75);
-    const prompt = scene.add.text(0, -16, "E", {
+    const frame = media.npc.frames[spawn.npcId];
+    if (!frame) throw new Error(`NPC appearance is missing for ${spawn.npcId}.`);
+    const body = scene.add.sprite(0, 0, media.npc.textureKey, frame.name).setOrigin(0.5, 0.82);
+    const prompt = scene.add.text(0, -26, "E", {
       ...textStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
       padding: { x: 3, y: 1 },

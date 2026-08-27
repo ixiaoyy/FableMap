@@ -25,6 +25,7 @@
     "pretypecheck": "npm run prisma:generate",
     "typecheck": "vue-tsc --noEmit -p tsconfig.client.json && tsc --noEmit -p tsconfig.server.json",
     "test:life-loop": "tsx --test test/life-loop-contract.test.mjs test/indexeddb-v2-backup-contract.test.mjs",
+    "test:town-population": "tsx --test test/town-population-contract.test.mjs",
     "test:identity": "node --experimental-strip-types --test test/sso-contract.test.mjs test/retirement-contract.test.mjs",
     "test:oidc": "node --experimental-strip-types --test test/sso-contract.test.mjs"
   },

@@ -218,10 +218,14 @@ function decodeNpcs(layer: Record<string, unknown>, regionId: string): readonly 
     const entityId = requiredString(properties, "entityId");
     const npcId = requiredString(properties, "npcId");
     const dialogueId = requiredString(properties, "dialogueId");
+    const interactionType = requiredString(properties, "interactionType");
     assertStableId(entityId, "NPC entity ID");
     assertStableId(npcId, "NPC ID");
     assertStableId(dialogueId, "Dialogue ID");
-    return { entityId, regionId, npcId, dialogueId, ...pointFrom(object) };
+    if (interactionType !== "shop" && interactionType !== "dialogue") {
+      throw new Error("NPC interaction type is invalid.");
+    }
+    return { entityId, regionId, npcId, dialogueId, interactionType, ...pointFrom(object) };
   });
 }
 

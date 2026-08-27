@@ -39,6 +39,7 @@ export interface NpcSpawnDefinition extends WorldPoint {
   readonly regionId: string;
   readonly npcId: string;
   readonly dialogueId: string;
+  readonly interactionType: "shop" | "dialogue";
 }
 
 export interface RegionDefinition {
@@ -128,7 +129,8 @@ export class WorldCatalog {
       [x - halfWidth, y + halfHeight],
       [x + halfWidth, y + halfHeight],
     ] as const;
-    return samples.some(([sampleX, sampleY]) => this.isBlockedPoint(region, sampleX, sampleY));
+    return samples.some(([sampleX, sampleY]) => this.isBlockedPoint(region, sampleX, sampleY))
+      || this.overlapsNpcFeet(region, x, y, halfWidth, halfHeight);
   }
 
   /** Returns all region definitions in deterministic insertion order for Phaser preload and rendering. */
@@ -219,6 +221,23 @@ export class WorldCatalog {
     ) {
       throw new Error(`${label} is outside region ${region.id}.`);
     }
+  }
+
+  /** Tests one player foot box against fixed dialogue-NPC feet without trapping legacy shop positions. */
+  private overlapsNpcFeet(
+    region: RegionDefinition,
+    x: number,
+    y: number,
+    halfWidth: number,
+    halfHeight: number,
+  ): boolean {
+    const npcHalfWidth = 5;
+    const npcHalfHeight = 3;
+    return region.npcs.some((npc) => (
+      npc.interactionType === "dialogue"
+      && Math.abs(x - npc.x) < halfWidth + npcHalfWidth
+      && Math.abs(y - npc.y) < halfHeight + npcHalfHeight
+    ));
   }
 
   /** Tests one world-space point against the finite collision grid and region boundary. */

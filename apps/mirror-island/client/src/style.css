@@ -337,6 +337,17 @@ h1 {
   font-size: 20px;
 }
 
+.shop-panel__welcome {
+  margin: 14px 10px 0;
+  padding: 10px 12px;
+  border-left: 3px solid #9d6b36;
+  color: #68492f;
+  background: rgba(255, 247, 211, 0.38);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .shop-panel__goods {
   display: grid;
   gap: 10px;

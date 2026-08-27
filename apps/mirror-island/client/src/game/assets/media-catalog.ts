@@ -14,7 +14,6 @@ export const MEDIA_KEYS = {
   interiorFloor: "ninja-interior-floor",
   wall: "ninja-wall",
   hero: "ninja-hero",
-  shopkeeper: "ninja-shopkeeper",
 } as const;
 
 export const MEDIA_URLS = {
@@ -23,7 +22,6 @@ export const MEDIA_URLS = {
   interiorFloor: mediaUrl("interior-floor.png", "e281598e"),
   wall: mediaUrl("wall.png", "ad5eb80a"),
   hero: mediaUrl("player.png", "f2dd61a2"),
-  shopkeeper: mediaUrl("player-female.png", "552e1af7"),
 } as const;
 
 export const VILLAGE_FRAMES = {

@@ -28,7 +28,10 @@ export interface EntityMediaProfile {
     readonly growingFrame: AtlasFrameDefinition;
     readonly matureFrame: AtlasFrameDefinition;
   };
-  readonly npcTextureKey: string;
+  readonly npc: {
+    readonly textureKey: string;
+    readonly frames: Readonly<Record<string, AtlasFrameDefinition>>;
+  };
 }
 
 export interface PlayerMediaProfile {
@@ -56,6 +59,7 @@ export const VECTORAITH_MEDIA_KEYS = {
   orchard: "vectoraith-orchard",
   crops: "vectoraith-crops",
   farmer: "vectoraith-farmer",
+  npcs: "vectoraith-npcs",
 } as const;
 
 export const VECTORAITH_MEDIA_URLS = {
@@ -65,7 +69,14 @@ export const VECTORAITH_MEDIA_URLS = {
   orchard: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png?v=5488f410`,
   crops: `${VECTORAITH_MEDIA_BASE}/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c`,
   farmer: `${VECTORAITH_MEDIA_BASE}/sprites/$farmer.png?v=85fe4b73`,
+  npcs: "/game-media/v1/assets/vendor/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16/generic_people.png?v=eb1fe419",
 } as const;
+
+const VECTORAITH_NPC_FRAMES: Readonly<Record<string, AtlasFrameDefinition>> = {
+  "seed-keeper": { name: "vectoraith-npc-huaqiang", x: 10 * 16, y: 4 * 32, width: 16, height: 32 },
+  "town-blacksmith": { name: "vectoraith-npc-haotian", x: 7 * 16, y: 0, width: 16, height: 32 },
+  "town-resident-01": { name: "vectoraith-npc-ahe", x: 4 * 16, y: 4 * 32, width: 16, height: 32 },
+};
 
 const NINJA_ENTITY_MEDIA: EntityMediaProfile = {
   tree: {
@@ -76,7 +87,7 @@ const NINJA_ENTITY_MEDIA: EntityMediaProfile = {
   },
   rock: { textureKey: MEDIA_KEYS.village, frame: VILLAGE_FRAMES.rock },
   farmSoil: { textureKey: MEDIA_KEYS.floor, frame: FLOOR_FRAMES.tilled },
-  npcTextureKey: MEDIA_KEYS.shopkeeper,
+  npc: { textureKey: VECTORAITH_MEDIA_KEYS.npcs, frames: VECTORAITH_NPC_FRAMES },
 };
 
 const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
@@ -99,7 +110,7 @@ const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
     growingFrame: { name: "vectoraith-crop-growing", x: 5 * 16, y: 1 * 16, width: 16, height: 16 },
     matureFrame: { name: "vectoraith-crop-mature", x: 7 * 16, y: 1 * 16, width: 16, height: 16 },
   },
-  npcTextureKey: MEDIA_KEYS.shopkeeper,
+  npc: { textureKey: VECTORAITH_MEDIA_KEYS.npcs, frames: VECTORAITH_NPC_FRAMES },
 };
 
 const VECTORAITH_PLAYER_MEDIA: PlayerMediaProfile = {

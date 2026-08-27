@@ -173,6 +173,83 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - Town Gate B 建筑密度已于 2026-08-26 通过用户视觉确认：正式 40×30 Town 固定为 1 个蓝顶杂货铺、1 个红色大体量铁匠铺和 5 栋民宅，共 7 个建筑体量；石质粮仓已明确否决。允许橙顶/棕顶民宅非相邻复用，但相邻建筑不得完全同形；新增住宅只用短支路接入，河流、唯一桥、粉树广场、西入口、Seed Shop 出口和 5 个 stable object 保持不变。
 - Town Gate C 已于 2026-08-26 通过用户视觉确认：生活感只通过成组静态 Props 建立，杂货铺使用货箱/招牌/门槛，铁匠铺使用灯具/木料/矿石，五栋民宅使用至少三类非均匀院落，粉树广场保留单一公告设施，桥头只放少量引导物。正式 Town 停止继续增加建筑或均匀铺装饰；后续只因真实通行、Collision、AbovePlayer 或功能入口问题窄修。
 
+## Scenario: Town Population MVP
+
+### 1. Scope / Trigger
+
+- Trigger：`life-loop-v1` 与 Town Gate C 已封存，需要用三个固定 NPC 验证小镇从静态地图变为生活空间。
+- 本场景只拥有华强、昊天、阿禾、线性 1∼3 句对话、现有 Seed Shop 人格化入口、统一模态锁和固定脚底碰撞；不包含日程、好感、任务、分支、铁匠功能或持久 NPC 状态。
+
+### 2. Signatures
+
+```typescript
+interface NpcSpawnDefinition extends WorldPoint {
+  readonly entityId: string;
+  readonly regionId: string;
+  readonly npcId: string;
+  readonly dialogueId: string;
+  readonly interactionType: "shop" | "dialogue";
+}
+
+interface DialogueDefinition {
+  readonly id: string;
+  readonly speaker: string;
+  readonly lines: readonly [string, ...string[]];
+}
+
+interface DialogueProjection {
+  readonly speaker: string;
+  readonly lines: readonly string[];
+  readonly lineIndex: number;
+}
+```
+
+### 3. Contracts
+
+- 已发布华强保持 `entityId=seed-shop-keeper`、`npcId=seed-keeper`、`dialogueId=seed-keeper-welcome`，只补 `interactionType=shop`；不得为商店再造第二套入口。
+- Town 新增且只新增 `town-blacksmith`（昊天）和 `town-resident-01`（阿禾），均为 `interactionType=dialogue`；坐标属于 Tiled，stable ID 不随移动改变。
+- `interactionType` 是 decoder 必填枚举；WorldScene 以它分派现有 ShopPanel 或 DialoguePanel，ShopSystem 仍以 `seed-shop-keeper`、region 与 42px 距离验证买卖命令。
+- Dialogue 只在 Vue transient state 中保存当前行；不进入 GameSession、StoredGame、IndexedDB 或 domain command。
+- `isWorldInputLocked()` 在 Shop 或 Dialogue 打开时为 true，统一阻止 movement、interaction 与 exit transition；E/点击推进，最后一句关闭并恢复输入。
+- 固定 `dialogue` NPC 使用约 5×3px 脚底半径；`shop` NPC 不新增脚底阻挡，避免已发布 Seed Shop 旧位置存档被困。
+- 正式 NPC 图来自 VectoRaith NPC v1.6 DEMO 的完整 `DEMO/16x16/generic_people.png`：192×256、17354 bytes、SHA-256 `eb1fe419def5a351cfc147a8273b133f1e7daaa9f59a418fe4a7d3f8d7d67ba0`；Git 不跟踪 PNG，运行时只读 immutable CDN 原始 bytes。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| NPC 缺少/使用未知 `interactionType` | 地图解码失败，世界不启动 |
+| `dialogueId` 不在 catalog | 显示固定错误 feedback，不打开空 modal |
+| Dialogue/Shop 已打开时重复 E | 不创建第二 modal；Dialogue 仅推进一行 |
+| Shop 打开但玩家不在华强 42px 内 | ShopSystem 返回 `not-at-shop`，gold/inventory 不变 |
+| NPC frame 缺失 | EntityFactory 明确失败，不回退 Ninja shopkeeper |
+| NPC 脚底堵住 reviewed route | 路线门禁失败，不提交/部署 |
+| NPC CDN bytes/hash 不匹配 | prepare/deploy 失败，不加载未知素材 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：玩家从 Farm 进入 Town，先看到阿禾并完成两句对话，找到昊天，再进入 Seed Shop 对华强按 E 打开原子买卖面板。
+- Base：Dialogue 用 E 或按钮逐句推进，Shop/Dialogue 期间世界停止响应，关闭后恢复；刷新不保存任何对话位置。
+- Bad：Vue 直接修改 gold、按 `entityId` 硬编码多个商店分支、把 sprite frame 写进 save，或引入 DialogueGraph/Quest/Schedule 框架。
+
+### 6. Tests Required
+
+- 正式四地图 decoder 断言 Town 两名 dialogue NPC、Seed Shop 一名 shop NPC、全局 stable ID 唯一及非法 `interactionType` 失败。
+- WorldCatalog 断言 Town NPC 脚底阻挡、华强不阻挡旧位置、三人均有 42px 内可达交互点，Farm↔Town/桥/商店路线不回退。
+- transient modal 合同断言对话逐句关闭、Shop 欢迎语、统一输入锁和关闭恢复；Life Loop 原子买卖合同继续通过。
+- `prepare:media`、NPC/ Life Loop 窄合同、typecheck、client build、manifest totals、Git 图片二进制为 0；生产最终由 30∼60 秒真实浏览器验收。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: UI guesses identity and owns shop/economy state.
+if (npc.entityId === "some-shopkeeper") snapshot.gold -= 20;
+
+// Correct: Tiled declares interaction; UI reuses the existing command owner.
+if (npc.interactionType === "shop") openShop(dialogue.lines[0]);
+session.dispatch({ type: "buy-item", itemId: "turnip-seed", quantity: 1 });
+```
+
 ## World Foundation contract
 
 - 地图使用 16×16 正交 TMJ 区域文件；农场东侧连接小镇西侧，后续 forest/mountain/river/mine/temple/story regions 复用同一切图合同，不扩成单张超级地图。
@@ -209,7 +286,7 @@ gameState.player.tileset = "vectoraith";
 - Runtime source tiles remain original 16×16; Phaser uses `pixelArt`、`roundPixels` 与 2× integer camera zoom，不采用 32/48px upscaled tileset。
 - 禁止为发布再次 pack used tiles、重排 GID、裁切/合并 entity frames 或重编码 PNG；Tiled 直接使用原始 16-column metadata，EntityFactory 直接注册原 sheet frame。
 - Missing local file or decoder failure → visible media/startup error；不得静默回退未知素材。
-- Required checks：formal decoder + Farm 23 stable object/Town 5 stable object equality + Farm/Town route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
+- Required checks：formal decoder + Farm 23 stable object/Town 7 stable object equality + Farm/Town route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
 - Checkpoint 后只有真实游玩发现的明确碰撞、树脚、路径或院落操作问题允许修改 Farm v1；不以偏好性微调重开 Gate A/B/C。
 
 ### 1. Scope / Trigger
@@ -383,7 +460,7 @@ farmTile.frameName = "vectoraith-crop-mature";
 - Phaser/Vue 和既有固定开源来源继续锁版本；规则迁移以当前 checkpoint 源码为依据，不建立复制分叉。
 - 已评审 `idb@8.0.3`，许可证 ISC 不在默认 allowlist，且当前接口窄，因此采用受控原生 IndexedDB 薄层并记录拒绝原因。
 - 图片仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 图片二进制为零。
-- VectoRaith v1.08 采用自定义项目使用许可。用户已批准 Web runtime 直接下载 6 张官方完整 sheet 并接受作者回复前的残余风险；禁止原 ZIP、未采用目录、素材浏览/下载入口或素材包式产品。作者回复若附加条件则 forward-fix。
+- VectoRaith Farming v1.08 与 NPC v1.6 DEMO 采用自定义项目使用许可。用户已批准 Web runtime 直接读取登记的官方完整 PNG 并接受作者回复前的残余风险；禁止原 ZIP、32/48px 版本、未采用目录、素材浏览/下载入口或素材包式产品。作者回复若附加条件则 forward-fix。
 
 ## Verification
 

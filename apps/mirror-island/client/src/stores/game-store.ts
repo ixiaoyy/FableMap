@@ -12,7 +12,8 @@ export interface InventorySlotProjection {
 
 export interface DialogueProjection {
   readonly speaker: string;
-  readonly text: string;
+  readonly lines: readonly string[];
+  readonly lineIndex: number;
 }
 
 const mutableState = reactive({
@@ -24,6 +25,7 @@ const mutableState = reactive({
   feedback: null as ActionFeedback | null,
   dialogue: null as DialogueProjection | null,
   shopOpen: false,
+  shopWelcome: "",
 });
 
 export const gameUiState = readonly(mutableState);
@@ -55,30 +57,45 @@ export function setActionFeedback(feedback: ActionFeedback | null): void {
 }
 
 /** Opens one fixed ephemeral dialogue projection above the Phaser world. */
-export function setDialogue(dialogue: DialogueProjection): void {
+export function setDialogue(dialogue: Pick<DialogueProjection, "speaker" | "lines">): void {
+  if (dialogue.lines.length === 0) throw new Error("Dialogue requires at least one line.");
   mutableState.shopOpen = false;
-  mutableState.dialogue = dialogue;
+  mutableState.shopWelcome = "";
+  mutableState.dialogue = { speaker: dialogue.speaker, lines: [...dialogue.lines], lineIndex: 0 };
 }
 
-/** Closes the active ephemeral dialogue without touching save-owned gameplay state. */
-export function clearDialogue(): void {
-  mutableState.dialogue = null;
+/** Advances one fixed linear dialogue line and closes after the final line. */
+export function advanceDialogue(): void {
+  const dialogue = mutableState.dialogue;
+  if (!dialogue) return;
+  if (dialogue.lineIndex + 1 >= dialogue.lines.length) {
+    mutableState.dialogue = null;
+    return;
+  }
+  mutableState.dialogue = { ...dialogue, lineIndex: dialogue.lineIndex + 1 };
 }
 
 /** Opens the transient Seed Keeper shop without storing UI state in GameSession. */
-export function openShop(): void {
+export function openShop(welcomeLine: string): void {
   mutableState.dialogue = null;
+  mutableState.shopWelcome = welcomeLine;
   mutableState.shopOpen = true;
 }
 
 /** Closes the transient Seed Keeper shop without mutating inventory or gold. */
 export function closeShop(): void {
   mutableState.shopOpen = false;
+  mutableState.shopWelcome = "";
 }
 
 /** Reports whether a modal Vue panel currently owns Phaser world input. */
 export function isWorldInputLocked(): boolean {
-  return mutableState.shopOpen;
+  return mutableState.shopOpen || mutableState.dialogue !== null;
+}
+
+/** Reports whether E should advance the active linear dialogue instead of reaching the world. */
+export function isDialogueOpen(): boolean {
+  return mutableState.dialogue !== null;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
@@ -89,4 +106,5 @@ export function clearGameState(): void {
   mutableState.feedback = null;
   mutableState.dialogue = null;
   mutableState.shopOpen = false;
+  mutableState.shopWelcome = "";
 }

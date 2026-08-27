@@ -7,6 +7,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const vendorBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/vendor";
 const ninjaBaseUrl = `${vendorBaseUrl}/ninja-adventure/2024-04-19`;
 const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08/original/16x16`;
+const vectoraithNpcBaseUrl = `${vendorBaseUrl}/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16`;
 const assets = [
   {
     name: "male player",
@@ -112,6 +113,13 @@ const assets = [
     outputs: ["public/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/sprites/$farmer.png"],
     bytes: 3059,
     sha256: "85fe4b7350f2ccf9a6225c2bec6fe1bc9f5dfa00909605cc4ec3962d1c006f08",
+  },
+  {
+    name: "VectoRaith original NPC demo",
+    url: `${vectoraithNpcBaseUrl}/generic_people.png`,
+    outputs: ["public/game-media/v1/assets/vendor/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16/generic_people.png"],
+    bytes: 17354,
+    sha256: "eb1fe419def5a351cfc147a8273b133f1e7daaa9f59a418fe4a7d3f8d7d67ba0",
   },
 ];
 

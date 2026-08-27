@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import type { GameState } from "../../../../domain/state/game-state.ts";
-import { SEED_KEEPER_ENTITY_ID } from "../../../../domain/shop/ShopSystem.ts";
 import type { WorldCatalog } from "../../../../domain/world/regions.ts";
 import {
   dispatchLocalGameCommand,
@@ -8,7 +7,9 @@ import {
   tickLocalGameSession,
 } from "../../session/local-game-session.ts";
 import {
+  advanceDialogue,
   isWorldInputLocked,
+  isDialogueOpen,
   openShop,
   setActionFeedback,
   setDialogue,
@@ -90,7 +91,6 @@ export class WorldScene extends Phaser.Scene {
     this.load.image(MEDIA_KEYS.interiorFloor, MEDIA_URLS.interiorFloor);
     this.load.image(MEDIA_KEYS.wall, MEDIA_URLS.wall);
     this.load.spritesheet(MEDIA_KEYS.hero, MEDIA_URLS.hero, { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet(MEDIA_KEYS.shopkeeper, MEDIA_URLS.shopkeeper, { frameWidth: 16, frameHeight: 16 });
     this.load.image(VECTORAITH_MEDIA_KEYS.terrain, VECTORAITH_MEDIA_URLS.terrain);
     this.load.image(VECTORAITH_MEDIA_KEYS.buildings, VECTORAITH_MEDIA_URLS.buildings);
     this.load.image(VECTORAITH_MEDIA_KEYS.details, VECTORAITH_MEDIA_URLS.details);
@@ -100,6 +100,7 @@ export class WorldScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 32,
     });
+    this.load.image(VECTORAITH_MEDIA_KEYS.npcs, VECTORAITH_MEDIA_URLS.npcs);
     for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
   }
 
@@ -124,6 +125,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
     if (isWorldInputLocked()) {
       this.setIdleFrame();
+      if (isDialogueOpen() && Phaser.Input.Keyboard.JustDown(this.interactKey)) advanceDialogue();
       return;
     }
     const xAxis = toAxis(
@@ -239,6 +241,9 @@ export class WorldScene extends Phaser.Scene {
       if (media.farmCrop) {
         this.registerAtlasFrame(media.farmCrop.textureKey, media.farmCrop.growingFrame);
         this.registerAtlasFrame(media.farmCrop.textureKey, media.farmCrop.matureFrame);
+      }
+      for (const frame of Object.values(media.npc.frames)) {
+        this.registerAtlasFrame(media.npc.textureKey, frame);
       }
     }
   }
@@ -428,16 +433,16 @@ export class WorldScene extends Phaser.Scene {
       setActionFeedback({ tone: "error", code: "no-npc-nearby", message: "附近没有可交谈的人。" });
       return;
     }
-    if (nearest.npc.entityId === SEED_KEEPER_ENTITY_ID) {
-      openShop();
-      return;
-    }
     const dialogue = getDialogueDefinition(nearest.npc.spawn.dialogueId);
     if (!dialogue) {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
       return;
     }
-    setDialogue({ speaker: dialogue.speaker, text: dialogue.text });
+    if (nearest.npc.spawn.interactionType === "shop") {
+      openShop(dialogue.lines[0]);
+      return;
+    }
+    setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });
   }
 
   /** Fades once around a single atomic sleep command and blocks repeat input during the transition. */

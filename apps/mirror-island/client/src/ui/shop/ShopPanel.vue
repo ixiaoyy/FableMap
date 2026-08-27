@@ -34,11 +34,13 @@ function sellTurnip(): void {
     <section class="shop-panel" role="dialog" aria-modal="true" aria-labelledby="shop-title">
       <header class="shop-panel__header">
         <div>
-          <span>SEED KEEPER</span>
+          <span>华强 · SEED KEEPER</span>
           <h2 id="shop-title">种子店</h2>
         </div>
         <strong>{{ gameUiState.gold }}g</strong>
       </header>
+
+      <p class="shop-panel__welcome">{{ gameUiState.shopWelcome }}</p>
 
       <div class="shop-panel__goods">
         <article>
