@@ -92,7 +92,8 @@ jobs:
             assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_details.png|\
             assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_orchard.png|\
             assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png|\
-            assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/sprites/\$farmer.png)
+            assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/sprites/\$farmer.png|\
+            assets/vendor/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16/generic_people.png)
               if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
                 echo "::error::Original VectoRaith runtime media must use image/png"
                 exit 1
