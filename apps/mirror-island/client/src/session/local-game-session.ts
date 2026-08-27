@@ -8,11 +8,18 @@ import {
   setActionFeedback,
 } from "../stores/game-store.ts";
 
+const LOCAL_PLAYTEST_OWNER_KEY = "local-playtest-v1";
+
 let session: GameSession | null = null;
 let repository: IndexedDbSaveRepository | null = null;
 let stopStoreProjection: (() => void) | null = null;
 
-/** Initializes one browser-local GameSession after identity has produced an opaque owner key. */
+/** Initializes the single anonymous playtest slot without creating a user or device identity. */
+export function initializeLocalPlaytestGameSession(catalog: WorldCatalog): GameSession {
+  return initializeLocalGameSession(LOCAL_PLAYTEST_OWNER_KEY, catalog);
+}
+
+/** Initializes one browser-local GameSession for an explicit isolated owner key. */
 export function initializeLocalGameSession(ownerKey: string, catalog: WorldCatalog): GameSession {
   if (session) throw new Error("Local GameSession is already initialized.");
   repository = new IndexedDbSaveRepository();
@@ -21,7 +28,7 @@ export function initializeLocalGameSession(ownerKey: string, catalog: WorldCatal
   return session;
 }
 
-/** Returns the initialized local session or fails fast before authentication and menu setup finish. */
+/** Returns the initialized local session or fails fast before local menu setup finishes. */
 export function getLocalGameSession(): GameSession {
   if (!session) throw new Error("Local GameSession is unavailable.");
   return session;

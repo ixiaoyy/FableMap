@@ -7,13 +7,7 @@ RUN npm ci --ignore-scripts --legacy-peer-deps
 
 COPY apps/mirror-island/ ./
 
-ARG VITE_KEYCLOAK_URL=https://fable.pingxingxian.space/identity
-ARG VITE_KEYCLOAK_REALM=mirror-island
-ARG VITE_KEYCLOAK_CLIENT_ID=mirror-island-web
 ARG VITE_MIRROR_BASE_PATH=/
-ENV VITE_KEYCLOAK_URL=${VITE_KEYCLOAK_URL}
-ENV VITE_KEYCLOAK_REALM=${VITE_KEYCLOAK_REALM}
-ENV VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID}
 ENV VITE_MIRROR_BASE_PATH=${VITE_MIRROR_BASE_PATH}
 
 RUN npm run test:life-loop && npm run build:client

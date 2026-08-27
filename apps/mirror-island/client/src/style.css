@@ -771,7 +771,7 @@ h1 {
     animation: shop-arrive 140ms steps(2, end) both;
   }
 
-  .signal[data-phase="authenticating"] .signal__lamp,
+  .signal[data-phase="initializing"] .signal__lamp,
   .signal[data-phase="loading"] .signal__lamp {
     animation: pulse 1.2s steps(2, end) infinite;
   }

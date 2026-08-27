@@ -10,7 +10,7 @@
 - 玩家、资源、背包、制作和农田由本地 GameSession 唯一处理；Phaser/Vue 发送命令并渲染 snapshot，不经过实时后端。
 - 第一阶段已经完成并生产验收：World Foundation、Farm Showcase、`life-loop-v1`、Town Gate A/B/C 与 Town Population MVP。玩家可以在正式 Farm/Town/Cottage/Seed Shop 间移动，完成三日萝卜生活循环，并与华强、昊天、阿禾交互。
 - 房屋、伙伴工作和基地权限保留为后续主线能力，不进入首个纵向切片。
-- 当前托管 Web 入口支持 ParallelLines 论坛账号或独立中文用户名密码；两类账号不自动合并。未来单机产品是否强制登录另行决定，玩法与存档合同不得依赖 Keycloak。
+- 当前托管 Web 入口是纯本地无账号试玩；不显示或调用注册、登录、论坛账号、账号设置或云存档入口。
 - 玩家存档、背包和世界状态由本地 GameSession 处理并写入 IndexedDB；实时玩法不经过服务端。
 - `One Beautiful Slice` 已在真实生产浏览器通过验收并冻结为 Farm v1；除明确碰撞缺陷外，不再重排构图或继续添加装饰。
 - 客户端技术栈固定为 Phaser 4 + Vue 3 + TypeScript + Vite + Tiled。未来桌面版与 Steam 目标采用 Tauri 2，但当前不引入 Tauri/Rust/Steam；GameSession 通过 SaveRepository 与当前 IndexedDB、未来 FileSystem adapter 解耦。
@@ -50,22 +50,22 @@
 
 开发判断固定为：当前功能是否让正在验证的核心循环更好玩；仅因“以后可能有用”或“架构更完整”而增加的框架暂缓。优先顺序为：可玩 → 好看 → 好玩 → 内容扩展 → 技术完美。
 
-## 登录体验
+## 试玩进入体验
 
-当前托管 Web 版本直接访问镜像岛时，Keycloak 像素主题同时提供“使用论坛账号”和独立用户名密码。已登录论坛玩家通过一次性票据首次建立 Keycloak federated identity，之后使用 Keycloak 会话直接进入。
+玩家访问 `/` 后直接看到“新游戏 / 继续游戏”，客户端不发起 Keycloak/OIDC 请求。同一 origin + 浏览器 profile 只使用一个固定本地试玩槽；清除站点数据会丢失进度，且不支持跨设备同步。
 
-独立账号不要求邮箱、验证码、密码复杂度或找回流程；密码长度 1–72，用户名 1–32 个 Unicode 字符并保留基本危险字符过滤。
+旧账号派生的 IndexedDB 记录保持原样但暂时不可达，不枚举、删除、覆盖、合并或迁移。Keycloak、论坛 OIDC bridge 和数据库基础设施保留，独立注册关闭。
 
 ## 数据原则
 
 - Keycloak 和游戏数据库分库/分凭据，游戏库不复制密码或论坛凭据。
 - 旧 `localStorage` 角色名、外观和进度全部丢弃；新版只精确删除已知 `farm-game.save.v1`–`v4` 键。
-- IndexedDB 保存本地 GameSession；Keycloak、Prisma/PostgreSQL 继续保留给登录、未来云存档、成就和排行榜，不进入实时循环。
+- IndexedDB 保存本地 GameSession；Keycloak、Prisma/PostgreSQL 作为未启用的身份及未来云存档、成就和排行榜基础设施保留，不进入客户端启动或实时循环。
 
 ## 成功标准
 
 - `/` 只显示镜像岛，`/mirror-island/` 跳转到 `/`，无旧界面或备用路由。
-- 中文独立注册、论坛首次 SSO、再访直登和 Remember Me 可验证。
+- 无 Keycloak session 且身份服务不可达时，`/` 仍直接显示新游戏/继续游戏，全程无 Keycloak/OIDC 请求。
 - 不启动游戏后端时，玩家仍能完成采集、背包、制作、锄地、播种、浇水、生长和收获。
 - “新游戏”创建本地世界；“继续游戏”从 IndexedDB 恢复玩家、背包、资源和农田。
 - World Foundation 只有在真人从农场向右进入小镇、进出种子店、返回农场并刷新恢复后才算完成；默认主视图是 16px Tiled 游戏世界，正式 TMJ 由 Tiled 手工维护。

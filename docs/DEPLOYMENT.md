@@ -15,13 +15,13 @@
 | 服务 | 职责 | 持久化 |
 |---|---|---|
 | `frontend` | Nginx 和单份 Phaser/Vue client | 无 |
-| `keycloak` | 独立账号、Remember Me、论坛 Identity Broker | `mirror_identity_db` |
+| `keycloak` | 保留的身份与论坛 Identity Broker；当前试玩客户端不接入 | `mirror_identity_db` |
 | `mirror-identity-db` | Keycloak PostgreSQL 17 | `mirror_identity_db` volume |
 | `mirror-game` | 论坛 OIDC 桥、health 与未来云存档/成就/排行榜 API；不参与实时玩法 | `mirror-game-db` |
 | `mirror-game-db` | 游戏 PostgreSQL 17 | `mirror_game_db` volume |
 | `mirror-game-migrate` | 一次性 `prisma migrate deploy` | 无 |
 
-Keycloak 与游戏数据库使用不同服务、database、用户、密码和 volume。
+Keycloak 与游戏数据库使用不同服务、database、用户、密码和 volume。公开 `/` 使用固定本地试玩槽，不读取身份服务；`frontend` 不声明对 Keycloak 或 `mirror-game` 的启动依赖。Keycloak 关闭独立注册，但 realm、client、论坛 Identity Provider 和数据均保留。
 
 `mirror-game` 保留镜像岛默认网络，并额外连接 ParallelLines `api` 当前使用的外部 Docker 网络；只有 `mirror-game` 进入该网络。生产部署从正在运行的 `api` 容器解析带精确 `api` 别名的唯一网络，不依赖固定 Compose 项目名，也不让 frontend、Keycloak 或数据库进入论坛网络。
 
@@ -72,6 +72,6 @@ npm --prefix .\apps\mirror-island run build:server
 docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml config
 ```
 
-当前生产运行 Phaser/Vue Farm Showcase。Life Loop 发布除上述自动检查外，还必须验证全新账号与已有 v2 IndexedDB 账号；v2 主记录只在同一 readwrite transaction 原子保留原始 backup 后才切换为 v3。两类人工验收通过前不创建 `life-loop-v1` tag，也不进入 Expedition 实现。
+当前生产入口调整为 Phaser/Vue 纯本地无账号试玩。发布必须验证身份服务不可达时仍能新建/继续农场，浏览器无 Keycloak/OIDC 请求，且旧账号 owner key 下的 IndexedDB 记录不被枚举或改写。现有 v2→v3 原子 backup 合同保留，但试玩版不为旧账号存档提供入口或迁移。
 
 浏览器 v2 backup 使用现有 `mirror-island-local/game-saves` store 和 owner/slot scoped backup key，不改变 IndexedDB database version 或 SaveRepository port。该备份只用于 forward-fix 恢复，不进入玩法 snapshot；用户显式删除 slot 时主记录与 backup 同时删除。

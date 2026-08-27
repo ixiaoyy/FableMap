@@ -52,7 +52,6 @@
     "@prisma/client": "7.9.1",
     "express": "5.2.1",
     "jose": "6.2.9",
-    "keycloak-js": "26.2.4",
     "oidc-provider": "9.11.1",
     "pg": "8.23.0",
     "phaser": "4.2.1",

@@ -17,7 +17,7 @@ const SAVE_STORE_NAME = "game-saves";
 export class IndexedDbSaveRepository implements SaveRepository {
   private databasePromise: Promise<IDBDatabase> | null = null;
 
-  /** Opens the reviewed database lazily so authentication can finish before local gameplay storage is touched. */
+  /** Opens the reviewed database lazily so local startup can fail before gameplay storage is touched. */
   private openDatabase(): Promise<IDBDatabase> {
     if (this.databasePromise) return this.databasePromise;
     this.databasePromise = new Promise((resolve, reject) => {

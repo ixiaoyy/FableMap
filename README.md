@@ -9,7 +9,7 @@ RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行
 - Phaser `4.2.1` + Vue 3 + TypeScript + Vite：地图、角色表现、输入和 Web UI。
 - GameSession + 纯 TypeScript domain：背包、采集、制作、种田和本地状态 owner。
 - 原生 IndexedDB：版本化单人存档；不使用 localStorage 保存玩法状态。
-- Keycloak `26.7.1`：独立中文用户名密码、Remember Me、论坛 OIDC 身份代理。
+- Keycloak `26.7.1`：保留的身份与论坛 OIDC 代理基础设施；当前试玩客户端不接入。
 - `oidc-provider` `9.11.1`：将 ParallelLines 现有一次性票据适配为标准 OIDC。
 - Prisma `7.9.1` + PostgreSQL 17：玩家资料、存档、背包、动态格、区块、住宅和全服结算。
 - Nginx：`/`、`/identity/`、`/forum-sso/` 和 `/game-media/v1/` 同域路由；单人玩法不提供 WebSocket 路由。
@@ -19,13 +19,10 @@ RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行
 ```powershell
 npm --prefix .\apps\mirror-island install
 Copy-Item .\apps\mirror-island\.env.example .\apps\mirror-island\.env
-npm --prefix .\apps\mirror-island run identity:up
-npm --prefix .\apps\mirror-island run identity:configure
-npm --prefix .\apps\mirror-island run dev:server
 npm --prefix .\apps\mirror-island run dev:client
 ```
 
-单人实时玩法不读取 `MIRROR_ISLAND_DATABASE_URL`；Prisma/PostgreSQL 只为未来云存档等后端能力保留，实际接入需要单独评审和授权。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
+公开 `/` 直接进入无账号本地试玩，不需要启动 Keycloak、游戏服务端或 PostgreSQL。单人实时玩法不读取 `MIRROR_ISLAND_DATABASE_URL`；Prisma/PostgreSQL 只为未来云存档等后端能力保留，实际接入需要单独评审和授权。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
 
 ## 最小检查
 

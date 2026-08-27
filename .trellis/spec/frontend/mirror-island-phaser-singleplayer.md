@@ -27,7 +27,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
 - IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v3 包含 region、day、gold 与按天作物状态，旧 v1/v2 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源和农田；读取从 unknown 完整验证，未来/损坏版本明确失败。
-- token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；ownerKey 由身份 adapter 提供。
+- token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
 - 持久化拓扑固定为 `GameSession -> SaveRepository -> IndexedDB（当前 Web）/ FileSystem（未来 Tauri）`；当前只实现 IndexedDB，不把 filesystem、Rust command 或桌面路径渗入 domain。
 
@@ -80,14 +80,14 @@ function planIndexedDbSave(
 ### 5. Good/Base/Bad Cases
 
 - Good：v2 continue 解码、catalog reconcile 成功后，首次 critical save 原子留下原始 v2 并切换 v3。
-- Base：全新账号与后续 v3 saves 沿用原 main key，不产生 backup。
+- Base：全新本地试玩槽与后续 v3 saves 沿用原 main key，不产生 backup。
 - Bad：`load()` 先覆盖 main 再进入 GameSession，或先写 v3 后用另一个 transaction 补 backup。
 
 ### 6. Tests Required
 
 - 纯 write-plan 合同断言首次 v2 生成 exact backup、已有 backup 不覆盖、v3/new 不备份、delete keys 仅两条 scoped key。
 - Life Loop v2→v3 幂等 domain 合同继续通过。
-- typecheck、client build；生产必须由全新账号与已有 v2 账号分别人工验收。
+- typecheck、client build；原子 v2→v3 保留由确定性 fixture 验证，当前生产人工验收聚焦新本地试玩槽的新游戏、继续和刷新恢复。
 
 ### 7. Wrong vs Correct
 
@@ -104,8 +104,8 @@ store.put({ key: mainKey, game: validatedV3 });
 
 ## Preserved backend boundary
 
-- Keycloak 26.7.1、keycloak-js 26.2.4、oidc-provider 9.11.1、Prisma 7.9.1、PostgreSQL 17、论坛跨 Compose 网络、CDN 和部署设施继续保留。
-- 后端近期只负责登录/论坛 SSO；云存档、成就和排行榜另行规划，不在当前任务创建 API 或数据库结构。
+- Keycloak 26.7.1、oidc-provider 9.11.1、Prisma 7.9.1、PostgreSQL 17、论坛跨 Compose 网络、CDN 和部署设施继续保留；公开 Web 客户端不再依赖 `keycloak-js`。
+- 后端近期只保留论坛 SSO、health 和未来非实时 API 边界；当前试玩客户端不调用它们，云存档、成就和排行榜另行规划。
 - 现有九表基线不修改。新表/字段/migration 必须先单独评审并获批准。
 
 ## Scenario: future Tauri SaveRepository adapter gate
@@ -286,7 +286,7 @@ gameState.player.tileset = "vectoraith";
 - Runtime source tiles remain original 16×16; Phaser uses `pixelArt`、`roundPixels` 与 2× integer camera zoom，不采用 32/48px upscaled tileset。
 - 禁止为发布再次 pack used tiles、重排 GID、裁切/合并 entity frames 或重编码 PNG；Tiled 直接使用原始 16-column metadata，EntityFactory 直接注册原 sheet frame。
 - Missing local file or decoder failure → visible media/startup error；不得静默回退未知素材。
-- Required checks：formal decoder + Farm 23 stable object/Town 7 stable object equality + Farm/Town route Collision replay + typecheck + client build；浏览器画布验收仍需可用的 Keycloak session。
+- Required checks：formal decoder + Farm 23 stable object/Town 7 stable object equality + Farm/Town route Collision replay + typecheck + client build；浏览器画布验收不需要 Keycloak session 或身份服务。
 - Checkpoint 后只有真实游玩发现的明确碰撞、树脚、路径或院落操作问题允许修改 Farm v1；不以偏好性微调重开 Gate A/B/C。
 
 ### 1. Scope / Trigger
@@ -450,10 +450,150 @@ crop.setVisible(tile.phase === "growing" || tile.phase === "mature");
 farmTile.frameName = "vectoraith-crop-mature";
 ```
 
-## Identity replaceability
+## Scenario: selected Hotbar item owns world interaction
 
-- 当前托管 Web 版本继续通过 Keycloak 验证账号隔离，但 domain、WorldCatalog、GameSession 与 SaveRepository 只接 opaque owner key，不导入 Keycloak。
-- Keycloak 是否为未来离线/单机产品强制前提尚未决定；不得在 World Foundation 中把登录页面或 token 固化为地图、玩法或存档格式的一部分。
+### 1. Scope / Trigger
+
+- Trigger：玩家必须先选择工具/种子或空手，再点击 Tree/FarmPlot；系统不再根据目标 phase 自动猜测工具。
+- 本场景只拥有 transient Hotbar selection、持续手持表现、精确 item/target command 和空手采摘；不包含工具品质、耐久、体力、升级或铁匠功能。
+
+### 2. Signatures
+
+```typescript
+type HeldItemId = ItemId | "";
+
+type ToolUseCommand = {
+  readonly type: "use-item-on-target";
+  readonly itemId: HeldItemId;
+  readonly targetId: string;
+};
+
+interface ToolSelectionProjection {
+  readonly selectedHotbarIndex: number | null;
+  readonly selectedItemId: HeldItemId;
+}
+```
+
+### 3. Contracts
+
+- 新游戏 slots 0/1/2 固定 hoe/watering-can/axe；默认 `selectedHotbarIndex=null`、空手。开发期不 backfill 旧存档。
+- 点击或按 `1–8` 选择槽位；再次选择当前槽或选择空槽回到空手。选择只在 client store，禁止进入 GameState、StoredGame、IndexedDB 或 domain。
+- Phaser 在 ActionTimeline impact 发送 `use-item-on-target`；GameSession 重新验证背包仍拥有非空 item，并按 WorldCatalog target kind 路由。
+- 精确合法组合只有：axe+tree、hoe+untilled、turnip-seed+tilled、watering-can+growing、empty+mature。
+- 错误物品/phase 仍播放当前玩家动作，但 GameSession 返回 quiet no-effect；目标不播放 impact，不 publish/save，不显示文字错误。
+- 空手收获使用当前 farmer 的代码俯身动作；mutation 仍只发生在 impact 一次。
+- Shop/Dialogue/ActionTimeline busy 时 Hotbar 与数字键选择被锁；modal 关闭后保留先前选择。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| item 不在背包或 target 未知 | quiet no-effect，state byte-equivalent |
+| wrong item/target phase | 玩家动作完成；target 无 impact；无反馈/保存 |
+| axe + available nearby tree | tree depleted、+3 wood、一次 critical save |
+| watering-can + already watered crop | waiting feedback；不重复成长 |
+| empty + mature crop + 背包有容量 | 俯身 impact 时收获一次 |
+| empty + mature crop + 背包满 | 俯身完成，作物保留，inventory-full feedback |
+| selected slot 被消耗为空 | 下一 snapshot projection 自动清空 selection |
+| modal/action busy | selection/use input ignored |
+
+### 5. Good/Base/Bad Cases
+
+- Good：按 1 选锄头→点击未耕地；选择种子→播种；选择浇水壶→浇水；成熟后取消选择→空手俯身收获。
+- Base：选择斧头点击成熟作物，斧头动作播放但作物完全不动；再次按斧头槽回到空手。
+- Bad：FarmPlot 根据 phase 自动选择动作、Vue 直接改 inventory、把 selected index 写进 v3 save，或错误工具仍触发 target shake。
+
+### 6. Tests Required
+
+- GameSession：新游戏三件工具；所有合法组合成功；tree 与每个 farm phase 的 wrong-item snapshot 全等；不存在旧 gather/farm-primary active 调用。
+- Client store：初始空手、click/key toggle、空槽、最后一个 seed 消耗、modal/action lock。
+- ActionTimeline：正确/错误工具都只派发一次；只有 success 调用 Tree/FarmPlot impact；空手 harvest 失败不移除 crop。
+- 回归：Life Loop、Town Population、IndexedDB v2 backup、typecheck、client build；Git 图片/TMJ/migration diff 为零。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: target state chooses the player's item.
+session.dispatch({ type: "farm-primary", tileId });
+
+// Correct: client sends the selected item; domain validates the exact pair.
+session.dispatch({ type: "use-item-on-target", itemId: selectedItemId, targetId: tileId });
+```
+
+## Scenario: anonymous local playtest entry
+
+### 1. Scope / Trigger
+
+- Trigger：前期只验证玩法，公开 `/` 取消注册、登录、论坛账号和身份检查门禁，但保留 Keycloak/OIDC/数据库基础设施供未来单独评审。
+
+### 2. Signatures
+
+```typescript
+const LOCAL_PLAYTEST_OWNER_KEY = "local-playtest-v1";
+
+function initializeLocalPlaytestGameSession(catalog: WorldCatalog): GameSession;
+function initializeLocalGameSession(ownerKey: string, catalog: WorldCatalog): GameSession;
+```
+
+```json
+{
+  "registrationAllowed": false
+}
+```
+
+### 3. Contracts
+
+- `LOCAL_PLAYTEST_OWNER_KEY` 只由 `client/src/session/local-game-session.ts` 拥有；`App.vue` 只调用 `initializeLocalPlaytestGameSession`，不复制键值。
+- `ownerKey` 不是用户 ID、设备 ID 或可识别信息；同一 origin + browser profile 只有一个试玩槽。tool-art preview 继续使用独立键，不覆盖正式试玩。
+- IndexedDB 仍以 `ownerKey:slotId` 直接读写，不枚举 object store。旧 Keycloak subject hash owner key 记录保留但暂时不可达，不迁移、合并或删除。
+- browser source/dependency/build env 不包含 `keycloak-js`、`VITE_KEYCLOAK_*`、token 刷新或 Keycloak/OIDC 请求；界面不显示账号入口。
+- Compose 的 `frontend` 不得 `depends_on` Keycloak 或 `mirror-game`。Keycloak realm/client、论坛 Identity Provider、OIDC bridge、PostgreSQL、volumes 和 secrets 保留；realm 关闭独立注册。
+- 未来重新引入账号时，必须单独评审试玩槽与账号槽的选择/合并规则；不在本合同预留自动绑定。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| Keycloak、论坛 bridge 或 PostgreSQL 不可达 | `frontend` 仍可启动，`/` 仍可新建/继续本地游戏 |
+| 当前试玩槽缺失 | “继续游戏”禁用，“新游戏”可用 |
+| 当前试玩槽损坏/未来版本 | 进入可恢复错误状态，不静默新建或覆盖 |
+| 只存在旧 subject hash 槽 | 视为当前试玩槽缺失，旧记录不读取/改写 |
+| 直接访问 Keycloak 注册 | realm 拒绝独立注册，已有 realm 数据不删除 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：身份服务不可达时访问 `/`，新建 Day 1 / 100g 农场，刷新后“继续游戏”恢复同一 IndexedDB 槽。
+- Base：首次访问直接显示本地菜单和存档丢失/不跨设备提示，不发起任何身份请求。
+- Bad：只隐藏登录按钮但仍初始化 Keycloak，在 `App.vue` 复制 owner key，枚举旧存档猜测一个账号，或保留 `frontend -> keycloak/mirror-game` 启动依赖。
+
+### 6. Tests Required
+
+- 静态搜索 browser source、dependency、lockfile、Docker build args 和 env 样例，断言无 `keycloak-js`、`initializeKeycloakSession`、`deriveLocalSaveOwnerKey` 和 `VITE_KEYCLOAK_*`。
+- 解析 realm JSON，断言 `registrationAllowed=false`，同时 `mirror-island-web` client 和 `parallellines` Identity Provider 仍存在；运行 `test:identity`。
+- 解析 Compose config，断言 `frontend.depends_on` 不存在，Keycloak/bridge/database 服务仍存在。
+- 运行 typecheck 和 client build；真实浏览器验证 `/` 不跳转、无账号入口、新游戏、刷新后继续和本地存档限制文案。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: the shell still owns authentication and derives a per-account key.
+const auth = await initializeKeycloakSession();
+initializeLocalGameSession(await deriveLocalSaveOwnerKey(auth.subject), catalog);
+
+// Correct: the session adapter owns the single anonymous playtest key.
+initializeLocalPlaytestGameSession(catalog);
+```
+
+```yaml
+# Wrong: static gameplay cannot start until identity services start.
+frontend:
+  depends_on: [keycloak, mirror-game]
+
+# Correct: frontend has no runtime service dependency.
+frontend:
+  build:
+    dockerfile: apps/mirror-island/Dockerfile.web
+```
 
 ## Open-source contract
 

@@ -1,10 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import {
-  deriveLocalSaveOwnerKey,
-  initializeKeycloakSession,
-  type AuthenticatedSession,
-} from "./auth/keycloak.ts";
 import PhaserGame from "./PhaserGame.vue";
 import { isToolArtPreviewEnabled } from "./game/assets/tool-art-candidate.ts";
 import { loadWorldCatalog } from "./game/world/world-catalog.ts";
@@ -15,6 +10,7 @@ import {
   flushLocalGameSession,
   getLocalGameSession,
   initializeLocalGameSession,
+  initializeLocalPlaytestGameSession,
   shutdownLocalGameSession,
 } from "./session/local-game-session.ts";
 import {
@@ -30,12 +26,11 @@ import ShopPanel from "./ui/shop/ShopPanel.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
-let authenticatedSession: AuthenticatedSession | null = null;
 const debugMode = computed(() => new URLSearchParams(window.location.search).get("debug") === "1");
 const toolArtPreviewMode = isToolArtPreviewEnabled();
 
 const phaseLabel = computed(() => ({
-  authenticating: "正在确认身份",
+  initializing: "正在准备本地世界",
   menu: "本地世界待命",
   loading: "正在读取存档",
   playing: "本地存档已启用",
@@ -48,7 +43,7 @@ async function startNewGame(): Promise<void> {
   await enterGame(() => getLocalGameSession().newGame());
 }
 
-/** Loads the authenticated profile's validated IndexedDB slot. */
+/** Loads the validated anonymous playtest slot from this browser. */
 async function continueGame(): Promise<void> {
   if (!gameUiState.saveAvailable) return;
   await enterGame(() => getLocalGameSession().continueGame());
@@ -68,7 +63,7 @@ async function enterGame(start: () => Promise<unknown>): Promise<void> {
   }
 }
 
-/** Reloads the current origin after an authentication or local persistence failure. */
+/** Reloads the current origin after a local startup or persistence failure. */
 function reloadPage(): void {
   window.location.reload();
 }
@@ -97,13 +92,12 @@ onMounted(async () => {
   }
   try {
     removeRetiredLocalStorageSaves();
-    authenticatedSession = await initializeKeycloakSession();
     const catalog = await loadWorldCatalog();
-    initializeLocalGameSession(await deriveLocalSaveOwnerKey(authenticatedSession.subject), catalog);
+    initializeLocalPlaytestGameSession(catalog);
     localSessionReady.value = true;
     window.addEventListener("pagehide", checkpointOnPageHide);
   } catch {
-    failureMessage.value = "登录或本地存储暂时不可用，请刷新后重试。";
+    failureMessage.value = "本地世界或存储暂时不可用，请刷新后重试。";
     setGamePhase("error");
     return;
   }
@@ -118,7 +112,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener("pagehide", checkpointOnPageHide);
-  authenticatedSession?.dispose();
   void shutdownLocalGameSession().catch(() => undefined);
 });
 </script>
@@ -166,9 +159,9 @@ onUnmounted(() => {
     </section>
 
     <section v-else class="start-panel" aria-live="polite">
-      <div v-if="gameUiState.phase === 'authenticating' || gameUiState.phase === 'loading'">
+      <div v-if="gameUiState.phase === 'initializing' || gameUiState.phase === 'loading'">
         <p class="start-panel__kicker">PERSONAL WORLD</p>
-        <h2>{{ gameUiState.phase === 'authenticating' ? '正在确认你的身份' : '正在打开本地世界' }}</h2>
+        <h2>{{ gameUiState.phase === 'initializing' ? '正在准备本地世界' : '正在打开本地世界' }}</h2>
         <p>世界状态只在这台浏览器的 IndexedDB 中读取和保存。</p>
       </div>
 
@@ -187,7 +180,10 @@ onUnmounted(() => {
             继续游戏
           </button>
         </div>
-        <small>{{ gameUiState.saveAvailable ? '检测到当前账号的本地存档' : '当前账号还没有本地存档' }}</small>
+        <small>
+          {{ gameUiState.saveAvailable ? '检测到这台浏览器的本地存档。' : '这台浏览器还没有本地存档。' }}
+          清除站点数据会丢失进度，存档不会同步到其他设备。
+        </small>
       </div>
 
       <div v-else role="alert">

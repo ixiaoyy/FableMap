@@ -10,9 +10,6 @@ services:
       context: .
       dockerfile: apps/mirror-island/Dockerfile.web
       args:
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-https://fable.pingxingxian.space/identity}
-        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-mirror-island}
-        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-mirror-island-web}
         VITE_MIRROR_BASE_PATH: /
     image: fablespace-frontend:local
     ports:

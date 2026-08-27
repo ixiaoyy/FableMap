@@ -5,8 +5,7 @@
 | Phaser | `4.2.1` | MIT | 浏览器 2D 渲染、输入、相机和实体表现 |
 | Vue | `3.5.41` | MIT | Hotbar、背包、制作和状态 UI |
 | Phaser/Colyseus 多人切片 | tag `phaser-colyseus-checkpoint-2026-08-24` | 版本见 checkpoint | 已冻结技术参考，不进入单人 active graph |
-| Keycloak Server | `26.7.1` + 固定多架构 digest | Apache-2.0 | 独立账号、Remember Me、OIDC broker、会话 |
-| `keycloak-js` | `26.2.4` | Apache-2.0 | browser Authorization Code + PKCE、内存 token 刷新 |
+| Keycloak Server | `26.7.1` + 固定多架构 digest | Apache-2.0 | 保留的身份与论坛 OIDC broker 基础设施；当前试玩客户端不接入 |
 | `oidc-provider` | `9.11.1` | MIT | 把现有 ParallelLines ticket 窄适配为 OpenID Certified OIDC provider |
 | Prisma/@prisma/client/@prisma/adapter-pg | `7.9.1` | Apache-2.0 | PostgreSQL schema、migration、transaction/OCC、生成 client |
 | `pg` | `8.23.0` | MIT | Prisma 7 PostgreSQL driver adapter |

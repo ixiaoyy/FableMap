@@ -2,7 +2,7 @@ import { reactive, readonly } from "vue";
 import type { ActionFeedback } from "../../../domain/session/commands.ts";
 import type { GameState } from "../../../domain/state/game-state.ts";
 
-export type GamePhase = "authenticating" | "menu" | "loading" | "playing" | "error";
+export type GamePhase = "initializing" | "menu" | "loading" | "playing" | "error";
 
 export interface InventorySlotProjection {
   readonly index: number;
@@ -17,7 +17,7 @@ export interface DialogueProjection {
 }
 
 const mutableState = reactive({
-  phase: "authenticating" as GamePhase,
+  phase: "initializing" as GamePhase,
   saveAvailable: false,
   day: 0,
   gold: 0,
@@ -30,12 +30,12 @@ const mutableState = reactive({
 
 export const gameUiState = readonly(mutableState);
 
-/** Updates the application shell phase without exposing authentication or persistence objects. */
+/** Updates the application shell phase without exposing persistence objects. */
 export function setGamePhase(phase: GamePhase): void {
   mutableState.phase = phase;
 }
 
-/** Updates whether the authenticated profile can continue an existing local slot. */
+/** Updates whether this browser can continue its anonymous local slot. */
 export function setSaveAvailable(available: boolean): void {
   mutableState.saveAvailable = available;
 }

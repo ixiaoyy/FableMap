@@ -8,15 +8,15 @@
 - 旧 React/Phaser 原型、RPGJS 运行时和 Phaser/Colyseus 多人技术切片均已退役或冻结；多人切片只通过 `phaser-colyseus-checkpoint-2026-08-24` 保留，不建立双运行时或备用路由。
 - Stardew Core 第一阶段只交付本地采集、背包、制作、种田和存档恢复；随后固定扩展“玩家农场向右连接小镇、北侧山地/矿区、南侧河流/湖泊”，再加入时间、商店和少量 NPC。
 - 《聊斋》是未来书库中的一本书；书屋、异闻世界和具体故事不进入 Stardew Core 当前阶段。
-- 论坛账号和独立用户名密码都通过 Keycloak 进入游戏；不提供游客、邮箱、找回、账号自动合并或绑定。
+- 当前前期玩法验证版为纯本地无账号试玩；公开 `/` 不显示或调用注册、登录、论坛账号、账号设置或云存档入口，同一浏览器 profile 只有一个本地农场。
 - 旧 localStorage 名称、外观和进度不迁移；新客户端只精确删除 `farm-game.save.v1`–`v4`。
 
 ## 技术边界
 
 - 唯一应用目录是 `apps/mirror-island/`；客户端固定 `phaser@4.2.1` + Vue 3 + TypeScript + Vite，Stardew Core 成立前不追版本。
 - 代码边界固定为 `domain/`、`client/`、`server/`：domain 拥有 GameSession、物品、配方、Inventory/Gathering/Crafting/Farming 和 SaveRepository 合同；Phaser/Vue 只发送本地命令并渲染只读 snapshot。
-- 实时玩法不得依赖 Colyseus、WebSocket、matchmaking、Prisma 或服务端 tick；浏览器使用版本化 IndexedDB adapter 保存本地存档，后端只保留登录、论坛 SSO 及未来云存档/成就/排行榜接口。
-- Keycloak `26.7.1` 管理身份与会话；`oidc-provider` `9.11.1` 只把 ParallelLines 一次性票据适配为 OIDC，不保存论坛密码或建第二个用户库。
+- 实时玩法不得依赖 Colyseus、WebSocket、matchmaking、Prisma 或服务端 tick；浏览器使用版本化 IndexedDB adapter 保存本地存档，后端只保留论坛 SSO 及未来云存档/成就/排行榜接口。
+- Keycloak `26.7.1` 与 `oidc-provider` `9.11.1` 作为未启用的身份/论坛 OIDC 基础设施保留；当前客户端不加载 `keycloak-js`，Keycloak 关闭独立注册。
 - 镜像岛游戏数据使用 Prisma `7.9.1` + 独立 PostgreSQL 17；Keycloak 和游戏分库、分凭据、分 volume。
 - 已评审的九表范围只允许一个基线 migration。应用启动不建表；生产使用一次性 migration 镜像执行 `prisma migrate deploy`。
 - Keycloak token、密码、ticket、数据库 URL、SSO secret 和 cookie key 不进 URL、IndexedDB/localStorage/sessionStorage、Git、镜像或日志。
@@ -66,7 +66,7 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml 
 - 除非用户最新明确要求，新增需求不建设大规模单元、合同、集成、E2E 或数据库自动测试矩阵，也不把它们作为交付门槛；玩法、IndexedDB 恢复、视觉和业务正确性以人工测试反馈为准。
 - 上述精简原则同样适用于历史自动测试：修改相关区域时允许删除、合并或降级维护成本高、与类型/构建检查重复或脱离当前产品的旧测试，不为保持旧测试而扩建测试基础设施。
 - 人工反馈出现可稳定复现的真实缺陷时，优先窄修复；只有低成本且能防止同类高风险复发时才补一个针对性检查。
-- 身份/主题改动还要验收中文注册、论坛 SSO、再访、Remember Me、同名不合并、桌面/手机/200% zoom/键盘/错误状态。
+- 无账号入口改动要验收身份服务不可达时仍可新建/继续本地农场、全程无 Keycloak/OIDC 请求、清理站点数据风险文案以及桌面/手机/200% zoom/键盘/错误状态。
 - 持久化改动默认由人工环境验证 migration、存档重连和恢复；只有用户明确授权时才连接隔离 PostgreSQL，禁止连接生产数据库做测试。
 - 改图片要核对 URL/key/尺寸/格式/字节/MIME/SHA-256/缓存头和 Git 跟踪图片二进制为零。
 - 业务实现新增生产代码/配置并通过最小验证后立即 `git add`；测试、文档、截图和诊断产物不自动暂存。

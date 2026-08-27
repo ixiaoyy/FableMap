@@ -7,7 +7,7 @@
   "defaultLocale": "zh-CN",
   "loginTheme": "mirror-island",
   "sslRequired": "external",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "registrationEmailAsUsername": false,
   "rememberMe": true,
   "verifyEmail": false,
