@@ -1622,3 +1622,36 @@ Added simple male/female character creation and naming, safe v1-to-v2 local save
 ### Next Steps
 
 - None - task complete
+
+
+## Session 49: 对齐镜像岛项目基线
+
+**Date**: 2026-08-27
+**Task**: 对齐镜像岛项目基线
+**Branch**: `codex/project-baseline-reconciliation`
+
+### Summary
+
+对齐 rewritten main、Life Loop/Town/NPC 权威文档与 checkpoint SHA；归档四个已验收旧任务，保留 Forum SSO 人工登录缺口；修复 package-lock 并通过真实 npm ci、全部窄合同、类型检查、客户端/服务端构建和 Compose 解析。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e8b07fbe` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
