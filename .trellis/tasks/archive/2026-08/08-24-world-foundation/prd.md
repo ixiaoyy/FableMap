@@ -100,17 +100,17 @@
 
 - [x] 所有 TMJ 通过集中 decoder，固定 6 个 Tile Layer 与 5 个 Object Layer 完整存在。
 - [x] 新游戏在农场小屋附近出生，正式角色可通过键盘与指针 Debug fallback 移动。
-- [ ] 地面、水面、墙体和建筑碰撞正确，玩家不能穿越 Collision。
-- [ ] Farm 东侧出口进入 Town，Town 西侧出口返回 Farm，短淡入淡出无黑屏或重复触发。
+- [x] 地面、水面、墙体和建筑碰撞正确，玩家不能穿越 Collision。
+- [x] Farm 东侧出口进入 Town，Town 西侧出口返回 Farm，短淡入淡出无黑屏或重复触发。
 - [x] 玩家可以砍一棵由 `ResourceSpawns` 创建的树，命中时序只结算一次，木材进入 Hotbar。
-- [ ] 切换地图并返回后，被砍树木仍保持耗尽；刷新继续后状态仍一致。
-- [ ] 玩家可以进入种子店并通过 E 与唯一店主显示一句 Vue Dialogue。
+- [x] 切换地图并返回后，被砍树木仍保持耗尽；刷新继续后状态仍一致。
+- [x] 玩家可以进入种子店并通过 E 与华强打开现有 Shop；后续 Town Population 验证了统一 Dialogue/Shop 输入锁。
 - [x] Visual Pass 后正式世界是默认主视图，Debug Shell 只能显式开启。
 - [x] GameSession/domain 不依赖 Phaser、Tiled、Vue、Keycloak 或 IndexedDB；Keycloak 不成为未来单机产品硬依赖。
 - [x] 正式运行时只采用 manifest 已登记素材；VectoRaith visual prototype 的原包与 PNG 仅位于 Git ignored 本地目录，无图片二进制进入 Git，无新数据库 migration 或生产部署。
 - [x] 最小 typecheck 与 client build 通过；玩法、切图、碰撞、动画和视觉由实际浏览器人工验收。
-- [ ] Gate B 本地候选的水岸/建筑碰撞、桥面、弯曲道路、树冠遮挡和 Farm Exit 需在真实画布人工确认；GameSession route replay 不能替代这项视觉门槛。
-- [ ] Gate C 需以整图、2× 出生镜头、水塘、农田和桥头五张图确认达到早期宣传截图质量；素材数量与 build 结果不构成视觉通过。
+- [x] Gate B 的水岸/建筑碰撞、桥面、弯曲道路、树冠遮挡和 Farm Exit 已在真实画布人工确认。
+- [x] Gate C 的整图、2× 出生镜头、水塘、农田和桥头五张图已确认达到早期宣传截图质量并冻结为 Farm v1。
 
 ## Human-playable checkpoint gate
 

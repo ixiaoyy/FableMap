@@ -43,12 +43,12 @@
 
 ## Acceptance Criteria
 
-- [ ] 生产 Farm 使用 6 个官方原始文件，正式画面/碰撞/对象合同不回退。
-- [ ] 旧 5 个裁剪 CDN 对象与本地 packed/crop pipeline 已精确删除，代码/manifest/文档无旧引用。
-- [ ] Git 图片二进制新增为 0；原始文件只在 ignored 本地与 CDN。
-- [ ] Town Gate A 候选保持所有现有 stable IDs 与出口目标。
-- [ ] 提供 Town 整图和 Farm→Town 实际到达比例截图。
-- [ ] 用户确认大构图后才允许进入 Town Gate B 视觉细化。
+- [x] 生产 Farm 使用 6 个官方原始文件，正式画面/碰撞/对象合同不回退。
+- [x] 旧 5 个裁剪 CDN 对象与本地 packed/crop pipeline 已精确删除，代码/manifest/文档无旧引用。
+- [x] Git 图片二进制新增为 0；原始文件只在 ignored 本地与 CDN。
+- [x] Town Gate A 候选保持所有现有 stable IDs 与出口目标。
+- [x] 已提供 Town 整图和 Farm→Town 实际到达比例截图并完成人工通行验收。
+- [x] 用户确认 Gate A 后依序通过 Gate B 建筑密度与 Gate C 生活街景。
 
 ## Out of Scope
 

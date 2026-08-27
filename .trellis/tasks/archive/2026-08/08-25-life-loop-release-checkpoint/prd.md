@@ -47,9 +47,9 @@
 - [x] v3 普通保存和全新账号不创建 v2 backup；显式 delete 同时删除两条 owner/slot 记录。
 - [x] Life Loop 合同、typecheck、client build 和 JSON/TMJ 解析通过；无 migration、数据库连接或图片二进制。
 - [x] Life Loop commits 基于最新 main 发布，GitHub Actions 成功，生产首页/资源/OIDC 健康。
-- [ ] 用户分别确认全新账号和已有 v2 存档账号的生产验收。
-- [ ] `docs/checkpoints/life-loop-v1/` 记录最终证据，`life-loop-v1` tag 指向已验证 checkpoint。
-- [ ] Expedition 仍为设计边界，未增加任何运行时代码。
+- [x] 用户分别确认全新账号和已有 v2 存档账号的生产验收。
+- [x] `docs/checkpoints/life-loop-v1/` 记录最终证据，`life-loop-v1` rewritten tag 指向 `cc4b6ff5` checkpoint。
+- [x] Expedition 仍为设计边界，未增加任何运行时代码；用户随后明确继续 Stardew/Town。
 
 ## Out of Scope
 

@@ -39,7 +39,7 @@ npm --prefix .\apps\mirror-island run build:server
 
 ## 资源
 
-游戏图片优先使用经许可审核和登记的成熟素材。正式 Farm v1 使用 VectoRaith Farming Sim v1.08 的 5 个最小派生图集，Ninja Adventure 只保留非 Farm 技术占位；采用项位于不可变 `game/media/v1` CDN 命名空间，Git 不跟踪游戏图片二进制。详见 [图片与美术规范](docs/IMAGE_ASSETS_SPEC.md)。
+游戏图片优先使用经许可审核和登记的成熟素材。正式 Farm/Town 直接使用 VectoRaith Farming Sim v1.08 的 6 张官方 Original/16×16 PNG，不再裁剪、重排、合图或重编码；Ninja Adventure 只保留室内技术占位。采用项位于不可变 `game/media/v1` CDN 命名空间，Git 不跟踪游戏图片二进制。详见 [图片与美术规范](docs/IMAGE_ASSETS_SPEC.md)。
 
 ## 文档
 

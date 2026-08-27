@@ -4,13 +4,14 @@
 
 - 名称：`Life Loop v1 Checkpoint`
 - 本地完整真人验收：通过（2026-08-25）
-- 生产 main commit：`7414986a71508f438ecda1c94da29562327a0f06`
-- 最终生产验收基线：`37c51953f426febbbe49506a30a6527ecabfaf91`（包含已通过的 Town Gate C）
-- GitHub Actions run：`32827316974`，成功
+- 原生产部署 commit：`7414986a71508f438ecda1c94da29562327a0f06`；历史重写后等价 commit：`55360a6ccf746fbbcd35a28f7ac15818122d8d1b`
+- 原最终生产验收基线：`37c51953f426febbbe49506a30a6527ecabfaf91`；历史重写后等价 commit：`4ec3e152bfb3d3326a62d25dd3dd8c1309561a58`（包含已通过的 Town Gate C）
+- 原部署 GitHub Actions run：`32827316974`，成功；该 run 保留 rewrite 前 head SHA 作为历史事实
 - 公网健康：通过；首页、Life Loop/v2 backup bundle、Cottage bed、VectoRaith atlas 与 OIDC 均正常
 - 全新账号生产验收：通过（用户于 2026-08-26 确认）
 - 已有 v2 存档账号生产验收：通过（用户于 2026-08-26 确认）
-- Tag：`life-loop-v1`，指向包含本验收记录的最终已验证 main checkpoint
+- Rewritten Tag：`life-loop-v1`，tag object `6c226896d256f843628bc5cb3269666aba22aec7`，指向 `cc4b6ff5fad37df0ebde500de1549b795f4b9087`
+- 当前生产 main：`83410ca5ba5414f10d0d95ed6ea5cd57cc3fa95f`，已包含后续 Town Population MVP
 
 > 本 checkpoint 只表示第一个生活日循环达到可发布状态，不代表 Town 美术、Expedition、灵兽、战斗、肉鸽、塔防或东方志怪内容完成。
 
@@ -26,9 +27,9 @@
 
 ## Source commits
 
-- Life Loop implementation：`673cc6d2`
-- Local manual acceptance：`06a0668a`
-- Release safety / v2 backup：source `e797a4d7`，main `7414986a`
+- Life Loop implementation（rewritten main）：`1d1ca3e2`
+- Local manual acceptance（rewritten main）：`77144831`
+- Release safety / v2 backup（rewritten main）：`55360a6c`；原 feature/main SHA `e797a4d7` / `7414986a` 不再由公开 refs 保留
 
 ## v2 migration safety
 
@@ -55,4 +56,4 @@ owner:slot            ← validated v3
 
 ## Next gate
 
-本 checkpoint 与 tag 完成后，只允许创建 Expedition Prototype 的 PRD/design。原型边界以 `docs/PRODUCT_BRIEF.md` 的固定约束为准，不得直接扩建系统。
+本 checkpoint、Town Gate A/B/C 与 Town Population MVP 均已完成。用户最新决定是继续完善 Stardew/Town，当前下一产品门为 `Town Functionality MVP` 的独立规划；Expedition、战斗与灵兽继续暂停，不得直接扩建系统。

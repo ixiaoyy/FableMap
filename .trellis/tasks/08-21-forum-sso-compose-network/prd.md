@@ -28,7 +28,7 @@
 - [x] 部署脚本在启动镜像岛服务前确认 ParallelLines `api` 容器存在，并唯一解析包含 `api` 别名的网络。
 - [x] 部署健康检查从 `mirror-game` 请求论坛 `/healthz`，网络/DNS/HTTP 失败会使部署失败。
 - [x] 部署合同测试覆盖共享网络声明、动态网络发现及跨容器健康检查。
-- [ ] `npm --prefix ./apps/mirror-island test` 与组合 Compose 配置检查通过。
+- [x] 当前对应的 `test:identity`（8/8）与组合 Compose 配置检查通过（2026-08-27 基线复核）。
 - [ ] 生产发布后，新签发论坛票据可完成首次登录；既有 Keycloak 论坛账号可再次登录。
 - [x] Git diff 不包含本任务范围外的改动，且不包含 secret、票据、Cookie、数据库连接或图片二进制。
 

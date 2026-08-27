@@ -28,10 +28,12 @@
 
 | 项目 | 结果 | 非敏感备注 |
 |---|---|---|
-| main commit | passed | `7414986a71508f438ecda1c94da29562327a0f06` |
-| deploy run | passed | GitHub Actions `32827316974` |
+| main commit | passed | 原部署 `7414986a71508f438ecda1c94da29562327a0f06`；rewritten 等价 `55360a6ccf746fbbcd35a28f7ac15818122d8d1b` |
+| deploy run | passed | GitHub Actions `32827316974`；保留 rewrite 前 head SHA |
 | 公网健康 | passed | bundle `index-BRQNlJwq.js`；Life Loop、backup、Cottage bed、Vecto、OIDC 正常 |
 | 全新账号 | passed | 用户于 2026-08-26 确认；未记录身份或存档原文 |
 | 已有 v2 账号 | passed | 用户于 2026-08-26 确认迁移、保存与继续游戏正常 |
 | Town Gate C | passed | 用户于 2026-08-26 确认生产通行正常 |
-| `life-loop-v1` tag | passed | 指向包含本验收记录的最终已验证 main checkpoint |
+| `life-loop-v1` tag | passed | rewritten target `cc4b6ff5fad37df0ebde500de1549b795f4b9087` |
+
+历史于 2026-08-27 原地重写后，当前生产 `main=83410ca5ba5414f10d0d95ed6ea5cd57cc3fa95f`；文件树与重写前最终生产树保持一致，并已通过新的部署 run `33046402832`。

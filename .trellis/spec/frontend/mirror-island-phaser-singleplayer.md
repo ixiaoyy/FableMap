@@ -163,15 +163,15 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - 第二批 World Foundation 严格拆为 A：Tilemap Foundation，B：World Entities + ActionTimeline，C：Visual Pass；不并行铺昼夜、经济或 NPC 日程。
 - 第三批当前收窄为 `Stardew Life Loop 第一批`：Day、Gold、床睡觉、按天成长和 Seed Keeper 单商品买卖；不顺势加入 Season、完整时钟、昼夜、天气或更多 NPC。
 - World Foundation 与 Farm Showcase 已由用户在 2026-08-25 的生产真实浏览器清单中确认通过，第三批实施门槛已解除。
-- 长期产品方向是家园生活 + 灵兽培养 + 轻撤离探索 + 肉鸽事件 + 阶段性守家 + 东方志怪，但当前禁止为这些后续阶段提前实现框架。Life Loop 真人验收后才允许提交小型 Expedition Prototype 设计。
-- 当前视觉里程碑为 `One Beautiful Slice`：只把 Farm 做成可作宣传截图的样板核心区；Farm 视觉确认前冻结 Town/Cottage/Seed Shop 精修与旧长链验收。
+- 长期产品方向仍是家园生活 + 灵兽培养 + 轻撤离探索 + 肉鸽事件 + 阶段性守家 + 东方志怪，但用户已在 Life Loop/Town Population 验收后明确暂停 Expedition 与战斗，当前继续 Stardew/Town；未经新的明确批准不得创建 Expedition task、map、Cargo、敌人或捕获代码。
+- `One Beautiful Slice`、Farm Gate A/B/C、Town Gate A/B/C 与三名 NPC 均已通过并进入生产；当前下一产品门只允许先规划 `Town Functionality MVP`，本基线任务不实现铁匠铺、工具规则或新室内。
 - Ninja Adventure 从正式场景美术降级为开发/占位资源，不再为它进行 Gate C 级精修；Gate A 构图确认仍可使用现有占位画面。
-- VectoRaith Farming Sim v1.08 只在 Farm 出生镜头做本地 visual prototype；候选 TMJ 必须复用现有对象层、stable ID、Collision、EntityFactory 和 GameSession 合同，不一次迁移全项目。
-- Gate B 视觉已通过，当前进入本地 Gate C；大构图、小屋、水塘、农田、道路、河流、林缘和 Collision 冻结，只允许稀疏 Props、水生植物/岸石/波纹、作物表现、道路边缘草花、桥头景观、既有素材阴影和一处非交互地标树。
+- VectoRaith Farming Sim v1.08 已从 visual prototype 转为生产 Farm/Town 底座；运行时直接读取 6 张官方 Original/16×16 PNG，候选/旧 packed 流程不再是活跃实现面。
 - Gate C 视觉样板已通过并冻结为 `docs/checkpoints/farm-showcase-v1/`，并正式成为生产 Farm v1；停止继续增加装饰。该 checkpoint 不等于 World Foundation 或完整世界美术完成。
 - Town Gate A 已通过 reference study、40×30 空间蓝图和 ignored 候选视觉确认；正式 Town 固定为西入口→弯曲主街→桥头粉色地标→唯一河桥→Seed Shop，并保留南侧小巷与河畔次区回路。未经真实碰撞问题不得重开大构图。
 - Town Gate B 建筑密度已于 2026-08-26 通过用户视觉确认：正式 40×30 Town 固定为 1 个蓝顶杂货铺、1 个红色大体量铁匠铺和 5 栋民宅，共 7 个建筑体量；石质粮仓已明确否决。允许橙顶/棕顶民宅非相邻复用，但相邻建筑不得完全同形；新增住宅只用短支路接入，河流、唯一桥、粉树广场、西入口、Seed Shop 出口和 5 个 stable object 保持不变。
 - Town Gate C 已于 2026-08-26 通过用户视觉确认：生活感只通过成组静态 Props 建立，杂货铺使用货箱/招牌/门槛，铁匠铺使用灯具/木料/矿石，五栋民宅使用至少三类非均匀院落，粉树广场保留单一公告设施，桥头只放少量引导物。正式 Town 停止继续增加建筑或均匀铺装饰；后续只因真实通行、Collision、AbovePlayer 或功能入口问题窄修。
+- Town Population MVP 已于 2026-08-27 通过生产人工验收：华强复用现有 Shop，昊天与阿禾使用线性 Dialogue，统一 modal lock、重复 E、防出口触发和脚底碰撞均成立；该验收不授权 NPC 日程、好感、任务或铁匠功能。
 
 ## Scenario: Town Population MVP
 

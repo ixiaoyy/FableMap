@@ -3,7 +3,7 @@
   "name": "world-foundation",
   "title": "World Foundation 区域地图与实体管线",
   "description": "建立可长期扩展的 Tiled 区域合同、Farm/Town 地图切换、持久世界实体、交互动画骨架与统一视觉素材；Debug Shell 保留为非默认诊断入口。",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": "apps/mirror-island",
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "fable",
   "assignee": "fable",
   "createdAt": "2026-08-24",
-  "completedAt": null,
+  "completedAt": "2026-08-27",
   "branch": "codex/world-foundation",
   "base_branch": "codex/phaser-singleplayer-stardew-core",
   "worktree_path": null,
@@ -23,6 +23,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Farm Showcase Checkpoint is frozen under docs/checkpoints/farm-showcase-v1 and adopted as production Farm v1. User approved embedded-use interpretation; five minimal VectoRaith derived PNGs are manifest/CDN assets while original ZIP/full sheets remain private. Preserve all 23 stable objects, GameSession, SaveRepository and IndexedDB; only real play findings justify small Farm fixes. Manual browser acceptance and author written permission evidence remain pending; no Town polish, Gate D, DB or new system.",
+  "notes": "World Foundation, Farm Gate A/B/C and production Farm/Town routes are complete. Runtime now uses six official VectoRaith Original/16x16 PNGs directly; the packed derivative pipeline was retired. User accepted Farm/Town collision, bridge, canopy, Seed Shop entry, resource persistence and production navigation. Preserve the 23 Farm stable objects, GameSession, SaveRepository and IndexedDB; only real play defects justify narrow fixes.",
   "meta": {}
 }

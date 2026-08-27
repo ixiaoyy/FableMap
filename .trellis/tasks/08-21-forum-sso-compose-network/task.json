@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Automated network/OIDC contracts and combined Compose config were revalidated on 2026-08-27 (test:identity 8/8). Keep this task open until a newly issued forum ticket completes first login and an existing Keycloak forum account completes re-login; public discovery/health alone do not satisfy that manual acceptance.",
   "meta": {}
 }

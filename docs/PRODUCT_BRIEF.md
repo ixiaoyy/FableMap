@@ -8,7 +8,7 @@
 
 - 第一张正式地图结构固定：玩家农场向右连接小镇，北侧预留山地/矿区，南侧连接河流/湖泊；不再反复调整总体布局。
 - 玩家、资源、背包、制作和农田由本地 GameSession 唯一处理；Phaser/Vue 发送命令并渲染 snapshot，不经过实时后端。
-- 第一里程碑已证明新游戏、采集、种田和继续游戏；World Foundation 与 Farm Showcase 已建立正式 Farm、小镇动线、碰撞、实体和动作时序。`Stardew Life Loop 第一批` 已通过本地真人验收，当前唯一实施里程碑是生产发布与 `life-loop-v1` checkpoint。
+- 第一阶段已经完成并生产验收：World Foundation、Farm Showcase、`life-loop-v1`、Town Gate A/B/C 与 Town Population MVP。玩家可以在正式 Farm/Town/Cottage/Seed Shop 间移动，完成三日萝卜生活循环，并与华强、昊天、阿禾交互。
 - 房屋、伙伴工作和基地权限保留为后续主线能力，不进入首个纵向切片。
 - 当前托管 Web 入口支持 ParallelLines 论坛账号或独立中文用户名密码；两类账号不自动合并。未来单机产品是否强制登录另行决定，玩法与存档合同不得依赖 Keycloak。
 - 玩家存档、背包和世界状态由本地 GameSession 处理并写入 IndexedDB；实时玩法不经过服务端。
@@ -29,11 +29,13 @@
 
 ## 当前里程碑顺序
 
-1. 发布已验收的 Life Loop，保护原始 v2 IndexedDB 副本，完成全新账号/已有 v2 账号生产验收并固定 `life-loop-v1`。
-2. 只有生产 checkpoint 通过后，才创建 `Expedition Prototype / 异域远征最小原型` 的 PRD/design；不提前实现。
-3. Expedition 第一版只用一张两段式静态森林验证“家里安全、已经稳赚但仍想贪一次、撤离后还想再开一局”的感觉。
+1. 已完成：Life Loop 生产双账号验收与 `life-loop-v1` checkpoint、Town Gate A/B/C、三名固定 NPC 和现有商店人格化入口。
+2. 当前下一产品门：`Town Functionality MVP`。先规划铁匠铺可进入、现有工具合同和最多一栋代表性民宅；不在基线整理任务中提前实现。
+3. Expedition、战斗、灵兽、肉鸽和撤离继续后置。只有用户在 Stardew/Town 下一阶段验收后重新明确批准，才允许创建相应实施任务。
 
-## Expedition Prototype 固定约束
+## 远期 Expedition Prototype 约束（当前暂停）
+
+以下约束只保留为未来设计边界，不代表当前下一阶段，也不得据此自行创建地图、战斗或状态代码。
 
 - 地图固定为入口 → 区域 A → 安全撤离点，并从 A 分支到风险区域 B；完全不做程序生成。
 - 敌人只有近战追击与远程/蓄力两个行为原型；精英只复用其中一个并强化/换皮，不建立完整 Enemy Framework。
