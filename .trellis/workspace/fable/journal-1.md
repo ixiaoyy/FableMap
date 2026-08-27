@@ -1655,3 +1655,36 @@ Added simple male/female character creation and naming, safe v1-to-v2 local save
 ### Next Steps
 
 - None - task complete
+
+
+## Session 50: Remove account gate from local playtest
+
+**Date**: 2026-08-27
+**Task**: Remove account gate from local playtest
+**Branch**: `codex/local-playtest-no-auth-main`
+
+### Summary
+
+Removed browser Keycloak login and registration entry, introduced one anonymous IndexedDB playtest slot, decoupled frontend startup from identity services, preserved backend identity infrastructure and old account saves, synchronized executable specs, and verified typecheck, client build, identity contracts, Compose config, and browser new-game/refresh recovery.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e4429b44` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
