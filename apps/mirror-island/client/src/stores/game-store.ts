@@ -1,6 +1,12 @@
 import { reactive, readonly } from "vue";
+import {
+  HOTBAR_SLOT_COUNT,
+  getItemDefinition,
+  type ItemId,
+} from "../../../domain/items/definitions.ts";
 import type { ActionFeedback } from "../../../domain/session/commands.ts";
 import type { GameState } from "../../../domain/state/game-state.ts";
+import { DAY_START_MINUTE } from "../../../domain/time/game-time.ts";
 
 export type GamePhase = "initializing" | "menu" | "loading" | "playing" | "error";
 
@@ -20,13 +26,20 @@ const mutableState = reactive({
   phase: "initializing" as GamePhase,
   saveAvailable: false,
   day: 0,
+  minuteOfDay: DAY_START_MINUTE,
   gold: 0,
   inventory: [] as InventorySlotProjection[],
+  selectedHotbarIndex: null as number | null,
+  selectedItemId: "" as ItemId | "",
+  worldActionBusy: false,
   feedback: null as ActionFeedback | null,
   dialogue: null as DialogueProjection | null,
   shopOpen: false,
   shopWelcome: "",
+  sleepConfirmationOpen: false,
 });
+
+let confirmSleepAction: (() => void) | null = null;
 
 export const gameUiState = readonly(mutableState);
 
@@ -43,12 +56,50 @@ export function setSaveAvailable(available: boolean): void {
 /** Projects the session-owned inventory into a serializable Vue read model. */
 export function applyGameState(state: GameState): void {
   mutableState.day = state.day;
+  mutableState.minuteOfDay = state.minuteOfDay;
   mutableState.gold = state.gold;
   mutableState.inventory = state.inventory.map((slot, index) => ({
     index,
     itemId: slot.itemId,
     quantity: slot.quantity,
   }));
+  const selectedIndex = mutableState.selectedHotbarIndex;
+  if (selectedIndex !== null) {
+    const selectedSlot = mutableState.inventory[selectedIndex];
+    if (!selectedSlot || selectedSlot.itemId === "" || selectedSlot.itemId !== mutableState.selectedItemId) {
+      clearHotbarSelection();
+    }
+  }
+}
+
+/** Selects or toggles one Hotbar slot while modal UI does not own gameplay input. */
+export function selectHotbarSlot(index: number): void {
+  if (isWorldInputLocked()) return;
+  if (!Number.isInteger(index) || index < 0 || index >= HOTBAR_SLOT_COUNT) {
+    throw new Error("Hotbar selection index is invalid.");
+  }
+  if (mutableState.selectedHotbarIndex === index) {
+    clearHotbarSelection();
+    return;
+  }
+  const definition = getItemDefinition(mutableState.inventory[index]?.itemId);
+  if (!definition) {
+    clearHotbarSelection();
+    return;
+  }
+  mutableState.selectedHotbarIndex = index;
+  mutableState.selectedItemId = definition.id;
+}
+
+/** Clears the transient selected slot and returns the player to empty hand. */
+export function clearHotbarSelection(): void {
+  mutableState.selectedHotbarIndex = null;
+  mutableState.selectedItemId = "";
+}
+
+/** Locks or unlocks transient Hotbar selection while Phaser owns one action timeline. */
+export function setWorldActionBusy(busy: boolean): void {
+  mutableState.worldActionBusy = busy;
 }
 
 /** Displays one fixed domain action result without retaining a gameplay event history. */
@@ -88,23 +139,48 @@ export function closeShop(): void {
   mutableState.shopWelcome = "";
 }
 
-/** Reports whether a modal Vue panel currently owns Phaser world input. */
-export function isWorldInputLocked(): boolean {
-  return mutableState.shopOpen || mutableState.dialogue !== null;
+/** Opens one transient rest confirmation and retains exactly one scene-owned sleep callback. */
+export function openSleepConfirmation(onConfirm: () => void): boolean {
+  if (isWorldInputLocked()) return false;
+  confirmSleepAction = onConfirm;
+  mutableState.sleepConfirmationOpen = true;
+  return true;
 }
 
-/** Reports whether E should advance the active linear dialogue instead of reaching the world. */
-export function isDialogueOpen(): boolean {
-  return mutableState.dialogue !== null;
+/** Closes the rest confirmation without dispatching sleep or changing the current day. */
+export function cancelSleepConfirmation(): void {
+  mutableState.sleepConfirmationOpen = false;
+  confirmSleepAction = null;
+}
+
+/** Closes the rest confirmation before invoking its scene-owned atomic sleep transition once. */
+export function confirmSleep(): void {
+  if (!mutableState.sleepConfirmationOpen) return;
+  const action = confirmSleepAction;
+  mutableState.sleepConfirmationOpen = false;
+  confirmSleepAction = null;
+  action?.();
+}
+
+/** Reports whether a modal Vue panel currently owns Phaser world input. */
+export function isWorldInputLocked(): boolean {
+  return mutableState.worldActionBusy
+    || mutableState.shopOpen
+    || mutableState.dialogue !== null
+    || mutableState.sleepConfirmationOpen;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
 export function clearGameState(): void {
   mutableState.day = 0;
+  mutableState.minuteOfDay = DAY_START_MINUTE;
   mutableState.gold = 0;
   mutableState.inventory = [];
+  clearHotbarSelection();
+  mutableState.worldActionBusy = false;
   mutableState.feedback = null;
   mutableState.dialogue = null;
   mutableState.shopOpen = false;
   mutableState.shopWelcome = "";
+  cancelSleepConfirmation();
 }

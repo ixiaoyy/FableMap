@@ -14,14 +14,16 @@
 
 - 当前继续完善 Stardew/Town，不做 Colyseus 多人、好友参观、双人模式、联机副本、聊天、交易、排行榜、战斗扩展、灵兽、肉鸽、撤离、妖潮塔防、钓鱼、矿洞、节日或复杂经济。
 - 土地、作物或住宅周边公共格的私有化、保护、交易或 owner 权限。
-- 公共住宅室内、多房屋、建筑材料和通用建造系统。
+- 除当前已批准的五栋既有民宅公共区与静态私人内屋外，不新增住宅、建筑材料、家具编辑或通用建造系统。
 - 云存档、通用 ECS、大型全局状态库、地图编辑平台或无界程序生成框架；本地 GameSession 只服务 Stardew Core 当前闭环。
 - 书屋、异闻世界和《乔女》《画皮》《聂小倩》等《聊斋》内容当前不做；东方志怪未来作为独立异闻故事世界逐项规划。
-- World Foundation、Farm Gate A/B/C、Town Gate A/B/C 与 Town Population MVP 均已通过；不得以旧 Gate 文档为理由重新调整大构图、均匀添加装饰或扩建 NPC 系统。
-- 当前三名 NPC 仅有固定位置、线性对话和现有 Seed Shop 入口；Town Functionality 获单独批准前，不加入完整时钟、Season、天气、NPC 日程、好感、任务或复杂经济。
+- World Foundation、Farm Gate A/B/C、Town Gate A/B/C 与 Town Population MVP 均已通过；当前地图扩展只允许增加功能入口和独立区域，不重新调整 Town 大构图、均匀添加装饰或扩建 NPC 系统。
+- 当前八名 NPC 只有四段固定 anchor 日程、线性对话、家庭/住址文本关系和 Seed Shop 白天营业；不加入完整日历、Season、天气、特殊日程优先级、跨区寻路动画、好感、送礼、任务或复杂经济。
 - 当前不做 Tauri/Rust/FileSystem adapter/Steam API，不做 Unity 或 Godot 技术验证；未来桌面目标只保留架构边界。
 - VectoRaith 已成为生产 Farm v1 与 Town Gate A 的正式美术底座；不提交 ZIP、截图或图片二进制到 Git。用户已要求运行时直接使用 6 张官方 Original/16×16 PNG，禁止再次裁剪、重排、合图或重编码；作者若补充许可条件则 forward-fix。
 
 用户已明确暂停 `Expedition Prototype`，优先继续 Stardew/Town。除非用户在后续里程碑重新批准，不创建远征 task、map、Cargo、敌人、捕获或肉鸽代码；未来即使获准，也不得提前建设完整随机地图、宠物养成或战斗框架。
+
+当前不做但已确认应在未来评审的 Town 能力，不从文档中删除，统一保留在 [Town 后续开发路线图](TOWN_ROADMAP.md)；列入路线图不等于已批准开发。
 
 新通用能力必须先评估成熟开源方案、许可证、维护状态、体积、数据归属和退出成本；不为一个小需求引入整套平台。

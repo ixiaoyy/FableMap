@@ -76,6 +76,11 @@ const VECTORAITH_NPC_FRAMES: Readonly<Record<string, AtlasFrameDefinition>> = {
   "seed-keeper": { name: "vectoraith-npc-huaqiang", x: 10 * 16, y: 4 * 32, width: 16, height: 32 },
   "town-blacksmith": { name: "vectoraith-npc-haotian", x: 7 * 16, y: 0, width: 16, height: 32 },
   "town-resident-01": { name: "vectoraith-npc-ahe", x: 4 * 16, y: 4 * 32, width: 16, height: 32 },
+  "town-resident-mozi": { name: "vectoraith-npc-mozi", x: 2 * 16, y: 5 * 32, width: 16, height: 32 },
+  "town-resident-haonan": { name: "vectoraith-npc-haonan", x: 8 * 16, y: 0, width: 16, height: 32 },
+  "town-resident-alan": { name: "vectoraith-npc-alan", x: 6 * 16, y: 4 * 32, width: 16, height: 32 },
+  "town-resident-haomeili": { name: "vectoraith-npc-haomeili", x: 3 * 16, y: 4 * 32, width: 16, height: 32 },
+  "town-resident-xiangzi": { name: "vectoraith-npc-xiangzi", x: 10 * 16, y: 6 * 32, width: 16, height: 32 },
 };
 
 const NINJA_ENTITY_MEDIA: EntityMediaProfile = {
@@ -144,16 +149,44 @@ const VECTORAITH_TILESET_BINDINGS: readonly TilesetBinding[] = [
   { tiledName: "vectoraith-details", textureKey: VECTORAITH_MEDIA_KEYS.details },
 ];
 
-/** Resolves direct Original/16×16 VectoRaith tilemap bindings for the formal Farm and Town regions. */
+const MIXED_INTERIOR_TILESET_BINDINGS: readonly TilesetBinding[] = [
+  ...NINJA_TILESET_BINDINGS,
+  ...VECTORAITH_TILESET_BINDINGS,
+];
+
+const MIXED_INTERIOR_REGION_IDS = new Set([
+  "blacksmith",
+  "town-house-west",
+  "town-house-north",
+  "town-house",
+  "town-house-southwest",
+  "town-house-east",
+]);
+
+/** Reports whether one outdoor region uses the formal VectoRaith visual profile. */
+function usesVectoRaithOutdoorProfile(regionId: string): boolean {
+  return regionId === "farm"
+    || regionId === "town"
+    || regionId === "foothills"
+    || regionId === "lakeshore";
+}
+
+/** Reports whether one fixed indoor region mixes Ninja floors with VectoRaith props. */
+function usesMixedInteriorProfile(regionId: string): boolean {
+  return MIXED_INTERIOR_REGION_IDS.has(regionId);
+}
+
+/** Resolves direct Original/16×16 VectoRaith tilemap bindings for formal outdoor regions. */
 export function tilesetBindingsForRegion(regionId: string): readonly TilesetBinding[] {
-  return regionId === "farm" || regionId === "town"
+  if (usesMixedInteriorProfile(regionId)) return MIXED_INTERIOR_TILESET_BINDINGS;
+  return usesVectoRaithOutdoorProfile(regionId)
     ? VECTORAITH_TILESET_BINDINGS
     : NINJA_TILESET_BINDINGS;
 }
 
 /** Resolves entity atlas frames for one region without changing EntityFactory behavior or domain state. */
 export function entityMediaForRegion(regionId: string): EntityMediaProfile {
-  return regionId === "farm"
+  return usesVectoRaithOutdoorProfile(regionId)
     ? VECTORAITH_ENTITY_MEDIA
     : NINJA_ENTITY_MEDIA;
 }

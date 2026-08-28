@@ -1,4 +1,4 @@
-import { ITEM_ID } from "../items/definitions.ts";
+import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { GameState } from "../state/game-state.ts";
 import type { WorldCatalog } from "../world/regions.ts";
@@ -8,6 +8,7 @@ const TREE_WOOD_YIELD = 3;
 
 export type GatheringResult =
   | "success"
+  | "no-effect"
   | "missing-target"
   | "depleted"
   | "too-far"
@@ -20,8 +21,8 @@ export class GatheringSystem {
     private readonly catalog: WorldCatalog,
   ) {}
 
-  /** Atomically depletes one nearby tree before awarding its unique wood yield. */
-  gather(state: GameState, targetId: string): GatheringResult {
+  /** Uses one selected item on a nearby tree and mutates only for an owned axe. */
+  use(state: GameState, targetId: string, itemId: ItemId | ""): GatheringResult {
     const spawn = this.catalog.resource(targetId);
     const resource = state.resources[targetId];
     if (!spawn || !resource || spawn.kind !== "tree" || resource.kind !== "tree") return "missing-target";
@@ -29,6 +30,9 @@ export class GatheringSystem {
     if (state.player.regionId !== spawn.regionId) return "missing-target";
     if (Math.hypot(state.player.x - spawn.x, state.player.y - spawn.y) > GATHER_DISTANCE_PIXELS) {
       return "too-far";
+    }
+    if (itemId !== ITEM_ID.axe || this.inventory.quantity(state.inventory, ITEM_ID.axe) < 1) {
+      return "no-effect";
     }
     if (!this.inventory.canAdd(state.inventory, ITEM_ID.wood, TREE_WOOD_YIELD)) {
       return "inventory-full";

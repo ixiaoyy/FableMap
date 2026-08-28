@@ -2,6 +2,7 @@ import { CraftingSystem, type CraftingResult } from "../crafting/CraftingSystem.
 import { FarmingSystem, type FarmingResult } from "../farming/FarmingSystem.ts";
 import { GatheringSystem, type GatheringResult } from "../gathering/GatheringSystem.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
+import { getItemDefinition } from "../items/definitions.ts";
 import {
   MAIN_SAVE_SLOT,
   createStoredGame,
@@ -18,6 +19,13 @@ import {
   type BuyResult,
   type SellResult,
 } from "../shop/ShopSystem.ts";
+import {
+  DAY_END_MINUTE,
+  DAY_START_MINUTE,
+  MAX_CLOCK_TICK_DELTA_MS,
+  REAL_MILLISECONDS_PER_TIME_STEP,
+  advanceGameMinute,
+} from "../time/game-time.ts";
 import { movePlayer } from "../world/movement.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 import type { ActionFeedback, GameCommand } from "./commands.ts";
@@ -42,6 +50,8 @@ export class GameSession {
   private saveQueue: Promise<void> = Promise.resolve();
   private lastSaveError: unknown = null;
   private sleepPending = false;
+  private lastClockTickAt: number | null = null;
+  private clockAccumulatorMs = 0;
 
   /** Creates the sole mutable session owner for one opaque account key and local save slot. */
   constructor(
@@ -71,7 +81,9 @@ export class GameSession {
     this.lastSaveError = null;
     this.sleepPending = false;
     this.movementDirty = false;
-    this.lastMovementCheckpointAt = this.now();
+    const currentNow = this.now();
+    this.lastMovementCheckpointAt = currentNow;
+    this.resetClockBaseline(currentNow);
     this.publish();
     return cloneGameState(state);
   }
@@ -86,7 +98,9 @@ export class GameSession {
     this.lastSaveError = null;
     this.sleepPending = false;
     this.movementDirty = false;
-    this.lastMovementCheckpointAt = this.now();
+    const currentNow = this.now();
+    this.lastMovementCheckpointAt = currentNow;
+    this.resetClockBaseline(currentNow);
     this.queueSave();
     this.publish();
     return this.snapshot();
@@ -103,22 +117,11 @@ export class GameSession {
         }
         return null;
       }
-      case "gather": {
-        const result = this.gathering.gather(state, command.targetId);
-        if (result === "success") this.commitCriticalChange();
-        return gatheringFeedback(result);
-      }
+      case "use-item-on-target": return this.useItemOnTarget(state, command.itemId, command.targetId);
       case "craft": {
         const result = this.crafting.craft(state, command.recipeId);
         if (result === "success") this.commitCriticalChange();
         return craftingFeedback(result);
-      }
-      case "farm-primary": {
-        const result = this.farming.primary(state, command.tileId);
-        if (["tilled", "planted", "watered", "harvested"].includes(result)) {
-          this.commitCriticalChange();
-        }
-        return farmingFeedback(result);
       }
       case "sleep": {
         const result = this.sleep(state, command.bedId);
@@ -157,14 +160,51 @@ export class GameSession {
     }
   }
 
-  /** Periodically checkpoints movement without advancing any day-owned gameplay rule. */
-  tick(now = this.now()): void {
-    this.requireState();
+  /** Advances bounded movement saves and the pause-aware ten-minute local game clock. */
+  tick(now = this.now(), paused = false): void {
+    const state = this.requireState();
+    if (!Number.isFinite(now)) return;
+    let shouldSave = false;
     if (this.movementDirty && now - this.lastMovementCheckpointAt >= MOVEMENT_CHECKPOINT_INTERVAL_MS) {
-      this.queueSave();
       this.movementDirty = false;
       this.lastMovementCheckpointAt = now;
+      shouldSave = true;
     }
+    const previousClockTick = this.lastClockTickAt;
+    this.lastClockTickAt = now;
+    if (!paused && previousClockTick !== null && state.minuteOfDay < DAY_END_MINUTE) {
+      const elapsed = Math.max(0, Math.min(now - previousClockTick, MAX_CLOCK_TICK_DELTA_MS));
+      this.clockAccumulatorMs += elapsed;
+      if (this.clockAccumulatorMs >= REAL_MILLISECONDS_PER_TIME_STEP) {
+        this.clockAccumulatorMs -= REAL_MILLISECONDS_PER_TIME_STEP;
+        state.minuteOfDay = advanceGameMinute(state.minuteOfDay);
+        this.publish();
+        shouldSave = true;
+      }
+    }
+    if (shouldSave) this.queueSave();
+  }
+
+  /** Routes one selected inventory item or empty hand to the catalog-owned target at impact time. */
+  private useItemOnTarget(state: GameState, rawItemId: string, targetId: string): ActionFeedback | null {
+    const itemId = rawItemId === "" ? "" : getItemDefinition(rawItemId)?.id;
+    if (itemId === undefined) return null;
+    if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return null;
+    const resource = this.catalog.resource(targetId);
+    if (resource?.kind === "tree") {
+      const result = this.gathering.use(state, targetId, itemId);
+      if (result === "success") this.commitCriticalChange();
+      return gatheringFeedback(result);
+    }
+    const interaction = this.catalog.interaction(targetId);
+    if (interaction?.kind === "farm-plot") {
+      const result = this.farming.use(state, targetId, itemId);
+      if (["tilled", "planted", "watered", "harvested"].includes(result)) {
+        this.commitCriticalChange();
+      }
+      return farmingFeedback(result);
+    }
+    return null;
   }
 
   /** Returns a defensive state snapshot and never exposes the session-owned mutable object. */
@@ -235,10 +275,18 @@ export class GameSession {
     const safeSpawn = this.catalog.requireDefaultSpawn("cottage");
     this.farming.settleDay(state);
     state.day += 1;
+    state.minuteOfDay = DAY_START_MINUTE;
     state.player.regionId = "cottage";
     state.player.x = safeSpawn.x;
     state.player.y = safeSpawn.y;
+    this.resetClockBaseline(this.now());
     return "slept";
+  }
+
+  /** Resets only wall-clock accumulation without changing the persisted game minute. */
+  private resetClockBaseline(now: number): void {
+    this.lastClockTickAt = Number.isFinite(now) ? now : null;
+    this.clockAccumulatorMs = 0;
   }
 
   /** Sends isolated snapshots to every renderer and UI projection listener. */
@@ -255,8 +303,9 @@ export class GameSession {
 }
 
 /** Maps one gathering result to fixed local UI feedback. */
-function gatheringFeedback(result: GatheringResult): ActionFeedback {
+function gatheringFeedback(result: GatheringResult): ActionFeedback | null {
   switch (result) {
+    case "no-effect": return null;
     case "success": return { tone: "success", code: result, message: "+3 异星木材" };
     case "depleted": return { tone: "error", code: result, message: "这棵树已经被采集。" };
     case "too-far": return { tone: "error", code: result, message: "离目标太远。" };
@@ -275,18 +324,17 @@ function craftingFeedback(result: CraftingResult): ActionFeedback {
 }
 
 /** Maps one farming transition to fixed local UI feedback. */
-function farmingFeedback(result: FarmingResult): ActionFeedback {
+function farmingFeedback(result: FarmingResult): ActionFeedback | null {
   const success = (message: string): ActionFeedback => ({ tone: "success", code: result, message });
   const error = (message: string): ActionFeedback => ({ tone: "error", code: result, message });
   switch (result) {
+    case "no-effect": return null;
     case "tilled": return success("土地已经开垦。");
     case "planted": return success("萝卜种子已经播下。");
     case "watered": return success("作物已浇水，睡觉后会成长。");
     case "harvested": return success("收获了一个萝卜。");
     case "waiting": return error("今天已经浇过水了。");
     case "too-far": return error("离农田太远。");
-    case "missing-tool": return error("缺少所需工具。");
-    case "missing-seed": return error("没有可用种子。");
     case "inventory-full": return error("背包已满。");
     case "missing-tile": return error("农田不存在。");
   }

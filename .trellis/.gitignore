@@ -21,6 +21,9 @@
 # Atomic update temp files
 *.tmp
 
+# Local render and visual QA artifacts
+tmp/
+
 # Update backup directories
 .backup-*
 

@@ -28,11 +28,20 @@ export interface ResourceSpawnDefinition extends WorldPoint {
   readonly kind: "tree" | "stone";
 }
 
-export interface InteractionDefinition extends WorldRect {
+export interface StandardInteractionDefinition extends WorldRect {
   readonly entityId: string;
   readonly regionId: string;
   readonly kind: "farm-plot" | "door" | "bed";
 }
+
+export interface InspectInteractionDefinition extends WorldRect {
+  readonly entityId: string;
+  readonly regionId: string;
+  readonly kind: "inspect";
+  readonly dialogueId: string;
+}
+
+export type InteractionDefinition = StandardInteractionDefinition | InspectInteractionDefinition;
 
 export interface NpcSpawnDefinition extends WorldPoint {
   readonly entityId: string;
@@ -120,8 +129,15 @@ export class WorldCatalog {
     )) ?? null;
   }
 
-  /** Reports whether a player hitbox centered at the point overlaps blocked or out-of-bounds tiles. */
-  isBlocked(regionId: string, x: number, y: number, halfWidth = 5, halfHeight = 4): boolean {
+  /** Reports whether a player hitbox overlaps tiles or the supplied time-active NPC feet. */
+  isBlocked(
+    regionId: string,
+    x: number,
+    y: number,
+    halfWidth = 5,
+    halfHeight = 4,
+    activeNpcs?: readonly NpcSpawnDefinition[],
+  ): boolean {
     const region = this.requireRegion(regionId);
     const samples = [
       [x - halfWidth, y - halfHeight],
@@ -130,7 +146,7 @@ export class WorldCatalog {
       [x + halfWidth, y + halfHeight],
     ] as const;
     return samples.some(([sampleX, sampleY]) => this.isBlockedPoint(region, sampleX, sampleY))
-      || this.overlapsNpcFeet(region, x, y, halfWidth, halfHeight);
+      || this.overlapsNpcFeet(activeNpcs ?? region.npcs, x, y, halfWidth, halfHeight);
   }
 
   /** Returns all region definitions in deterministic insertion order for Phaser preload and rendering. */
@@ -225,7 +241,7 @@ export class WorldCatalog {
 
   /** Tests one player foot box against fixed dialogue-NPC feet without trapping legacy shop positions. */
   private overlapsNpcFeet(
-    region: RegionDefinition,
+    npcs: readonly NpcSpawnDefinition[],
     x: number,
     y: number,
     halfWidth: number,
@@ -233,7 +249,7 @@ export class WorldCatalog {
   ): boolean {
     const npcHalfWidth = 5;
     const npcHalfHeight = 3;
-    return region.npcs.some((npc) => (
+    return npcs.some((npc) => (
       npc.interactionType === "dialogue"
       && Math.abs(x - npc.x) < halfWidth + npcHalfWidth
       && Math.abs(y - npc.y) < halfHeight + npcHalfHeight

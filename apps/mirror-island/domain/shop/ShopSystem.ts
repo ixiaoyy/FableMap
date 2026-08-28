@@ -1,9 +1,10 @@
 import { ITEM_ID } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { GameState } from "../state/game-state.ts";
+import { activeNpcById } from "../world/npc-schedules.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 
-export const SEED_KEEPER_ENTITY_ID = "seed-shop-keeper";
+const SEED_KEEPER_NPC_ID = "seed-keeper";
 export const TURNIP_SEED_BUY_PRICE = 20;
 export const TURNIP_SELL_PRICE = 35;
 const SHOP_INTERACTION_DISTANCE_PIXELS = 42;
@@ -57,10 +58,9 @@ export class ShopSystem {
 
   /** Reports whether the player is in the Seed Keeper's region and within the reviewed range. */
   private isPlayerAtSeedKeeper(state: GameState): boolean {
-    const keeper = this.catalog.npc(SEED_KEEPER_ENTITY_ID);
+    const keeper = activeNpcById(this.catalog, SEED_KEEPER_NPC_ID, state.minuteOfDay);
     return Boolean(
       keeper
-      && keeper.npcId === "seed-keeper"
       && keeper.interactionType === "shop"
       && state.player.regionId === keeper.regionId
       && Math.hypot(state.player.x - keeper.x, state.player.y - keeper.y)

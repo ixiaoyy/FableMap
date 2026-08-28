@@ -30,8 +30,10 @@
 ## 当前里程碑顺序
 
 1. 已完成：Life Loop 生产双账号验收与 `life-loop-v1` checkpoint、Town Gate A/B/C、三名固定 NPC 和现有商店人格化入口。
-2. 当前下一产品门：`Town Functionality MVP`。先规划铁匠铺可进入、现有工具合同和最多一栋代表性民宅；不在基线整理任务中提前实现。
+2. 当前正在实现：`Town 世界元素扩展 v1`、`Town 家庭与居民 v1` 与 `Town 时间与 NPC 日程 v1`。保持既有 40×30 主镇构图，增加可进入铁匠工坊、五栋民宅、五名住户、北侧山麓、南侧湖岸、06:00–24:00 时钟和八名 NPC 四段日程；本批次明确不做工具升级、天气、Season、好感、采矿、钓鱼或新经济。
 3. Expedition、战斗、灵兽、肉鸽和撤离继续后置。只有用户在 Stardew/Town 下一阶段验收后重新明确批准，才允许创建相应实施任务。
+
+Town 已明确但尚未实现的日程表现、好感/送礼、日历天气、职业功能和人际事件统一登记在 [Town 后续开发路线图](TOWN_ROADMAP.md)。路线图用于防遗忘，不自动授权实施。
 
 ## 远期 Expedition Prototype 约束（当前暂停）
 
@@ -70,5 +72,5 @@
 - “新游戏”创建本地世界；“继续游戏”从 IndexedDB 恢复玩家、背包、资源和农田。
 - World Foundation 只有在真人从农场向右进入小镇、进出种子店、返回农场并刷新恢复后才算完成；默认主视图是 16px Tiled 游戏世界，正式 TMJ 由 Tiled 手工维护。
 - Farm Showcase 的整图、2× 出生镜头和真实生产浏览器路线已通过；视觉方向不再阻塞 Life Loop。
-- Life Loop 以 Day 1 / 100g、床交互、原子日结、三次有效浇水跨日、20g 买种、35g 出售和 IndexedDB 恢复为成功标准；本轮 HUD 只显示 Day 和 Gold，不实现 Season 或时钟。
+- Life Loop 以 Day 1 / 100g、床交互、原子日结、三次有效浇水跨日、20g 买种、35g 出售和 IndexedDB 恢复为成功标准；后续 Town 日程批次已在 HUD 增加时间，但仍不实现 Season、天气或体力。
 - 旧 backend、database、volume、备份和 `fablespace/` 对象前缀不存在；论坛、镜像岛两个数据库和 `game/` 媒体完整。

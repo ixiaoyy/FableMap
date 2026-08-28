@@ -8,8 +8,13 @@ import {
   assertStableId,
   type WorldCatalog,
 } from "../world/regions.ts";
+import { activeNpcSpawnsInRegion } from "../world/npc-schedules.ts";
+import {
+  DAY_START_MINUTE,
+  decodeGameMinute,
+} from "../time/game-time.ts";
 
-export const GAME_STATE_VERSION = 3 as const;
+export const GAME_STATE_VERSION = 4 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
 const LEGACY_TREE_ID = "tree-01";
@@ -48,6 +53,7 @@ export interface FarmTileState {
 export interface GameState {
   readonly version: typeof GAME_STATE_VERSION;
   day: number;
+  minuteOfDay: number;
   gold: number;
   player: PlayerState;
   inventory: InventorySlot[];
@@ -55,7 +61,7 @@ export interface GameState {
   farmTiles: Record<string, FarmTileState>;
 }
 
-/** Creates a deterministic v3 game state from the validated Tiled-derived world catalog. */
+/** Creates a deterministic v4 game state from the validated Tiled-derived world catalog. */
 export function createInitialGameState(catalog: WorldCatalog): GameState {
   const inventory: InventorySlot[] = Array.from(
     { length: INVENTORY_SLOT_COUNT },
@@ -63,10 +69,12 @@ export function createInitialGameState(catalog: WorldCatalog): GameState {
   );
   inventory[0] = { itemId: ITEM_ID.hoe, quantity: 1 };
   inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
+  inventory[2] = { itemId: ITEM_ID.axe, quantity: 1 };
   const start = catalog.requireDefaultSpawn(catalog.startRegionId);
   const state: GameState = {
     version: GAME_STATE_VERSION,
     day: 1,
+    minuteOfDay: DAY_START_MINUTE,
     gold: 100,
     player: { regionId: catalog.startRegionId, ...start },
     inventory,
@@ -81,7 +89,8 @@ export function createInitialGameState(catalog: WorldCatalog): GameState {
 export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCatalog): boolean {
   catalog.requireRegion(state.player.regionId);
   let changed = false;
-  if (catalog.isBlocked(state.player.regionId, state.player.x, state.player.y)) {
+  const activeNpcs = activeNpcSpawnsInRegion(catalog, state.player.regionId, state.minuteOfDay);
+  if (catalog.isBlocked(state.player.regionId, state.player.x, state.player.y, 5, 4, activeNpcs)) {
     const safeSpawn = catalog.requireDefaultSpawn(state.player.regionId);
     state.player.x = safeSpawn.x;
     state.player.y = safeSpawn.y;
@@ -123,6 +132,7 @@ export function cloneGameState(state: GameState): GameState {
   return {
     version: GAME_STATE_VERSION,
     day: state.day,
+    minuteOfDay: state.minuteOfDay,
     gold: state.gold,
     player: { ...state.player },
     inventory: state.inventory.map((slot) => ({ ...slot })),
@@ -135,13 +145,14 @@ export function cloneGameState(state: GameState): GameState {
   };
 }
 
-/** Validates one unknown value as a complete version-3 game state and returns a defensive clone. */
+/** Validates one unknown value as a complete version-4 game state and returns a defensive clone. */
 export function decodeGameState(value: unknown): GameState {
   const state = recordFrom(value, "Game state is invalid.");
   if (state.version !== GAME_STATE_VERSION) throw new Error("Game state version is unsupported.");
   return {
     version: GAME_STATE_VERSION,
     day: positiveSafeInteger(state.day, "Game day is invalid."),
+    minuteOfDay: decodeGameMinute(state.minuteOfDay),
     gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
     player: decodePlayerState(state.player),
     inventory: decodeInventory(state.inventory, false),
@@ -150,13 +161,30 @@ export function decodeGameState(value: unknown): GameState {
   };
 }
 
-/** Explicitly migrates a released v2 state into the day-based v3 life-loop contract. */
+/** Explicitly migrates a released v3 state into the v4 clock contract at 06:00. */
+export function migrateGameStateV3(value: unknown): GameState {
+  const state = recordFrom(value, "Version-3 game state is invalid.");
+  if (state.version !== 3) throw new Error("Version-3 game state is unsupported.");
+  return {
+    version: GAME_STATE_VERSION,
+    day: positiveSafeInteger(state.day, "Game day is invalid."),
+    minuteOfDay: DAY_START_MINUTE,
+    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
+    player: decodePlayerState(state.player),
+    inventory: decodeInventory(state.inventory, false),
+    resources: decodeResources(state.resources),
+    farmTiles: decodeFarmTilesV3(state.farmTiles),
+  };
+}
+
+/** Explicitly migrates a released v2 state into the day-based v4 life-loop contract. */
 export function migrateGameStateV2(value: unknown): GameState {
   const state = recordFrom(value, "Version-2 game state is invalid.");
   if (state.version !== 2) throw new Error("Version-2 game state is unsupported.");
   return {
     version: GAME_STATE_VERSION,
     day: 1,
+    minuteOfDay: DAY_START_MINUTE,
     gold: 100,
     player: decodePlayerState(state.player),
     inventory: decodeInventory(state.inventory, true),
@@ -165,7 +193,7 @@ export function migrateGameStateV2(value: unknown): GameState {
   };
 }
 
-/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v3 world IDs. */
+/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v4 world IDs. */
 export function migrateLegacyGameStateV1(value: unknown): GameState {
   const state = recordFrom(value, "Legacy game state is invalid.");
   if (state.version !== 1) throw new Error("Legacy game state version is unsupported.");
@@ -187,6 +215,7 @@ export function migrateLegacyGameStateV1(value: unknown): GameState {
   return {
     version: GAME_STATE_VERSION,
     day: 1,
+    minuteOfDay: DAY_START_MINUTE,
     gold: 100,
     player: {
       regionId: "farm",

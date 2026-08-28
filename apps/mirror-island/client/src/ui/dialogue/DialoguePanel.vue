@@ -23,6 +23,6 @@ const advanceLabel = computed(() => {
   >
     <span id="dialogue-speaker" class="dialogue-panel__speaker">{{ gameUiState.dialogue.speaker }}</span>
     <p>{{ currentLine }}</p>
-    <button type="button" @click="advanceDialogue">{{ advanceLabel }} · E</button>
+    <button type="button" @click="advanceDialogue">{{ advanceLabel }}</button>
   </aside>
 </template>

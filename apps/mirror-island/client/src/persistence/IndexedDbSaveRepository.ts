@@ -55,7 +55,7 @@ export class IndexedDbSaveRepository implements SaveRepository {
     return decodeStoredGame(rawRecord.game);
   }
 
-  /** Atomically preserves the first raw v2 payload before replacing its main slot with validated v3. */
+  /** Atomically preserves the first raw v2 payload before replacing its main slot with the current save. */
   async save(ownerKey: string, slotId: string, game: StoredGame): Promise<void> {
     const validatedGame = decodeStoredGame(game);
     const mainKey = saveKey(ownerKey, slotId);

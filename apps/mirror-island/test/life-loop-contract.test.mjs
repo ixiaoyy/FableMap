@@ -7,11 +7,17 @@ import { decodeStoredGame } from "../domain/persistence/SaveRepository.ts";
 import { GameSession } from "../domain/session/GameSession.ts";
 import { ShopSystem } from "../domain/shop/ShopSystem.ts";
 import { createInitialGameState } from "../domain/state/game-state.ts";
+import {
+  DAY_END_MINUTE,
+  DAY_START_MINUTE,
+  REAL_MILLISECONDS_PER_TIME_STEP,
+} from "../domain/time/game-time.ts";
 import { WorldCatalog } from "../domain/world/regions.ts";
 import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
 
 const FARM_PLOT_ID = "farm-plot-001";
 const BED_ID = "cottage-bed";
+const TREE_ID = "test-tree-001";
 
 class MemorySaveRepository {
   game = null;
@@ -56,9 +62,14 @@ function createLifeLoopCatalog() {
       tileHeight: 16,
       blocked: Array.from({ length: 100 }, () => false),
     },
-    spawns: { entry: { x: 32, y: 32 } },
+    spawns: {
+      entry: { x: 32, y: 32 },
+      "npc-huaqiang-home": { x: 96, y: 96 },
+      "npc-huaqiang-counter": { x: 64, y: 32 },
+      "npc-huaqiang-shelves": { x: 96, y: 32 },
+    },
     exits: [],
-    resources: [],
+    resources: [{ entityId: TREE_ID, regionId: "cottage", kind: "tree", x: 64, y: 48 }],
     interactions: [
       { entityId: BED_ID, regionId: "cottage", kind: "bed", x: 16, y: 16, width: 32, height: 48 },
       { entityId: FARM_PLOT_ID, regionId: "cottage", kind: "farm-plot", x: 40, y: 32, width: 16, height: 16 },
@@ -73,6 +84,17 @@ function createLifeLoopCatalog() {
       y: 32,
     }],
   }]);
+}
+
+/** Advances one session clock in one-second ticks and returns the updated wall-clock timestamp. */
+function advanceSessionClock(session, startNow, gameMinutes, paused = false) {
+  let now = startNow;
+  const ticks = (gameMinutes / 10) * (REAL_MILLISECONDS_PER_TIME_STEP / 1_000);
+  for (let index = 0; index < ticks; index += 1) {
+    now += 1_000;
+    session.tick(now, paused);
+  }
+  return now;
 }
 
 /** Creates one valid 24-slot v2 inventory with both retired farming item IDs. */
@@ -121,11 +143,12 @@ async function decodeFormalMap(name, mapKey) {
   return decodeTiledRegion(raw, mapKey);
 }
 
-test("v2 saves migrate once to v3 and repeated v3 decode is idempotent", () => {
+test("v2 and v3 saves migrate to v4 at 06:00 and repeated v4 decode is idempotent", () => {
   const migrated = decodeStoredGame(createV2StoredGame());
-  assert.equal(migrated.version, 3);
-  assert.equal(migrated.state.version, 3);
+  assert.equal(migrated.version, 4);
+  assert.equal(migrated.state.version, 4);
   assert.equal(migrated.state.day, 1);
+  assert.equal(migrated.state.minuteOfDay, DAY_START_MINUTE);
   assert.equal(migrated.state.gold, 100);
   assert.equal(migrated.state.inventory[0].itemId, ITEM_ID.turnipSeed);
   assert.equal(migrated.state.inventory[1].itemId, ITEM_ID.turnip);
@@ -138,22 +161,82 @@ test("v2 saves migrate once to v3 and repeated v3 decode is idempotent", () => {
   });
   assert.equal(migrated.state.farmTiles["farm-plot-002"].growthStage, 3);
   assert.deepEqual(decodeStoredGame(migrated), migrated);
-  assert.throws(() => decodeStoredGame({ ...migrated, version: 4 }), /unsupported/i);
+  const versionThree = {
+    version: 3,
+    updatedAt: migrated.updatedAt,
+    state: { ...migrated.state, version: 3 },
+  };
+  delete versionThree.state.minuteOfDay;
+  assert.equal(decodeStoredGame(versionThree).state.minuteOfDay, DAY_START_MINUTE);
+  assert.throws(
+    () => decodeStoredGame({ ...migrated, state: { ...migrated.state, minuteOfDay: 365 } }),
+    /time is invalid/i,
+  );
+  assert.throws(() => decodeStoredGame({ ...migrated, version: 5 }), /unsupported/i);
+});
+
+test("clock advances in ten-minute steps, pauses without catch-up and sleep resets 06:00", async () => {
+  const repository = new MemorySaveRepository();
+  let wallClock = 0;
+  const session = new GameSession(repository, "clock-owner", createLifeLoopCatalog(), "main", () => wallClock);
+  await session.newGame();
+
+  wallClock = advanceSessionClock(session, wallClock, 0);
+  for (let index = 0; index < 7; index += 1) {
+    wallClock += 1_000;
+    session.tick(wallClock, false);
+  }
+  assert.equal(session.snapshot().minuteOfDay, DAY_START_MINUTE);
+  wallClock += 60_000;
+  session.tick(wallClock, true);
+  wallClock += 1_000;
+  session.tick(wallClock, false);
+  assert.equal(session.snapshot().minuteOfDay, DAY_START_MINUTE + 10);
+
+  wallClock = advanceSessionClock(
+    session,
+    wallClock,
+    DAY_END_MINUTE - (DAY_START_MINUTE + 10),
+  );
+  assert.equal(session.snapshot().minuteOfDay, DAY_END_MINUTE);
+  wallClock = advanceSessionClock(session, wallClock, 20);
+  assert.equal(session.snapshot().minuteOfDay, DAY_END_MINUTE);
+
+  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
+  assert.equal(session.snapshot().day, 2);
+  assert.equal(session.snapshot().minuteOfDay, DAY_START_MINUTE);
+  await session.flush();
 });
 
 test("one real session completes buy, three watered sleeps, harvest, sale and repeat purchase", async () => {
   const repository = new MemorySaveRepository();
-  const session = new GameSession(repository, "test-owner", createLifeLoopCatalog(), "main", () => 1_000);
+  let wallClock = 1_000;
+  const session = new GameSession(repository, "test-owner", createLifeLoopCatalog(), "main", () => wallClock);
   let state = await session.newGame();
   assert.equal(state.day, 1);
+  assert.equal(state.minuteOfDay, DAY_START_MINUTE);
   assert.equal(state.gold, 100);
+  assert.deepEqual(state.inventory.slice(0, 3), [
+    { itemId: ITEM_ID.hoe, quantity: 1 },
+    { itemId: ITEM_ID.wateringCan, quantity: 1 },
+    { itemId: ITEM_ID.axe, quantity: 1 },
+  ]);
   assert.equal(state.inventory.some((slot) => slot.itemId === ITEM_ID.turnipSeed), false);
 
+  wallClock = advanceSessionClock(session, wallClock, 180);
+  assert.equal(session.snapshot().minuteOfDay, 9 * 60);
   assert.equal(session.dispatch({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 })?.code, "bought");
-  assert.equal(session.dispatch({ type: "farm-primary", tileId: FARM_PLOT_ID })?.code, "tilled");
-  assert.equal(session.dispatch({ type: "farm-primary", tileId: FARM_PLOT_ID })?.code, "planted");
-  assert.equal(session.dispatch({ type: "farm-primary", tileId: FARM_PLOT_ID })?.code, "watered");
-  session.tick(Number.MAX_SAFE_INTEGER);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID })?.code, "tilled");
+  const tilled = session.snapshot();
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: FARM_PLOT_ID }), null);
+  assert.deepEqual(session.snapshot(), tilled);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.turnipSeed, targetId: FARM_PLOT_ID })?.code, "planted");
+  const planted = session.snapshot();
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID }), null);
+  assert.deepEqual(session.snapshot(), planted);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
+  wallClock += 1_000;
+  session.tick(wallClock, true);
   assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthStage, 0);
   await session.flush();
   const savesBeforeSleep = repository.saveCalls;
@@ -162,23 +245,28 @@ test("one real session completes buy, three watered sleeps, harvest, sale and re
   assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "already-saving");
   state = session.snapshot();
   assert.equal(state.day, 2);
+  assert.equal(state.minuteOfDay, DAY_START_MINUTE);
   assert.equal(state.farmTiles[FARM_PLOT_ID].growthStage, 1);
   assert.equal(state.farmTiles[FARM_PLOT_ID].watered, false);
   await session.flush();
   assert.equal(repository.saveCalls, savesBeforeSleep + 1);
 
-  assert.equal(session.dispatch({ type: "farm-primary", tileId: FARM_PLOT_ID })?.code, "watered");
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
   assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
   await session.flush();
   assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthStage, 2);
 
-  assert.equal(session.dispatch({ type: "farm-primary", tileId: FARM_PLOT_ID })?.code, "watered");
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
   assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
   await session.flush();
   state = session.snapshot();
   assert.equal(state.day, 4);
   assert.equal(state.farmTiles[FARM_PLOT_ID].phase, "mature");
-  assert.equal(session.dispatch({ type: "farm-primary", tileId: FARM_PLOT_ID })?.code, "harvested");
+  const mature = structuredClone(state);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: FARM_PLOT_ID }), null);
+  assert.deepEqual(session.snapshot(), mature);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: "", targetId: FARM_PLOT_ID })?.code, "harvested");
+  wallClock = advanceSessionClock(session, wallClock, 180);
   assert.equal(session.dispatch({ type: "sell-item", itemId: ITEM_ID.turnip, quantity: 1 })?.code, "sold");
   assert.equal(session.snapshot().gold, 115);
   assert.equal(session.dispatch({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 })?.code, "bought");
@@ -187,11 +275,35 @@ test("one real session completes buy, three watered sleeps, harvest, sale and re
   assert.ok(repository.saveCalls >= 10);
 });
 
+test("selected item and target phase own every tree and farm mutation", async () => {
+  const repository = new MemorySaveRepository();
+  const session = new GameSession(repository, "tool-owner", createLifeLoopCatalog(), "main", () => 2_000);
+  await session.newGame();
+
+  const initial = session.snapshot();
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: TREE_ID }), null);
+  assert.deepEqual(session.snapshot(), initial);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID }), null);
+  assert.deepEqual(session.snapshot(), initial);
+
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: TREE_ID })?.code, "success");
+  assert.equal(session.snapshot().resources[TREE_ID].available, false);
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: "", targetId: FARM_PLOT_ID }), null);
+  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].phase, "untilled");
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID })?.code, "tilled");
+  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: FARM_PLOT_ID }), null);
+  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].phase, "tilled");
+});
+
 test("shop failure paths leave gold and inventory unchanged", () => {
   const catalog = createLifeLoopCatalog();
   const inventory = new InventorySystem();
   const shop = new ShopSystem(inventory, catalog);
   const state = createInitialGameState(catalog);
+  state.player.x = 64;
+  state.player.y = 32;
+  assert.equal(shop.buyTurnipSeed(state), "not-at-shop");
+  state.minuteOfDay = 9 * 60;
   const baseline = structuredClone(state);
   assert.equal(shop.sellTurnip(state), "missing-item");
   assert.deepEqual(state, baseline);
@@ -216,6 +328,14 @@ test("formal world catalog decodes with the single stable Cottage bed interactio
     decodeFormalMap("town.tmj", "region-town"),
     decodeFormalMap("cottage.tmj", "region-cottage"),
     decodeFormalMap("seed-shop.tmj", "region-seed-shop"),
+    decodeFormalMap("blacksmith.tmj", "region-blacksmith"),
+    decodeFormalMap("town-house-west.tmj", "region-town-house-west"),
+    decodeFormalMap("town-house-north.tmj", "region-town-house-north"),
+    decodeFormalMap("town-house.tmj", "region-town-house"),
+    decodeFormalMap("town-house-southwest.tmj", "region-town-house-southwest"),
+    decodeFormalMap("town-house-east.tmj", "region-town-house-east"),
+    decodeFormalMap("foothills.tmj", "region-foothills"),
+    decodeFormalMap("lakeshore.tmj", "region-lakeshore"),
   ]);
   const catalog = new WorldCatalog(regions);
   const cottage = catalog.requireRegion("cottage");

@@ -1,16 +1,29 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { selectNpcHitTarget } from "../client/src/game/combat/npc-hit-target.ts";
 import { getDialogueDefinition } from "../client/src/game/dialogue/definitions.ts";
 import {
   advanceDialogue,
+  applyGameState,
+  cancelSleepConfirmation,
   clearGameState,
   closeShop,
+  confirmSleep,
   gameUiState,
   isWorldInputLocked,
   openShop,
+  openSleepConfirmation,
+  selectHotbarSlot,
   setDialogue,
+  setWorldActionBusy,
 } from "../client/src/stores/game-store.ts";
+import { ITEM_ID } from "../domain/items/definitions.ts";
+import {
+  activeNpcById,
+  activeNpcSpawns,
+  validateNpcSchedules,
+} from "../domain/world/npc-schedules.ts";
 import {
   createWorldCatalog,
   decodeTiledRegion,
@@ -68,16 +81,38 @@ function interactionGoals(catalog, npc) {
   return goals;
 }
 
-test("formal maps decode three stable NPCs with reviewed interaction types and reachable feet", async () => {
-  const [farmMap, townMap, cottageMap, seedShopMap] = await Promise.all([
-    loadMap("farm"), loadMap("town"), loadMap("cottage"), loadMap("seed-shop"),
+test("formal world maps decode NPCs, expansion exits and inspect hotspots through one catalog", async () => {
+  const [
+    farmMap, townMap, cottageMap, seedShopMap, blacksmithMap,
+    townHouseWestMap, townHouseNorthMap, townHouseMap, townHouseSouthwestMap, townHouseEastMap,
+    foothillsMap, lakeshoreMap,
+  ]
+    = await Promise.all([
+      loadMap("farm"), loadMap("town"), loadMap("cottage"), loadMap("seed-shop"),
+      loadMap("blacksmith"),
+      loadMap("town-house-west"), loadMap("town-house-north"), loadMap("town-house"),
+      loadMap("town-house-southwest"), loadMap("town-house-east"),
+      loadMap("foothills"), loadMap("lakeshore"),
   ]);
   const catalog = createWorldCatalog([
     decodeTiledRegion(farmMap, "test-farm"),
     decodeTiledRegion(townMap, "test-town"),
     decodeTiledRegion(cottageMap, "test-cottage"),
     decodeTiledRegion(seedShopMap, "test-seed-shop"),
+    decodeTiledRegion(blacksmithMap, "test-blacksmith"),
+    decodeTiledRegion(townHouseWestMap, "test-town-house-west"),
+    decodeTiledRegion(townHouseNorthMap, "test-town-house-north"),
+    decodeTiledRegion(townHouseMap, "test-town-house"),
+    decodeTiledRegion(townHouseSouthwestMap, "test-town-house-southwest"),
+    decodeTiledRegion(townHouseEastMap, "test-town-house-east"),
+    decodeTiledRegion(foothillsMap, "test-foothills"),
+    decodeTiledRegion(lakeshoreMap, "test-lakeshore"),
   ]);
+  validateNpcSchedules(catalog);
+  const visualProfileSource = await readFile(
+    new URL("../client/src/game/assets/visual-profile.ts", import.meta.url),
+    "utf8",
+  );
   const town = catalog.requireRegion("town");
   const shop = catalog.requireRegion("seed-shop");
   assert.deepEqual(town.npcs.map((npc) => [npc.entityId, npc.npcId, npc.dialogueId, npc.interactionType]), [
@@ -88,6 +123,34 @@ test("formal maps decode three stable NPCs with reviewed interaction types and r
     ["seed-shop-keeper", "seed-keeper", "seed-keeper-welcome", "shop"],
   ]);
 
+  const expectedScheduleRegions = new Map([
+    [360, ["town-house", "town-house-southwest", "seed-shop", "town-house-west", "town-house-north", "town-house", "town-house-southwest", "town-house-east"]],
+    [540, ["town", "town", "seed-shop", "town", "foothills", "lakeshore", "blacksmith", "lakeshore"]],
+    [1020, ["lakeshore", "blacksmith", "seed-shop", "town", "town", "town", "town", "lakeshore"]],
+    [1260, ["town-house", "town-house-southwest", "seed-shop", "town-house-west", "town-house-north", "town-house", "town-house-southwest", "town-house-east"]],
+  ]);
+  const scheduledNpcIds = [
+    "town-resident-01",
+    "town-blacksmith",
+    "seed-keeper",
+    "town-resident-mozi",
+    "town-resident-haonan",
+    "town-resident-alan",
+    "town-resident-haomeili",
+    "town-resident-xiangzi",
+  ];
+  for (const [minuteOfDay, expectedRegions] of expectedScheduleRegions) {
+    const active = activeNpcSpawns(catalog, minuteOfDay);
+    assert.equal(active.length, scheduledNpcIds.length);
+    assert.deepEqual(active.map(({ npcId }) => npcId), scheduledNpcIds);
+    assert.deepEqual(active.map(({ regionId }) => regionId), expectedRegions);
+    assert.equal(new Set(active.map(({ entityId }) => entityId)).size, active.length);
+    assert.equal(new Set(active.map(({ npcId }) => npcId)).size, active.length);
+  }
+  assert.equal(activeNpcById(catalog, "seed-keeper", 360)?.interactionType, "dialogue");
+  assert.equal(activeNpcById(catalog, "seed-keeper", 540)?.interactionType, "shop");
+  assert.equal(activeNpcById(catalog, "seed-keeper", 1020)?.interactionType, "dialogue");
+
   const townStart = [2, 18];
   for (const npc of town.npcs) {
     assert.equal(catalog.isBlocked("town", npc.x, npc.y), true);
@@ -97,10 +160,85 @@ test("formal maps decode three stable NPCs with reviewed interaction types and r
   assert.equal(catalog.isBlocked("seed-shop", keeper.x, keeper.y), false);
   assert.equal(findRoute(catalog, "seed-shop", [20, 26], interactionGoals(catalog, keeper)), true);
 
+  const expansionRegionIds = [
+    "blacksmith",
+    "town-house-west",
+    "town-house-north",
+    "town-house",
+    "town-house-southwest",
+    "town-house-east",
+    "foothills",
+    "lakeshore",
+  ];
+  for (const regionId of expansionRegionIds) {
+    const region = catalog.requireRegion(regionId);
+    assert.equal(region.exits.length, 1);
+    for (const interaction of region.interactions.filter(({ kind }) => kind === "inspect")) {
+      assert.ok(getDialogueDefinition(interaction.dialogueId));
+    }
+  }
+  assert.equal(catalog.requireRegion("foothills").resources.filter(({ kind }) => kind === "tree").length, 18);
+  assert.equal(catalog.requireRegion("lakeshore").resources.filter(({ kind }) => kind === "tree").length, 12);
+  assert.equal(findRoute(catalog, "foothills", [24, 33], new Set(["27,5", "28,5", "29,5"])), true);
+  assert.equal(findRoute(catalog, "lakeshore", [8, 2], new Set(["20,17", "20,18", "20,19"])), true);
+
+  const houseRegionIds = [
+    "town-house-west",
+    "town-house-north",
+    "town-house",
+    "town-house-southwest",
+    "town-house-east",
+  ];
+  const expectedHouseResidents = new Map([
+    ["town-house-west", ["town-house-west-resident", "town-resident-mozi", "resident-mozi-home", "墨子"]],
+    ["town-house-north", ["town-house-north-resident", "town-resident-haonan", "resident-haonan-home", "浩南"]],
+    ["town-house", ["town-house-riverside-resident", "town-resident-alan", "resident-alan-home", "阿澜"]],
+    ["town-house-southwest", ["town-house-southwest-resident", "town-resident-haomeili", "resident-haomeili-home", "昊美丽"]],
+    ["town-house-east", ["town-house-east-resident", "town-resident-xiangzi", "resident-xiangzi-home", "祥子"]],
+  ]);
+  for (const regionId of houseRegionIds) {
+    const house = catalog.requireRegion(regionId);
+    const inspectInteractions = house.interactions.filter(({ kind }) => kind === "inspect");
+    assert.equal(inspectInteractions.length, 3);
+    assert.equal(inspectInteractions.some(({ entityId }) => entityId.endsWith("private-room")), true);
+    assert.equal(catalog.isBlocked(regionId, 17 * TILE_SIZE + 8, 7 * TILE_SIZE + 8), true);
+    assert.equal(findRoute(catalog, regionId, [12, 15], new Set(["17,8"])), true);
+    const resident = house.npcs[0];
+    const expected = expectedHouseResidents.get(regionId);
+    assert.ok(resident && expected);
+    assert.deepEqual(
+      [resident.entityId, resident.npcId, resident.dialogueId, resident.interactionType],
+      [...expected.slice(0, 3), "dialogue"],
+    );
+    const dialogue = getDialogueDefinition(resident.dialogueId);
+    assert.equal(dialogue?.speaker, expected[3]);
+    assert.equal(dialogue?.lines.length, 3);
+    assert.equal(visualProfileSource.includes(`"${resident.npcId}"`), true);
+    assert.equal(catalog.isBlocked(regionId, resident.x, resident.y), true);
+    assert.equal(findRoute(catalog, regionId, [12, 15], interactionGoals(catalog, resident)), true);
+  }
+  const publicBuildingExitIds = new Set([
+    "town-blacksmith-entry",
+    "town-house-west-entry",
+    "town-house-north-entry",
+    "town-house-entry",
+    "town-house-southwest-entry",
+    "town-house-east-entry",
+  ]);
+  for (const buildingExit of town.exits.filter(({ id }) => publicBuildingExitIds.has(id))) {
+    const goals = new Set([`${Math.floor(buildingExit.x / TILE_SIZE)},${Math.floor(buildingExit.y / TILE_SIZE)}`]);
+    assert.equal(findRoute(catalog, "town", townStart, goals), true);
+  }
+
   const invalid = structuredClone(seedShopMap);
   const invalidNpc = invalid.layers.find((layer) => layer.name === "NpcSpawns").objects[0];
   invalidNpc.properties.find((property) => property.name === "interactionType").value = "quest";
   assert.throws(() => decodeTiledRegion(invalid, "invalid-interaction"), /interaction type is invalid/u);
+
+  const invalidInspect = structuredClone(foothillsMap);
+  const inspect = invalidInspect.layers.find((layer) => layer.name === "Interactions").objects[0];
+  inspect.properties = inspect.properties.filter((property) => property.name !== "dialogueId");
+  assert.throws(() => decodeTiledRegion(invalidInspect, "invalid-inspect"), /dialogueId is invalid/u);
 });
 
 test("linear dialogue and shop share one transient world-input lock", () => {
@@ -114,6 +252,8 @@ test("linear dialogue and shop share one transient world-input lock", () => {
   advanceDialogue();
   assert.equal(gameUiState.dialogue?.lineIndex, 1);
   advanceDialogue();
+  assert.equal(gameUiState.dialogue?.lineIndex, 2);
+  advanceDialogue();
   assert.equal(gameUiState.dialogue, null);
   assert.equal(isWorldInputLocked(), false);
 
@@ -123,4 +263,93 @@ test("linear dialogue and shop share one transient world-input lock", () => {
   assert.equal(isWorldInputLocked(), true);
   closeShop();
   assert.equal(isWorldInputLocked(), false);
+});
+
+test("Hotbar selection is transient, toggleable and modal-safe", () => {
+  clearGameState();
+  const inventory = Array.from({ length: 24 }, () => ({ itemId: "", quantity: 0 }));
+  inventory[0] = { itemId: ITEM_ID.hoe, quantity: 1 };
+  inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
+  inventory[2] = { itemId: ITEM_ID.axe, quantity: 1 };
+  const state = {
+    version: 4,
+    day: 1,
+    minuteOfDay: 360,
+    gold: 100,
+    player: { regionId: "farm", x: 0, y: 0 },
+    inventory,
+    resources: {},
+    farmTiles: {},
+  };
+  applyGameState(state);
+  assert.equal(gameUiState.selectedHotbarIndex, null);
+  assert.equal(gameUiState.selectedItemId, "");
+
+  selectHotbarSlot(0);
+  assert.equal(gameUiState.selectedHotbarIndex, 0);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.hoe);
+  selectHotbarSlot(0);
+  assert.equal(gameUiState.selectedHotbarIndex, null);
+  selectHotbarSlot(7);
+  assert.equal(gameUiState.selectedItemId, "");
+
+  selectHotbarSlot(1);
+  setWorldActionBusy(true);
+  selectHotbarSlot(2);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.wateringCan);
+  setWorldActionBusy(false);
+  openShop("测试商店");
+  selectHotbarSlot(2);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.wateringCan);
+  closeShop();
+
+  const consumed = structuredClone(state);
+  consumed.inventory[1] = { itemId: "", quantity: 0 };
+  applyGameState(consumed);
+  assert.equal(gameUiState.selectedHotbarIndex, null);
+  assert.equal(gameUiState.selectedItemId, "");
+  clearGameState();
+});
+
+test("sleep confirmation locks world input and resolves yes or no exactly once", () => {
+  clearGameState();
+  let sleepRequests = 0;
+
+  assert.equal(openSleepConfirmation(() => { sleepRequests += 1; }), true);
+  assert.equal(gameUiState.sleepConfirmationOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  assert.equal(openSleepConfirmation(() => { sleepRequests += 10; }), false);
+
+  cancelSleepConfirmation();
+  assert.equal(gameUiState.sleepConfirmationOpen, false);
+  assert.equal(isWorldInputLocked(), false);
+  assert.equal(sleepRequests, 0);
+
+  assert.equal(openSleepConfirmation(() => { sleepRequests += 1; }), true);
+  confirmSleep();
+  confirmSleep();
+  assert.equal(gameUiState.sleepConfirmationOpen, false);
+  assert.equal(isWorldInputLocked(), false);
+  assert.equal(sleepRequests, 1);
+  clearGameState();
+});
+
+test("punch targeting selects only the deterministic nearest NPC in the facing corridor", () => {
+  const player = { x: 100, y: 100 };
+  const candidates = [
+    { entityId: "npc-far", x: 124, y: 100 },
+    { entityId: "npc-near-b", x: 116, y: 104 },
+    { entityId: "npc-near-a", x: 116, y: 96 },
+    { entityId: "npc-behind", x: 92, y: 100 },
+    { entityId: "npc-wide", x: 114, y: 111 },
+    { entityId: "npc-out-of-range", x: 129, y: 100 },
+  ];
+
+  assert.equal(selectNpcHitTarget(player, "right", candidates)?.entityId, "npc-near-a");
+  assert.equal(selectNpcHitTarget(player, "left", candidates)?.entityId, "npc-behind");
+  assert.equal(selectNpcHitTarget(player, "up", [{ entityId: "npc-up", x: 100, y: 84 }])?.entityId, "npc-up");
+  assert.equal(selectNpcHitTarget(player, "down", [{ entityId: "npc-down", x: 100, y: 116 }])?.entityId, "npc-down");
+  assert.equal(selectNpcHitTarget(player, "right", candidates.filter(({ entityId }) => (
+    entityId === "npc-behind" || entityId === "npc-wide" || entityId === "npc-out-of-range"
+  ))), null);
 });

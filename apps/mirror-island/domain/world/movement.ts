@@ -1,4 +1,5 @@
 import type { GameState } from "../state/game-state.ts";
+import { activeNpcSpawnsInRegion } from "./npc-schedules.ts";
 import type { WorldCatalog } from "./regions.ts";
 
 export const PLAYER_SPEED_PIXELS_PER_SECOND = 96;
@@ -18,10 +19,11 @@ export function movePlayer(
   const previousX = state.player.x;
   const previousY = state.player.y;
   const region = catalog.requireRegion(state.player.regionId);
+  const activeNpcs = activeNpcSpawnsInRegion(catalog, state.player.regionId, state.minuteOfDay);
   const nextX = clamp(previousX + (xAxis / magnitude) * distance, 5, region.widthPixels - 5);
-  if (!catalog.isBlocked(state.player.regionId, nextX, previousY)) state.player.x = nextX;
+  if (!catalog.isBlocked(state.player.regionId, nextX, previousY, 5, 4, activeNpcs)) state.player.x = nextX;
   const nextY = clamp(previousY + (yAxis / magnitude) * distance, 4, region.heightPixels - 4);
-  if (!catalog.isBlocked(state.player.regionId, state.player.x, nextY)) state.player.y = nextY;
+  if (!catalog.isBlocked(state.player.regionId, state.player.x, nextY, 5, 4, activeNpcs)) state.player.y = nextY;
   return state.player.x !== previousX || state.player.y !== previousY;
 }
 

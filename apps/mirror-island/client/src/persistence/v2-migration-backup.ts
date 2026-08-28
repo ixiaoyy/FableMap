@@ -18,7 +18,7 @@ export function v2BackupKey(mainKey: string): string {
   return `${mainKey}${V2_BACKUP_SUFFIX}`;
 }
 
-/** Plans one validated v3 main write and an optional exact v2 backup without mutating either input. */
+/** Plans one validated current main write and an optional exact v2 backup without mutating either input. */
 export function planIndexedDbSave(
   mainKey: string,
   existingMain: IndexedDbGameRecord | undefined,

@@ -195,7 +195,7 @@ function decodeResources(layer: Record<string, unknown>, regionId: string): read
   });
 }
 
-/** Decodes stable interaction rectangles and their closed first-batch kinds. */
+/** Decodes stable interaction rectangles, validating inspect dialogue metadata at the Tiled boundary. */
 function decodeInteractions(layer: Record<string, unknown>, regionId: string): readonly InteractionDefinition[] {
   return objectRecords(layer).map((object) => {
     if (object.type !== "interaction") throw new Error("Interactions contains a non-interaction object.");
@@ -203,6 +203,11 @@ function decodeInteractions(layer: Record<string, unknown>, regionId: string): r
     const entityId = requiredString(properties, "entityId");
     const kind = requiredString(properties, "interactionKind");
     assertStableId(entityId, "Interaction entity ID");
+    if (kind === "inspect") {
+      const dialogueId = requiredString(properties, "dialogueId");
+      assertStableId(dialogueId, "Dialogue ID");
+      return { entityId, regionId, kind, dialogueId, ...rectFrom(object) };
+    }
     if (kind !== "farm-plot" && kind !== "door" && kind !== "bed") {
       throw new Error("Interaction kind is invalid.");
     }

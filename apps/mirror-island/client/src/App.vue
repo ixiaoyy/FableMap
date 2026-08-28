@@ -23,6 +23,7 @@ import DialoguePanel from "./ui/dialogue/DialoguePanel.vue";
 import LifeHud from "./ui/hud/LifeHud.vue";
 import Hotbar from "./ui/hotbar/Hotbar.vue";
 import ShopPanel from "./ui/shop/ShopPanel.vue";
+import SleepConfirmationPanel from "./ui/sleep/SleepConfirmationPanel.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -153,6 +154,7 @@ onUnmounted(() => {
       <LifeHud />
       <DialoguePanel />
       <ShopPanel />
+      <SleepConfirmationPanel />
       <div v-if="!debugMode" class="game-hud">
         <Hotbar />
       </div>

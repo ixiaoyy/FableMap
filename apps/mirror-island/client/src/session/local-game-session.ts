@@ -51,9 +51,9 @@ export function dispatchLocalGameCommand(command: GameCommand): ActionFeedback |
   return feedback;
 }
 
-/** Advances only bounded movement checkpoint timing using an explicit wall-clock timestamp. */
-export function tickLocalGameSession(now: number): void {
-  getLocalGameSession().tick(now);
+/** Advances bounded movement/time checkpoints with an explicit transient pause signal. */
+export function tickLocalGameSession(now: number, paused: boolean): void {
+  getLocalGameSession().tick(now, paused);
 }
 
 /** Flushes pending snapshots without disposing the active renderer or UI subscription. */

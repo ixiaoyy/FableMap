@@ -25,7 +25,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v3 包含 region、day、gold 与按天作物状态，旧 v1/v2 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v4 包含 region、day、minuteOfDay、gold 与按天作物状态，旧 v1/v2/v3 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源和农田；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -80,7 +80,7 @@ function planIndexedDbSave(
 ### 5. Good/Base/Bad Cases
 
 - Good：v2 continue 解码、catalog reconcile 成功后，首次 critical save 原子留下原始 v2 并切换 v3。
-- Base：全新本地试玩槽与后续 v3 saves 沿用原 main key，不产生 backup。
+- Base：全新本地试玩槽与后续 current saves 沿用原 main key，不产生 backup。
 - Bad：`load()` 先覆盖 main 再进入 GameSession，或先写 v3 后用另一个 transaction 补 backup。
 
 ### 6. Tests Required
@@ -163,15 +163,18 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - 第二批 World Foundation 严格拆为 A：Tilemap Foundation，B：World Entities + ActionTimeline，C：Visual Pass；不并行铺昼夜、经济或 NPC 日程。
 - 第三批当前收窄为 `Stardew Life Loop 第一批`：Day、Gold、床睡觉、按天成长和 Seed Keeper 单商品买卖；不顺势加入 Season、完整时钟、昼夜、天气或更多 NPC。
 - World Foundation 与 Farm Showcase 已由用户在 2026-08-25 的生产真实浏览器清单中确认通过，第三批实施门槛已解除。
-- 长期产品方向仍是家园生活 + 灵兽培养 + 轻撤离探索 + 肉鸽事件 + 阶段性守家 + 东方志怪，但用户已在 Life Loop/Town Population 验收后明确暂停 Expedition 与战斗，当前继续 Stardew/Town；未经新的明确批准不得创建 Expedition task、map、Cargo、敌人或捕获代码。
-- `One Beautiful Slice`、Farm Gate A/B/C、Town Gate A/B/C 与三名 NPC 均已通过并进入生产；当前下一产品门只允许先规划 `Town Functionality MVP`，本基线任务不实现铁匠铺、工具规则或新室内。
+- 长期产品方向仍是家园生活 + 灵兽培养 + 轻撤离探索 + 肉鸽事件 + 阶段性守家 + 东方志怪；当前继续 Stardew/Town，并仅额外批准 presentation-only 的空手 NPC 击打反馈，不构成敌人、伤害或战斗系统授权。未经新的明确批准不得创建 Expedition task、map、Cargo、敌人或捕获代码。
+- `One Beautiful Slice`、Farm Gate A/B/C、Town Gate A/B/C 与三名 NPC 均已通过并进入生产；用户已于 2026-08-28 批准 `Town 世界元素扩展 v1`：增加铁匠工坊、五栋可进入公共区的民宅、静态阻挡的私人内屋、北侧山麓与南侧湖岸，但不实现工具升级、好感解锁、采矿、钓鱼或新经济。
 - Ninja Adventure 从正式场景美术降级为开发/占位资源，不再为它进行 Gate C 级精修；Gate A 构图确认仍可使用现有占位画面。
 - VectoRaith Farming Sim v1.08 已从 visual prototype 转为生产 Farm/Town 底座；运行时直接读取 6 张官方 Original/16×16 PNG，候选/旧 packed 流程不再是活跃实现面。
 - Gate C 视觉样板已通过并冻结为 `docs/checkpoints/farm-showcase-v1/`，并正式成为生产 Farm v1；停止继续增加装饰。该 checkpoint 不等于 World Foundation 或完整世界美术完成。
 - Town Gate A 已通过 reference study、40×30 空间蓝图和 ignored 候选视觉确认；正式 Town 固定为西入口→弯曲主街→桥头粉色地标→唯一河桥→Seed Shop，并保留南侧小巷与河畔次区回路。未经真实碰撞问题不得重开大构图。
 - Town Gate B 建筑密度已于 2026-08-26 通过用户视觉确认：正式 40×30 Town 固定为 1 个蓝顶杂货铺、1 个红色大体量铁匠铺和 5 栋民宅，共 7 个建筑体量；石质粮仓已明确否决。允许橙顶/棕顶民宅非相邻复用，但相邻建筑不得完全同形；新增住宅只用短支路接入，河流、唯一桥、粉树广场、西入口、Seed Shop 出口和 5 个 stable object 保持不变。
 - Town Gate C 已于 2026-08-26 通过用户视觉确认：生活感只通过成组静态 Props 建立，杂货铺使用货箱/招牌/门槛，铁匠铺使用灯具/木料/矿石，五栋民宅使用至少三类非均匀院落，粉树广场保留单一公告设施，桥头只放少量引导物。正式 Town 停止继续增加建筑或均匀铺装饰；后续只因真实通行、Collision、AbovePlayer 或功能入口问题窄修。
-- Town Population MVP 已于 2026-08-27 通过生产人工验收：华强复用现有 Shop，昊天与阿禾使用线性 Dialogue，统一 modal lock、重复 E、防出口触发和脚底碰撞均成立；该验收不授权 NPC 日程、好感、任务或铁匠功能。
+- Town Population MVP 已于 2026-08-27 通过生产人工验收：华强复用现有 Shop，昊天与阿禾使用线性 Dialogue，统一 modal lock、防出口触发和脚底碰撞均成立；后续输入精简为点击邻近 NPC 交互，当前世界交互不再注册 E；该验收不授权 NPC 日程、好感、任务或铁匠功能。
+- 用户于 2026-08-28 批准 `Town 家庭与居民 v1`：五栋民宅各增加一名固定 dialogue NPC——墨子、浩南、阿澜、昊美丽、祥子；阿澜与阿禾、昊美丽与昊天只通过住址和对话表达家庭关系，不增加 Relationship、日程、好感、送礼或持久 NPC 状态。
+- 用户于 2026-08-28 后续批准 `Town 时间与 NPC 日程 v1`：增加 06:00–24:00、8 秒/10 分钟的 GameSession 时钟和八名 NPC 四段固定日程；允许 v3→v4 存档迁移，但仍不增加 Season、天气、体力、好感、送礼或 NPC 寻路动画。
+- Town 任务若主动推迟玩家可感知能力，归档前必须把能力、依赖和实施触发条件登记到 `docs/TOWN_ROADMAP.md`；路线图是防遗忘清单，不替代独立 PRD，也不自动扩大当前实现范围。
 
 ## Scenario: Town Population MVP
 
@@ -210,7 +213,7 @@ interface DialogueProjection {
 - Town 新增且只新增 `town-blacksmith`（昊天）和 `town-resident-01`（阿禾），均为 `interactionType=dialogue`；坐标属于 Tiled，stable ID 不随移动改变。
 - `interactionType` 是 decoder 必填枚举；WorldScene 以它分派现有 ShopPanel 或 DialoguePanel，ShopSystem 仍以 `seed-shop-keeper`、region 与 42px 距离验证买卖命令。
 - Dialogue 只在 Vue transient state 中保存当前行；不进入 GameSession、StoredGame、IndexedDB 或 domain command。
-- `isWorldInputLocked()` 在 Shop 或 Dialogue 打开时为 true，统一阻止 movement、interaction 与 exit transition；E/点击推进，最后一句关闭并恢复输入。
+- `isWorldInputLocked()` 在 Shop、Dialogue 或休息确认框打开时为 true，统一阻止 movement、interaction 与 exit transition；Dialogue 只通过界面按钮推进，最后一句关闭并恢复输入。
 - 固定 `dialogue` NPC 使用约 5×3px 脚底半径；`shop` NPC 不新增脚底阻挡，避免已发布 Seed Shop 旧位置存档被困。
 - 正式 NPC 图来自 VectoRaith NPC v1.6 DEMO 的完整 `DEMO/16x16/generic_people.png`：192×256、17354 bytes、SHA-256 `eb1fe419def5a351cfc147a8273b133f1e7daaa9f59a418fe4a7d3f8d7d67ba0`；Git 不跟踪 PNG，运行时只读 immutable CDN 原始 bytes。
 
@@ -220,7 +223,7 @@ interface DialogueProjection {
 |---|---|
 | NPC 缺少/使用未知 `interactionType` | 地图解码失败，世界不启动 |
 | `dialogueId` 不在 catalog | 显示固定错误 feedback，不打开空 modal |
-| Dialogue/Shop 已打开时重复 E | 不创建第二 modal；Dialogue 仅推进一行 |
+| Dialogue/Shop 已打开时重复点击 NPC | 不创建第二 modal；当前 modal 保持唯一 |
 | Shop 打开但玩家不在华强 42px 内 | ShopSystem 返回 `not-at-shop`，gold/inventory 不变 |
 | NPC frame 缺失 | EntityFactory 明确失败，不回退 Ninja shopkeeper |
 | NPC 脚底堵住 reviewed route | 路线门禁失败，不提交/部署 |
@@ -228,8 +231,8 @@ interface DialogueProjection {
 
 ### 5. Good/Base/Bad Cases
 
-- Good：玩家从 Farm 进入 Town，先看到阿禾并完成两句对话，找到昊天，再进入 Seed Shop 对华强按 E 打开原子买卖面板。
-- Base：Dialogue 用 E 或按钮逐句推进，Shop/Dialogue 期间世界停止响应，关闭后恢复；刷新不保存任何对话位置。
+- Good：玩家从 Farm 进入 Town，先点击阿禾并完成两句对话，找到昊天，再进入 Seed Shop 点击华强打开原子买卖面板。
+- Base：Dialogue 用按钮逐句推进，Shop/Dialogue 期间世界停止响应，关闭后恢复；刷新不保存任何对话位置。
 - Bad：Vue 直接修改 gold、按 `entityId` 硬编码多个商店分支、把 sprite frame 写进 save，或引入 DialogueGraph/Quest/Schedule 框架。
 
 ### 6. Tests Required
@@ -250,6 +253,77 @@ if (npc.interactionType === "shop") openShop(dialogue.lines[0]);
 session.dispatch({ type: "buy-item", itemId: "turnip-seed", quantity: 1 });
 ```
 
+## Scenario: Town clock and fixed NPC schedules
+
+### 1. Scope / Trigger
+
+- Trigger：五栋住宅与八名固定 NPC 已成立，需要用可见时间让住宅、工作地点、山麓和湖岸形成日常生活网络。
+- 本场景只拥有单日时钟、四段 anchor 切换、活跃 NPC 碰撞和 Seed Shop 白天营业；不包含天气、Season、好感、送礼、寻路或昏倒。
+
+### 2. Signatures
+
+```typescript
+interface GameStateV4 {
+  readonly version: 4;
+  day: number;
+  minuteOfDay: number; // 360..1440, step 10
+}
+
+type NpcSchedulePhase = "morning" | "day" | "evening" | "night";
+
+function activeNpcSpawns(
+  catalog: WorldCatalog,
+  minuteOfDay: number,
+): readonly NpcSpawnDefinition[];
+
+function GameSession.tick(now?: number, paused?: boolean): void;
+```
+
+### 3. Contracts
+
+- 时间由 GameSession 唯一拥有：新游戏/睡觉为 360，10 分钟一步，1440 冻结；现实 8000ms 推进一步，单 tick elapsed 最多消费 1000ms。
+- modal、ActionTimeline、transition 通过 `paused=true` 切断 wall-clock 累积；恢复时不补算后台或暂停时间。
+- GameState/StoredGame 当前版本为 4；v3 完整验证后补 06:00，v1/v2 继续迁移到 v4；minute 必须可被 10 整除。
+- Tiled SpawnPoints 拥有 schedule anchor 坐标；domain registry 只引用 regionId/spawnId。NpcSpawns 仍唯一拥有 entityId/npcId/dialogueId。
+- movement、reconcile、WorldScene 与 ShopSystem 必须消费同一个 active NPC resolver；禁止 Phaser 单独移动 sprite 或留下旧脚底碰撞。
+- 华强仅 day phase 投影为 `shop`，其他 phase 投影为 `dialogue`；买卖命令必须在当前 active counter 的 42px 内。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| minute 非安全整数、越界或非 10 分钟粒度 | save decode 失败，原记录不覆盖 |
+| v3 save | 迁移到 v4 06:00，其他 state 字段保持 |
+| pause / 后台长间隔 | 更新时间基线，不推进、不追赶 |
+| 24:00 后 tick | 保持 24:00，等待主动睡觉 |
+| schedule 缺 anchor、anchor 被 tile 阻挡或同 phase 重叠 | 启动 validation 失败 |
+| NPC anchor 改变但 entityId 相同 | 销毁并重建临时 NpcEntity，identity/dialogue 保持 |
+| 华强不在 day counter | 只对话，ShopSystem 返回 `not-at-shop` |
+
+### 5. Good/Base/Bad Cases
+
+- Good：09:00 浩南位于山麓、祥子位于码头、华强在柜台可交易；17:00 同一 identity 切到 evening anchor，旧位置无 sprite/碰撞。
+- Base：对话打开一分钟现实时间后关闭，游戏 minute 不变；睡觉后 Day+1 且 06:00。
+- Bad：Vue 自增时间、在 Phaser hardcode 像素日程、复制同一 NPC 实体，或只换 sprite 不换 movement collision。
+
+### 6. Tests Required
+
+- v3→v4 06:00、v4 幂等、非法 minute、8 秒步长、pause、24:00 freeze、sleep reset。
+- 四个 phase 各断言八名 NPC identity 唯一、region anchor、无 tile 阻挡/重叠；active interaction range 可达。
+- 华强 morning/evening 为 dialogue、day 为 shop；买卖只在 day counter 成功。
+- Life Loop、Town、v2 backup、typecheck、client build；不扩建天气/好感测试。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: renderer invents a second schedule and collision remains at the TMJ base point.
+npcSprite.setPosition(304, 240);
+
+// Correct: every consumer projects the same Tiled anchor from the persisted game minute.
+const active = activeNpcSpawnsInRegion(catalog, regionId, state.minuteOfDay);
+catalog.isBlocked(regionId, x, y, 5, 4, active);
+```
+
 ## World Foundation contract
 
 - 地图使用 16×16 正交 TMJ 区域文件；农场东侧连接小镇西侧，后续 forest/mountain/river/mine/temple/story regions 复用同一切图合同，不扩成单张超级地图。
@@ -264,6 +338,7 @@ session.dispatch({ type: "buy-item", itemId: "turnip-seed", quantity: 1 });
 - 已登记 ID 是持久身份、坐标只是布局；Tiled 中可移动对象与重画 tile，但不得因构图变化重命名 `entityId`、`exitId`、`spawnId`、`npcId` 或 `dialogueId`。
 - 地图阶段以实际画面、动线、碰撞与操作为主要验收证据；decoder、类型检查和构建仅证明最低结构完整性。
 - 正式世界使用 2× 整数 camera zoom；不得退回 1× 全图总览造成角色和交互物过小，响应式缩放继续由 Phaser FIT 处理。
+- Town 扩展继续使用分区切图而不是放大单张主镇：`blacksmith`、五栋 `town-house*` 使用现有室内占位图集，`foothills`、`lakeshore` 使用现有 VectoRaith 户外 profile；每栋住宅外门可进入公共区，私人内屋只由 Collision + Tiled-owned `inspect dialogueId` 阻挡，禁止把访问状态写入 GameState/save。
 - Farm 固定扩为 64×48；核心构图集中在出生镜头附近，依次建立小屋、水塘/农田和东向道路三个视觉焦点。Gate A 只审大块构图，用户确认前禁止提前堆细节或新玩法实体。
 - Gate A v2 与 VectoRaith 方向验证已通过；Gate B 冻结 23 个 stable object，只允许在 ignored 候选 TMJ 完成岸线、院落/石板、弯曲道路、农田边界、小桥、林缘、Collision 与 AbovePlayer。截图确认前不得进入 Gate C、装饰或新系统。
 
@@ -391,6 +466,7 @@ type LifeLoopCommand =
 ### 3. Contracts
 
 - 新游戏固定 `day=1`、`gold=100`；HUD 只投影 `Day N` 与 `Ng`。
+- 玩家在 42px 内点击 Cottage 床后先打开“是否休息？”确认框；“否”只关闭 modal，“是”关闭 modal 后调用一次既有 sleep transition。远距离点击静默无效，E 不承担睡觉交互。
 - `sleep` 必须在一次同步 mutation 中依序完成：结算所有 watered crops → 清除每日 watered → `day + 1` → Cottage 安全位置；随后由 GameSession 排队一次 critical save。
 - 萝卜播种后只有“该日已浇水 + 成功睡觉”才增长 1 阶；3 次有效日结后 mature。wall-clock、刷新等待和同日重复浇水都不能额外成长。
 - `turnip-seed` 每次只买 1 个、价格 20g；`turnip` 每次只卖 1 个、价格 35g。扣款/加物与背包 mutation 必须全成或全不成。
@@ -501,7 +577,7 @@ interface ToolSelectionProjection {
 
 - Good：按 1 选锄头→点击未耕地；选择种子→播种；选择浇水壶→浇水；成熟后取消选择→空手俯身收获。
 - Base：选择斧头点击成熟作物，斧头动作播放但作物完全不动；再次按斧头槽回到空手。
-- Bad：FarmPlot 根据 phase 自动选择动作、Vue 直接改 inventory、把 selected index 写进 v3 save，或错误工具仍触发 target shake。
+- Bad：FarmPlot 根据 phase 自动选择动作、Vue 直接改 inventory、把 selected index 写进 current save，或错误工具仍触发 target shake。
 
 ### 6. Tests Required
 
@@ -518,6 +594,69 @@ session.dispatch({ type: "farm-primary", tileId });
 
 // Correct: client sends the selected item; domain validates the exact pair.
 session.dispatch({ type: "use-item-on-target", itemId: selectedItemId, targetId: tileId });
+```
+
+## Scenario: presentation-only NPC hit reaction
+
+### 1. Scope / Trigger
+
+- Trigger：玩家空手按 Space 时需要一个短促挥拳反馈，并允许当前三个固定 NPC 产生非致命视觉反应；本场景不建立战斗领域状态。
+
+### 2. Signatures
+
+```typescript
+type Facing = "down" | "up" | "left" | "right";
+
+interface NpcHitCandidate extends WorldPoint {
+  readonly entityId: string;
+}
+
+function selectNpcHitTarget<T extends NpcHitCandidate>(
+  player: WorldPoint,
+  facing: Facing,
+  candidates: readonly T[],
+): T | null;
+```
+
+### 3. Contracts
+
+- Space 只在 `selectedItemId === ""`、world input unlocked、transition idle 和 ActionTimeline idle 时开始；工具、种子或其他手持物存在时完全无动作。
+- 命中走廊固定为前向 `0..28px`、横向绝对距离 `<=10px`；多目标按欧氏距离平方、再按 stable entity ID 决定唯一目标。
+- 玩家挥空仍播放 `120ms windup → 90ms impact → 180ms recovery`；命中只调用 NpcEntity 的临时闪白、约 6px 击退和复位。
+- NPC Tiled spawn、脚底碰撞、GameState、StoredGame 和 IndexedDB 永远不因击打改变；切图/Scene shutdown 必须终止 tween、清 tint 并恢复 spawn。
+- Phaser 4 的填充闪白使用 `setTint(color).setTintMode(Phaser.TintModes.FILL)`；禁止调用已移除参数语义的 `setTintFill(color)`。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| Space 时手持任意物品 | 无动画、无 NPC 反应 |
+| 前方无合法 NPC | 只播放挥拳 |
+| NPC 在背后、横向超 10px 或前向超 28px | NPC 不反应 |
+| NPC 已在 reaction 中 | 不叠加 tween；当前挥拳正常结束 |
+| Shop/Dialogue/休息确认/工具动作/切图中 | 忽略 Space |
+| Scene teardown | 玩家与 NPC 临时坐标/tint 全部复位 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：空手面对 NPC 按 Space，玩家短突进，最近的前方 NPC 闪白后退并回到原位，存档字节不变。
+- Base：面对空地挥拳有动作；拿着锄头按 Space 完全无动作。
+- Bad：把击打次数、NPC 坐标或血量写入 GameSession，按鼠标攻击，或让击退改变地图碰撞位置。
+
+### 6. Tests Required
+
+- 纯目标选择断言四方向、背后、横向、超距、最近目标与 stable ID tie-break。
+- client typecheck 与 build 必须通过；Life Loop、Town Population 和工具交互窄合同不得回退。
+- 真实浏览器检查空手/手持、挥空、命中、连续 Space、打开 modal 与切图后的 tint/坐标残留。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: a presentation hit becomes persistent combat state.
+session.dispatch({ type: "damage-npc", npcId, amount: 1 });
+
+// Correct: the client chooses one active-region visual target and restores it after feedback.
+selectNpcHitTarget(player, facing, candidates)?.entity.playHitReaction(facingVector(facing));
 ```
 
 ## Scenario: anonymous local playtest entry

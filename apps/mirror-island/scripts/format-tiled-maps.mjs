@@ -4,7 +4,20 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const mapDirectory = join(root, "public", "map");
-const supportedMapNames = ["farm.tmj", "town.tmj", "cottage.tmj", "seed-shop.tmj"];
+const supportedMapNames = [
+  "farm.tmj",
+  "town.tmj",
+  "cottage.tmj",
+  "seed-shop.tmj",
+  "blacksmith.tmj",
+  "town-house-west.tmj",
+  "town-house-north.tmj",
+  "town-house.tmj",
+  "town-house-southwest.tmj",
+  "town-house-east.tmj",
+  "foothills.tmj",
+  "lakeshore.tmj",
+];
 const requestedMapNames = process.argv.slice(2);
 const mapNames = requestedMapNames.length > 0 ? requestedMapNames : supportedMapNames;
 if (mapNames.some((name) => !supportedMapNames.includes(name))) {

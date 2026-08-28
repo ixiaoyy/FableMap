@@ -4,6 +4,7 @@ import { VECTORAITH_MEDIA_URLS } from "./visual-profile.ts";
 export const TOOL_ART_CANDIDATE_KEYS = {
   plowing: "tool-art-vectoraith-plowing",
   helloTools: "tool-art-hello-rumin-tools",
+  gardensIcons: "tool-art-ivoryred-gardens-icons",
 } as const;
 
 export const TOOL_ART_CANDIDATE_URLS = {
@@ -39,7 +40,12 @@ const CANDIDATE_ICONS: Readonly<Partial<Record<ItemId, CandidateIconDefinition>>
 
 export const HELLO_RUMIN_TOOL_FRAMES = {
   watering: 6,
+  hoe: 13,
   axe: 27,
+} as const;
+
+export const GARDENS_ICON_FRAMES = {
+  seedBag: 56,
 } as const;
 
 export const VECTORAITH_PLOWING_FRAMES = {
@@ -65,6 +71,17 @@ export function isToolArtPreviewEnabled(search = window.location.search): boolea
 /** Resolves one presentation-only Hotbar icon without adding media fields to item definitions or saves. */
 export function candidateIconForItem(itemId: string): CandidateIconDefinition | null {
   return CANDIDATE_ICONS[itemId as ItemId] ?? null;
+}
+
+/** Maps the transient held item to its player-side animation without inspecting target state. */
+export function candidateActionForItem(itemId: string): CandidateToolAction {
+  switch (itemId) {
+    case ITEM_ID.axe: return "axe";
+    case ITEM_ID.hoe: return "plow";
+    case ITEM_ID.wateringCan: return "water";
+    case ITEM_ID.turnipSeed: return "plant";
+    default: return "harvest";
+  }
 }
 
 /** Creates one reviewed 16×16 frame reference into an unchanged full source image. */

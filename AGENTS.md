@@ -48,7 +48,7 @@
 
 ## 权威来源与验证
 
-- 权威入口：`README.md`、`docs/INDEX.md`、`docs/PRODUCT_BRIEF.md`、`docs/WHAT_NOT_TO_BUILD.md`、`docs/IMAGE_ASSETS_SPEC.md`、`docs/DEPLOYMENT.md`、`.trellis/spec/frontend/mirror-island-phaser-singleplayer.md`。
+- 权威入口：`README.md`、`docs/INDEX.md`、`docs/PRODUCT_BRIEF.md`、`docs/WHAT_NOT_TO_BUILD.md`、`docs/TOWN_ROADMAP.md`、`docs/IMAGE_ASSETS_SPEC.md`、`docs/DEPLOYMENT.md`、`.trellis/spec/frontend/mirror-island-phaser-singleplayer.md`。
 - 聊天与文档冲突时以用户最新明确决定为准，先同步权威合同再实现。
 - 查看/解释保持只读；只有用户要求修改才变更代码、配置或数据。
 - 结论只基于已检查代码、配置、数据、日志和运行状态；证据不足时说明缺口。

@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { FarmTileState, ResourceState } from "../../../../domain/state/game-state.ts";
 import type {
+  InspectInteractionDefinition,
   InteractionDefinition,
   NpcSpawnDefinition,
   ResourceSpawnDefinition,
@@ -182,11 +183,17 @@ export class BedEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
 
-  /** Creates one functional code-drawn Cottage bed while its stable position remains Tiled-owned. */
-  constructor(scene: Phaser.Scene, readonly interaction: InteractionDefinition) {
+  /** Creates one clickable Cottage bed while its stable position remains Tiled-owned. */
+  constructor(
+    scene: Phaser.Scene,
+    readonly interaction: InteractionDefinition,
+    onInteract: (entity: BedEntity) => void,
+  ) {
     this.entityId = interaction.entityId;
     const frame = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0x81502f, 1)
-      .setStrokeStyle(2, 0x4d311f, 1);
+      .setStrokeStyle(2, 0x4d311f, 1)
+      .setInteractive({ useHandCursor: true });
+    frame.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     const blanket = scene.add.rectangle(
       0,
       interaction.height * 0.13,
@@ -203,7 +210,7 @@ export class BedEntity {
       0xead9ae,
       1,
     );
-    const prompt = scene.add.text(0, -interaction.height / 2 - 6, "E 睡觉", {
+    const prompt = scene.add.text(0, -interaction.height / 2 - 6, "点击休息", {
       ...textStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
       padding: { x: 3, y: 1 },
@@ -226,22 +233,71 @@ export class BedEntity {
   }
 }
 
-export class NpcEntity {
+export class InspectEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
 
-  /** Creates one fixed NPC from the supplied atlas while dialogue metadata remains catalog-owned. */
-  constructor(scene: Phaser.Scene, readonly spawn: NpcSpawnDefinition, media: EntityMediaProfile) {
+  /** Creates one invisible Tiled-owned inspect hotspot with a hover-only affordance. */
+  constructor(
+    scene: Phaser.Scene,
+    readonly interaction: InspectInteractionDefinition,
+    onInteract: (entity: InspectEntity) => void,
+  ) {
+    this.entityId = interaction.entityId;
+    const hitArea = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0xffffff, 0.001)
+      .setInteractive({ useHandCursor: true });
+    const prompt = scene.add.text(0, -interaction.height / 2 - 5, "查看", {
+      ...textStyle("#ffe7b5"),
+      backgroundColor: "#3d2918",
+      padding: { x: 3, y: 1 },
+    }).setOrigin(0.5).setVisible(false);
+    hitArea.on(Phaser.Input.Events.POINTER_OVER, () => prompt.setVisible(true));
+    hitArea.on(Phaser.Input.Events.POINTER_OUT, () => prompt.setVisible(false));
+    hitArea.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.container = scene.add.container(
+      interaction.x + interaction.width / 2,
+      interaction.y + interaction.height / 2,
+      [hitArea, prompt],
+    ).setDepth(100 + interaction.y + interaction.height);
+  }
+
+  /** Returns Euclidean distance from the hotspot center to one player position. */
+  distanceTo(x: number, y: number): number {
+    return Math.hypot(x - this.container.x, y - this.container.y);
+  }
+
+  /** Destroys the complete temporary inspect hotspot and all pointer listeners. */
+  destroy(): void {
+    this.container.destroy(true);
+  }
+}
+
+export class NpcEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Sprite;
+  private reactionAnimating = false;
+
+  /** Creates one clickable fixed NPC while dialogue metadata remains catalog-owned. */
+  constructor(
+    scene: Phaser.Scene,
+    readonly spawn: NpcSpawnDefinition,
+    media: EntityMediaProfile,
+    onInteract: (entity: NpcEntity) => void,
+  ) {
     this.entityId = spawn.entityId;
     const frame = media.npc.frames[spawn.npcId];
     if (!frame) throw new Error(`NPC appearance is missing for ${spawn.npcId}.`);
-    const body = scene.add.sprite(0, 0, media.npc.textureKey, frame.name).setOrigin(0.5, 0.82);
-    const prompt = scene.add.text(0, -26, "E", {
+    this.body = scene.add.sprite(0, 0, media.npc.textureKey, frame.name)
+      .setOrigin(0.5, 0.82)
+      .setInteractive({ useHandCursor: true });
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    const prompt = scene.add.text(0, -26, "点击", {
       ...textStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
       padding: { x: 3, y: 1 },
     }).setOrigin(0.5);
-    this.container = scene.add.container(spawn.x, spawn.y, [body, prompt]).setDepth(100 + spawn.y);
+    this.container = scene.add.container(spawn.x, spawn.y, [this.body, prompt]).setDepth(100 + spawn.y);
   }
 
   /** Returns Euclidean world distance from this NPC spawn to one player position. */
@@ -249,9 +305,46 @@ export class NpcEntity {
     return Math.hypot(x - this.spawn.x, y - this.spawn.y);
   }
 
+  /** Reports whether this temporary view already represents the supplied active schedule anchor. */
+  matchesSpawn(spawn: NpcSpawnDefinition): boolean {
+    return this.spawn.entityId === spawn.entityId
+      && this.spawn.regionId === spawn.regionId
+      && this.spawn.x === spawn.x
+      && this.spawn.y === spawn.y
+      && this.spawn.interactionType === spawn.interactionType;
+  }
+
+  /** Plays one non-stacking presentation-only flash and 6px knockback before restoring the Tiled spawn. */
+  playHitReaction(direction: Readonly<{ x: number; y: number }>): boolean {
+    if (this.reactionAnimating) return false;
+    this.reactionAnimating = true;
+    this.body.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+    this.container.setPosition(this.spawn.x, this.spawn.y);
+    this.container.scene.tweens.add({
+      targets: this.container,
+      x: this.spawn.x + direction.x * 6,
+      y: this.spawn.y + direction.y * 6,
+      duration: 70,
+      hold: 80,
+      yoyo: true,
+      ease: "Quad.Out",
+      onComplete: () => this.resetHitReaction(),
+    });
+    return true;
+  }
+
   /** Destroys the complete temporary NPC view. */
   destroy(): void {
+    this.container.scene.tweens.killTweensOf(this.container);
+    this.resetHitReaction();
     this.container.destroy(true);
+  }
+
+  /** Restores transient hit presentation without changing catalog or collision state. */
+  private resetHitReaction(): void {
+    this.reactionAnimating = false;
+    this.body.clearTint();
+    this.container.setPosition(this.spawn.x, this.spawn.y);
   }
 }
 
@@ -281,13 +374,21 @@ export class EntityFactory {
   }
 
   /** Creates one functional Cottage bed from its decoded Tiled interaction. */
-  createBed(interaction: InteractionDefinition): BedEntity {
-    return new BedEntity(this.scene, interaction);
+  createBed(interaction: InteractionDefinition, onInteract: (entity: BedEntity) => void): BedEntity {
+    return new BedEntity(this.scene, interaction, onInteract);
+  }
+
+  /** Creates one transient environment-inspection hotspot from decoded Tiled metadata. */
+  createInspect(
+    interaction: InspectInteractionDefinition,
+    onInteract: (entity: InspectEntity) => void,
+  ): InspectEntity {
+    return new InspectEntity(this.scene, interaction, onInteract);
   }
 
   /** Creates one fixed NPC entity from its catalog spawn metadata. */
-  createNpc(spawn: NpcSpawnDefinition): NpcEntity {
-    return new NpcEntity(this.scene, spawn, this.media);
+  createNpc(spawn: NpcSpawnDefinition, onInteract: (entity: NpcEntity) => void): NpcEntity {
+    return new NpcEntity(this.scene, spawn, this.media, onInteract);
   }
 }
 
