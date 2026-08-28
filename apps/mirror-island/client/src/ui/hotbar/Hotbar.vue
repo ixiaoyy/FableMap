@@ -5,16 +5,13 @@ import {
   getItemDefinition,
 } from "../../../../domain/items/definitions.ts";
 import {
-  candidateIconForItem,
-  isToolArtCandidateEnabled,
-  type CandidateIconDefinition,
-} from "../../game/assets/tool-art-candidate.ts";
+  itemIconForItem,
+  type ItemIconDefinition,
+} from "../../game/assets/item-icons.ts";
 import {
   gameUiState,
   selectHotbarSlot,
 } from "../../stores/game-store.ts";
-
-const toolArtCandidateEnabled = isToolArtCandidateEnabled();
 
 const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index) => {
   const slot = gameUiState.inventory[index];
@@ -22,14 +19,14 @@ const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index
   return {
     index,
     definition,
-    icon: toolArtCandidateEnabled && definition ? candidateIconForItem(definition.id) : null,
+    icon: definition ? itemIconForItem(definition.id) : null,
     quantity: slot?.quantity ?? 0,
     selected: gameUiState.selectedHotbarIndex === index,
   };
 }));
 
 /** Converts one source-sheet frame into an integer 2× CSS sprite without generating a derivative image. */
-function iconStyle(icon: CandidateIconDefinition): Record<string, string> {
+function iconStyle(icon: ItemIconDefinition): Record<string, string> {
   return {
     backgroundImage: `url("${icon.url}")`,
     backgroundPosition: `${-icon.x * 2}px ${-icon.y * 2}px`,

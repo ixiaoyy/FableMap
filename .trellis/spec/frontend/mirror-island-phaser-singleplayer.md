@@ -526,6 +526,69 @@ crop.setVisible(tile.phase === "growing" || tile.phase === "mature");
 farmTile.frameName = "vectoraith-crop-mature";
 ```
 
+## Scenario: production Hotbar item icons
+
+### 1. Scope / Trigger
+
+- Trigger：Tool Art Gate A 已确认 GARDENS 工具/种子图标，正式 Hotbar 不再使用大号汉字占位；本场景只晋升 UI item frame，不晋升候选工具动作。
+
+### 2. Signatures
+
+```typescript
+interface ItemIconDefinition {
+  readonly url: string;
+  readonly sourceWidth: number;
+  readonly sourceHeight: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: 16;
+  readonly height: 16;
+}
+
+function itemIconForItem(itemId: string): ItemIconDefinition | null;
+```
+
+### 3. Contracts
+
+- `client/src/game/assets/item-icons.ts` 是正式 item ID → immutable source/frame 的唯一 owner；ItemDefinition、GameState、StoredGame 和 IndexedDB 不保存 URL、texture key 或 frame。
+- GARDENS 采用原始 160×176 PNG：hoe `(0,1)`、watering can `(0,4)`、axe `(0,9)`、turnip seed `(6,5)`；turnip/wood 继续使用已登记 VectoRaith crops/details frame。
+- GARDENS 对象固定在 `game/media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/`，bytes/SHA-256 必须等于 manifest；禁止裁图、重排、重编码或把 PNG 加入 Git。
+- Hotbar 对 mapped item 显示 2× nearest-neighbor 图标并保留小字 name/quantity/selection；只有确实 unmapped 的 item 才回退 `hotbarMark`。
+- CC BY 4.0 署名必须随产品交付到 `/THIRD_PARTY_NOTICES.txt` 并从 start UI 可发现；仓库内部采用记录不能替代产品署名。
+- `tool-art-candidate.ts` 只保留 development-only action preview；生产 Hotbar 不读取 `import.meta.env.DEV` 或 query flag。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| CDN key 已存在但 SHA 不同 | 发布失败，禁止覆盖 immutable object |
+| manifest totals/key/hash/URL 不一致 | 构建/部署媒体门禁失败 |
+| mapped item 图标请求失败 | 生产验收失败，不把缺图当成功发布 |
+| item 无正式 frame | Hotbar 使用 `hotbarMark`，name/quantity 仍正常 |
+| notice 缺失或不可访问 | CC-BY 采用未完成，不部署 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：新游戏前三格显示锄头、浇水壶、斧头像素图标，选择和数量不变，网络只请求登记的同源媒体。
+- Base：未来新增尚未评审的 item 仍显示文字 mark，不猜 frame、不复用不相干图标。
+- Bad：生产依赖 `/tool-art-candidate/`、在 ItemDefinition 写图片 URL、提交 PNG，或只在仓库 README 署名。
+
+### 6. Tests Required
+
+- manifest 断言 14 images / 214731 bytes，并从 CDN 校验全部 SHA-256、dimensions、MIME 与 immutable cache。
+- typecheck、client build；产物包含正式 GARDENS URL 和 `THIRD_PARTY_NOTICES.txt`，不包含旧 local GARDENS candidate URL。
+- Git 图片 binary diff 为 0；真实浏览器断言前三格使用图标且 notice 可访问。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: production Hotbar remains behind a development-only visual gate.
+const icon = import.meta.env.DEV ? candidateIconForItem(itemId) : null;
+
+// Correct: production resolves one reviewed presentation frame without changing item state.
+const icon = itemIconForItem(itemId);
+```
+
 ## Scenario: selected Hotbar item owns world interaction
 
 ### 1. Scope / Trigger

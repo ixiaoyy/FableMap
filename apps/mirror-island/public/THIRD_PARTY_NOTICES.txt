@@ -1,0 +1,9 @@
+Mirror Island — Third-Party Notices
+
+GARDENS, 16x16 icon pack
+Author: IvoryRed
+Official source: https://ivoryred.itch.io/gardens-16x16-icon-pack
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+Use in Mirror Island: Hotbar tool and seed icons selected from the original sheet.
+Modification: None. The published PNG is byte-identical to the reviewed official file.

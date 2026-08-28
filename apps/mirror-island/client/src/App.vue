@@ -213,7 +213,7 @@ onUnmounted(() => {
 
     <footer v-if="gameUiState.phase !== 'playing' || debugMode" class="field-footer">
       <span>{{ gameUiState.phase === 'playing' ? '移动靠近目标 · 点击树木或农田' : '单人世界 · 本地存档' }}</span>
-      <span>World Foundation</span>
+      <a href="/THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener noreferrer">素材鸣谢</a>
     </footer>
   </main>
 </template>

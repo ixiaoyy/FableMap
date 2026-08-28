@@ -716,6 +716,16 @@ h1 {
   text-transform: uppercase;
 }
 
+.field-footer a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+.field-footer a:hover,
+.field-footer a:focus-visible {
+  color: var(--acid);
+}
+
 .failure {
   position: fixed;
   inset: 50% auto auto 50%;

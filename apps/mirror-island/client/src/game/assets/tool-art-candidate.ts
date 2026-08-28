@@ -1,5 +1,5 @@
-import { ITEM_ID, type ItemId } from "../../../../domain/items/definitions.ts";
-import { VECTORAITH_MEDIA_URLS } from "./visual-profile.ts";
+import { ITEM_ID } from "../../../../domain/items/definitions.ts";
+import { GARDENS_ICON_URL } from "./item-icons.ts";
 
 export const TOOL_ART_CANDIDATE_KEYS = {
   plowing: "tool-art-vectoraith-plowing",
@@ -10,33 +10,10 @@ export const TOOL_ART_CANDIDATE_KEYS = {
 export const TOOL_ART_CANDIDATE_URLS = {
   plowing: "/tool-art-candidate/vectoraith-farmer-plowing.png",
   helloTools: "/tool-art-candidate/hello-rumin-tool-animation.png",
-  gardensIcons: "/tool-art-candidate/ivoryred-gardens-icons.png",
+  gardensIcons: GARDENS_ICON_URL,
 } as const;
 
 export type CandidateToolAction = "axe" | "plow" | "plant" | "water" | "harvest";
-
-export interface CandidateIconDefinition {
-  readonly url: string;
-  readonly sourceWidth: number;
-  readonly sourceHeight: number;
-  readonly x: number;
-  readonly y: number;
-  readonly width: 16;
-  readonly height: 16;
-}
-
-const GARDENS_SOURCE = { url: TOOL_ART_CANDIDATE_URLS.gardensIcons, width: 160, height: 176 } as const;
-const VECTORAITH_CROPS_SOURCE = { url: VECTORAITH_MEDIA_URLS.crops, width: 256, height: 256 } as const;
-const VECTORAITH_DETAILS_SOURCE = { url: VECTORAITH_MEDIA_URLS.details, width: 256, height: 256 } as const;
-
-const CANDIDATE_ICONS: Readonly<Partial<Record<ItemId, CandidateIconDefinition>>> = {
-  [ITEM_ID.axe]: icon(GARDENS_SOURCE, 0, 9),
-  [ITEM_ID.hoe]: icon(GARDENS_SOURCE, 0, 1),
-  [ITEM_ID.wateringCan]: icon(GARDENS_SOURCE, 0, 4),
-  [ITEM_ID.turnipSeed]: icon(GARDENS_SOURCE, 6, 5),
-  [ITEM_ID.turnip]: icon(VECTORAITH_CROPS_SOURCE, 7, 1),
-  [ITEM_ID.wood]: icon(VECTORAITH_DETAILS_SOURCE, 6, 5),
-};
 
 export const HELLO_RUMIN_TOOL_FRAMES = {
   watering: 6,
@@ -68,11 +45,6 @@ export function isToolArtPreviewEnabled(search = window.location.search): boolea
     && (parameters.get("toolArt") === "preview" || parameters.get("toolArtPreview") === "1");
 }
 
-/** Resolves one presentation-only Hotbar icon without adding media fields to item definitions or saves. */
-export function candidateIconForItem(itemId: string): CandidateIconDefinition | null {
-  return CANDIDATE_ICONS[itemId as ItemId] ?? null;
-}
-
 /** Maps the transient held item to its player-side animation without inspecting target state. */
 export function candidateActionForItem(itemId: string): CandidateToolAction {
   switch (itemId) {
@@ -82,21 +54,4 @@ export function candidateActionForItem(itemId: string): CandidateToolAction {
     case ITEM_ID.turnipSeed: return "plant";
     default: return "harvest";
   }
-}
-
-/** Creates one reviewed 16×16 frame reference into an unchanged full source image. */
-function icon(
-  source: { readonly url: string; readonly width: number; readonly height: number },
-  column: number,
-  row: number,
-): CandidateIconDefinition {
-  return {
-    url: source.url,
-    sourceWidth: source.width,
-    sourceHeight: source.height,
-    x: column * 16,
-    y: row * 16,
-    width: 16,
-    height: 16,
-  };
 }
