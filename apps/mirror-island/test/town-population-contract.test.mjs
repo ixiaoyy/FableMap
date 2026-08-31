@@ -198,12 +198,18 @@ test("formal world maps decode NPCs, expansion exits and inspect hotspots throug
   assert.equal(activeNpcById(catalog, "seed-keeper", 1020)?.interactionType, "dialogue");
 
   const activityRuntime = new NpcMotionRuntime(catalog);
-  activityRuntime.reset(540);
-  assert.deepEqual(
-    activityRuntime.activeSpawns().filter(({ activity }) => activity !== null).map(({ npcId, activity }) => (
-      [npcId, activity]
-    )),
-    [
+  const expectedActivitiesByMinute = [
+    [360, [
+      ["town-resident-01", "tend"],
+      ["town-blacksmith", "prepare"],
+      ["seed-keeper", "stock"],
+      ["town-resident-mozi", "prepare"],
+      ["town-resident-haonan", "prepare"],
+      ["town-resident-alan", "prepare"],
+      ["town-resident-haomeili", "sew"],
+      ["town-resident-xiangzi", "rope-check"],
+    ]],
+    [540, [
       ["town-resident-01", "tend"],
       ["town-blacksmith", "forge"],
       ["seed-keeper", "serve"],
@@ -212,13 +218,55 @@ test("formal world maps decode NPCs, expansion exits and inspect hotspots throug
       ["town-resident-alan", "observe"],
       ["town-resident-haomeili", "organize"],
       ["town-resident-xiangzi", "dock-watch"],
-    ],
-  );
+    ]],
+    [1020, [
+      ["town-resident-01", "observe"],
+      ["town-blacksmith", "close"],
+      ["seed-keeper", "close"],
+      ["town-resident-mozi", "repair"],
+      ["town-resident-haonan", "record"],
+      ["town-resident-alan", "observe"],
+      ["town-resident-haomeili", "organize"],
+      ["town-resident-xiangzi", "close"],
+    ]],
+    [1260, [
+      ["town-resident-01", "tea"],
+      ["town-blacksmith", "tea"],
+      ["seed-keeper", "record"],
+      ["town-resident-mozi", "organize"],
+      ["town-resident-haonan", "record"],
+      ["town-resident-alan", "tea"],
+      ["town-resident-haomeili", "tea"],
+      ["town-resident-xiangzi", "record"],
+    ]],
+  ];
+  for (const [minuteOfDay, expectedActivities] of expectedActivitiesByMinute) {
+    activityRuntime.reset(minuteOfDay);
+    assert.deepEqual(
+      activityRuntime.activeSpawns().map(({ npcId, activity }) => [npcId, activity]),
+      expectedActivities,
+    );
+  }
+
+  activityRuntime.reset(540);
   assert.equal(activityRuntime.activeByNpcId("town-resident-mozi")?.activityPhase, 0);
   activityRuntime.advance(400);
   assert.equal(activityRuntime.activeByNpcId("town-resident-mozi")?.activityPhase, 1);
+
+  activityRuntime.reset(1260);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-01")?.activityPhase, 0);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-alan")?.activityPhase, 0);
+  assert.equal(activityRuntime.activeByNpcId("town-blacksmith")?.activityPhase, 0);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-haomeili")?.activityPhase, 0);
+  activityRuntime.advance(400);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-01")?.activityPhase, 1);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-alan")?.activityPhase, 1);
+  assert.equal(activityRuntime.activeByNpcId("town-blacksmith")?.activityPhase, 1);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-haomeili")?.activityPhase, 1);
+
   activityRuntime.reset(360);
-  assert.equal(activityRuntime.activeSpawns().every(({ activity }) => activity === null), true);
+  activityRuntime.transitionTo(540);
+  assert.equal(activityRuntime.activeByNpcId("seed-keeper")?.activity, null);
 
   activityRuntime.reset(540);
   const haonanStart = activityRuntime.activeByNpcId("town-resident-haonan");
