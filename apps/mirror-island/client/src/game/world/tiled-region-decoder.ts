@@ -190,8 +190,10 @@ function decodeResources(layer: Record<string, unknown>, regionId: string): read
     const entityId = requiredString(properties, "entityId");
     const kind = requiredString(properties, "resourceKind");
     assertStableId(entityId, "Resource entity ID");
-    if (kind !== "tree" && kind !== "stone") throw new Error("Resource kind is invalid.");
-    return { entityId, regionId, kind, ...pointFrom(object) };
+    if (!["tree", "stone", "spring-wildflower", "bamboo-shoot"].includes(kind)) {
+      throw new Error("Resource kind is invalid.");
+    }
+    return { entityId, regionId, kind: kind as ResourceSpawnDefinition["kind"], ...pointFrom(object) };
   });
 }
 

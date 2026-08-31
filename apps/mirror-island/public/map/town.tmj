@@ -942,7 +942,58 @@
       "draworder": "topdown",
       "id": 10,
       "name": "ResourceSpawns",
-      "objects": [],
+      "objects": [
+        {
+          "height": 0,
+          "id": 130,
+          "name": "Spring Wildflower",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "town-forage-flower-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "spring-wildflower"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 96,
+          "y": 400
+        },
+        {
+          "height": 0,
+          "id": 131,
+          "name": "Bamboo Shoot",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "town-forage-bamboo-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "bamboo-shoot"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 560,
+          "y": 160
+        }
+      ],
       "opacity": 1,
       "type": "objectgroup",
       "visible": false,
@@ -1031,7 +1082,7 @@
     }
   ],
   "nextlayerid": 12,
-  "nextobjectid": 130,
+  "nextobjectid": 132,
   "orientation": "orthogonal",
   "properties": [
     {

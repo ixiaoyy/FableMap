@@ -861,6 +861,56 @@
           "width": 0,
           "x": 672,
           "y": 272
+        },
+        {
+          "height": 0,
+          "id": 163,
+          "name": "Spring Wildflower",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-forage-flower-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "spring-wildflower"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 240,
+          "y": 400
+        },
+        {
+          "height": 0,
+          "id": 164,
+          "name": "Bamboo Shoot",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-forage-bamboo-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "bamboo-shoot"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 560,
+          "y": 336
         }
       ],
       "opacity": 1,
@@ -882,7 +932,7 @@
     }
   ],
   "nextlayerid": 12,
-  "nextobjectid": 163,
+  "nextobjectid": 165,
   "orientation": "orthogonal",
   "properties": [
     {

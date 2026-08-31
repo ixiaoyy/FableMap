@@ -28,6 +28,7 @@ import ShopPanel from "./ui/shop/ShopPanel.vue";
 import SleepConfirmationPanel from "./ui/sleep/SleepConfirmationPanel.vue";
 import SocialPanel from "./ui/social/SocialPanel.vue";
 import TouchControls from "./ui/controls/TouchControls.vue";
+import CalendarPanel from "./ui/calendar/CalendarPanel.vue";
 import CharacterCreator from "./ui/character/CharacterCreator.vue";
 
 const failureMessage = ref("");
@@ -173,13 +174,14 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
       </p>
       <LifeHud />
       <SocialPanel />
+      <CalendarPanel />
       <TouchControls v-if="!debugMode" />
       <DialoguePanel />
       <ShopPanel />

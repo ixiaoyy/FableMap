@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { ITEM_ID } from "../../../../domain/items/definitions.ts";
-import {
-  TURNIP_SEED_BUY_PRICE,
-  TURNIP_SELL_PRICE,
-} from "../../../../domain/shop/ShopSystem.ts";
+import { ITEM_DEFINITIONS, ITEM_ID, type ItemId } from "../../../../domain/items/definitions.ts";
+import { calendarAt } from "../../../../domain/calendar/game-calendar.ts";
+import { CROP_DEFINITIONS, cropsForSeason, sellPriceForItem } from "../../../../domain/farming/crops.ts";
 import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
 import { closeShop, gameUiState } from "../../stores/game-store.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
 
 const panel = ref<HTMLElement | null>(null);
-const turnipSeedQuantity = computed(() => itemQuantity(ITEM_ID.turnipSeed));
-const turnipQuantity = computed(() => itemQuantity(ITEM_ID.turnip));
-const canBuyTurnipSeed = computed(() => gameUiState.gold >= TURNIP_SEED_BUY_PRICE);
-const canSellTurnip = computed(() => turnipQuantity.value > 0);
+const seedGoods = computed(() => cropsForSeason(calendarAt(gameUiState.day).season));
+const sellGoods = computed(() => [
+  ...CROP_DEFINITIONS.map(({ cropId }) => cropId),
+  ITEM_ID.springWildflower,
+  ITEM_ID.bambooShoot,
+]);
 
 /** Returns one inventory projection total without owning domain inventory rules. */
 function itemQuantity(itemId: string): number {
@@ -23,13 +23,13 @@ function itemQuantity(itemId: string): number {
 }
 
 /** Requests one fixed-price turnip seed purchase from GameSession. */
-function buyTurnipSeed(): void {
-  dispatchLocalGameCommand({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 });
+function buyItem(itemId: ItemId): void {
+  dispatchLocalGameCommand({ type: "buy-item", itemId, quantity: 1 });
 }
 
 /** Requests one fixed-price harvested turnip sale from GameSession. */
-function sellTurnip(): void {
-  dispatchLocalGameCommand({ type: "sell-item", itemId: ITEM_ID.turnip, quantity: 1 });
+function sellItem(itemId: ItemId): void {
+  dispatchLocalGameCommand({ type: "sell-item", itemId, quantity: 1 });
 }
 
 /** Leaves the shop and restores keyboard control to the world canvas. */
@@ -65,30 +65,30 @@ watch(() => gameUiState.shopOpen, (open) => {
       <p class="shop-panel__welcome">{{ gameUiState.shopWelcome }}</p>
 
       <div class="shop-panel__goods">
-        <article>
+        <article v-for="crop in seedGoods" :key="crop.seedId">
           <div>
-            <h3>萝卜种子</h3>
-            <p>持有 {{ turnipSeedQuantity }} · 每次购买 1 粒</p>
+            <h3>{{ ITEM_DEFINITIONS[crop.seedId].name }}</h3>
+            <p>持有 {{ itemQuantity(crop.seedId) }} · 成长 {{ crop.growthDays }} 天</p>
           </div>
           <button
             type="button"
-            :disabled="!canBuyTurnipSeed"
-            @click="buyTurnipSeed"
+            :disabled="gameUiState.gold < crop.seedPrice"
+            @click="buyItem(crop.seedId)"
           >
-            {{ canBuyTurnipSeed ? `购买 ${TURNIP_SEED_BUY_PRICE}g` : "金币不足" }}
+            {{ gameUiState.gold >= crop.seedPrice ? `购买 ${crop.seedPrice}g` : "金币不足" }}
           </button>
         </article>
-        <article>
+        <article v-for="itemId in sellGoods" :key="itemId">
           <div>
-            <h3>萝卜</h3>
-            <p>持有 {{ turnipQuantity }} · 每次出售 1 个</p>
+            <h3>{{ ITEM_DEFINITIONS[itemId].name }}</h3>
+            <p>持有 {{ itemQuantity(itemId) }} · 每次出售 1 个</p>
           </div>
           <button
             type="button"
-            :disabled="!canSellTurnip"
-            @click="sellTurnip"
+            :disabled="itemQuantity(itemId) < 1"
+            @click="sellItem(itemId)"
           >
-            {{ canSellTurnip ? `出售 ${TURNIP_SELL_PRICE}g` : "无可出售" }}
+            {{ itemQuantity(itemId) > 0 ? `出售 ${sellPriceForItem(itemId)}g` : "无可出售" }}
           </button>
         </article>
       </div>

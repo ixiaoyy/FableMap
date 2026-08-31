@@ -7,8 +7,8 @@ export type GameCommand =
   | { readonly type: "craft"; readonly recipeId: RecipeId }
   | { readonly type: "sleep"; readonly bedId: string }
   | { readonly type: "talk-to-npc"; readonly npcId: string }
-  | { readonly type: "buy-item"; readonly itemId: typeof ITEM_ID.turnipSeed; readonly quantity: 1 }
-  | { readonly type: "sell-item"; readonly itemId: typeof ITEM_ID.turnip; readonly quantity: 1 }
+  | { readonly type: "buy-item"; readonly itemId: ItemId; readonly quantity: 1 }
+  | { readonly type: "sell-item"; readonly itemId: ItemId; readonly quantity: 1 }
   | { readonly type: "transition-region"; readonly exitId: string };
 
 export interface ActionFeedback {

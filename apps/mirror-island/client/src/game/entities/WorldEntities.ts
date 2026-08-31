@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { FarmTileState, ResourceState } from "../../../../domain/state/game-state.ts";
+import { cropDefinition } from "../../../../domain/farming/crops.ts";
 import type { NpcRuntimeSpawn } from "../../../../domain/world/npc-motions.ts";
 import type {
   ExitDefinition,
@@ -138,8 +139,7 @@ export class FarmPlotEntity {
   readonly container: Phaser.GameObjects.Container;
   private readonly soil: Phaser.GameObjects.Image;
   private readonly crop: Phaser.GameObjects.Image | null;
-  private readonly growingCropFrame: string | null;
-  private readonly matureCropFrame: string | null;
+  private readonly cropFrames: EntityMediaProfile["farmCrops"];
 
   /** Creates one clickable farm plot at a Tiled rectangle using the supplied presentation-only soil frame. */
   constructor(
@@ -152,11 +152,11 @@ export class FarmPlotEntity {
     this.soil = scene.add.image(0, 0, media.farmSoil.textureKey, media.farmSoil.frame.name)
       .setInteractive({ useHandCursor: true });
     this.soil.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
-    this.crop = media.farmCrop
-      ? scene.add.image(0, -4, media.farmCrop.textureKey, media.farmCrop.growingFrame.name).setVisible(false)
+    const initialCrop = Object.values(media.farmCrops ?? {}).find(Boolean);
+    this.crop = initialCrop
+      ? scene.add.image(0, -4, initialCrop.textureKey, initialCrop.growingFrame.name).setVisible(false)
       : null;
-    this.growingCropFrame = media.farmCrop?.growingFrame.name ?? null;
-    this.matureCropFrame = media.farmCrop?.matureFrame.name ?? null;
+    this.cropFrames = media.farmCrops;
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
@@ -170,16 +170,15 @@ export class FarmPlotEntity {
     this.soil.setTint(appearance.tint);
     this.soil.setAlpha(appearance.alpha);
     if (this.crop) {
-      const cropFrame = tile.phase === "mature"
-        ? this.matureCropFrame
-        : tile.phase === "growing"
-          ? this.growingCropFrame
-          : null;
+      const frames = tile.cropId === "" ? null : this.cropFrames?.[tile.cropId] ?? null;
+      const cropFrame = tile.phase === "mature" ? frames?.matureFrame.name
+        : tile.phase === "growing" ? frames?.growingFrame.name : null;
       this.crop.setVisible(cropFrame !== null);
-      if (cropFrame) {
+      if (cropFrame && frames) {
+        this.crop.setTexture(frames.textureKey);
         this.crop.setFrame(cropFrame);
         this.crop.setScale(cropScale(tile));
-        this.crop.setAlpha(tile.phase === "growing" && tile.growthStage === 0 ? 0.72 : 1);
+        this.crop.setAlpha(tile.phase === "growing" && tile.growthDays === 0 ? 0.72 : 1);
       }
     }
   }
@@ -285,6 +284,33 @@ export class BedEntity {
   private refreshPrompt(): void {
     this.prompt.setVisible(!this.inputLocked && (this.hovered || this.nearby));
   }
+}
+
+export class ForageEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+
+  /** Creates one clickable seasonal forage view from a Tiled candidate and reviewed atlas frame. */
+  constructor(
+    scene: Phaser.Scene,
+    readonly spawn: ResourceSpawnDefinition,
+    media: EntityMediaProfile,
+    onInteract: (entity: ForageEntity) => void,
+  ) {
+    this.entityId = spawn.entityId;
+    const visual = spawn.kind === "spring-wildflower" || spawn.kind === "bamboo-shoot"
+      ? media.forage?.[spawn.kind]
+      : null;
+    if (!visual) throw new Error(`Forage appearance is missing for ${spawn.kind}.`);
+    const body = scene.add.image(0, 0, visual.textureKey, visual.frame.name)
+      .setOrigin(0.5, 1)
+      .setInteractive({ useHandCursor: true });
+    body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
+  }
+
+  /** Destroys the temporary forage view and pointer listener. */
+  destroy(): void { this.container.destroy(true); }
 }
 
 export class InspectEntity {
@@ -713,6 +739,11 @@ export class EntityFactory {
     return new InspectEntity(this.scene, interaction, onInteract);
   }
 
+  /** Creates one active seasonal forage entity with its empty-hand interaction callback. */
+  createForage(spawn: ResourceSpawnDefinition, onInteract: (entity: ForageEntity) => void): ForageEntity {
+    return new ForageEntity(this.scene, spawn, this.media, onInteract);
+  }
+
   /** Creates one automatic-exit proximity hint with a camera-safe prompt position. */
   createExitHint(
     exit: ExitDefinition,
@@ -769,13 +800,10 @@ function farmAppearance(tile: FarmTileState): { readonly tint: number; readonly 
   }
 }
 
-/** Maps the three day-growth stages to a restrained presentation-only crop scale. */
+/** Maps generic watered-day progress to a restrained presentation-only crop scale. */
 function cropScale(tile: FarmTileState): number {
   if (tile.phase === "mature") return 1;
-  switch (tile.growthStage) {
-    case 0: return 0.5;
-    case 1: return 0.7;
-    case 2: return 0.88;
-    case 3: return 1;
-  }
+  if (tile.cropId === "") return 0.5;
+  const crop = cropDefinition(tile.cropId);
+  return crop ? 0.5 + 0.38 * Math.min(1, tile.growthDays / crop.growthDays) : 0.5;
 }

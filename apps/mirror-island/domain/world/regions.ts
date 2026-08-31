@@ -43,7 +43,7 @@ export interface ExitDefinition extends WorldRect {
 export interface ResourceSpawnDefinition extends WorldPoint {
   readonly entityId: string;
   readonly regionId: string;
-  readonly kind: "tree" | "stone";
+  readonly kind: "tree" | "stone" | "spring-wildflower" | "bamboo-shoot";
 }
 
 export interface StandardInteractionDefinition extends WorldRect {

@@ -1,4 +1,6 @@
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
+import { calendarAt } from "../calendar/game-calendar.ts";
+import { cropDefinition, cropForSeed } from "./crops.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { FarmTileState, GameState } from "../state/game-state.ts";
 import type { WorldCatalog } from "../world/regions.ts";
@@ -14,6 +16,7 @@ export type FarmingResult =
   | "too-far"
   | "inventory-full"
   | "waiting"
+  | "out-of-season"
   | "missing-tile";
 
 export class FarmingSystem {
@@ -36,7 +39,7 @@ export class FarmingSystem {
     }
     if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return "no-effect";
     if (itemId === ITEM_ID.hoe && tile.phase === "untilled") return this.till(tile);
-    if (itemId === ITEM_ID.turnipSeed && tile.phase === "tilled") return this.plant(state, tile);
+    if (itemId !== "" && cropForSeed(itemId) && tile.phase === "tilled") return this.plant(state, tile, itemId);
     if (itemId === ITEM_ID.wateringCan && tile.phase === "growing") return this.water(state, tile);
     if (itemId === "" && tile.phase === "mature") return this.harvest(state, tile);
     return "no-effect";
@@ -47,8 +50,10 @@ export class FarmingSystem {
     let advanced = 0;
     for (const tile of Object.values(state.farmTiles)) {
       if (tile.phase === "growing" && tile.watered) {
-        tile.growthStage = (tile.growthStage + 1) as 1 | 2 | 3;
-        if (tile.growthStage === 3) tile.phase = "mature";
+        const crop = cropDefinition(tile.cropId);
+        if (!crop) throw new Error(`Crop definition is missing: ${tile.cropId}.`);
+        tile.growthDays += 1;
+        if (tile.growthDays >= crop.growthDays) tile.phase = "mature";
         advanced += 1;
       }
       tile.watered = false;
@@ -63,11 +68,14 @@ export class FarmingSystem {
   }
 
   /** Consumes one starter seed and begins the first local crop cycle. */
-  private plant(state: GameState, tile: FarmTileState): FarmingResult {
-    if (!this.inventory.consume(state.inventory, ITEM_ID.turnipSeed, 1)) return "no-effect";
+  private plant(state: GameState, tile: FarmTileState, seedId: ItemId): FarmingResult {
+    const crop = cropForSeed(seedId);
+    if (!crop) return "no-effect";
+    if (!crop.seasons.includes(calendarAt(state.day).season)) return "out-of-season";
+    if (!this.inventory.consume(state.inventory, seedId, 1)) return "no-effect";
     tile.phase = "growing";
-    tile.cropId = ITEM_ID.turnip;
-    tile.growthStage = 0;
+    tile.cropId = crop.cropId;
+    tile.growthDays = 0;
     tile.watered = false;
     return "planted";
   }
@@ -82,10 +90,12 @@ export class FarmingSystem {
 
   /** Adds one mature crop before resetting the tile to prepared soil. */
   private harvest(state: GameState, tile: FarmTileState): FarmingResult {
-    if (!this.inventory.add(state.inventory, ITEM_ID.turnip, 1)) return "inventory-full";
+    const crop = cropDefinition(tile.cropId);
+    if (!crop) return "no-effect";
+    if (!this.inventory.add(state.inventory, crop.cropId, 1)) return "inventory-full";
     tile.phase = "tilled";
     tile.cropId = "";
-    tile.growthStage = 0;
+    tile.growthDays = 0;
     tile.watered = false;
     return "harvested";
   }

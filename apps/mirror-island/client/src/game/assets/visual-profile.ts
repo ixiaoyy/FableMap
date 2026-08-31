@@ -9,6 +9,8 @@ import {
   type PlayerAppearanceId,
 } from "../../../../domain/player/appearance.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
+import { ITEM_ID } from "../../../../domain/items/definitions.ts";
+import type { CropId } from "../../../../domain/farming/crops.ts";
 
 const VECTORAITH_MEDIA_BASE = "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16";
 
@@ -29,11 +31,15 @@ export interface EntityMediaProfile {
   };
   readonly rock: { readonly textureKey: string; readonly frame: AtlasFrameDefinition };
   readonly farmSoil: { readonly textureKey: string; readonly frame: AtlasFrameDefinition };
-  readonly farmCrop?: {
+  readonly farmCrops?: Readonly<Partial<Record<CropId, {
     readonly textureKey: string;
     readonly growingFrame: AtlasFrameDefinition;
     readonly matureFrame: AtlasFrameDefinition;
-  };
+  }>>>;
+  readonly forage?: Readonly<Record<"spring-wildflower" | "bamboo-shoot", {
+    readonly textureKey: string;
+    readonly frame: AtlasFrameDefinition;
+  }>>;
   readonly npc: {
     readonly textureKey: string;
     readonly frames: Readonly<Record<string, AtlasFrameDefinition>>;
@@ -132,10 +138,14 @@ const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
     textureKey: VECTORAITH_MEDIA_KEYS.terrain,
     frame: { name: "vectoraith-soil", x: 1 * 16, y: 3 * 16, width: 16, height: 16 },
   },
-  farmCrop: {
-    textureKey: VECTORAITH_MEDIA_KEYS.crops,
-    growingFrame: { name: "vectoraith-crop-growing", x: 5 * 16, y: 1 * 16, width: 16, height: 16 },
-    matureFrame: { name: "vectoraith-crop-mature", x: 7 * 16, y: 1 * 16, width: 16, height: 16 },
+  farmCrops: {
+    [ITEM_ID.turnip]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-turnip-growing", x: 13 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-turnip-mature", x: 14 * 16, y: 7 * 16, width: 16, height: 16 } },
+    [ITEM_ID.bokChoy]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-bok-choy-growing", x: 5 * 16, y: 3 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-bok-choy-mature", x: 7 * 16, y: 3 * 16, width: 16, height: 16 } },
+    [ITEM_ID.cauliflower]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-cauliflower-growing", x: 5 * 16, y: 1 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-cauliflower-mature", x: 7 * 16, y: 1 * 16, width: 16, height: 16 } },
+  },
+  forage: {
+    "spring-wildflower": { textureKey: VECTORAITH_MEDIA_KEYS.crops, frame: { name: "vectoraith-spring-wildflower", x: 2 * 16, y: 9 * 16, width: 16, height: 16 } },
+    "bamboo-shoot": { textureKey: VECTORAITH_MEDIA_KEYS.crops, frame: { name: "vectoraith-bamboo-shoot", x: 2 * 16, y: 15 * 16, width: 16, height: 16 } },
   },
   npc: { textureKey: VECTORAITH_MEDIA_KEYS.npcs, frames: VECTORAITH_NPC_FRAMES },
 };

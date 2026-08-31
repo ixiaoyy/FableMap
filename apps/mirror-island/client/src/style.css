@@ -651,10 +651,10 @@ h1 {
   top: 18px;
   right: 18px;
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: 1fr auto;
   gap: 6px 12px;
   align-items: center;
-  min-width: 210px;
+  min-width: 260px;
   padding: 10px 13px;
   border: 2px solid #e0c485;
   outline: 2px solid rgba(74, 48, 27, 0.78);
@@ -676,6 +676,54 @@ h1 {
   color: #8a5428;
   font-size: 17px;
 }
+
+.life-hud__date {
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.life-hud__date:hover,
+.life-hud__date:focus-visible { color: #8a5428; outline: 1px solid #8a5428; outline-offset: 3px; }
+
+.calendar-backdrop {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(24, 22, 17, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.calendar-panel {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 18px;
+  border: 3px double #7b542f;
+  color: #4a321f;
+  background: #efd9a5;
+  box-shadow: 8px 10px 0 rgba(27, 20, 13, 0.38);
+}
+
+.calendar-panel header { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 14px; }
+.calendar-panel header span { color: #956a3d; font-size: 9px; letter-spacing: .14em; }
+.calendar-panel h2 { margin: 3px 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 30px; font-weight: 400; }
+.calendar-panel header button { min-height: 34px; padding: 0 13px; border: 1px solid #7b542f; color: #4a321f; background: #f7e8bd; cursor: pointer; }
+.calendar-panel__weekdays, .calendar-panel__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.calendar-panel__weekdays { margin-bottom: 5px; color: #87633f; font-size: 10px; text-align: center; }
+.calendar-panel__days > div { display: grid; min-height: 64px; place-items: center; padding: 5px; border: 1px solid #c39f68; background: #f7e7bb; }
+.calendar-panel__days > div.is-past { opacity: .52; }
+.calendar-panel__days > div.is-current { border: 2px solid #47704b; color: #284b32; background: #dce0a9; box-shadow: inset 0 0 0 2px #f6edc8; }
+.calendar-panel__days strong { font-family: Georgia, "Times New Roman", serif; font-size: 20px; }
+.calendar-panel__days small { color: #9a5637; font-size: 7px; text-align: center; }
 
 .social-ledger-trigger {
   position: absolute;
@@ -1593,7 +1641,7 @@ h1 {
   .life-hud {
     top: 10px;
     right: 10px;
-    min-width: 188px;
+    min-width: 220px;
     padding: 8px 10px;
   }
 

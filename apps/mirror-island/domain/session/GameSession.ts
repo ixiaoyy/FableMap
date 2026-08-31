@@ -1,8 +1,10 @@
 import { CraftingSystem, type CraftingResult } from "../crafting/CraftingSystem.ts";
 import { FarmingSystem, type FarmingResult } from "../farming/FarmingSystem.ts";
 import { GatheringSystem, type GatheringResult } from "../gathering/GatheringSystem.ts";
+import { ForageSystem, type ForageResult } from "../gathering/ForageSystem.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { getItemDefinition } from "../items/definitions.ts";
+import { canAdvancePlayableCalendar } from "../calendar/game-calendar.ts";
 import {
   DEFAULT_PLAYER_APPEARANCE_ID,
   type PlayerAppearanceId,
@@ -40,20 +42,21 @@ import {
   NpcMotionRuntime,
   type NpcRuntimeSpawn,
 } from "../world/npc-motions.ts";
-import type { WorldCatalog } from "../world/regions.ts";
+import type { ResourceSpawnDefinition, WorldCatalog } from "../world/regions.ts";
 import type { ActionFeedback, GameCommand } from "./commands.ts";
 
 const MOVEMENT_CHECKPOINT_INTERVAL_MS = 500;
 const SLEEP_INTERACTION_DISTANCE_PIXELS = 42;
 const NPC_INTERACTION_DISTANCE_PIXELS = 42;
 
-type SleepResult = "slept" | "missing-bed" | "too-far" | "already-saving" | "day-limit";
+type SleepResult = "slept" | "missing-bed" | "too-far" | "already-saving" | "day-limit" | "season-content-limit";
 
 export type GameStateListener = (state: GameState) => void;
 
 export class GameSession {
   private readonly inventory = new InventorySystem();
   private readonly gathering: GatheringSystem;
+  private readonly forage: ForageSystem;
   private readonly crafting = new CraftingSystem(this.inventory);
   private readonly farming: FarmingSystem;
   private readonly shop: ShopSystem;
@@ -79,6 +82,7 @@ export class GameSession {
   ) {
     if (!ownerKey.trim() || !slotId.trim()) throw new Error("Local save identity is invalid.");
     this.gathering = new GatheringSystem(this.inventory, catalog);
+    this.forage = new ForageSystem(this.inventory, catalog);
     this.farming = new FarmingSystem(this.inventory, catalog);
     this.shop = new ShopSystem(this.inventory);
     this.npcMotions = new NpcMotionRuntime(catalog);
@@ -159,14 +163,14 @@ export class GameSession {
         return null;
       }
       case "buy-item": {
-        const result = this.shop.buyTurnipSeed(state, this.npcMotions.activeSpawns());
+        const result = this.shop.buySeed(state, this.npcMotions.activeSpawns(), command.itemId);
         if (result === "bought") this.commitCriticalChange();
-        return buyFeedback(result);
+        return buyFeedback(result, command.itemId);
       }
       case "sell-item": {
-        const result = this.shop.sellTurnip(state, this.npcMotions.activeSpawns());
+        const result = this.shop.sellItem(state, this.npcMotions.activeSpawns(), command.itemId);
         if (result === "sold") this.commitCriticalChange();
-        return sellFeedback(result);
+        return sellFeedback(result, command.itemId);
       }
       case "transition-region": {
         const exit = this.catalog.exitAt(
@@ -225,6 +229,12 @@ export class GameSession {
     if (itemId === undefined) return null;
     if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return null;
     const resource = this.catalog.resource(targetId);
+    if (resource && resource.kind !== "tree" && resource.kind !== "stone") {
+      if (itemId !== "") return null;
+      const result = this.forage.collect(state, targetId);
+      if (result === "collected") this.commitCriticalChange();
+      return forageFeedback(result);
+    }
     if (resource?.kind === "tree") {
       const result = this.gathering.use(state, targetId, itemId);
       if (result === "success") this.commitCriticalChange();
@@ -270,6 +280,11 @@ export class GameSession {
   /** Returns one current runtime NPC projection by stable npcId or null when unknown. */
   activeNpcById(npcId: string): NpcRuntimeSpawn | null {
     return this.npcMotions.activeByNpcId(npcId);
+  }
+
+  /** Returns active deterministic forage candidates in one region for the current saved day. */
+  activeForageSpawnsInRegion(regionId: string): readonly ResourceSpawnDefinition[] {
+    return this.forage.activeSpawns(this.requireState(), regionId);
   }
 
   /** Publishes current and future defensive snapshots and returns an explicit disposer. */
@@ -332,10 +347,12 @@ export class GameSession {
       return "too-far";
     }
     if (state.day >= Number.MAX_SAFE_INTEGER) return "day-limit";
+    if (!canAdvancePlayableCalendar(state.day)) return "season-content-limit";
     const safeSpawn = this.catalog.requireDefaultSpawn("cottage");
     this.friendship.settleDay(state);
     this.farming.settleDay(state);
     state.day += 1;
+    state.dailyForage = { day: state.day, collectedIds: [] };
     state.minuteOfDay = DAY_START_MINUTE;
     state.player.regionId = "cottage";
     state.player.x = safeSpawn.x;
@@ -361,6 +378,16 @@ export class GameSession {
   private requireState(): GameState {
     if (!this.state) throw new Error("GameSession has not started a game.");
     return this.state;
+  }
+}
+
+/** Maps one seasonal forage collection result to fixed local feedback. */
+function forageFeedback(result: ForageResult): ActionFeedback | null {
+  switch (result) {
+    case "collected": return { tone: "success", code: result, message: "收下了一份春季采集物。" };
+    case "too-far": return { tone: "error", code: result, message: "再靠近一些才能采集。" };
+    case "inventory-full": return { tone: "error", code: result, message: "背包已满。" };
+    case "missing-forage": case "inactive": return null;
   }
 }
 
@@ -392,10 +419,11 @@ function farmingFeedback(result: FarmingResult): ActionFeedback | null {
   switch (result) {
     case "no-effect": return null;
     case "tilled": return success("土地已经开垦。");
-    case "planted": return success("萝卜种子已经播下。");
+    case "planted": return success("种子已经播下。");
     case "watered": return success("作物已浇水，睡觉后会成长。");
-    case "harvested": return success("收获了一个萝卜。");
+    case "harvested": return success("收获了一份成熟作物。");
     case "waiting": return error("今天已经浇过水了。");
+    case "out-of-season": return error("这种作物不适合当前季节。");
     case "too-far": return error("离农田太远。");
     case "inventory-full": return error("背包已满。");
     case "missing-tile": return error("农田不存在。");
@@ -410,25 +438,30 @@ function sleepFeedback(result: SleepResult): ActionFeedback {
     case "too-far": return { tone: "error", code: result, message: "需要再靠近床一些。" };
     case "already-saving": return { tone: "error", code: result, message: "这一天正在结算，请稍候。" };
     case "day-limit": return { tone: "error", code: result, message: "日期已经达到存档上限。" };
+    case "season-content-limit": return { tone: "error", code: result, message: "春季已经结束，夏季内容准备完成后才能继续休息。" };
   }
 }
 
 /** Maps one fixed seed purchase result to local UI feedback without exposing pricing logic to Vue. */
-function buyFeedback(result: BuyResult): ActionFeedback {
+function buyFeedback(result: BuyResult, itemId: string): ActionFeedback {
+  const itemName = getItemDefinition(itemId)?.name ?? "种子";
   switch (result) {
-    case "bought": return { tone: "success", code: result, message: "购买了 1 粒萝卜种子。" };
+    case "bought": return { tone: "success", code: result, message: `购买了 1 份${itemName}。` };
     case "not-at-shop": return { tone: "error", code: result, message: "需要在种子店老板旁交易。" };
+    case "unavailable-item": return { tone: "error", code: result, message: "当前季节不出售这个物品。" };
     case "insufficient-gold": return { tone: "error", code: result, message: "金币不足。" };
     case "inventory-full": return { tone: "error", code: result, message: "背包已满。" };
   }
 }
 
 /** Maps one fixed turnip sale result to local UI feedback without exposing pricing logic to Vue. */
-function sellFeedback(result: SellResult): ActionFeedback {
+function sellFeedback(result: SellResult, itemId: string): ActionFeedback {
+  const itemName = getItemDefinition(itemId)?.name ?? "物品";
   switch (result) {
-    case "sold": return { tone: "success", code: result, message: "出售了 1 个萝卜。" };
+    case "sold": return { tone: "success", code: result, message: `出售了 1 个${itemName}。` };
     case "not-at-shop": return { tone: "error", code: result, message: "需要在种子店老板旁交易。" };
-    case "missing-item": return { tone: "error", code: result, message: "背包里没有可出售的萝卜。" };
+    case "unavailable-item": return { tone: "error", code: result, message: "这个物品不能在这里出售。" };
+    case "missing-item": return { tone: "error", code: result, message: `背包里没有${itemName}。` };
     case "gold-limit": return { tone: "error", code: result, message: "金币已经达到存档上限。" };
   }
 }

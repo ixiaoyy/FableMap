@@ -56,6 +56,7 @@ const mutableState = reactive({
   shopWelcome: "",
   sleepConfirmationOpen: false,
   socialOpen: false,
+  calendarOpen: false,
 });
 
 let confirmSleepAction: (() => void) | null = null;
@@ -215,6 +216,7 @@ export function openSocial(): boolean {
     || mutableState.shopOpen
     || mutableState.dialogue !== null
     || mutableState.sleepConfirmationOpen
+    || mutableState.calendarOpen
   ) return false;
   mutableState.socialOpen = true;
   return true;
@@ -225,13 +227,24 @@ export function closeSocial(): void {
   mutableState.socialOpen = false;
 }
 
+/** Opens the transient seasonal calendar while no other modal owns world input. */
+export function openCalendar(): boolean {
+  if (isWorldInputLocked()) return false;
+  mutableState.calendarOpen = true;
+  return true;
+}
+
+/** Closes the transient calendar without mutating the absolute game day. */
+export function closeCalendar(): void { mutableState.calendarOpen = false; }
+
 /** Reports whether a modal Vue panel currently owns Phaser world input. */
 export function isWorldInputLocked(): boolean {
   return mutableState.worldActionBusy
     || mutableState.shopOpen
     || mutableState.dialogue !== null
     || mutableState.sleepConfirmationOpen
-    || mutableState.socialOpen;
+    || mutableState.socialOpen
+    || mutableState.calendarOpen;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
@@ -252,5 +265,6 @@ export function clearGameState(): void {
   mutableState.shopOpen = false;
   mutableState.shopWelcome = "";
   mutableState.socialOpen = false;
+  mutableState.calendarOpen = false;
   cancelSleepConfirmation();
 }

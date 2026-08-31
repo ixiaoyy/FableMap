@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { ITEM_ID } from "../../../../domain/items/definitions.ts";
+import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
 import type {
   ExitDefinition,
@@ -54,6 +54,7 @@ import {
   BedEntity,
   ExitHintEntity,
   FarmPlotEntity,
+  ForageEntity,
   InspectEntity,
   NpcEntity,
   RockEntity,
@@ -90,6 +91,7 @@ export class WorldScene extends Phaser.Scene {
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
   private readonly farmViews = new Map<string, FarmPlotEntity>();
+  private readonly forageViews = new Map<string, ForageEntity>();
   private readonly bedViews = new Map<string, BedEntity>();
   private readonly inspectViews = new Map<string, InspectEntity>();
   private readonly exitHintViews = new Map<string, ExitHintEntity>();
@@ -231,6 +233,7 @@ export class WorldScene extends Phaser.Scene {
     playerView.container.setDepth(100 + Math.floor(state.player.y));
     const region = this.catalog.requireRegion(state.player.regionId);
     this.renderResources(region.id, state);
+    this.renderForage(region.id);
     this.renderFarmPlots(region.id, state);
     this.renderBeds(region.id);
     this.renderInspects(region.id);
@@ -340,10 +343,12 @@ export class WorldScene extends Phaser.Scene {
       this.registerAtlasFrame(media.tree.stumpTextureKey, media.tree.stumpFrame);
       this.registerAtlasFrame(media.rock.textureKey, media.rock.frame);
       this.registerAtlasFrame(media.farmSoil.textureKey, media.farmSoil.frame);
-      if (media.farmCrop) {
-        this.registerAtlasFrame(media.farmCrop.textureKey, media.farmCrop.growingFrame);
-        this.registerAtlasFrame(media.farmCrop.textureKey, media.farmCrop.matureFrame);
+      for (const crop of Object.values(media.farmCrops ?? {})) {
+        if (!crop) continue;
+        this.registerAtlasFrame(crop.textureKey, crop.growingFrame);
+        this.registerAtlasFrame(crop.textureKey, crop.matureFrame);
       }
+      for (const forage of Object.values(media.forage ?? {})) this.registerAtlasFrame(forage.textureKey, forage.frame);
       for (const frame of Object.values(media.npc.frames)) {
         this.registerAtlasFrame(media.npc.textureKey, frame);
       }
@@ -440,7 +445,7 @@ export class WorldScene extends Phaser.Scene {
       sprite.setTexture(TOOL_ART_CANDIDATE_KEYS.helloTools, frame).setOrigin(0.5, this.playerMedia.originY);
       return true;
     }
-    if (itemId === ITEM_ID.turnipSeed) {
+    if (getItemDefinition(itemId)?.category === "seed") {
       sprite.setTexture(TOOL_ART_CANDIDATE_KEYS.gardensIcons, GARDENS_ICON_FRAMES.seedBag).setOrigin(0.5);
       return true;
     }
@@ -461,8 +466,26 @@ export class WorldScene extends Phaser.Scene {
         this.treeViews.set(spawn.entityId, view);
         const resource = state.resources[spawn.entityId];
         if (resource) view.project(resource);
-      } else if (!this.rockViews.has(spawn.entityId)) {
+      } else if (spawn.kind === "stone" && !this.rockViews.has(spawn.entityId)) {
         this.rockViews.set(spawn.entityId, this.entityFactory.createRock(spawn));
+      }
+    }
+  }
+
+  /** Creates active deterministic forage views and removes collected or inactive daily candidates. */
+  private renderForage(regionId: string): void {
+    const spawns = getLocalGameSession().activeForageSpawnsInRegion(regionId);
+    const activeIds = new Set(spawns.map((spawn) => spawn.entityId));
+    removeMissing(this.forageViews, activeIds);
+    for (const spawn of spawns) {
+      if (!this.forageViews.has(spawn.entityId)) {
+        this.forageViews.set(spawn.entityId, this.entityFactory.createForage(spawn, (entity) => {
+          dispatchLocalGameCommand({
+            type: "use-item-on-target",
+            itemId: gameUiState.selectedItemId,
+            targetId: entity.entityId,
+          });
+        }));
       }
     }
   }
@@ -954,6 +977,7 @@ export class WorldScene extends Phaser.Scene {
     this.activeMap = null;
     destroyAll(this.treeViews);
     destroyAll(this.rockViews);
+    destroyAll(this.forageViews);
     destroyAll(this.farmViews);
     destroyAll(this.bedViews);
     destroyAll(this.inspectViews);

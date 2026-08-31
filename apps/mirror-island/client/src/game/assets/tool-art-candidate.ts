@@ -52,6 +52,8 @@ export function candidateActionForItem(itemId: string): CandidateToolAction {
     case ITEM_ID.hoe: return "plow";
     case ITEM_ID.wateringCan: return "water";
     case ITEM_ID.turnipSeed: return "plant";
+    case ITEM_ID.bokChoySeed: return "plant";
+    case ITEM_ID.cauliflowerSeed: return "plant";
     default: return "harvest";
   }
 }
