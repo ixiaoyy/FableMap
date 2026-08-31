@@ -1688,3 +1688,105 @@ Removed browser Keycloak login and registration entry, introduced one anonymous 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 51: Deploy latest anonymous Mirror Island release
+
+**Date**: 2026-08-28
+**Task**: Deploy latest anonymous Mirror Island release
+**Branch**: `codex/tool-interaction-mvp`
+
+### Summary
+
+Fixed the game runtime dependency boundary, fast-forwarded main, completed production deployment, and verified the public root ships no browser Keycloak code.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ddff3aa50e9e1e9f852e8a95722ac13551281320` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 52: Publish production Hotbar icons
+
+**Date**: 2026-08-28
+**Task**: Publish production Hotbar icons
+**Branch**: `codex/tool-interaction-mvp`
+
+### Summary
+
+Published the reviewed CC-BY GARDENS icon sheet to immutable media, promoted Hotbar icons to production, shipped product attribution, deployed successfully, and verified the live icons in Chrome.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `eb91067490bf5e4d86274471351e9009ab2b2efc` | (see git log) |
+| `43819d064977f310f9aadac0ed80a76f74616000` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 53: 深化镜像岛日常生活与角色创建
+
+**Date**: 2026-08-31
+**Task**: 深化镜像岛日常生活与角色创建
+**Branch**: `codex/tool-interaction-mvp`
+
+### Summary
+
+完成工具交互、昼夜与NPC生活运行时、基础好感、移动端控制、角色创建和八名NPC四时段双日轮换对话；同步契约、路线图与素材采用记录。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `002d2175` | (see git log) |
+| `de3a033f` | (see git log) |
+| `991afea8` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
