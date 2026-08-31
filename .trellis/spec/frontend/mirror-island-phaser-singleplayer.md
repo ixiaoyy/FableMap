@@ -25,7 +25,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v6 包含 region、player appearance、day、minuteOfDay、gold、按天作物与 NPC friendship，旧 v1–v5 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v7 包含 region、player appearance、absolute day、minuteOfDay、gold、通用作物、每日采集与 NPC friendship，旧 v1–v6 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源、农田和 friendship；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -1015,6 +1015,66 @@ tree.frame = { x: 0, y: 0, width: 48, height: 48 };
 // Correct: runtime references the official orchard sheet directly.
 tree.textureKey = "vectoraith-orchard";
 tree.frame = { x: 5 * 16, y: 0, width: 3 * 16, height: 3 * 16 };
+```
+
+## Scenario: spring calendar and gameplay foundation v7
+
+### 1. Scope / Trigger
+
+- Trigger：当前绝对 Day 和单一萝卜不足以承载四季；需要先完成28天日历、春季多作物和每日采集，同时避免进入空内容夏季。
+- 本场景拥有纯 calendar、三种春季作物、两种春季采集物、多商品商店与月历 UI；天气、节日、品质、肥料和完整夏秋冬内容继续延期。
+
+### 2. Signatures
+
+```typescript
+function calendarAt(absoluteDay: number): GameCalendarDate;
+function cropsForSeason(season: Season): readonly CropDefinition[];
+interface DailyForageState { day: number; collectedIds: string[]; }
+interface FarmTileStateV7 { cropId: CropId | ""; growthDays: number; }
+```
+
+### 3. Contracts
+
+- 绝对 `GameState.day` 是唯一持久日期；year/season/dayOfSeason/weekday 纯推导，Spring 1 Year1=Monday，每季28天、每年112天。
+- calendar 纯函数支持四季循环；当前 GameSession 在 Spring 28 sleep 返回 `season-content-limit`，不结算也不进入无内容 Summer 1。
+- crop catalog 唯一拥有萝卜3天20/35、小白菜5天45/80、花椰菜8天80/170及 spring season；Farming/Shop/UI 不复制价格或 seed→crop 规则。
+- v7 FarmTile 保存 cropId/growthDays；v6 `growthStage` 原样迁移为萝卜 watered-day progress。frame/scale 仍只属于 visual profile。
+- ResourceSpawns 可包含 spring-wildflower/bamboo-shoot 候选；每日出现由 day+stable ID 确定，save 只保存当日 collected IDs，不保存坐标。
+- 月历和 calendarOpen 是 transient client projection；打开时纳入统一 input/time lock，不进入 save。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| absolute day 非正安全整数 | calendar 明确失败 |
+| Spring 28 请求睡觉 | 不结算/不推进，返回内容边界 feedback |
+| 非春季种子或未知 seed/crop | 不扣物品、不改农田 |
+| forage 当日未出现/已采集/远距 | 不改背包和 collected IDs |
+| forage 背包满 | 地图对象保留，collected 不写入 |
+| v6 合法存档 | 迁移 v7，萝卜/角色/好感/位置保留，dailyForage 为空 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：春1种萝卜和花椰菜，按不同天数成熟；探索湖岸收野花，刷新不复活，春2出现新一批。
+- Base：点击 HUD 日期打开28天月历，Escape 返回；春28睡觉得到明确边界且状态不变。
+- Bad：同时保存 day/year/season 导致漂移、Vue直接算价格、Math.random刷新采集物，或提前展示未实现夏季。
+
+### 6. Tests Required
+
+- Day1/28/29/112/113 calendar、v6→v7/幂等/损坏、三作物成长与价格、forage确定性/采集/背包满。
+- 正式四张户外地图 decoder、typecheck、client build；月历宽屏/手机/200% zoom 视觉由真实浏览器确认。
+- 不连接数据库、不新增 Prisma migration、不扩建身份或全量 E2E。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: duplicate persisted calendar fields and random browser-only forage.
+state.season = "spring";
+if (Math.random() > 0.5) spawnFlower();
+
+// Correct: one absolute day deterministically projects calendar and forage.
+const date = calendarAt(state.day);
+const active = forage.activeSpawns(state, state.player.regionId);
 ```
 
 ## Scenario: Stardew Life Loop v3

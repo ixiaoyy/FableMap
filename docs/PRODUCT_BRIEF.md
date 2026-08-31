@@ -73,5 +73,5 @@ Town 尚未实现的非白天/休息动作、营业日程、送礼/私人内屋�
 - “新游戏”创建本地世界；“继续游戏”从 IndexedDB 恢复玩家、背包、资源和农田。
 - World Foundation 只有在真人从农场向右进入小镇、进出种子店、返回农场并刷新恢复后才算完成；默认主视图是 16px Tiled 游戏世界，正式 TMJ 由 Tiled 手工维护。
 - Farm Showcase 的整图、2× 出生镜头和真实生产浏览器路线已通过；视觉方向不再阻塞 Life Loop。
-- Life Loop 以 Day 1 / 100g、床交互、原子日结、三次有效浇水跨日、20g 买种、35g 出售和 IndexedDB 恢复为成功标准；后续 Town 日程批次已在 HUD 增加时间，但仍不实现 Season、天气或体力。
+- Life Loop 当前加入四季28天纯日历底座、春季三作物、野花/春笋每日采集和 v7 IndexedDB 恢复；可玩内容暂止于 Spring 28，不提前进入空内容夏季，天气与体力仍未实现。
 - 旧 backend、database、volume、备份和 `fablespace/` 对象前缀不存在；论坛、镜像岛两个数据库和 `game/` 媒体完整。
