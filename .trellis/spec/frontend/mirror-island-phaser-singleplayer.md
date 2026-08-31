@@ -25,11 +25,75 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v4 包含 region、day、minuteOfDay、gold 与按天作物状态，旧 v1/v2/v3 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
-- save value 包含 schema version、updatedAt、玩家、背包、资源和农田；读取从 unknown 完整验证，未来/损坏版本明确失败。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v6 包含 region、player appearance、day、minuteOfDay、gold、按天作物与 NPC friendship，旧 v1–v5 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- save value 包含 schema version、updatedAt、玩家、背包、资源、农田和 friendship；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
 - 持久化拓扑固定为 `GameSession -> SaveRepository -> IndexedDB（当前 Web）/ FileSystem（未来 Tauri）`；当前只实现 IndexedDB，不把 filesystem、Rust command 或桌面路径渗入 domain。
+
+## Scenario: generation-safe local session shutdown
+
+### 1. Scope / Trigger
+
+- Trigger：Vue/HMR 或页面重新挂载可能在旧 GameSession 的异步 `flush()` 尚未完成时初始化新会话；旧清理不得关闭新 IndexedDB adapter、停止新 projection 或把新 UI 清为 Day 0。
+
+### 2. Signatures
+
+```typescript
+async function shutdownLocalGameSession(): Promise<void>;
+```
+
+### 3. Contracts
+
+- shutdown 开始时一次捕获当前 `session`、`repository` 与 `stopStoreProjection`，并同步把三个模块级 active handle 置空，使后续初始化拥有独立新一代资源。
+- 只对捕获的旧 session 执行 `flush()`；无论 flush 成功或失败，`finally` 都只停止捕获的旧 projection、关闭捕获的旧 repository。
+- 旧 flush 完成后仅当模块级 `session` 仍为空才调用 `clearGameState()`；期间已初始化新会话时禁止清空其 snapshot。
+- 不引入 generation ID、存档字段或第二个 repository owner；资源身份由捕获的对象引用区分。
+- `WorldScene` 的 `SHUTDOWN` 发生在 Scene systems 仍可用时，可显式取消 timeline/销毁 region views；`DESTROY` 只解绑 GameSession/UI 外部状态并让 Phaser 自己销毁 GameObjects，禁止再读取 `container.scene.tweens`。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 当前没有会话 | 幂等完成并清理 transient UI |
+| 旧 flush 完成前没有新初始化 | 关闭旧 adapter、停止旧 projection、清空 UI |
+| 旧 flush pending 时初始化新会话 | 旧 shutdown 完成后新 session/repository/projection 与 UI 保持可用 |
+| 旧 flush reject | 释放旧 projection/adapter 后原样 reject；不得触碰已存在的新会话 |
+| Phaser 直接触发 Scene `DESTROY` | 不手动遍历实体，console 无 detached Scene/tween 错误 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：HMR 卸载 A，A flush pending；B 初始化并 publish Day 2；A 随后完成，只释放 A，界面仍为 B 的 Day 2。
+- Base：正常页面退出没有后继会话，旧存档 flush 后清空 transient store。
+- Bad：await 旧 flush 后再读取模块级 `repository`/`stopStoreProjection`，从而关闭 B；或无条件 `clearGameState()` 显示 Day 0/0g。
+
+### 6. Tests Required
+
+- 有低成本 client lifecycle harness 时，用 deferred repository 交错执行 A shutdown 与 B initialize，断言 B projection 继续更新且 B repository 未关闭。
+- flush reject 分支断言旧资源仍释放、Promise reject、新会话不受影响；真实 HMR 检查还要覆盖 `SHUTDOWN`/`DESTROY` 两种路径且 console 无 detached Scene 错误；日常最小门禁保留 client typecheck。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: globals may already belong to a newer session after await.
+await session?.flush();
+stopStoreProjection?.();
+repository?.close();
+clearGameState();
+
+// Correct: release only the generation captured before awaiting.
+const activeSession = session;
+const activeRepository = repository;
+const activeStop = stopStoreProjection;
+session = repository = stopStoreProjection = null;
+try {
+  await activeSession?.flush();
+} finally {
+  activeStop?.();
+  activeRepository?.close();
+  if (!session) clearGameState();
+}
+```
 
 ## Scenario: atomic IndexedDB v2 backup before v3 switch
 
@@ -174,6 +238,11 @@ const session = new GameSession(runtimeSaveRepository, ownerKey, worldCatalog);
 - Town Population MVP 已于 2026-08-27 通过生产人工验收：华强复用现有 Shop，昊天与阿禾使用线性 Dialogue，统一 modal lock、防出口触发和脚底碰撞均成立；后续输入精简为点击邻近 NPC 交互，当前世界交互不再注册 E；该验收不授权 NPC 日程、好感、任务或铁匠功能。
 - 用户于 2026-08-28 批准 `Town 家庭与居民 v1`：五栋民宅各增加一名固定 dialogue NPC——墨子、浩南、阿澜、昊美丽、祥子；阿澜与阿禾、昊美丽与昊天只通过住址和对话表达家庭关系，不增加 Relationship、日程、好感、送礼或持久 NPC 状态。
 - 用户于 2026-08-28 后续批准 `Town 时间与 NPC 日程 v1`：增加 06:00–24:00、8 秒/10 分钟的 GameSession 时钟和八名 NPC 四段固定日程；允许 v3→v4 存档迁移，但仍不增加 Season、天气、体力、好感、送礼或 NPC 寻路动画。
+- 用户于 2026-08-28 继续批准 `NPC 日程移动 MVP`：同区域日程切换使用 Collision 网格短路径，跨区域只做离场/到场淡入淡出；瞬时位置由 GameSession runtime 拥有，不进入 StoredGame v4。
+- 用户于 2026-08-28 批准 `NPC 轻量环境动作 MVP`，并后续确认补齐八人：华强营业、昊天锻造、阿禾照料、墨子修缮、浩南巡山、阿澜观湖、昊美丽整理、祥子巡视码头只在 day 到岗后运行；浩南/祥子使用 Tiled 短巡逻路线，其余六人为 body-local 两相表现。
+- 用户于 2026-08-28 批准 `NPC 动态避让 MVP`：walking 遇玩家/居民立即等待，600ms 后尝试临时 tile 绕行，无旁路时持续等待，永不推人、穿人或瞬移。
+- 用户于 2026-08-28 批准 `昼夜视觉变化 MVP`：现有 minuteOfDay 驱动晨/昼/暮/夜 CSS atmosphere；室外 24:00 最大 0.44 靛蓝遮罩、室内最大 0.12，HUD/modal 不受影响，路灯/点光源继续延期。
+- 用户于 2026-08-28 批准 `基础好感与每日交谈 MVP`：八名 NPC 采用 250点/心、十心封顶、每日首次交谈 +20、漏聊 -2、满心停止衰减；StoredGame v5 持久化，Social 名册只显示心数/关系/今日状态，送礼和两心内屋继续延期。
 - Town 任务若主动推迟玩家可感知能力，归档前必须把能力、依赖和实施触发条件登记到 `docs/TOWN_ROADMAP.md`；路线图是防遗忘清单，不替代独立 PRD，也不自动扩大当前实现范围。
 
 ## Scenario: Town Population MVP
@@ -258,7 +327,7 @@ session.dispatch({ type: "buy-item", itemId: "turnip-seed", quantity: 1 });
 ### 1. Scope / Trigger
 
 - Trigger：五栋住宅与八名固定 NPC 已成立，需要用可见时间让住宅、工作地点、山麓和湖岸形成日常生活网络。
-- 本场景只拥有单日时钟、四段 anchor 切换、活跃 NPC 碰撞和 Seed Shop 白天营业；不包含天气、Season、好感、送礼、寻路或昏倒。
+- 本场景拥有单日时钟、四段 anchor 目标、活跃 NPC 碰撞和 Seed Shop 白天营业；后续 NPC runtime 如何在 anchor 之间移动由下一场景覆盖，不改变本场景的持久时间和目标合同。
 
 ### 2. Signatures
 
@@ -283,9 +352,9 @@ function GameSession.tick(now?: number, paused?: boolean): void;
 
 - 时间由 GameSession 唯一拥有：新游戏/睡觉为 360，10 分钟一步，1440 冻结；现实 8000ms 推进一步，单 tick elapsed 最多消费 1000ms。
 - modal、ActionTimeline、transition 通过 `paused=true` 切断 wall-clock 累积；恢复时不补算后台或暂停时间。
-- GameState/StoredGame 当前版本为 4；v3 完整验证后补 06:00，v1/v2 继续迁移到 v4；minute 必须可被 10 整除。
+- minuteOfDay 在 v4 引入并由当前 GameState/StoredGame v5 原样保留；v3 完整验证后补 06:00 并继续迁移 v5，minute 必须可被 10 整除。
 - Tiled SpawnPoints 拥有 schedule anchor 坐标；domain registry 只引用 regionId/spawnId。NpcSpawns 仍唯一拥有 entityId/npcId/dialogueId。
-- movement、reconcile、WorldScene 与 ShopSystem 必须消费同一个 active NPC resolver；禁止 Phaser 单独移动 sprite 或留下旧脚底碰撞。
+- 初始/恢复 reconcile 使用 schedule resolver；会话开始后的 movement、WorldScene 与 ShopSystem 必须消费 GameSession 的同一个 active NPC runtime projection，禁止 Phaser 单独移动 sprite 或留下旧脚底碰撞。
 - 华强仅 day phase 投影为 `shop`，其他 phase 投影为 `dialogue`；买卖命令必须在当前 active counter 的 42px 内。
 
 ### 4. Validation & Error Matrix
@@ -297,12 +366,12 @@ function GameSession.tick(now?: number, paused?: boolean): void;
 | pause / 后台长间隔 | 更新时间基线，不推进、不追赶 |
 | 24:00 后 tick | 保持 24:00，等待主动睡觉 |
 | schedule 缺 anchor、anchor 被 tile 阻挡或同 phase 重叠 | 启动 validation 失败 |
-| NPC anchor 改变但 entityId 相同 | 销毁并重建临时 NpcEntity，identity/dialogue 保持 |
+| NPC anchor 改变但 entityId 相同 | GameSession 为同一 identity 创建 transient route/transfer，identity/dialogue 保持 |
 | 华强不在 day counter | 只对话，ShopSystem 返回 `not-at-shop` |
 
 ### 5. Good/Base/Bad Cases
 
-- Good：09:00 浩南位于山麓、祥子位于码头、华强在柜台可交易；17:00 同一 identity 切到 evening anchor，旧位置无 sprite/碰撞。
+- Good：09:00 时启动白天路线；到场后浩南位于山麓、祥子位于码头、华强在柜台可交易；17:00 同一 identity 开始前往 evening anchor。
 - Base：对话打开一分钟现实时间后关闭，游戏 minute 不变；睡觉后 Day+1 且 06:00。
 - Bad：Vue 自增时间、在 Phaser hardcode 像素日程、复制同一 NPC 实体，或只换 sprite 不换 movement collision。
 
@@ -319,9 +388,519 @@ function GameSession.tick(now?: number, paused?: boolean): void;
 // Wrong: renderer invents a second schedule and collision remains at the TMJ base point.
 npcSprite.setPosition(304, 240);
 
-// Correct: every consumer projects the same Tiled anchor from the persisted game minute.
-const active = activeNpcSpawnsInRegion(catalog, regionId, state.minuteOfDay);
+// Correct: GameSession owns the runtime projection consumed by every live-system caller.
+const active = session.activeNpcSpawnsInRegion(regionId);
 catalog.isBlocked(regionId, x, y, 5, 4, active);
+```
+
+## Scenario: NPC schedule movement MVP
+
+### 1. Scope / Trigger
+
+- Trigger：固定日程已成立，但时段边界瞬移使小镇缺少生活感；需要在不升级存档、不引入跨地图导航系统的前提下补齐可见移动。
+- 本场景拥有同区域 Collision 短路径、跨区域 transfer、统一 runtime projection 和移动期间商店资格；动态避让与环境动作分别由后续场景扩展，不改变基础路线合同。
+
+### 2. Signatures
+
+```typescript
+type NpcMotionKind = "idle" | "walking" | "waiting" | "leaving" | "arriving";
+
+interface NpcRuntimeSpawn extends NpcSpawnDefinition {
+  readonly opacity: number;
+  readonly motion: NpcMotionKind;
+}
+
+function findNpcPath(
+  collision: CollisionGrid,
+  start: WorldPoint,
+  end: WorldPoint,
+  avoidedPoints?: readonly WorldPoint[],
+): readonly WorldPoint[] | null;
+
+function GameSession.activeNpcSpawnsInRegion(regionId: string): readonly NpcRuntimeSpawn[];
+```
+
+### 3. Contracts
+
+- `NpcMotionRuntime` 是 GameSession 下的 transient owner；`GameState`、StoredGame v5、IndexedDB key/store/backup 和 save decoder 均不增加 NPC 坐标或 motion 字段。
+- new/continue/sleep 直接 reset 到当前 schedule anchor；刷新不回放未完成路线，睡觉不播放跨日回家动画。
+- 同区域 anchor 变化使用精确锁定的 `easystarjs@0.4.4` 同步模式和四方向 Collision grid；该 CommonJS 包必须通过默认导入后实例化 `.js`，具名 `js` 导入在 Node ESM 合同测试中不可用；路径保留精确 Tiled 起终点，中间使用 tile center，无路径时降级为 transfer。
+- walking 以 48px/s 消费 waypoints；transfer 总时长 360ms，前 180ms 只属于旧区域并淡出，后 180ms 只属于新区域并淡入，同一 identity 不双重投影。
+- `GameSession.tick(now, paused)` 复用现有单 tick 1000ms 上限；paused 时只刷新基线，时钟与 motion 都不推进、不追赶后台时间。
+- movement collision、WorldScene click/hit/render 和 ShopSystem 只读取 GameSession runtime projection；Phaser 不自行 tween 玩法坐标。
+- walking/leaving/arriving 一律投影为 `dialogue`；只有 idle target 恢复 schedule interactionType，因此华强到 day 柜台后才可交易，离柜开始后立即失去交易资格。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 起终点在 Collision grid 外 | path adapter 明确失败，启动/日程合同错误可见 |
+| 终点被阻挡或不存在可达路径 | 返回 `null`，runtime 使用同区域 transfer 到达目标 |
+| EasyStar 同步 callback 未在 `calculate()` 内完成 | 明确抛错，不把异步竞态带入 tick |
+| tick paused、负 delta、非有限 delta | motion 不推进；恢复后从当前 runtime 位置继续 |
+| walking/transfer 期间发起买卖 | ShopSystem 返回 `not-at-shop`，gold/inventory 不变 |
+| Scene teardown 或切图 | 临时 NpcEntity 销毁；GameSession runtime 和存档均不受 Phaser tween 影响 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：墨子在 Town 内沿道路走向傍晚 anchor，画面位置、点击命中和玩家脚底碰撞同步移动；到点后恢复 idle。
+- Base：阿禾从住宅去 Town 时旧区域淡出、新区域淡入；刷新期间只按当前 minute 重建到目标 anchor。
+- Bad：WorldScene 自己 tween sprite、movement 仍碰撞终点，或把 waypoint/progress 写入 StoredGame 以恢复动画。
+
+### 6. Tests Required
+
+- 正式 Town catalog：一个同区域 resident 从 walking 中间位置最终精确落到目标 anchor；一个跨区域 resident 在 transfer 中点切换 region 且始终只有一个 projection。
+- Life Loop：华强在 09:00 route 开始时为 dialogue/`not-at-shop`，paused tick 位置不变，到柜 idle 后交易成功。
+- Path adapter：被完整阻隔的网格返回 `null`；类型检查与 client build 证明 EasyStar CommonJS/内置 typings 可被当前 Vite/TS 配置消费。
+- 不新增 DB、migration、图片或 E2E；真实浏览器人工检查走动、淡出/淡入、对话/击打和碰撞体感。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: renderer animates one position while gameplay still resolves the schedule endpoint.
+sprite.setPosition(nextAnchor.x, nextAnchor.y);
+const blocked = catalog.isBlocked(regionId, x, y, 5, 4, scheduledNpcs);
+
+// Correct: every live consumer reads the same GameSession-owned transient projection.
+session.tick(now, paused);
+const active = session.activeNpcSpawnsInRegion(regionId);
+renderNpcs(active);
+catalog.isBlocked(regionId, x, y, 5, 4, active);
+```
+
+## Scenario: NPC lightweight environment activities
+
+### 1. Scope / Trigger
+
+- Trigger：八名 NPC 已有工作地点和移动 runtime，需要用低成本环境行为表达职业/地点关系，而不提前建设职业服务、任务或持久 NPC AI。
+- 本场景拥有八名 NPC 的 day activity；非 day 休息动作、休息日和特殊日程继续延期，walking 避让由下一场景统一处理。
+
+### 2. Signatures
+
+```typescript
+type NpcActivityKind =
+  | "serve"
+  | "forge"
+  | "tend"
+  | "repair"
+  | "mountain-patrol"
+  | "observe"
+  | "organize"
+  | "dock-watch";
+
+interface NpcRuntimeSpawn extends NpcSpawnDefinition {
+  readonly activity: NpcActivityKind | null;
+  readonly activityPhase: 0 | 1;
+}
+
+function npcActivityAt(
+  catalog: WorldCatalog,
+  npcId: string,
+  minuteOfDay: number,
+): NpcActivityPlan | null;
+```
+
+### 3. Contracts
+
+- `npc-activities.ts` 是 identity → day activity/route 的唯一 registry；Phaser 不按 npcId 复制活动规则。
+- 华强=`serve`/Seed Shop、昊天=`forge`/Town、阿禾=`tend`/Town、墨子=`repair`/Town、浩南=`mountain-patrol`/Foothills、阿澜=`observe`/Lakeshore、昊美丽=`organize`/Blacksmith、祥子=`dock-watch`/Lakeshore；八人非 day 均投影 `activity=null`。
+- 浩南 route 从 `npc-haonan-trail` 出发，经 `npc-haonan-patrol-mid`、`npc-haonan-patrol-lookout` 闭环；祥子 route 从 `npc-xiangzi-dock` 出发，经 east/west 两点闭环。坐标只属于 Tiled SpawnPoints。
+- patrol 每点停留 2400ms，再复用既有 EasyStar 四方向路径；schedule phase 变化立即取消 ambient loop，从当前 runtime 坐标前往新 anchor。
+- `activityPhase` 每 400ms 在 0/1 间切换，并只随 pause-aware GameSession tick 推进；刷新/continue/sleep 从当前 schedule target 重建，不保存进度。
+- NpcEntity 只根据 activity/phase 偏移 body 并显示单字动作标记；container、点击、击打、depth 和碰撞继续使用 GameSession runtime 坐标。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| activity npcId 不在八名 schedule identity 中 | world catalog 启动失败 |
+| activity region 与 day schedule region 不同 | 启动失败 |
+| patrol 第一项不等于 day schedule anchor | 启动失败 |
+| route point 缺失、被 Collision 阻挡或任一闭环 leg 不可达 | 启动失败，不在运行时瞬移兜底 |
+| walking/leaving/arriving 属于 schedule transition | activity 为 null，抵达 day target 后才建立 activity |
+| modal/action/region transition paused | activity cadence、dwell 和 patrol position 均不推进 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：浩南到岗后停留、沿山路走到 lookout、再继续闭环；沿途点击/击打/碰撞位置与画面一致。
+- Base：墨子在修缮点以两相 body-local 动作显示“修”，17:00 开始离岗后活动立即消失。
+- Bad：WorldScene 按“浩南”硬编码 tween container，或把 activity/progress/routeIndex 写进 StoredGame。
+
+### 6. Tests Required
+
+- 正式 12-region catalog 调用 schedule/activity validators，断言八种 day activity、非 day 全空和四个巡逻 SpawnPoints。
+- runtime 断言 400ms activity phase、2400ms dwell、浩南/祥子从 day anchor 真实移动并精确到下一个 Tiled point。
+- typecheck 与 client build；不增加数据库、身份、Life Loop 全套、E2E 或图片检查矩阵。
+- 真实浏览器人工检查单字标记、body-local 动作、巡逻路线和对话/击打暂停体感。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation owns an untracked route and moves only the sprite container.
+if (npc.npcId === "town-resident-haonan") scene.tweens.add({ targets: npc.container, x: 424 });
+
+// Correct: domain resolves semantic activity and the existing runtime owns every route coordinate.
+const activity = npcActivityAt(catalog, npc.npcId, minuteOfDay);
+runtime.advance(deltaMs);
+npcEntity.project(session.activeNpcById(npc.npcId));
+```
+
+## Scenario: NPC dynamic avoidance MVP
+
+### 1. Scope / Trigger
+
+- Trigger：schedule walking 与浩南/祥子巡逻已经成立，但 NPC 仍会穿过玩家或其他居民，需要统一动态占位且不能把规则下放 Phaser。
+- 本场景只拥有 walking 的玩家/NPC 避让、等待与临时 tile 重规划；不包含推挤、穿人兜底、crowd steering、队列或持久路线。
+
+### 2. Signatures
+
+```typescript
+interface NpcAvoidancePosition extends WorldPoint {
+  readonly regionId: string;
+}
+
+function NpcMotionRuntime.advance(
+  deltaMs: number,
+  player?: NpcAvoidancePosition,
+): void;
+
+function worldFeetOverlap(
+  left: WorldPoint,
+  leftHalfWidth: number,
+  leftHalfHeight: number,
+  right: WorldPoint,
+  rightHalfWidth: number,
+  rightHalfHeight: number,
+): boolean;
+```
+
+### 3. Contracts
+
+- GameSession tick 把当前 `state.player` 传给 NpcMotionRuntime；Phaser 不暂停、推开或重规划 NPC。
+- 玩家脚底固定半径 5×4px、NPC 5×3px，由 `regions.ts` 单一导出；玩家→NPC 碰撞和 NPC→玩家/NPC 避让共用 `worldFeetOverlap`。
+- 最大 1000ms runtime delta 拆为至多 50ms substeps；48px/s 时单步最多 2.4px，禁止只检查长 delta 终点造成穿透。
+- 每个 substep 按 stable entityId 排序；已处理 NPC 的新位置立即成为后续 NPC 的障碍，同一位置竞争结果确定。
+- walking candidate 与动态脚底重叠或进入同一 Collision tile 时立即丢弃位移，并投影 `motion=waiting`；idle/transfer 不执行动态路径规则。
+- blocked 累计 600ms 后把同区域玩家/NPC world points 作为本次 EasyStar `avoidAdditionalPoint` 输入；重规划成功后沿旁路继续，失败后每 600ms 限频重试。
+- destination 被占用时同样不可穿透；无旁路可无限等待，障碍移开后下一可用 substep 恢复。
+- blockedMs、动态 points 和新 route 都是 transient runtime，禁止进入 GameState/StoredGame/Tiled。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| candidate 与玩家/NPC overlap 或同 tile | 保持当前位置，motion=waiting |
+| 阻挡未满 600ms | 不运行 A*，沿原 route 等待 |
+| 600ms 后存在旁路 | 使用临时 avoided tiles 生成新 waypoints |
+| 600ms 后无旁路或 target 被占 | 保留 target/route，继续等待并限频重试 |
+| 玩家移开 | 原路线或已生成旁路立即恢复，blockedMs 清零 |
+| paused / first tick / 非有限 delta | 不推进 avoidance 或 motion |
+
+### 5. Good/Base/Bad Cases
+
+- Good：玩家站在浩南直线路径上，浩南先停下，随后从相邻 tile 绕过并继续巡山，全程不与玩家重叠。
+- Base：玩家占住巡逻终点，NPC 一直等待；玩家离开后抵达原 target，不丢失 activity routeIndex。
+- Bad：NPC 把玩家推开、600ms 后穿人、每帧同步 A*，或 WorldScene 自己暂停 container。
+
+### 6. Tests Required
+
+- 正式 Town runtime：浩南遇玩家立即 waiting、foot boxes 不 overlap、600ms 后产生横向绕路并通过。
+- target 占位：持续等待且不 idle；移开后精确到原 Tiled target。
+- path adapter：单行三格中间 dynamic avoided tile 返回 null。
+- Town contract、typecheck、client build；不新增数据库、身份、Life Loop 全套、E2E、地图或图片检查。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation teleports through a blocker after an arbitrary timeout.
+if (blockedForMs > 600) npc.container.setPosition(target.x, target.y);
+
+// Correct: GameSession passes the player and runtime alone decides wait/replan state.
+runtime.advance(elapsed, state.player);
+const active = runtime.activeSpawnsInRegion(state.player.regionId);
+```
+
+## Scenario: day-night visual cycle MVP
+
+### 1. Scope / Trigger
+
+- Trigger：06:00–24:00 时钟和四段 NPC 日程已成立，但地图颜色全天不变，玩家只能从 HUD/人物位置理解时间。
+- 本场景只拥有 client-only 晨曦、白天、黄昏、夜色和室内/室外强度差；不包含灯光点、天气、Season、星空、阴影或 gameplay 夜间规则。
+
+### 2. Signatures
+
+```typescript
+type DaylightPhase = "dawn" | "day" | "dusk" | "night";
+type DaylightEnvironment = "outdoor" | "indoor";
+
+interface DaylightVisual {
+  readonly phase: DaylightPhase;
+  readonly environment: DaylightEnvironment;
+  readonly color: `#${string}`;
+  readonly opacity: number;
+}
+
+function daylightVisualAt(minuteOfDay: number, regionId: string): DaylightVisual;
+function isOutdoorRegion(regionId: string): boolean;
+```
+
+### 3. Contracts
+
+- `daylightVisualAt` 只消费 GameState 已有 `minuteOfDay` 和 `player.regionId`；GameSession、StoredGame v5、IndexedDB 与 Tiled 不新增视觉字段。
+- `world/region-environment.ts` 是 Farm/Town/Foothills/Lakeshore outdoor 分类的唯一 owner；visual profile 与 daylight 共用它，其他 region 按 indoor。
+- outdoor 关键点：06:00 rose/0.16、07:00–15:00 clear/0、16:00 warm/0.02、17:00 amber/0.08、18:00 terracotta/0.14、20:00 violet/0.28、21:00 indigo/0.36、24:00 deep indigo/0.44。
+- indoor 使用独立暖灰紫曲线，白天为 0，24:00 最大 0.12；不得机械缩放 outdoor 造成冷蓝室内。
+- 合法 10 分钟 minute 在相邻 keyframe 间线性插值 sRGB 与 opacity；phase 边界为 07:00、17:00、21:00。
+- game-store 只增加 transient regionId read model；App.vue 输出 CSS variables/data attributes，不把视觉结果传回 domain。
+- `.world-frame::after` 使用 isolated multiply overlay、z-index 2、pointer-events none；LifeHud/Hotbar/feedback/dialogue/shop/sleep 位于 z-index 3+，保持原色和输入。
+- CSS transition 只在 `prefers-reduced-motion: no-preference` 中启用 700ms linear；HUD `HH:MM` 是非颜色时间提示。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| minute 非法、越界或非 10 分钟粒度 | 复用 `decodeGameMinute` 明确失败 |
+| 06:00 / 07:00 / 17:00 / 21:00 | 分别投影 dawn/day/dusk/night 边界 |
+| 未知 regionId | 按 indoor 低强度处理，不升级为 gameplay 错误 |
+| 切图 | 下一 GameState snapshot 立即切换目标 environment 曲线 |
+| modal/action/transition paused | minute 不变，daylight 不自行推进 |
+| reduced motion | 无 CSS transition，但变量状态立即正确 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：玩家黄昏从 Town 进入 Seed Shop，室外琥珀色在淡出期间切换为轻暖室内，HUD 和商店仍保持清晰。
+- Base：正午 Farm 无遮罩；24:00 室外明显靛蓝但道路/人物仍可辨，Cottage 只轻微变暗。
+- Bad：WorldScene 创建受 camera zoom 影响的巨大 rectangle、把 tint 写入 save，或用深黑夜色却没有灯光可玩性。
+
+### 6. Tests Required
+
+- 纯投影断言 06:00、正午、18:00、21:00、24:00 phase/environment/opacity，15:00 前保持 clear day，18:00–20:00 中点连续插值。
+- indoor 24:00 opacity 明显低于 outdoor；非法 365 minute 失败。
+- Town contract、typecheck、client build；Impeccable detector 不得在本次 daylight 改动行产生新 finding。
+- 不新增数据库、身份、Life Loop 全套、E2E、地图、图片或 shader 检查。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation invents another clock and dims the whole app, including HUD.
+const hour = new Date().getHours();
+document.body.style.opacity = hour > 20 ? "0.5" : "1";
+
+// Correct: client projects the persisted game minute into canvas-only CSS roles.
+const daylight = daylightVisualAt(gameUiState.minuteOfDay, gameUiState.regionId);
+style["--daylight-color"] = daylight.color;
+style["--daylight-opacity"] = String(daylight.opacity);
+```
+
+## Scenario: friendship and daily talk MVP
+
+### 1. Scope / Trigger
+
+- Trigger：八名 NPC 已有身份、家庭、日程、活动和对话，但交谈不产生持久关系进度；需要先建立可恢复的基础友情循环，再规划 gifts/rooms/events。
+- 本场景只拥有十心 friendship、每日首次交谈、轻微漏聊衰减和 Social 名册；不包含送礼、生日、关系对话、私人房间解锁、心事件或婚恋。
+
+### 2. Signatures
+
+```typescript
+interface FriendshipState {
+  readonly npcId: string;
+  points: number;        // 0..2500
+  lastTalkedDay: number; // 0..state.day
+}
+
+type GameCommand =
+  | { readonly type: "talk-to-npc"; readonly npcId: string }
+  | ExistingGameCommand;
+
+interface GameStateV5 {
+  readonly version: 5;
+  friendships: Record<string, FriendshipState>;
+}
+```
+
+### 3. Contracts
+
+- friendship 尺度固定 250 点/心、10心/2500封顶；每日首次有效交谈 +20，重复交谈 0。
+- 漏聊日结：lastTalkedDay !== current day 且 points 在1..2499时 -2；0不再下降，2500停止衰减。
+- activity/walking/waiting NPC 与普通 idle NPC 同样 +20，不采用动画中减半；华强 Shop 点击与 Dialogue 点击走同一个 command。
+- GameSession 从当前 NpcMotionRuntime 按 npcId 取位置，要求同 region 且 42px 内；未知、远距或非当前 active NPC quiet no-op。
+- WorldScene 每次 NPC 点击只 dispatch 一次 talk，再打开 Shop/Dialogue；对话逐行、买卖按钮和重复开面板不额外增加。
+- sleep 在 day+1 前依序执行 FriendshipSystem.settleDay 与 FarmingSystem.settleDay，再推进 day、06:00 和 Cottage 位置，并只提交一次 critical save。
+- GameState/StoredGame 当前版本 5；v4 完整验证后补空 friendships，continue catalog reconcile 补八名 defaults；v1–v3 迁移直接输出 v5 empty friendships。
+- catalog reconcile 为唯一 base npcId 补零，拒绝未知 friendship key 和 key/npcId 不一致；v5 decoder 要求 points 0..2500、lastTalkedDay 0..day。
+- Social panel open/closed、姓名、关系称谓、心图形和 focus 不进 save。
+- Social 名称由 WorldCatalog base npc dialogueId → DialogueDefinition.speaker 投影，不复制角色名表。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 首次当天近距 talk | points +20（clamp 2500），lastTalkedDay=current day，publish/save |
+| 当天重复 talk | byte-equivalent，无 save |
+| 远距/未知/非 active NPC | quiet no-op |
+| 漏聊且 points 1..2499 | 睡觉时 -2 |
+| points=0 或 2500 | 漏聊不衰减 |
+| v4 save | 验证旧字段后迁移 v5 empty friendships，catalog reconcile 补八名 |
+| v5 points 越界、future lastTalkedDay、unknown friendship | decode/reconcile 失败，不覆盖原记录 |
+| Social 打开 | world input/time locked；关闭后恢复 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Day 1 点击阿禾一次得到20点，继续推进所有对话不加；Day 2 再聊变40点，Social 显示0.2/10心和今日已聊。
+- Base：一天没见已有20点的墨子，睡觉后变18；满心居民长期未聊保持2500。
+- Bad：Vue 直接 points+=20、Shop 买一次加一次、对话每行刷分，或把 Social open/name/avatar 写进 save。
+
+### 6. Tests Required
+
+- v2/v3/v4→v5、v5幂等、非法 points/lastTalkedDay、v2 backup current-v5 main。
+- FriendshipSystem 首聊/重复/次日/漏聊/0/满心；GameSession 远距与 active keeper 近距。
+- 正式 Town catalog 新游戏八个 friendship defaults；store Social lock 与 friendship projection。
+- Life Loop、Town、typecheck、client build；不连接数据库、不增加 identity/E2E。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: every dialogue line mutates a UI-owned heart count.
+gameUiState.hearts[npcId] += 1;
+
+// Correct: one NPC click sends one validated local command.
+session.dispatch({ type: "talk-to-npc", npcId });
+setDialogue(dialogue);
+```
+
+## Scenario: deterministic NPC contextual dialogue
+
+### 1. Scope / Trigger
+
+- Trigger：八名居民已有固定身份、四段日程、地点和活动，但单一静态台词无法表达早晨准备、白天工作、傍晚收工和夜间居家。
+- 本场景只拥有八人×四时段×两日版本的客户端内容解析；不增加 gifts、quests、branches、events、calendar、weather 或持久对话状态。
+
+### 2. Signatures
+
+```typescript
+interface DialogueContext {
+  readonly day: number;
+  readonly minuteOfDay: number;
+  readonly shopAvailable?: boolean;
+}
+
+function getDialogueDefinition(
+  dialogueId: string,
+  context?: DialogueContext,
+): DialogueDefinition | null;
+```
+
+### 3. Contracts
+
+- `client/src/game/dialogue/definitions.ts` 是 speaker、固定 inspect 文案和 contextual variants 的唯一 owner；WorldScene 不按 npcId/phase 硬编码台词。
+- NPC 点击传现有 GameState `day`/`minuteOfDay` 与 runtime `interactionType` 投影出的 `shopAvailable`；resolver 复用 `schedulePhaseAt()`，再以 `(day - 1) % 2` 确定当日版本。
+- 同一天同 phase 重复交谈返回 byte-equivalent lines；跨 Day 1/2 轮换，禁止随机数、计数器或 last-dialogue save 字段。
+- 华强 day + `shopAvailable=true` variant 第一行是 Shop welcome；前往柜台时显示开店准备文案，morning/evening/night 只描述备货、收店或休息，并由现有 interactionType 保证不能交易。
+- 未提供 context 或 dialogueId 没有 variants 时返回固定 definition；公告板、家具、私人内屋、山路和湖岸 inspect 不参与轮换。
+- 一次 NPC 点击仍先 dispatch 一次 `talk-to-npc`，再打开 Shop/Dialogue；逐句推进不再次增加 friendship。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| dialogueId 未知 | 返回 null，沿用 missing-dialogue feedback |
+| day 非正安全整数 | resolver 明确失败，不打开半有效面板 |
+| minute 非 06:00–24:00 十分钟粒度 | 复用 `schedulePhaseAt`/`decodeGameMinute` 明确失败 |
+| contextual NPC + 合法 context | 返回原 speaker/id + 当前 phase/day lines |
+| fixed inspect + 任意合法 context | 返回原固定 definition，内容不变 |
+| 华强 day walking/到柜前 | interactionType=dialogue + shopAvailable=false，显示开店准备文案且不打开 Shop |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Day 1 白天浩南谈山泉和碎石，Day 2 同时段谈巡过泉眼；傍晚回镇后改为收工内容。
+- Base：同一天重复点击阿澜仍是同一段湖岸内容；家具 inspect 永远保持固定描述。
+- Bad：每次点击随机选一句、把 phase/day 文案分支写在 WorldScene、为对话轮换升级 StoredGame，或台词承诺尚未实现的采矿/钓鱼/升级服务。
+
+### 6. Tests Required
+
+- 窄纯检查覆盖八个 NPC dialogueId × 四个 phase × Day 1/2：同日稳定、跨日不同、speaker/id 保持。
+- 固定 `town-notice-board` 有/无 context 必须相同；非法 day/minute 明确失败。
+- 最小门禁保留 typecheck + client build；真实浏览器抽查华强、浩南与一个家庭 NPC，不扩建 E2E/数据库/地图/图片矩阵。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: renderer owns another schedule and random conversation state.
+const lines = npcId === "town-resident-haonan"
+  ? variants[Math.floor(Math.random() * variants.length)]
+  : fallback;
+
+// Correct: the content owner consumes the existing persisted day and clock.
+const dialogue = getDialogueDefinition(npc.spawn.dialogueId, {
+  day: state.day,
+  minuteOfDay: state.minuteOfDay,
+});
+```
+
+## Scenario: local player appearance creation
+
+### 1. Scope / Trigger
+
+- Trigger：公开本地试玩的新游戏必须先选择真正影响世界精灵的角色外观；旧 React/localStorage 角色创建与 Ninja/Samurai 素材继续退役。
+- 本场景拥有现有 farmer + VectoRaith NPC demo 八个动画预设、创建页与 v6 持久化；分层发型/上衣/下装/鞋子仍等待专用同风格素材。
+
+### 2. Signatures
+
+```typescript
+type PlayerAppearanceId = "farmer-original" | "islander-spring" | ExistingPresetId;
+
+interface PlayerStateV6 {
+  regionId: string;
+  x: number;
+  y: number;
+  appearanceId: PlayerAppearanceId;
+}
+
+function GameSession.newGame(appearanceId?: PlayerAppearanceId): Promise<GameState>;
+function playerMediaProfile(appearanceId: PlayerAppearanceId): PlayerMediaProfile;
+```
+
+### 3. Contracts
+
+- `domain/player/appearance.ts` 是 stable appearance ID、默认值和 decoder 的唯一 owner；domain/save 禁止出现 URL、texture key、atlas frame 或 NPC identity。
+- `GameState`/`StoredGame` 当前版本 6；v1–v5 迁移统一补 `farmer-original`，保证已发布存档继续后视觉不变。
+- 新游戏只在角色页最终确认后调用 `GameSession.newGame(id)`；浏览、取消或返回不得覆盖当前 IndexedDB 记录。
+- `visual-profile.ts` 唯一映射 ID 到 VectoRaith farmer 或 NPC demo 的四方向帧；NPC demo 按 12列×8行、每角色3×4帧的官方布局解析。
+- 创建页直接 CSS 裁切 manifest 已登记原图，不生成、提交或上传衍生 PNG；选择支持点击、触屏、Tab、方向键、Enter 和 Escape。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| unknown/empty appearance ID | domain decoder 或 save decoder 明确失败，不创建/覆盖存档 |
+| v5 或更旧合法存档 | 迁移为 v6 + `farmer-original`，其他进度保持 |
+| 创建页浏览或 Escape/返回 | 当前 save byte-equivalent，回到原菜单/错误页 |
+| 最终确认且写盘成功 | 首次 publish 后进入 Phaser，玩家使用选中动画 |
+| 最终写盘失败 | 进入可恢复错误页，不挂载半初始化 Phaser 世界 |
+| 素材加载失败 | 使用现有 media-load-failed 可见错误，不回退旧 Ninja 玩家 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：选择“春芽”后进入 Farm，室内外切图与刷新继续均保持同一角色。
+- Base：v5 老存档继续后仍是原 farmer；新游戏打开角色页再返回不会改动 Day/Gold。
+- Bad：Vue 只保存临时卡片索引、把 texture/frame 写进 IndexedDB、浏览第一张卡时就调用 newGame，或恢复旧 localStorage 外观。
+
+### 6. Tests Required
+
+- 最小门禁：typecheck + client build；save decoder 需要覆盖 v5→v6 默认外观、v6 幂等和未知 ID 失败。
+- 真实浏览器检查九个预览、方向键/Enter/Escape、已有存档覆盖提示、最终世界精灵与刷新恢复。
+- 不新增数据库、migration、账号、E2E 矩阵或图片二进制。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: persistence knows an atlas frame and browsing a card already replaces the farm.
+await session.newGame();
+state.player.textureKey = "vectoraith-npcs";
+
+// Correct: one semantic ID crosses domain/save; the client alone resolves presentation frames.
+await session.newGame(selectedAppearanceId);
+const media = playerMediaProfile(snapshot.player.appearanceId);
 ```
 
 ## World Foundation contract
@@ -524,6 +1103,69 @@ crop.setVisible(tile.phase === "growing" || tile.phase === "mature");
 
 // Wrong: domain or save stores an atlas frame.
 farmTile.frameName = "vectoraith-crop-mature";
+```
+
+## Scenario: production Hotbar item icons
+
+### 1. Scope / Trigger
+
+- Trigger：Tool Art Gate A 已确认 GARDENS 工具/种子图标，正式 Hotbar 不再使用大号汉字占位；本场景只晋升 UI item frame，不晋升候选工具动作。
+
+### 2. Signatures
+
+```typescript
+interface ItemIconDefinition {
+  readonly url: string;
+  readonly sourceWidth: number;
+  readonly sourceHeight: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: 16;
+  readonly height: 16;
+}
+
+function itemIconForItem(itemId: string): ItemIconDefinition | null;
+```
+
+### 3. Contracts
+
+- `client/src/game/assets/item-icons.ts` 是正式 item ID → immutable source/frame 的唯一 owner；ItemDefinition、GameState、StoredGame 和 IndexedDB 不保存 URL、texture key 或 frame。
+- GARDENS 采用原始 160×176 PNG：hoe `(0,1)`、watering can `(0,4)`、axe `(0,9)`、turnip seed `(6,5)`；turnip/wood 继续使用已登记 VectoRaith crops/details frame。
+- GARDENS 对象固定在 `game/media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/`，bytes/SHA-256 必须等于 manifest；禁止裁图、重排、重编码或把 PNG 加入 Git。
+- Hotbar 对 mapped item 显示 2× nearest-neighbor 图标并保留小字 name/quantity/selection；只有确实 unmapped 的 item 才回退 `hotbarMark`。
+- CC BY 4.0 署名必须随产品交付到 `/THIRD_PARTY_NOTICES.txt` 并从 start UI 可发现；仓库内部采用记录不能替代产品署名。
+- `tool-art-candidate.ts` 只保留 development-only action preview；生产 Hotbar 不读取 `import.meta.env.DEV` 或 query flag。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| CDN key 已存在但 SHA 不同 | 发布失败，禁止覆盖 immutable object |
+| manifest totals/key/hash/URL 不一致 | 构建/部署媒体门禁失败 |
+| mapped item 图标请求失败 | 生产验收失败，不把缺图当成功发布 |
+| item 无正式 frame | Hotbar 使用 `hotbarMark`，name/quantity 仍正常 |
+| notice 缺失或不可访问 | CC-BY 采用未完成，不部署 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：新游戏前三格显示锄头、浇水壶、斧头像素图标，选择和数量不变，网络只请求登记的同源媒体。
+- Base：未来新增尚未评审的 item 仍显示文字 mark，不猜 frame、不复用不相干图标。
+- Bad：生产依赖 `/tool-art-candidate/`、在 ItemDefinition 写图片 URL、提交 PNG，或只在仓库 README 署名。
+
+### 6. Tests Required
+
+- manifest 断言 14 images / 214731 bytes，并从 CDN 校验全部 SHA-256、dimensions、MIME 与 immutable cache。
+- typecheck、client build；产物包含正式 GARDENS URL 和 `THIRD_PARTY_NOTICES.txt`，不包含旧 local GARDENS candidate URL。
+- Git 图片 binary diff 为 0；真实浏览器断言前三格使用图标且 notice 可访问。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: production Hotbar remains behind a development-only visual gate.
+const icon = import.meta.env.DEV ? candidateIconForItem(itemId) : null;
+
+// Correct: production resolves one reviewed presentation frame without changing item state.
+const icon = itemIconForItem(itemId);
 ```
 
 ## Scenario: selected Hotbar item owns world interaction

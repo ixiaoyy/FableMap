@@ -44,5 +44,6 @@ npm --prefix .\apps\mirror-island run build:server
 - [产品简报](docs/PRODUCT_BRIEF.md)
 - [明确不做](docs/WHAT_NOT_TO_BUILD.md)
 - [Town 后续开发路线图](docs/TOWN_ROADMAP.md)
+- [现阶段精细化验收门禁](docs/CURRENT_SLICE_POLISH_GATE.md)
 - [生产部署](docs/DEPLOYMENT.md)
 - [Phaser 单人运行时规范](.trellis/spec/frontend/mirror-island-phaser-singleplayer.md)
