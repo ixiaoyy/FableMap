@@ -17,10 +17,14 @@ import {
 import { activeNpcSpawns } from "../domain/world/npc-schedules.ts";
 import { WorldCatalog } from "../domain/world/regions.ts";
 import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
+import { calendarAt } from "../domain/calendar/game-calendar.ts";
+import { CROP_DEFINITIONS } from "../domain/farming/crops.ts";
+import { ForageSystem, forageAppearsOnDay } from "../domain/gathering/ForageSystem.ts";
 
 const FARM_PLOT_ID = "farm-plot-001";
 const BED_ID = "cottage-bed";
 const TREE_ID = "test-tree-001";
+const FORAGE_ID = "test-forage-flower-001";
 
 class MemorySaveRepository {
   game = null;
@@ -72,7 +76,10 @@ function createLifeLoopCatalog() {
       "npc-huaqiang-shelves": { x: 96, y: 32 },
     },
     exits: [],
-    resources: [{ entityId: TREE_ID, regionId: "cottage", kind: "tree", x: 64, y: 48 }],
+    resources: [
+      { entityId: TREE_ID, regionId: "cottage", kind: "tree", x: 64, y: 48 },
+      { entityId: FORAGE_ID, regionId: "cottage", kind: "spring-wildflower", x: 32, y: 32 },
+    ],
     interactions: [
       { entityId: BED_ID, regionId: "cottage", kind: "bed", x: 16, y: 16, width: 32, height: 48 },
       { entityId: FARM_PLOT_ID, regionId: "cottage", kind: "farm-plot", x: 40, y: 32, width: 16, height: 16 },
@@ -156,10 +163,38 @@ async function decodeFormalMap(name, mapKey) {
   return decodeTiledRegion(raw, mapKey);
 }
 
-test("v2, v3 and v4 saves migrate to v5 and repeated v5 decode is idempotent", () => {
+test("calendar, spring crop catalog and daily forage use deterministic domain rules", () => {
+  assert.deepEqual(calendarAt(1), { absoluteDay: 1, year: 1, season: "spring", dayOfSeason: 1, weekday: "monday" });
+  assert.deepEqual(calendarAt(28), { absoluteDay: 28, year: 1, season: "spring", dayOfSeason: 28, weekday: "sunday" });
+  assert.equal(calendarAt(29).season, "summer");
+  assert.equal(calendarAt(112).season, "winter");
+  assert.deepEqual(calendarAt(113), { absoluteDay: 113, year: 2, season: "spring", dayOfSeason: 1, weekday: "monday" });
+  assert.deepEqual(CROP_DEFINITIONS.map(({ cropId, growthDays, seedPrice, sellPrice }) => (
+    [cropId, growthDays, seedPrice, sellPrice]
+  )), [
+    [ITEM_ID.turnip, 3, 20, 35],
+    [ITEM_ID.bokChoy, 5, 45, 80],
+    [ITEM_ID.cauliflower, 8, 80, 170],
+  ]);
+
+  const catalog = createLifeLoopCatalog();
+  const state = createInitialGameState(catalog);
+  const inventory = new InventorySystem();
+  const forage = new ForageSystem(inventory, catalog);
+  const activeDay = Array.from({ length: 28 }, (_, index) => index + 1)
+    .find((day) => forageAppearsOnDay(FORAGE_ID, day));
+  assert.ok(activeDay);
+  state.day = activeDay;
+  state.dailyForage = { day: activeDay, collectedIds: [] };
+  assert.equal(forage.collect(state, FORAGE_ID), "collected");
+  assert.equal(forage.collect(state, FORAGE_ID), "inactive");
+  assert.equal(state.dailyForage.collectedIds.includes(FORAGE_ID), true);
+});
+
+test("released saves migrate to v7 and repeated v7 decode is idempotent", () => {
   const migrated = decodeStoredGame(createV2StoredGame());
-  assert.equal(migrated.version, 5);
-  assert.equal(migrated.state.version, 5);
+  assert.equal(migrated.version, 7);
+  assert.equal(migrated.state.version, 7);
   assert.equal(migrated.state.day, 1);
   assert.equal(migrated.state.minuteOfDay, DAY_START_MINUTE);
   assert.equal(migrated.state.gold, 100);
@@ -169,26 +204,39 @@ test("v2, v3 and v4 saves migrate to v5 and repeated v5 decode is idempotent", (
     id: "farm-plot-001",
     phase: "growing",
     cropId: ITEM_ID.turnip,
-    growthStage: 1,
+    growthDays: 1,
     watered: true,
   });
-  assert.equal(migrated.state.farmTiles["farm-plot-002"].growthStage, 3);
+  assert.equal(migrated.state.farmTiles["farm-plot-002"].growthDays, 3);
+  assert.deepEqual(migrated.state.dailyForage, { day: 1, collectedIds: [] });
   assert.deepEqual(migrated.state.friendships, {});
   assert.deepEqual(decodeStoredGame(migrated), migrated);
+  const legacyFarmTiles = Object.fromEntries(Object.entries(migrated.state.farmTiles).map(([id, tile]) => [id, {
+    ...tile,
+    growthStage: tile.growthDays,
+  }]));
+  for (const tile of Object.values(legacyFarmTiles)) delete tile.growthDays;
   const versionThree = {
     version: 3,
     updatedAt: migrated.updatedAt,
-    state: { ...migrated.state, version: 3 },
+    state: { ...migrated.state, version: 3, farmTiles: legacyFarmTiles },
   };
   delete versionThree.state.minuteOfDay;
   assert.equal(decodeStoredGame(versionThree).state.minuteOfDay, DAY_START_MINUTE);
   const versionFour = {
     version: 4,
     updatedAt: migrated.updatedAt,
-    state: { ...migrated.state, version: 4 },
+    state: { ...migrated.state, version: 4, farmTiles: legacyFarmTiles },
   };
   delete versionFour.state.friendships;
   assert.deepEqual(decodeStoredGame(versionFour).state.friendships, {});
+  const versionSix = {
+    version: 6,
+    updatedAt: migrated.updatedAt,
+    state: { ...migrated.state, version: 6, farmTiles: legacyFarmTiles },
+  };
+  delete versionSix.state.dailyForage;
+  assert.deepEqual(decodeStoredGame(versionSix).state.dailyForage, { day: 1, collectedIds: [] });
   assert.throws(
     () => decodeStoredGame({ ...migrated, state: { ...migrated.state, minuteOfDay: 365 } }),
     /time is invalid/i,
@@ -203,7 +251,7 @@ test("v2, v3 and v4 saves migrate to v5 and repeated v5 decode is idempotent", (
     }),
     /friendship/i,
   );
-  assert.throws(() => decodeStoredGame({ ...migrated, version: 6 }), /unsupported/i);
+  assert.throws(() => decodeStoredGame({ ...migrated, version: 8 }), /unsupported/i);
 });
 
 test("friendship records first daily talk, applies light decay and stops decay at max hearts", () => {
@@ -305,7 +353,7 @@ test("one real session completes buy, three watered sleeps, harvest, sale and re
   assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
   wallClock += 1_000;
   session.tick(wallClock, true);
-  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthStage, 0);
+  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthDays, 0);
   await session.flush();
   const savesBeforeSleep = repository.saveCalls;
 
@@ -314,7 +362,7 @@ test("one real session completes buy, three watered sleeps, harvest, sale and re
   state = session.snapshot();
   assert.equal(state.day, 2);
   assert.equal(state.minuteOfDay, DAY_START_MINUTE);
-  assert.equal(state.farmTiles[FARM_PLOT_ID].growthStage, 1);
+  assert.equal(state.farmTiles[FARM_PLOT_ID].growthDays, 1);
   assert.equal(state.farmTiles[FARM_PLOT_ID].watered, false);
   assert.equal(state.friendships["seed-keeper"].points, 20);
   await session.flush();
@@ -323,7 +371,7 @@ test("one real session completes buy, three watered sleeps, harvest, sale and re
   assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
   assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
   await session.flush();
-  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthStage, 2);
+  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthDays, 2);
   assert.equal(session.snapshot().friendships["seed-keeper"].points, 18);
 
   assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
@@ -373,23 +421,23 @@ test("shop failure paths leave gold and inventory unchanged", () => {
   const state = createInitialGameState(catalog);
   state.player.x = 64;
   state.player.y = 32;
-  assert.equal(shop.buyTurnipSeed(state, activeNpcSpawns(catalog, state.minuteOfDay)), "not-at-shop");
+  assert.equal(shop.buySeed(state, activeNpcSpawns(catalog, state.minuteOfDay), ITEM_ID.turnipSeed), "not-at-shop");
   state.minuteOfDay = 9 * 60;
   const activeNpcs = activeNpcSpawns(catalog, state.minuteOfDay);
   const baseline = structuredClone(state);
-  assert.equal(shop.sellTurnip(state, activeNpcs), "missing-item");
+  assert.equal(shop.sellItem(state, activeNpcs, ITEM_ID.turnip), "missing-item");
   assert.deepEqual(state, baseline);
 
   state.inventory = state.inventory.map(() => ({ itemId: ITEM_ID.wood, quantity: 99 }));
   const fullInventory = structuredClone(state.inventory);
-  assert.equal(shop.buyTurnipSeed(state, activeNpcs), "inventory-full");
+  assert.equal(shop.buySeed(state, activeNpcs, ITEM_ID.turnipSeed), "inventory-full");
   assert.equal(state.gold, 100);
   assert.deepEqual(state.inventory, fullInventory);
 
   state.inventory = structuredClone(baseline.inventory);
   state.gold = 0;
   const emptyGoldInventory = structuredClone(state.inventory);
-  assert.equal(shop.buyTurnipSeed(state, activeNpcs), "insufficient-gold");
+  assert.equal(shop.buySeed(state, activeNpcs, ITEM_ID.turnipSeed), "insufficient-gold");
   assert.equal(state.gold, 0);
   assert.deepEqual(state.inventory, emptyGoldInventory);
 });
