@@ -129,7 +129,7 @@ export class NpcMotionRuntime {
     return this.activeSpawns().find((spawn) => spawn.npcId === npcId) ?? null;
   }
 
-  /** Creates one idle state and resolves any day activity owned by its exact schedule target. */
+  /** Creates one idle state and resolves the phase activity owned by its exact schedule target. */
   private createIdleMotion(target: NpcSpawnDefinition, minuteOfDay: number): IdleNpcMotion {
     return {
       kind: "idle",
@@ -138,7 +138,7 @@ export class NpcMotionRuntime {
     };
   }
 
-  /** Resolves one applicable transient activity while leaving non-formal fixture regions activity-free. */
+  /** Resolves one applicable transient phase activity while leaving unknown fixture identities activity-free. */
   private createActivityState(target: NpcSpawnDefinition, minuteOfDay: number): NpcActivityState | null {
     const plan = npcActivityAt(this.catalog, target.npcId, minuteOfDay);
     if (!plan || plan.regionId !== target.regionId) return null;

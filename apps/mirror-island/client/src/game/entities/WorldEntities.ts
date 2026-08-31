@@ -624,6 +624,48 @@ function npcActivityVisual(spawn: NpcRuntimeSpawn): NpcActivityVisual {
       bodyY: spawn.motion === "walking" ? 0 : -spawn.activityPhase,
       bodyAngle: 0,
     }; break;
+    case "stock": visual = {
+      label: "备",
+      bodyX: direction,
+      bodyY: 0,
+      bodyAngle: direction,
+    }; break;
+    case "close": visual = {
+      label: "收",
+      bodyX: direction,
+      bodyY: spawn.activityPhase,
+      bodyAngle: direction,
+    }; break;
+    case "prepare": visual = {
+      label: "备",
+      bodyX: 0,
+      bodyY: spawn.activityPhase,
+      bodyAngle: direction,
+    }; break;
+    case "tea": visual = {
+      label: "茶",
+      bodyX: direction,
+      bodyY: -spawn.activityPhase,
+      bodyAngle: 0,
+    }; break;
+    case "record": visual = {
+      label: "记",
+      bodyX: direction,
+      bodyY: 0,
+      bodyAngle: direction,
+    }; break;
+    case "sew": visual = {
+      label: "缝",
+      bodyX: direction,
+      bodyY: spawn.activityPhase,
+      bodyAngle: direction * 2,
+    }; break;
+    case "rope-check": visual = {
+      label: "绳",
+      bodyX: direction,
+      bodyY: spawn.activityPhase,
+      bodyAngle: 0,
+    }; break;
   }
   return {
     label: visual.label ? `${visual.label}${waitingSuffix}` : visual.label,
