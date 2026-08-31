@@ -9,7 +9,7 @@ import {
   v2BackupKey,
 } from "../client/src/persistence/v2-migration-backup.ts";
 
-/** Builds the smallest valid catalog needed to produce one current v4 save. */
+/** Builds the smallest valid catalog needed to produce one current v5 save. */
 function createCatalog() {
   return new WorldCatalog([{
     id: "farm",
@@ -43,27 +43,27 @@ function createRawV2() {
   };
 }
 
-test("first v4 write over v2 plans one exact owner-scoped backup", () => {
+test("first v5 write over v2 plans one exact owner-scoped backup", () => {
   const mainKey = "owner-hash:main";
   const rawV2 = createRawV2();
-  const v4 = createStoredGame(createInitialGameState(createCatalog()), 456);
-  const plan = planIndexedDbSave(mainKey, { key: mainKey, game: rawV2 }, undefined, v4);
-  assert.deepEqual(plan.main, { key: mainKey, game: v4 });
+  const v5 = createStoredGame(createInitialGameState(createCatalog()), 456);
+  const plan = planIndexedDbSave(mainKey, { key: mainKey, game: rawV2 }, undefined, v5);
+  assert.deepEqual(plan.main, { key: mainKey, game: v5 });
   assert.deepEqual(plan.backup, { key: `${mainKey}:backup:v2`, game: rawV2 });
   assert.strictEqual(plan.backup.game, rawV2);
 });
 
-test("existing backup, current v4 and new slots never create another v2 backup", () => {
+test("existing backup, current v5 and new slots never create another v2 backup", () => {
   const mainKey = "owner-hash:main";
   const rawV2 = createRawV2();
-  const v4 = createStoredGame(createInitialGameState(createCatalog()), 456);
+  const v5 = createStoredGame(createInitialGameState(createCatalog()), 456);
   const existingBackup = { key: v2BackupKey(mainKey), game: rawV2 };
   assert.equal(
-    planIndexedDbSave(mainKey, { key: mainKey, game: rawV2 }, existingBackup, v4).backup,
+    planIndexedDbSave(mainKey, { key: mainKey, game: rawV2 }, existingBackup, v5).backup,
     null,
   );
-  assert.equal(planIndexedDbSave(mainKey, { key: mainKey, game: v4 }, undefined, v4).backup, null);
-  assert.equal(planIndexedDbSave(mainKey, undefined, undefined, v4).backup, null);
+  assert.equal(planIndexedDbSave(mainKey, { key: mainKey, game: v5 }, undefined, v5).backup, null);
+  assert.equal(planIndexedDbSave(mainKey, undefined, undefined, v5).backup, null);
 });
 
 test("explicit slot deletion owns only its main and v2 backup keys", () => {

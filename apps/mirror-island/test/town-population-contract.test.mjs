@@ -3,22 +3,41 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { selectNpcHitTarget } from "../client/src/game/combat/npc-hit-target.ts";
 import { getDialogueDefinition } from "../client/src/game/dialogue/definitions.ts";
+import { daylightVisualAt } from "../client/src/game/presentation/daylight.ts";
 import {
   advanceDialogue,
   applyGameState,
   cancelSleepConfirmation,
   clearGameState,
   closeShop,
+  closeSocial,
   confirmSleep,
   gameUiState,
   isWorldInputLocked,
   openShop,
+  openSocial,
   openSleepConfirmation,
   selectHotbarSlot,
   setDialogue,
   setWorldActionBusy,
 } from "../client/src/stores/game-store.ts";
 import { ITEM_ID } from "../domain/items/definitions.ts";
+import { createInitialGameState } from "../domain/state/game-state.ts";
+import { validateNpcActivities } from "../domain/world/npc-activities.ts";
+import {
+  NPC_ACTIVITY_DWELL_MS,
+  NPC_REPLAN_DELAY_MS,
+  NPC_TRANSFER_DURATION_MS,
+  NpcMotionRuntime,
+} from "../domain/world/npc-motions.ts";
+import { findNpcPath } from "../domain/world/npc-pathfinding.ts";
+import {
+  NPC_FEET_HALF_HEIGHT,
+  NPC_FEET_HALF_WIDTH,
+  PLAYER_FEET_HALF_HEIGHT,
+  PLAYER_FEET_HALF_WIDTH,
+  worldFeetOverlap,
+} from "../domain/world/regions.ts";
 import {
   activeNpcById,
   activeNpcSpawns,
@@ -81,6 +100,27 @@ function interactionGoals(catalog, npc) {
   return goals;
 }
 
+test("daylight projection keeps outdoor phases distinct and indoor night readable", () => {
+  const dawn = daylightVisualAt(360, "farm");
+  const day = daylightVisualAt(720, "town");
+  const dusk = daylightVisualAt(1_080, "lakeshore");
+  const twilight = daylightVisualAt(1_140, "foothills");
+  const night = daylightVisualAt(1_260, "town");
+  const midnight = daylightVisualAt(1_440, "farm");
+  const indoorMidnight = daylightVisualAt(1_440, "cottage");
+
+  assert.deepEqual([dawn.phase, dawn.environment, dawn.opacity], ["dawn", "outdoor", 0.16]);
+  assert.deepEqual([day.phase, day.environment, day.opacity], ["day", "outdoor", 0]);
+  assert.deepEqual([dusk.phase, dusk.environment, dusk.opacity], ["dusk", "outdoor", 0.14]);
+  assert.ok(Math.abs(twilight.opacity - 0.21) < Number.EPSILON * 4);
+  assert.match(twilight.color, /^#[0-9a-f]{6}$/u);
+  assert.deepEqual([night.phase, night.environment, night.opacity], ["night", "outdoor", 0.36]);
+  assert.deepEqual([midnight.phase, midnight.opacity], ["night", 0.44]);
+  assert.deepEqual([indoorMidnight.environment, indoorMidnight.opacity], ["indoor", 0.12]);
+  assert.ok(indoorMidnight.opacity < midnight.opacity);
+  assert.throws(() => daylightVisualAt(365, "farm"), /time is invalid/i);
+});
+
 test("formal world maps decode NPCs, expansion exits and inspect hotspots through one catalog", async () => {
   const [
     farmMap, townMap, cottageMap, seedShopMap, blacksmithMap,
@@ -109,6 +149,7 @@ test("formal world maps decode NPCs, expansion exits and inspect hotspots throug
     decodeTiledRegion(lakeshoreMap, "test-lakeshore"),
   ]);
   validateNpcSchedules(catalog);
+  validateNpcActivities(catalog);
   const visualProfileSource = await readFile(
     new URL("../client/src/game/assets/visual-profile.ts", import.meta.url),
     "utf8",
@@ -147,9 +188,160 @@ test("formal world maps decode NPCs, expansion exits and inspect hotspots throug
     assert.equal(new Set(active.map(({ entityId }) => entityId)).size, active.length);
     assert.equal(new Set(active.map(({ npcId }) => npcId)).size, active.length);
   }
+  const initialState = createInitialGameState(catalog);
+  assert.deepEqual(Object.keys(initialState.friendships), scheduledNpcIds);
+  assert.equal(Object.values(initialState.friendships).every(({ points, lastTalkedDay }) => (
+    points === 0 && lastTalkedDay === 0
+  )), true);
   assert.equal(activeNpcById(catalog, "seed-keeper", 360)?.interactionType, "dialogue");
   assert.equal(activeNpcById(catalog, "seed-keeper", 540)?.interactionType, "shop");
   assert.equal(activeNpcById(catalog, "seed-keeper", 1020)?.interactionType, "dialogue");
+
+  const activityRuntime = new NpcMotionRuntime(catalog);
+  activityRuntime.reset(540);
+  assert.deepEqual(
+    activityRuntime.activeSpawns().filter(({ activity }) => activity !== null).map(({ npcId, activity }) => (
+      [npcId, activity]
+    )),
+    [
+      ["town-resident-01", "tend"],
+      ["town-blacksmith", "forge"],
+      ["seed-keeper", "serve"],
+      ["town-resident-mozi", "repair"],
+      ["town-resident-haonan", "mountain-patrol"],
+      ["town-resident-alan", "observe"],
+      ["town-resident-haomeili", "organize"],
+      ["town-resident-xiangzi", "dock-watch"],
+    ],
+  );
+  assert.equal(activityRuntime.activeByNpcId("town-resident-mozi")?.activityPhase, 0);
+  activityRuntime.advance(400);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-mozi")?.activityPhase, 1);
+  activityRuntime.reset(360);
+  assert.equal(activityRuntime.activeSpawns().every(({ activity }) => activity === null), true);
+
+  activityRuntime.reset(540);
+  const haonanStart = activityRuntime.activeByNpcId("town-resident-haonan");
+  activityRuntime.advance(1_000);
+  activityRuntime.advance(1_000);
+  activityRuntime.advance(NPC_ACTIVITY_DWELL_MS - 2_001);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-haonan")?.motion, "idle");
+  activityRuntime.advance(1);
+  assert.equal(activityRuntime.activeByNpcId("town-resident-haonan")?.motion, "walking");
+  activityRuntime.advance(500);
+  const patrollingHaonan = activityRuntime.activeByNpcId("town-resident-haonan");
+  assert.equal(patrollingHaonan?.activity, "mountain-patrol");
+  assert.notDeepEqual([patrollingHaonan?.x, patrollingHaonan?.y], [haonanStart?.x, haonanStart?.y]);
+  for (
+    let index = 0;
+    index < 100 && activityRuntime.activeByNpcId("town-resident-haonan")?.motion !== "idle";
+    index += 1
+  ) {
+    activityRuntime.advance(500);
+  }
+  const haonanMid = catalog.requireSpawn("foothills", "npc-haonan-patrol-mid");
+  assert.deepEqual(
+    [activityRuntime.activeByNpcId("town-resident-haonan")?.x, activityRuntime.activeByNpcId("town-resident-haonan")?.y],
+    [haonanMid.x, haonanMid.y],
+  );
+  const xiangziEast = catalog.requireSpawn("lakeshore", "npc-xiangzi-dock-east");
+  assert.deepEqual(
+    [activityRuntime.activeByNpcId("town-resident-xiangzi")?.x, activityRuntime.activeByNpcId("town-resident-xiangzi")?.y],
+    [xiangziEast.x, xiangziEast.y],
+  );
+  assert.equal(activityRuntime.activeByNpcId("town-resident-xiangzi")?.activity, "dock-watch");
+
+  const avoidanceRuntime = new NpcMotionRuntime(catalog);
+  avoidanceRuntime.reset(540);
+  avoidanceRuntime.advance(1_000);
+  avoidanceRuntime.advance(1_000);
+  avoidanceRuntime.advance(400);
+  const trailBlocker = { regionId: "foothills", x: 392, y: 464 };
+  avoidanceRuntime.advance(500, trailBlocker);
+  const waitingHaonan = avoidanceRuntime.activeByNpcId("town-resident-haonan");
+  assert.equal(waitingHaonan?.motion, "waiting");
+  assert.equal(worldFeetOverlap(
+    waitingHaonan,
+    NPC_FEET_HALF_WIDTH,
+    NPC_FEET_HALF_HEIGHT,
+    trailBlocker,
+    PLAYER_FEET_HALF_WIDTH,
+    PLAYER_FEET_HALF_HEIGHT,
+  ), false);
+  let detoured = false;
+  let passedBlocker = false;
+  for (let index = 0; index < 50 && !passedBlocker; index += 1) {
+    avoidanceRuntime.advance(100, trailBlocker);
+    const haonan = avoidanceRuntime.activeByNpcId("town-resident-haonan");
+    detoured ||= Math.abs((haonan?.x ?? trailBlocker.x) - trailBlocker.x) > 1;
+    passedBlocker = (haonan?.y ?? trailBlocker.y) < trailBlocker.y - PLAYER_FEET_HALF_HEIGHT;
+  }
+  assert.equal(detoured, true);
+  assert.equal(passedBlocker, true);
+
+  const targetBlockedRuntime = new NpcMotionRuntime(catalog);
+  targetBlockedRuntime.reset(540);
+  targetBlockedRuntime.advance(1_000);
+  targetBlockedRuntime.advance(1_000);
+  targetBlockedRuntime.advance(400);
+  const blockedTarget = { regionId: "foothills", ...catalog.requireSpawn("foothills", "npc-haonan-patrol-mid") };
+  for (let index = 0; index < 30; index += 1) targetBlockedRuntime.advance(100, blockedTarget);
+  assert.notEqual(targetBlockedRuntime.activeByNpcId("town-resident-haonan")?.motion, "idle");
+  for (
+    let index = 0;
+    index < 30 && targetBlockedRuntime.activeByNpcId("town-resident-haonan")?.motion !== "idle";
+    index += 1
+  ) targetBlockedRuntime.advance(100);
+  assert.equal(targetBlockedRuntime.activeByNpcId("town-resident-haonan")?.motion, "idle");
+  assert.deepEqual(
+    [targetBlockedRuntime.activeByNpcId("town-resident-haonan")?.x, targetBlockedRuntime.activeByNpcId("town-resident-haonan")?.y],
+    [blockedTarget.x, blockedTarget.y],
+  );
+
+  const runtime = new NpcMotionRuntime(catalog);
+  runtime.reset(540);
+  const moziStart = runtime.activeByNpcId("town-resident-mozi");
+  runtime.transitionTo(1020);
+  assert.equal(runtime.activeByNpcId("town-resident-mozi")?.motion, "walking");
+  runtime.advance(500);
+  const movingMozi = runtime.activeByNpcId("town-resident-mozi");
+  assert.equal(movingMozi?.regionId, "town");
+  assert.notDeepEqual([movingMozi?.x, movingMozi?.y], [moziStart?.x, moziStart?.y]);
+  for (let index = 0; index < 100 && runtime.activeByNpcId("town-resident-mozi")?.motion !== "idle"; index += 1) {
+    runtime.advance(1_000);
+  }
+  const moziTarget = activeNpcById(catalog, "town-resident-mozi", 1020);
+  assert.deepEqual(
+    [runtime.activeByNpcId("town-resident-mozi")?.x, runtime.activeByNpcId("town-resident-mozi")?.y],
+    [moziTarget?.x, moziTarget?.y],
+  );
+
+  runtime.reset(360);
+  runtime.transitionTo(540);
+  assert.equal(runtime.activeByNpcId("town-resident-01")?.regionId, "town-house");
+  assert.equal(runtime.activeByNpcId("town-resident-01")?.motion, "leaving");
+  runtime.advance(NPC_TRANSFER_DURATION_MS / 2);
+  assert.equal(runtime.activeByNpcId("town-resident-01")?.regionId, "town");
+  assert.equal(runtime.activeByNpcId("town-resident-01")?.motion, "arriving");
+  runtime.advance(NPC_TRANSFER_DURATION_MS / 2);
+  assert.equal(runtime.activeByNpcId("town-resident-01")?.motion, "idle");
+  assert.equal(runtime.activeSpawns().filter(({ npcId }) => npcId === "town-resident-01").length, 1);
+
+  assert.equal(findNpcPath({
+    columns: 3,
+    rows: 3,
+    tileWidth: 16,
+    tileHeight: 16,
+    blocked: [false, true, false, false, true, false, false, true, false],
+  }, { x: 8, y: 8 }, { x: 40, y: 8 }), null);
+  assert.equal(findNpcPath({
+    columns: 3,
+    rows: 1,
+    tileWidth: 16,
+    tileHeight: 16,
+    blocked: [false, false, false],
+  }, { x: 8, y: 8 }, { x: 40, y: 8 }, [{ x: 24, y: 8 }]), null);
+  assert.equal(NPC_REPLAN_DELAY_MS, 600);
 
   const townStart = [2, 18];
   for (const npc of town.npcs) {
@@ -272,7 +464,7 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
   inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
   inventory[2] = { itemId: ITEM_ID.axe, quantity: 1 };
   const state = {
-    version: 4,
+    version: 5,
     day: 1,
     minuteOfDay: 360,
     gold: 100,
@@ -280,10 +472,14 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
     inventory,
     resources: {},
     farmTiles: {},
+    friendships: {
+      "seed-keeper": { npcId: "seed-keeper", points: 20, lastTalkedDay: 1 },
+    },
   };
   applyGameState(state);
   assert.equal(gameUiState.selectedHotbarIndex, null);
   assert.equal(gameUiState.selectedItemId, "");
+  assert.equal(gameUiState.friendships["seed-keeper"].points, 20);
 
   selectHotbarSlot(0);
   assert.equal(gameUiState.selectedHotbarIndex, 0);
@@ -302,6 +498,12 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
   selectHotbarSlot(2);
   assert.equal(gameUiState.selectedItemId, ITEM_ID.wateringCan);
   closeShop();
+
+  assert.equal(openSocial(), true);
+  assert.equal(gameUiState.socialOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  closeSocial();
+  assert.equal(isWorldInputLocked(), false);
 
   const consumed = structuredClone(state);
   consumed.inventory[1] = { itemId: "", quantity: 0 };
