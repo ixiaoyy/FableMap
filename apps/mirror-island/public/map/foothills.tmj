@@ -119,6 +119,46 @@
           "width": 0,
           "x": 392,
           "y": 480
+        },
+        {
+          "height": 0,
+          "id": 161,
+          "name": "Haonan Patrol Mid",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "npc-haonan-patrol-mid"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 392,
+          "y": 440
+        },
+        {
+          "height": 0,
+          "id": 162,
+          "name": "Haonan Patrol Lookout",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "npc-haonan-patrol-lookout"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 424,
+          "y": 408
         }
       ],
       "opacity": 1,
@@ -842,7 +882,7 @@
     }
   ],
   "nextlayerid": 12,
-  "nextobjectid": 161,
+  "nextobjectid": 163,
   "orientation": "orthogonal",
   "properties": [
     {

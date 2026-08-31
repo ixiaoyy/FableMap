@@ -1,44 +1,15 @@
 <script setup lang="ts">
-import { onUnmounted, ref } from "vue";
-import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
-import { isWorldInputLocked } from "../../stores/game-store.ts";
+import { computed } from "vue";
+import { gameUiState } from "../../stores/game-store.ts";
+import {
+  useHeldMovement,
+  type MovementDirection,
+} from "../controls/use-held-movement.ts";
 
-type DebugDirection = "up" | "down" | "left" | "right";
-
-const DIRECTION_AXIS: Readonly<Record<DebugDirection, readonly [-1 | 0 | 1, -1 | 0 | 1]>> = {
-  up: [0, -1],
-  down: [0, 1],
-  left: [-1, 0],
-  right: [1, 0],
-};
-
-const activeDirection = ref<DebugDirection | null>(null);
-let movementTimer: number | null = null;
-
-/** Dispatches one bounded movement step through the existing GameSession command boundary. */
-function nudge(direction: DebugDirection): void {
-  if (isWorldInputLocked()) return;
-  const [xAxis, yAxis] = DIRECTION_AXIS[direction];
-  dispatchLocalGameCommand({ type: "move", xAxis, yAxis, deltaMs: 100 });
-}
-
-/** Starts repeat movement while a pointer remains held over one debug direction button. */
-function startMoving(direction: DebugDirection): void {
-  stopMoving();
-  if (isWorldInputLocked()) return;
-  activeDirection.value = direction;
-  nudge(direction);
-  movementTimer = window.setInterval(() => nudge(direction), 80);
-}
-
-/** Stops the current repeat movement without mutating any gameplay state directly. */
-function stopMoving(): void {
-  if (movementTimer !== null) window.clearInterval(movementTimer);
-  movementTimer = null;
-  activeDirection.value = null;
-}
-
-onUnmounted(stopMoving);
+const { activeDirection, activateFromKeyboard, startMoving, stopMoving } = useHeldMovement();
+const positionLabel = computed(() => (
+  `${gameUiState.regionId || "未加载"} · ${Math.round(gameUiState.playerX)}, ${Math.round(gameUiState.playerY)}`
+));
 </script>
 
 <template>
@@ -46,10 +17,11 @@ onUnmounted(stopMoving);
     <div class="debug-controls__copy">
       <span>DEBUG MOVE</span>
       <small>按住方向移动，靠近后点击目标</small>
+      <small>{{ positionLabel }}</small>
     </div>
     <div class="debug-dpad">
       <button
-        v-for="direction in (['up', 'left', 'down', 'right'] as DebugDirection[])"
+        v-for="direction in (['up', 'left', 'down', 'right'] as MovementDirection[])"
         :key="direction"
         type="button"
         class="debug-dpad__key"
@@ -60,7 +32,7 @@ onUnmounted(stopMoving);
         @pointerup="stopMoving"
         @pointercancel="stopMoving"
         @pointerleave="stopMoving"
-        @click="nudge(direction)"
+        @click="activateFromKeyboard(direction, $event)"
       >
         {{ { up: '↑', down: '↓', left: '←', right: '→' }[direction] }}
       </button>

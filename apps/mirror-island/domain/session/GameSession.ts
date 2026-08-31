@@ -4,6 +4,14 @@ import { GatheringSystem, type GatheringResult } from "../gathering/GatheringSys
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { getItemDefinition } from "../items/definitions.ts";
 import {
+  DEFAULT_PLAYER_APPEARANCE_ID,
+  type PlayerAppearanceId,
+} from "../player/appearance.ts";
+import {
+  FriendshipSystem,
+  type TalkFriendshipResult,
+} from "../social/FriendshipSystem.ts";
+import {
   MAIN_SAVE_SLOT,
   createStoredGame,
   type SaveRepository,
@@ -25,13 +33,19 @@ import {
   MAX_CLOCK_TICK_DELTA_MS,
   REAL_MILLISECONDS_PER_TIME_STEP,
   advanceGameMinute,
+  schedulePhaseAt,
 } from "../time/game-time.ts";
 import { movePlayer } from "../world/movement.ts";
+import {
+  NpcMotionRuntime,
+  type NpcRuntimeSpawn,
+} from "../world/npc-motions.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 import type { ActionFeedback, GameCommand } from "./commands.ts";
 
 const MOVEMENT_CHECKPOINT_INTERVAL_MS = 500;
 const SLEEP_INTERACTION_DISTANCE_PIXELS = 42;
+const NPC_INTERACTION_DISTANCE_PIXELS = 42;
 
 type SleepResult = "slept" | "missing-bed" | "too-far" | "already-saving" | "day-limit";
 
@@ -43,6 +57,8 @@ export class GameSession {
   private readonly crafting = new CraftingSystem(this.inventory);
   private readonly farming: FarmingSystem;
   private readonly shop: ShopSystem;
+  private readonly friendship = new FriendshipSystem();
+  private readonly npcMotions: NpcMotionRuntime;
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState | null = null;
   private movementDirty = false;
@@ -64,7 +80,8 @@ export class GameSession {
     if (!ownerKey.trim() || !slotId.trim()) throw new Error("Local save identity is invalid.");
     this.gathering = new GatheringSystem(this.inventory, catalog);
     this.farming = new FarmingSystem(this.inventory, catalog);
-    this.shop = new ShopSystem(this.inventory, catalog);
+    this.shop = new ShopSystem(this.inventory);
+    this.npcMotions = new NpcMotionRuntime(catalog);
   }
 
   /** Reports whether this authenticated browser profile has a valid local save record. */
@@ -72,12 +89,15 @@ export class GameSession {
     return this.repository.has(this.ownerKey, this.slotId);
   }
 
-  /** Replaces the current slot with a deterministic starter world and persists it before play begins. */
-  async newGame(): Promise<GameState> {
+  /** Replaces the current slot with one chosen appearance and persists it before play begins. */
+  async newGame(
+    appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
+  ): Promise<GameState> {
     await this.flush();
-    const state = createInitialGameState(this.catalog);
+    const state = createInitialGameState(this.catalog, appearanceId);
     await this.repository.save(this.ownerKey, this.slotId, createStoredGame(state, this.now()));
     this.state = state;
+    this.npcMotions.reset(state.minuteOfDay);
     this.lastSaveError = null;
     this.sleepPending = false;
     this.movementDirty = false;
@@ -95,6 +115,7 @@ export class GameSession {
     if (!stored) throw new Error("No local save exists for this account.");
     this.state = stored.state;
     reconcileGameStateWithCatalog(this.state, this.catalog);
+    this.npcMotions.reset(this.state.minuteOfDay);
     this.lastSaveError = null;
     this.sleepPending = false;
     this.movementDirty = false;
@@ -111,7 +132,8 @@ export class GameSession {
     const state = this.requireState();
     switch (command.type) {
       case "move": {
-        if (movePlayer(state, this.catalog, command.xAxis, command.yAxis, command.deltaMs)) {
+        const activeNpcs = this.npcMotions.activeSpawnsInRegion(state.player.regionId);
+        if (movePlayer(state, this.catalog, command.xAxis, command.yAxis, command.deltaMs, activeNpcs)) {
           this.movementDirty = true;
           this.publish();
         }
@@ -131,13 +153,18 @@ export class GameSession {
         }
         return sleepFeedback(result);
       }
+      case "talk-to-npc": {
+        const result = this.talkToNpc(state, command.npcId);
+        if (result === "recorded") this.commitCriticalChange();
+        return null;
+      }
       case "buy-item": {
-        const result = this.shop.buyTurnipSeed(state);
+        const result = this.shop.buyTurnipSeed(state, this.npcMotions.activeSpawns());
         if (result === "bought") this.commitCriticalChange();
         return buyFeedback(result);
       }
       case "sell-item": {
-        const result = this.shop.sellTurnip(state);
+        const result = this.shop.sellTurnip(state, this.npcMotions.activeSpawns());
         if (result === "sold") this.commitCriticalChange();
         return sellFeedback(result);
       }
@@ -172,14 +199,21 @@ export class GameSession {
     }
     const previousClockTick = this.lastClockTickAt;
     this.lastClockTickAt = now;
-    if (!paused && previousClockTick !== null && state.minuteOfDay < DAY_END_MINUTE) {
+    if (!paused && previousClockTick !== null) {
       const elapsed = Math.max(0, Math.min(now - previousClockTick, MAX_CLOCK_TICK_DELTA_MS));
-      this.clockAccumulatorMs += elapsed;
-      if (this.clockAccumulatorMs >= REAL_MILLISECONDS_PER_TIME_STEP) {
-        this.clockAccumulatorMs -= REAL_MILLISECONDS_PER_TIME_STEP;
-        state.minuteOfDay = advanceGameMinute(state.minuteOfDay);
-        this.publish();
-        shouldSave = true;
+      this.npcMotions.advance(elapsed, state.player);
+      if (state.minuteOfDay < DAY_END_MINUTE) {
+        this.clockAccumulatorMs += elapsed;
+        if (this.clockAccumulatorMs >= REAL_MILLISECONDS_PER_TIME_STEP) {
+          this.clockAccumulatorMs -= REAL_MILLISECONDS_PER_TIME_STEP;
+          const previousPhase = schedulePhaseAt(state.minuteOfDay);
+          state.minuteOfDay = advanceGameMinute(state.minuteOfDay);
+          if (schedulePhaseAt(state.minuteOfDay) !== previousPhase) {
+            this.npcMotions.transitionTo(state.minuteOfDay);
+          }
+          this.publish();
+          shouldSave = true;
+        }
       }
     }
     if (shouldSave) this.queueSave();
@@ -210,6 +244,32 @@ export class GameSession {
   /** Returns a defensive state snapshot and never exposes the session-owned mutable object. */
   snapshot(): GameState {
     return cloneGameState(this.requireState());
+  }
+
+  /** Validates one active nearby NPC before recording the domain-owned daily conversation. */
+  private talkToNpc(state: GameState, npcId: string): TalkFriendshipResult | "unavailable" {
+    const npc = this.npcMotions.activeByNpcId(npcId);
+    if (
+      !npc
+      || npc.regionId !== state.player.regionId
+      || Math.hypot(state.player.x - npc.x, state.player.y - npc.y) > NPC_INTERACTION_DISTANCE_PIXELS
+    ) return "unavailable";
+    return this.friendship.talk(state, npcId);
+  }
+
+  /** Returns defensive runtime projections for every NPC without exposing transient motion state. */
+  activeNpcSpawns(): readonly NpcRuntimeSpawn[] {
+    return this.npcMotions.activeSpawns();
+  }
+
+  /** Returns defensive runtime NPC projections currently belonging to one region. */
+  activeNpcSpawnsInRegion(regionId: string): readonly NpcRuntimeSpawn[] {
+    return this.npcMotions.activeSpawnsInRegion(regionId);
+  }
+
+  /** Returns one current runtime NPC projection by stable npcId or null when unknown. */
+  activeNpcById(npcId: string): NpcRuntimeSpawn | null {
+    return this.npcMotions.activeByNpcId(npcId);
   }
 
   /** Publishes current and future defensive snapshots and returns an explicit disposer. */
@@ -273,12 +333,14 @@ export class GameSession {
     }
     if (state.day >= Number.MAX_SAFE_INTEGER) return "day-limit";
     const safeSpawn = this.catalog.requireDefaultSpawn("cottage");
+    this.friendship.settleDay(state);
     this.farming.settleDay(state);
     state.day += 1;
     state.minuteOfDay = DAY_START_MINUTE;
     state.player.regionId = "cottage";
     state.player.x = safeSpawn.x;
     state.player.y = safeSpawn.y;
+    this.npcMotions.reset(state.minuteOfDay);
     this.resetClockBaseline(this.now());
     return "slept";
   }

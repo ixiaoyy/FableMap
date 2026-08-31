@@ -3,6 +3,24 @@ export interface WorldPoint {
   readonly y: number;
 }
 
+export const PLAYER_FEET_HALF_WIDTH = 5;
+export const PLAYER_FEET_HALF_HEIGHT = 4;
+export const NPC_FEET_HALF_WIDTH = 5;
+export const NPC_FEET_HALF_HEIGHT = 3;
+
+/** Reports whether two axis-aligned world-space foot boxes overlap at their supplied half extents. */
+export function worldFeetOverlap(
+  left: WorldPoint,
+  leftHalfWidth: number,
+  leftHalfHeight: number,
+  right: WorldPoint,
+  rightHalfWidth: number,
+  rightHalfHeight: number,
+): boolean {
+  return Math.abs(left.x - right.x) < leftHalfWidth + rightHalfWidth
+    && Math.abs(left.y - right.y) < leftHalfHeight + rightHalfHeight;
+}
+
 export interface WorldRect extends WorldPoint {
   readonly width: number;
   readonly height: number;
@@ -134,8 +152,8 @@ export class WorldCatalog {
     regionId: string,
     x: number,
     y: number,
-    halfWidth = 5,
-    halfHeight = 4,
+    halfWidth = PLAYER_FEET_HALF_WIDTH,
+    halfHeight = PLAYER_FEET_HALF_HEIGHT,
     activeNpcs?: readonly NpcSpawnDefinition[],
   ): boolean {
     const region = this.requireRegion(regionId);
@@ -247,12 +265,16 @@ export class WorldCatalog {
     halfWidth: number,
     halfHeight: number,
   ): boolean {
-    const npcHalfWidth = 5;
-    const npcHalfHeight = 3;
     return npcs.some((npc) => (
       npc.interactionType === "dialogue"
-      && Math.abs(x - npc.x) < halfWidth + npcHalfWidth
-      && Math.abs(y - npc.y) < halfHeight + npcHalfHeight
+      && worldFeetOverlap(
+        { x, y },
+        halfWidth,
+        halfHeight,
+        npc,
+        NPC_FEET_HALF_WIDTH,
+        NPC_FEET_HALF_HEIGHT,
+      )
     ));
   }
 

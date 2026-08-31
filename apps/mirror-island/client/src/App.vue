@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import type { PlayerAppearanceId } from "../../domain/player/appearance.ts";
 import PhaserGame from "./PhaserGame.vue";
 import { isToolArtPreviewEnabled } from "./game/assets/tool-art-candidate.ts";
+import { daylightVisualAt } from "./game/presentation/daylight.ts";
 import { loadWorldCatalog } from "./game/world/world-catalog.ts";
 import {
   removeRetiredLocalStorageSaves,
@@ -24,24 +26,45 @@ import LifeHud from "./ui/hud/LifeHud.vue";
 import Hotbar from "./ui/hotbar/Hotbar.vue";
 import ShopPanel from "./ui/shop/ShopPanel.vue";
 import SleepConfirmationPanel from "./ui/sleep/SleepConfirmationPanel.vue";
+import SocialPanel from "./ui/social/SocialPanel.vue";
+import TouchControls from "./ui/controls/TouchControls.vue";
+import CharacterCreator from "./ui/character/CharacterCreator.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
+const characterCreationReturnPhase = ref<"menu" | "error">("menu");
 const debugMode = computed(() => new URLSearchParams(window.location.search).get("debug") === "1");
 const toolArtPreviewMode = isToolArtPreviewEnabled();
+const daylight = computed(() => daylightVisualAt(gameUiState.minuteOfDay, gameUiState.regionId));
+const daylightStyle = computed(() => ({
+  "--daylight-color": daylight.value.color,
+  "--daylight-opacity": daylight.value.opacity.toFixed(3),
+}));
 
 const phaseLabel = computed(() => ({
   initializing: "正在准备本地世界",
   menu: "本地世界待命",
+  "character-creation": "正在选择登岛模样",
   loading: "正在读取存档",
   playing: "本地存档已启用",
   error: "暂时无法开始",
 }[gameUiState.phase]));
 
-/** Starts a fresh local slot after protecting an existing save from an accidental overwrite. */
+/** Opens character creation after protecting an existing save from an accidental overwrite. */
 async function startNewGame(): Promise<void> {
   if (gameUiState.saveAvailable && !window.confirm("新游戏会覆盖当前本地存档，确定继续吗？")) return;
-  await enterGame(() => getLocalGameSession().newGame());
+  characterCreationReturnPhase.value = gameUiState.phase === "error" ? "error" : "menu";
+  setGamePhase("character-creation");
+}
+
+/** Creates and enters a fresh local world using the appearance confirmed on the creation page. */
+async function confirmCharacterCreation(appearanceId: PlayerAppearanceId): Promise<void> {
+  await enterGame(() => getLocalGameSession().newGame(appearanceId));
+}
+
+/** Leaves character creation without writing or deleting the current browser save. */
+function cancelCharacterCreation(): void {
+  setGamePhase(characterCreationReturnPhase.value);
 }
 
 /** Loads the validated anonymous playtest slot from this browser. */
@@ -137,6 +160,9 @@ onUnmounted(() => {
       v-if="gameUiState.phase === 'playing'"
       class="world-frame"
       :class="{ 'world-frame--game': !debugMode }"
+      :data-daylight="daylight.phase"
+      :data-environment="daylight.environment"
+      :style="daylightStyle"
     >
       <PhaserGame />
       <aside v-if="debugMode" class="telemetry">
@@ -147,11 +173,14 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
       </p>
       <LifeHud />
+      <SocialPanel />
+      <TouchControls v-if="!debugMode" />
       <DialoguePanel />
       <ShopPanel />
       <SleepConfirmationPanel />
@@ -160,7 +189,12 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <section v-else class="start-panel" aria-live="polite">
+    <section
+      v-else
+      class="start-panel"
+      :class="{ 'start-panel--character': gameUiState.phase === 'character-creation' }"
+      aria-live="polite"
+    >
       <div v-if="gameUiState.phase === 'initializing' || gameUiState.phase === 'loading'">
         <p class="start-panel__kicker">PERSONAL WORLD</p>
         <h2>{{ gameUiState.phase === 'initializing' ? '正在准备本地世界' : '正在打开本地世界' }}</h2>
@@ -188,6 +222,13 @@ onUnmounted(() => {
         </small>
       </div>
 
+      <CharacterCreator
+        v-else-if="gameUiState.phase === 'character-creation'"
+        :overwriting="gameUiState.saveAvailable"
+        @confirm="confirmCharacterCreation"
+        @cancel="cancelCharacterCreation"
+      />
+
       <div v-else role="alert">
         <p class="start-panel__kicker">LOCAL WORLD ERROR</p>
         <h2>暂时无法进入</h2>
@@ -213,7 +254,7 @@ onUnmounted(() => {
 
     <footer v-if="gameUiState.phase !== 'playing' || debugMode" class="field-footer">
       <span>{{ gameUiState.phase === 'playing' ? '移动靠近目标 · 点击树木或农田' : '单人世界 · 本地存档' }}</span>
-      <span>World Foundation</span>
+      <a href="/THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener noreferrer">素材鸣谢</a>
     </footer>
   </main>
 </template>

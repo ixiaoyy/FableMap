@@ -1,7 +1,22 @@
+import {
+  schedulePhaseAt,
+  type NpcSchedulePhase,
+} from "../../../../domain/time/game-time.ts";
+
+type DialogueLines = readonly [string, ...string[]];
+type DialogueVariantPair = readonly [DialogueLines, DialogueLines];
+type ContextualDialogueVariants = Readonly<Record<NpcSchedulePhase, DialogueVariantPair>>;
+
 export interface DialogueDefinition {
   readonly id: string;
   readonly speaker: string;
-  readonly lines: readonly [string, ...string[]];
+  readonly lines: DialogueLines;
+}
+
+export interface DialogueContext {
+  readonly day: number;
+  readonly minuteOfDay: number;
+  readonly shopAvailable?: boolean;
 }
 
 const DIALOGUES: Readonly<Record<string, DialogueDefinition>> = {
@@ -195,7 +210,362 @@ const DIALOGUES: Readonly<Record<string, DialogueDefinition>> = {
   },
 };
 
-/** Returns one fixed reviewed dialogue definition or null for an unknown catalog ID. */
-export function getDialogueDefinition(dialogueId: string): DialogueDefinition | null {
-  return DIALOGUES[dialogueId] ?? null;
+const CONTEXTUAL_DIALOGUES: Readonly<Partial<Record<string, ContextualDialogueVariants>>> = {
+  "seed-keeper-welcome": {
+    morning: [
+      [
+        "天还没亮透，我先把受潮的种袋挑出来。",
+        "柜台九点后才开，早一点来只能陪我理货。",
+      ],
+      [
+        "今早的清单比昨天短，萝卜种子还够。",
+        "等我把木牌翻到营业那面，再进来慢慢挑。",
+      ],
+    ],
+    day: [
+      ["萝卜种子还压着半箱。今天种下的话，别忘了浇水。"],
+      ["今天新拆了一捆萝卜种子，二十金一袋，还是老价钱。"],
+    ],
+    evening: [
+      [
+        "柜台已经收了，剩下的种袋要重新扎口。",
+        "明早晒过一遍，纸袋才不会返潮。",
+      ],
+      [
+        "今天的账刚对完，架上那排空位也该擦一擦。",
+        "要买种子，明天白天再来。",
+      ],
+    ],
+    night: [
+      [
+        "这个点不看账了，眼睛比算盘先累。",
+        "明早还得把门前落下的种壳扫干净。",
+      ],
+      [
+        "夜里听见纸袋响，多半是风从门缝钻进来。",
+        "等我压好窗角，也该休息了。",
+      ],
+    ],
+  },
+  "blacksmith-intro": {
+    morning: [
+      [
+        "昊美丽昨晚把围裙的扣带补好了。",
+        "我趁炉火没起，先把今天要用的钳子排顺。",
+      ],
+      [
+        "早上的铁砧最凉，落锤前得先把手腕活动开。",
+        "工坊里那桶清水也要换新的。",
+      ],
+    ],
+    day: [
+      [
+        "今天只处理镇里的门扣和农具修补。",
+        "火候到了，锤声自然会稳下来。",
+      ],
+      [
+        "风箱刚顺起来，炉膛里的颜色正合适。",
+        "你站远半步，火星落不到鞋面上。",
+      ],
+    ],
+    evening: [
+      [
+        "最后一块铁已经回火，剩下的是收钳子和扫铁屑。",
+        "昊美丽总说我收工比开炉还慢。",
+      ],
+      [
+        "炉火看着还亮，其实已经不能再添料了。",
+        "把余温留到明早，工坊不会一下冷透。",
+      ],
+    ],
+    night: [
+      [
+        "手上的铁味洗两遍也散不掉。",
+        "今晚先歇着，明早再听第一声锤响。",
+      ],
+      [
+        "昊美丽把灯芯剪短了，说我夜里不该再摸工具。",
+        "她说得对，困的时候连钳口都看不准。",
+      ],
+    ],
+  },
+  "town-resident-pink-tree": {
+    morning: [
+      [
+        "姐姐阿澜起得比我早，已经去看过河面的颜色了。",
+        "我把窗边的小苗浇完才出门。",
+      ],
+      [
+        "清晨的粉花落得慢，扫起来反而费时间。",
+        "阿澜说风向变了，今天河边会更凉。",
+      ],
+    ],
+    day: [
+      [
+        "这棵粉花树总比别处早开几天。",
+        "我把树脚的土松开，雨水才不会积成一圈。",
+      ],
+      [
+        "今天落下的花瓣很完整，我挑几片夹进旧账本里。",
+        "等叶子长密了，这里会比街口凉快。",
+      ],
+    ],
+    evening: [
+      [
+        "湖边的风把衣角都吹凉了。",
+        "阿澜在看岸线，我替她记哪盏屋灯最先亮。",
+      ],
+      [
+        "太阳落到水面时，粉花树的影子会刚好碰到桥头。",
+        "从这里看，回家的路很清楚。",
+      ],
+    ],
+    night: [
+      [
+        "阿澜还在整理今天画的岸线，我先把茶温着。",
+        "窗外安静下来，才能听见河水碰桥桩。",
+      ],
+      [
+        "夜里别把窗开得太大，水汽会落到桌面上。",
+        "明早我还要去看看粉花树有没有折枝。",
+      ],
+    ],
+  },
+  "resident-mozi-home": {
+    morning: [
+      [
+        "早上的木头最诚实，哪块受潮一敲就听得出来。",
+        "我先把钉袋和尺子数一遍再出门。",
+      ],
+      [
+        "昨夜河风不小，西街的檐角得挨家看过去。",
+        "工具少一件，走到半路才发现最耽误事。",
+      ],
+    ],
+    day: [
+      [
+        "这块门板只是合页松了，不用整扇换掉。",
+        "旧木料修得好，也能再挡几年风。",
+      ],
+      [
+        "西街的屋顶怕河风，钉得太死反而容易裂。",
+        "留一点伸缩的位置，木头才住得安稳。",
+      ],
+    ],
+    evening: [
+      [
+        "收工前还要绕一遍主街，看看白天补的地方有没有走样。",
+        "太阳斜着照，木缝最容易看清。",
+      ],
+      [
+        "今天的刨花够装一小袋，带回去引火正好。",
+        "尺子我已经收了，锤子还得再擦一遍。",
+      ],
+    ],
+    night: [
+      [
+        "屋里一安静，就能听见哪块地板在轻响。",
+        "那不是坏事，木头也在跟着夜气伸缩。",
+      ],
+      [
+        "壁炉边这把椅子修过三次，坐起来倒比新的稳。",
+        "今晚不动工具，让手也歇一歇。",
+      ],
+    ],
+  },
+  "resident-haonan-home": {
+    morning: [
+      [
+        "上山前先看云脚，再看泉水。",
+        "两样都清，今天的石阶就不会太滑。",
+      ],
+      [
+        "灯油、绳子和干布都带齐了。",
+        "山里不缺路，缺的是出发前多想一步。",
+      ],
+    ],
+    day: [
+      [
+        "山泉今天很清，靠北那段路却有新落下的碎石。",
+        "沿木牌走就好，封着的地方别翻过去。",
+      ],
+      [
+        "我刚巡过泉眼，浅沟没有堵。",
+        "再往高处风更硬，听见树枝连响就该往回走。",
+      ],
+    ],
+    evening: [
+      [
+        "回镇前我会把山路木牌再扶正一次。",
+        "墨子看见松动的榫口，明天就知道带什么工具。",
+      ],
+      [
+        "今天没有人越过旧栅栏，这就是好消息。",
+        "鞋底的泥在街口刮干净，再回家喝茶。",
+      ],
+    ],
+    night: [
+      [
+        "夜里不进山，熟路也会被影子变成另一条路。",
+        "我把明天的天气记在茶桌那张纸上了。",
+      ],
+      [
+        "山风停了以后，窗边反而会更冷。",
+        "灯留一盏就够，明早还得早起。",
+      ],
+    ],
+  },
+  "resident-alan-home": {
+    morning: [
+      [
+        "阿禾已经在给窗边的小苗浇水了。",
+        "我先把空白纸压平，等河雾散一点再出门。",
+      ],
+      [
+        "晨光偏冷，画出来的水色容易比实际更蓝。",
+        "所以我总带一小块昨天的布样作比较。",
+      ],
+    ],
+    day: [
+      [
+        "今天岸边的浅绿比昨天多了一层灰。",
+        "风从东边来，水纹会把颜色切得很碎。",
+      ],
+      [
+        "我在等云影离开码头，再补最后一段岸线。",
+        "祥子说那块圆石昨晚又被水推偏了。",
+      ],
+    ],
+    evening: [
+      [
+        "站在桥边回看，镇上的灯色比湖面更暖。",
+        "阿禾喜欢数哪一盏先亮，我只记它们落在水里的位置。",
+      ],
+      [
+        "傍晚的颜色留不久，慢一会儿就会完全变样。",
+        "今天这张图先停在这里，明早再对照。",
+      ],
+    ],
+    night: [
+      [
+        "纸已经收进柜里，夜里的水色不用追着画。",
+        "阿禾温着茶，我们会把今天的记录对一遍。",
+      ],
+      [
+        "窗台有一点潮，我拿圆石压住了画纸四角。",
+        "等墨迹干透，明天才能带回湖边。",
+      ],
+    ],
+  },
+  "resident-haomeili-home": {
+    morning: [
+      [
+        "昊天又把围裙扣反了，我出门前还得替他重系一次。",
+        "针线盒倒是齐的，今天不用回头找。",
+      ],
+      [
+        "早上光线好，深色布上的细裂口最容易看见。",
+        "我先把工坊要用的护袖挑出来。",
+      ],
+    ],
+    day: [
+      [
+        "锤子和钳子分开挂，昊天忙起来才不会抓错。",
+        "这只布袋刚换过底，装铁件也不会漏。",
+      ],
+      [
+        "工坊里最容易坏的不是铁器，是绑带和手套。",
+        "趁昊天看炉火，我把磨破的边都收好。",
+      ],
+    ],
+    evening: [
+      [
+        "收工后衣服上全是细灰，拍得太重反而往布里钻。",
+        "我在街口吹一会儿风再回家。",
+      ],
+      [
+        "今天补了两只手套和一条围裙带。",
+        "昊天说这不算锻造，我说少了它们他也开不了炉。",
+      ],
+    ],
+    night: [
+      [
+        "针线桌只剩这道短边，缝完就收灯。",
+        "夜里眼睛累，针脚歪了明天还得拆。",
+      ],
+      [
+        "昊天把明天要穿的围裙搭在椅背上了。",
+        "总算有一次不用我提醒。",
+      ],
+    ],
+  },
+  "resident-xiangzi-home": {
+    morning: [
+      [
+        "风还没起来，正适合检查绳结有没有返松。",
+        "我带一块干布，码头的木板清早总有水汽。",
+      ],
+      [
+        "出门前先看窗台那几块圆石，潮气重不重一眼就知道。",
+        "今天湖面应该不会太急。",
+      ],
+    ],
+    day: [
+      [
+        "旧码头今天很稳，最东边那块板还是别踩边角。",
+        "绳结我重系过了，风大一点也不会散。",
+      ],
+      [
+        "湖面看着平，木板底下的水一直在推。",
+        "站久了就能听出哪根桩受力最重。",
+      ],
+    ],
+    evening: [
+      [
+        "晚风一转向，靠岸的水声就会变。",
+        "阿澜等我报完潮线，才肯收起今天的图。",
+      ],
+      [
+        "最后一圈绳已经盘好，码头边没有落下东西。",
+        "等天色再暗一点，我就沿湖岸回去。",
+      ],
+    ],
+    night: [
+      [
+        "夜里听不见码头的木响，反而有点不习惯。",
+        "明早我会先去看东边那根系船桩。",
+      ],
+      [
+        "窗台的信纸已经晾干了，圆石也该放回原位。",
+        "今晚风小，可以睡得安稳些。",
+      ],
+    ],
+  },
+};
+
+const SEED_KEEPER_OPENING_DIALOGUE: DialogueVariantPair = [
+  ["我正往柜台去。等我把木牌翻到营业那面，再来挑种子。"],
+  ["账本还没摊开，先让我走到柜台把种袋摆好。"],
+];
+
+/** Returns one fixed or deterministic day/phase dialogue, or null for an unknown catalog ID. */
+export function getDialogueDefinition(
+  dialogueId: string,
+  context?: DialogueContext,
+): DialogueDefinition | null {
+  const definition = DIALOGUES[dialogueId];
+  if (!definition) return null;
+  const variants = CONTEXTUAL_DIALOGUES[dialogueId];
+  if (!context || !variants) return definition;
+  if (!Number.isSafeInteger(context.day) || context.day < 1) {
+    throw new Error("Dialogue day is invalid.");
+  }
+  const phase = schedulePhaseAt(context.minuteOfDay);
+  const variantIndex = (context.day - 1) % 2;
+  const lines = dialogueId === "seed-keeper-welcome"
+    && phase === "day"
+    && context.shopAvailable === false
+    ? SEED_KEEPER_OPENING_DIALOGUE[variantIndex]!
+    : variants[phase][variantIndex]!;
+  return { ...definition, lines };
 }

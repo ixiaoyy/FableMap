@@ -1,8 +1,11 @@
 import Phaser from "phaser";
 import { ITEM_ID } from "../../../../domain/items/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
-import type { WorldCatalog } from "../../../../domain/world/regions.ts";
-import { activeNpcSpawnsInRegion } from "../../../../domain/world/npc-schedules.ts";
+import type {
+  ExitDefinition,
+  RegionDefinition,
+  WorldCatalog,
+} from "../../../../domain/world/regions.ts";
 import {
   dispatchLocalGameCommand,
   getLocalGameSession,
@@ -49,18 +52,21 @@ import { ActionTimeline } from "../entities/ActionTimeline.ts";
 import {
   EntityFactory,
   BedEntity,
+  ExitHintEntity,
   FarmPlotEntity,
   InspectEntity,
   NpcEntity,
   RockEntity,
   TreeEntity,
 } from "../entities/WorldEntities.ts";
+import { isOutdoorRegion } from "../world/region-environment.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
 
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
 const BED_INTERACTION_DISTANCE = 42;
 const INSPECT_INTERACTION_DISTANCE = 48;
+const EXIT_HINT_DISTANCE = 52;
 const WORLD_CAMERA_ZOOM = 2;
 
 interface PlayerView {
@@ -76,7 +82,9 @@ type TransitionPhase = "idle" | "fading-out" | "fading-in";
 
 export class WorldScene extends Phaser.Scene {
   private readonly catalog: WorldCatalog = getWorldCatalog();
-  private readonly playerMedia = playerMediaProfile();
+  private readonly playerMedia = playerMediaProfile(
+    getLocalGameSession().snapshot().player.appearanceId,
+  );
   private readonly toolArtCandidateEnabled = isToolArtCandidateEnabled();
   private playerView: PlayerView | null = null;
   private readonly treeViews = new Map<string, TreeEntity>();
@@ -84,6 +92,7 @@ export class WorldScene extends Phaser.Scene {
   private readonly farmViews = new Map<string, FarmPlotEntity>();
   private readonly bedViews = new Map<string, BedEntity>();
   private readonly inspectViews = new Map<string, InspectEntity>();
+  private readonly exitHintViews = new Map<string, ExitHintEntity>();
   private readonly npcViews = new Map<string, NpcEntity>();
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private activeMap: Phaser.Tilemaps.Tilemap | null = null;
@@ -98,6 +107,7 @@ export class WorldScene extends Phaser.Scene {
   private entityFactory!: EntityFactory;
   private actionTimeline!: ActionTimeline;
   private facing: Facing = "down";
+  private disposed = false;
 
   /** Creates the Tiled-backed scene with catalog entities and one shared player action timeline. */
   constructor() {
@@ -127,7 +137,10 @@ export class WorldScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 32,
     });
-    this.load.image(VECTORAITH_MEDIA_KEYS.npcs, VECTORAITH_MEDIA_URLS.npcs);
+    this.load.spritesheet(VECTORAITH_MEDIA_KEYS.npcs, VECTORAITH_MEDIA_URLS.npcs, {
+      frameWidth: 16,
+      frameHeight: 32,
+    });
     if (this.toolArtCandidateEnabled) {
       this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.plowing, TOOL_ART_CANDIDATE_URLS.plowing, {
         frameWidth: 32,
@@ -147,6 +160,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Creates test tiles, input, entity services and the local state subscription. */
   create(): void {
+    this.disposed = false;
     this.createTilemapFloorTexture();
     this.registerMediaFrames();
     this.createPlayerAnimations();
@@ -168,7 +182,8 @@ export class WorldScene extends Phaser.Scene {
     keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.attackKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.stopProjection = getLocalGameSession().subscribe((state) => this.renderState(state));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.disposeScene());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.disposeScene(true));
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.disposeScene(false));
   }
 
   /** Applies collision-aware movement and one exit transition while no action or modal owns input. */
@@ -178,6 +193,8 @@ export class WorldScene extends Phaser.Scene {
       Date.now(),
       this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || worldInputLocked,
     );
+    if (this.activeRegionId) this.renderNpcs(this.activeRegionId);
+    this.projectInteractionAffordances(worldInputLocked);
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
     if (worldInputLocked) {
       this.setIdleFrame();
@@ -217,7 +234,8 @@ export class WorldScene extends Phaser.Scene {
     this.renderFarmPlots(region.id, state);
     this.renderBeds(region.id);
     this.renderInspects(region.id);
-    this.renderNpcs(region.id, state.minuteOfDay);
+    this.renderExitHints(region);
+    this.renderNpcs(region.id);
   }
 
   /** Replaces all current Tilemap layers while preserving GameSession and the player view. */
@@ -497,22 +515,76 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Creates fixed-position NPC views for the active region without adding schedules or persistent AI. */
-  private renderNpcs(regionId: string, minuteOfDay: number): void {
-    const spawns = activeNpcSpawnsInRegion(this.catalog, regionId, minuteOfDay);
+  /** Creates stable proximity labels for every automatic door and regional exit. */
+  private renderExitHints(region: RegionDefinition): void {
+    const activeIds = new Set(region.exits.map((exit) => exit.id));
+    removeMissing(this.exitHintViews, activeIds);
+    for (const exit of region.exits) {
+      if (this.exitHintViews.has(exit.id)) continue;
+      this.exitHintViews.set(exit.id, this.entityFactory.createExitHint(
+        exit,
+        exitHintLabel(region.id, exit.targetRegionId, this.catalog),
+        exitHintPosition(exit, region),
+      ));
+    }
+  }
+
+  /** Projects GameSession-owned NPC motion into stable views for the active region. */
+  private renderNpcs(regionId: string): void {
+    const spawns = getLocalGameSession().activeNpcSpawnsInRegion(regionId);
     const activeIds = new Set(spawns.map((spawn) => spawn.entityId));
     removeMissing(this.npcViews, activeIds);
     for (const spawn of spawns) {
       const current = this.npcViews.get(spawn.entityId);
-      if (current && !current.matchesSpawn(spawn)) {
-        current.destroy();
-        this.npcViews.delete(spawn.entityId);
-      }
-      if (!this.npcViews.has(spawn.entityId)) {
+      if (current) {
+        current.project(spawn);
+      } else {
         this.npcViews.set(spawn.entityId, this.entityFactory.createNpc(spawn, (entity) => {
           this.interactWithNpc(entity);
         }));
       }
+    }
+  }
+
+  /** Projects player proximity into every shared interaction hint without mutating gameplay state. */
+  private projectInteractionAffordances(worldInputLocked: boolean): void {
+    const player = this.latestState?.player;
+    if (!player) return;
+    const inputLocked = worldInputLocked
+      || this.transitionPhase !== "idle"
+      || this.actionTimeline.isBusy();
+    const candidates: Array<{
+      readonly distance: number;
+      readonly limit: number;
+      readonly view: { projectAffordance(nearby: boolean, locked: boolean): void };
+    }> = [
+      ...Array.from(this.bedViews.values(), (view) => ({
+        view,
+        distance: view.distanceTo(player.x, player.y),
+        limit: BED_INTERACTION_DISTANCE,
+      })),
+      ...Array.from(this.inspectViews.values(), (view) => ({
+        view,
+        distance: view.distanceTo(player.x, player.y),
+        limit: INSPECT_INTERACTION_DISTANCE,
+      })),
+      ...Array.from(this.exitHintViews.values(), (view) => ({
+        view,
+        distance: view.distanceTo(player.x, player.y),
+        limit: EXIT_HINT_DISTANCE,
+      })),
+      ...Array.from(this.npcViews.values(), (view) => ({
+        view,
+        distance: view.distanceTo(player.x, player.y),
+        limit: NPC_INTERACTION_DISTANCE,
+      })),
+    ];
+    const nearest = candidates.reduce<(typeof candidates)[number] | null>((current, candidate) => {
+      if (candidate.distance > candidate.limit) return current;
+      return !current || candidate.distance < current.distance ? candidate : current;
+    }, null);
+    for (const candidate of candidates) {
+      candidate.view.projectAffordance(candidate === nearest, inputLocked);
     }
   }
 
@@ -783,19 +855,45 @@ export class WorldScene extends Phaser.Scene {
   private requestSleepConfirmation(bed: BedEntity): void {
     const player = this.latestState?.player;
     if (!player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
-    if (bed.distanceTo(player.x, player.y) > BED_INTERACTION_DISTANCE) return;
+    if (bed.distanceTo(player.x, player.y) > BED_INTERACTION_DISTANCE) {
+      setActionFeedback({ tone: "error", code: "bed-too-far", message: "走到床边再休息。" });
+      return;
+    }
     openSleepConfirmation(() => this.beginSleep(bed.entityId));
   }
 
   /** Opens the exact nearby clicked NPC's existing dialogue or shop projection. */
   private interactWithNpc(npc: NpcEntity): void {
-    const player = this.latestState?.player;
+    const state = this.latestState;
+    const player = state?.player;
     if (!player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
-    if (npc.distanceTo(player.x, player.y) > NPC_INTERACTION_DISTANCE) return;
-    const dialogue = getDialogueDefinition(npc.spawn.dialogueId);
+    const dialogue = getDialogueDefinition(npc.spawn.dialogueId, {
+      day: state.day,
+      minuteOfDay: state.minuteOfDay,
+      shopAvailable: npc.spawn.interactionType === "shop",
+    });
+    if (npc.distanceTo(player.x, player.y) > NPC_INTERACTION_DISTANCE) {
+      setActionFeedback({
+        tone: "error",
+        code: "npc-too-far",
+        message: `再靠近${dialogue?.speaker ?? "对方"}一点。`,
+      });
+      return;
+    }
     if (!dialogue) {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
       return;
+    }
+    const friendshipBefore = gameUiState.friendships[npc.spawn.npcId];
+    const firstTalkToday = friendshipBefore !== undefined && friendshipBefore.lastTalkedDay !== gameUiState.day;
+    dispatchLocalGameCommand({ type: "talk-to-npc", npcId: npc.spawn.npcId });
+    if (firstTalkToday && gameUiState.friendships[npc.spawn.npcId]?.lastTalkedDay === gameUiState.day) {
+      npc.playFriendshipPulse();
+      setActionFeedback({
+        tone: "success",
+        code: "friendship-talked",
+        message: `与${dialogue.speaker}更熟悉了一点。`,
+      });
     }
     if (npc.spawn.interactionType === "shop") {
       openShop(dialogue.lines[0]);
@@ -809,7 +907,10 @@ export class WorldScene extends Phaser.Scene {
     const player = this.latestState?.player;
     if (!player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
     if (player.regionId !== entity.interaction.regionId) return;
-    if (entity.distanceTo(player.x, player.y) > INSPECT_INTERACTION_DISTANCE) return;
+    if (entity.distanceTo(player.x, player.y) > INSPECT_INTERACTION_DISTANCE) {
+      setActionFeedback({ tone: "error", code: "inspect-too-far", message: "走近一些再查看。" });
+      return;
+    }
     const dialogue = getDialogueDefinition(entity.interaction.dialogueId);
     if (!dialogue) {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "这里暂时没有可查看的内容。" });
@@ -856,15 +957,19 @@ export class WorldScene extends Phaser.Scene {
     destroyAll(this.farmViews);
     destroyAll(this.bedViews);
     destroyAll(this.inspectViews);
+    destroyAll(this.exitHintViews);
     destroyAll(this.npcViews);
   }
 
-  /** Releases subscriptions and all region-owned Phaser objects on scene shutdown. */
-  private disposeScene(): void {
+  /** Releases subscriptions and optionally destroys views while the scene systems are still valid. */
+  private disposeScene(destroyViews: boolean): void {
+    if (this.disposed) return;
+    this.disposed = true;
     cancelSleepConfirmation();
     this.stopProjection?.();
     this.stopProjection = undefined;
-    this.destroyRegionViews();
+    if (destroyViews) this.destroyRegionViews();
+    else setWorldActionBusy(false);
   }
 }
 
@@ -887,4 +992,19 @@ function destroyAll<T extends { destroy(): void }>(views: Map<string, T>): void 
 /** Converts one signed integer difference into the closed digital movement axis. */
 function toAxis(value: number): -1 | 0 | 1 {
   return value < 0 ? -1 : value > 0 ? 1 : 0;
+}
+
+/** Returns one concise proximity label for an automatic transition target. */
+function exitHintLabel(currentRegionId: string, targetRegionId: string, catalog: WorldCatalog): string {
+  if (!isOutdoorRegion(currentRegionId) && isOutdoorRegion(targetRegionId)) return "出门";
+  const targetName = catalog.requireRegion(targetRegionId).displayName;
+  return isOutdoorRegion(targetRegionId) ? `前往${targetName}` : `进入${targetName}`;
+}
+
+/** Clamps one exit prompt inside the visible world edge without changing its Tiled hit rectangle. */
+function exitHintPosition(exit: ExitDefinition, region: RegionDefinition): Readonly<{ x: number; y: number }> {
+  return {
+    x: Phaser.Math.Clamp(exit.x + exit.width / 2, 34, region.widthPixels - 34),
+    y: Phaser.Math.Clamp(exit.y + exit.height / 2, 18, region.heightPixels - 18),
+  };
 }

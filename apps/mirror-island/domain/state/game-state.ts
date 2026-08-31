@@ -8,13 +8,23 @@ import {
   assertStableId,
   type WorldCatalog,
 } from "../world/regions.ts";
+import {
+  FRIENDSHIP_MAX_POINTS,
+  createFriendshipState,
+  type FriendshipState,
+} from "../social/definitions.ts";
+import {
+  DEFAULT_PLAYER_APPEARANCE_ID,
+  decodePlayerAppearanceId,
+  type PlayerAppearanceId,
+} from "../player/appearance.ts";
 import { activeNpcSpawnsInRegion } from "../world/npc-schedules.ts";
 import {
   DAY_START_MINUTE,
   decodeGameMinute,
 } from "../time/game-time.ts";
 
-export const GAME_STATE_VERSION = 4 as const;
+export const GAME_STATE_VERSION = 6 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
 const LEGACY_TREE_ID = "tree-01";
@@ -31,6 +41,7 @@ export interface PlayerState {
   regionId: string;
   x: number;
   y: number;
+  appearanceId: PlayerAppearanceId;
 }
 
 export interface ResourceState {
@@ -59,10 +70,14 @@ export interface GameState {
   inventory: InventorySlot[];
   resources: Record<string, ResourceState>;
   farmTiles: Record<string, FarmTileState>;
+  friendships: Record<string, FriendshipState>;
 }
 
-/** Creates a deterministic v4 game state from the validated Tiled-derived world catalog. */
-export function createInitialGameState(catalog: WorldCatalog): GameState {
+/** Creates a deterministic v6 game state for one validated appearance and Tiled-derived catalog. */
+export function createInitialGameState(
+  catalog: WorldCatalog,
+  appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
+): GameState {
   const inventory: InventorySlot[] = Array.from(
     { length: INVENTORY_SLOT_COUNT },
     () => ({ itemId: "", quantity: 0 }),
@@ -76,10 +91,15 @@ export function createInitialGameState(catalog: WorldCatalog): GameState {
     day: 1,
     minuteOfDay: DAY_START_MINUTE,
     gold: 100,
-    player: { regionId: catalog.startRegionId, ...start },
+    player: {
+      regionId: catalog.startRegionId,
+      ...start,
+      appearanceId: decodePlayerAppearanceId(appearanceId),
+    },
     inventory,
     resources: {},
     farmTiles: {},
+    friendships: {},
   };
   reconcileGameStateWithCatalog(state, catalog);
   return state;
@@ -98,7 +118,19 @@ export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCa
   }
   const knownResourceIds = new Set<string>();
   const knownFarmIds = new Set<string>();
+  const knownNpcIds = new Set<string>();
   for (const region of catalog.allRegions()) {
+    for (const npc of region.npcs) {
+      if (knownNpcIds.has(npc.npcId)) throw new Error(`Duplicate NPC identity: ${npc.npcId}.`);
+      knownNpcIds.add(npc.npcId);
+      const saved = state.friendships[npc.npcId];
+      if (!saved) {
+        state.friendships[npc.npcId] = createFriendshipState(npc.npcId);
+        changed = true;
+      } else if (saved.npcId !== npc.npcId) {
+        throw new Error(`Saved friendship identity does not match catalog NPC ${npc.npcId}.`);
+      }
+    }
     for (const spawn of region.resources) {
       knownResourceIds.add(spawn.entityId);
       const saved = state.resources[spawn.entityId];
@@ -124,6 +156,9 @@ export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCa
   if (Object.keys(state.farmTiles).some((id) => !knownFarmIds.has(id))) {
     throw new Error("Save references an unknown farm entity.");
   }
+  if (Object.keys(state.friendships).some((npcId) => !knownNpcIds.has(npcId))) {
+    throw new Error("Save references an unknown NPC friendship.");
+  }
   return changed;
 }
 
@@ -142,26 +177,66 @@ export function cloneGameState(state: GameState): GameState {
     farmTiles: Object.fromEntries(
       Object.entries(state.farmTiles).map(([id, tile]) => [id, { ...tile }]),
     ),
+    friendships: Object.fromEntries(
+      Object.entries(state.friendships).map(([npcId, friendship]) => [npcId, { ...friendship }]),
+    ),
   };
 }
 
-/** Validates one unknown value as a complete version-4 game state and returns a defensive clone. */
+/** Validates one unknown value as a complete version-6 game state and returns a defensive clone. */
 export function decodeGameState(value: unknown): GameState {
   const state = recordFrom(value, "Game state is invalid.");
   if (state.version !== GAME_STATE_VERSION) throw new Error("Game state version is unsupported.");
+  const day = positiveSafeInteger(state.day, "Game day is invalid.");
   return {
     version: GAME_STATE_VERSION,
-    day: positiveSafeInteger(state.day, "Game day is invalid."),
+    day,
     minuteOfDay: decodeGameMinute(state.minuteOfDay),
     gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
     player: decodePlayerState(state.player),
     inventory: decodeInventory(state.inventory, false),
     resources: decodeResources(state.resources),
     farmTiles: decodeFarmTilesV3(state.farmTiles),
+    friendships: decodeFriendships(state.friendships, day),
   };
 }
 
-/** Explicitly migrates a released v3 state into the v4 clock contract at 06:00. */
+/** Explicitly migrates a released v5 state into the v6 player-appearance contract. */
+export function migrateGameStateV5(value: unknown): GameState {
+  const state = recordFrom(value, "Version-5 game state is invalid.");
+  if (state.version !== 5) throw new Error("Version-5 game state is unsupported.");
+  const day = positiveSafeInteger(state.day, "Game day is invalid.");
+  return {
+    version: GAME_STATE_VERSION,
+    day,
+    minuteOfDay: decodeGameMinute(state.minuteOfDay),
+    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
+    player: migratePlayerState(state.player),
+    inventory: decodeInventory(state.inventory, false),
+    resources: decodeResources(state.resources),
+    farmTiles: decodeFarmTilesV3(state.farmTiles),
+    friendships: decodeFriendships(state.friendships, day),
+  };
+}
+
+/** Explicitly migrates a released v4 state into the v5 friendship contract with catalog-filled defaults. */
+export function migrateGameStateV4(value: unknown): GameState {
+  const state = recordFrom(value, "Version-4 game state is invalid.");
+  if (state.version !== 4) throw new Error("Version-4 game state is unsupported.");
+  return {
+    version: GAME_STATE_VERSION,
+    day: positiveSafeInteger(state.day, "Game day is invalid."),
+    minuteOfDay: decodeGameMinute(state.minuteOfDay),
+    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
+    player: migratePlayerState(state.player),
+    inventory: decodeInventory(state.inventory, false),
+    resources: decodeResources(state.resources),
+    farmTiles: decodeFarmTilesV3(state.farmTiles),
+    friendships: {},
+  };
+}
+
+/** Explicitly migrates a released v3 state into the v5 clock/friendship contract at 06:00. */
 export function migrateGameStateV3(value: unknown): GameState {
   const state = recordFrom(value, "Version-3 game state is invalid.");
   if (state.version !== 3) throw new Error("Version-3 game state is unsupported.");
@@ -170,14 +245,15 @@ export function migrateGameStateV3(value: unknown): GameState {
     day: positiveSafeInteger(state.day, "Game day is invalid."),
     minuteOfDay: DAY_START_MINUTE,
     gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
-    player: decodePlayerState(state.player),
+    player: migratePlayerState(state.player),
     inventory: decodeInventory(state.inventory, false),
     resources: decodeResources(state.resources),
     farmTiles: decodeFarmTilesV3(state.farmTiles),
+    friendships: {},
   };
 }
 
-/** Explicitly migrates a released v2 state into the day-based v4 life-loop contract. */
+/** Explicitly migrates a released v2 state into the day-based v5 life-loop contract. */
 export function migrateGameStateV2(value: unknown): GameState {
   const state = recordFrom(value, "Version-2 game state is invalid.");
   if (state.version !== 2) throw new Error("Version-2 game state is unsupported.");
@@ -186,14 +262,15 @@ export function migrateGameStateV2(value: unknown): GameState {
     day: 1,
     minuteOfDay: DAY_START_MINUTE,
     gold: 100,
-    player: decodePlayerState(state.player),
+    player: migratePlayerState(state.player),
     inventory: decodeInventory(state.inventory, true),
     resources: decodeResources(state.resources),
     farmTiles: decodeFarmTilesV2(state.farmTiles, true),
+    friendships: {},
   };
 }
 
-/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v4 world IDs. */
+/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v5 world IDs. */
 export function migrateLegacyGameStateV1(value: unknown): GameState {
   const state = recordFrom(value, "Legacy game state is invalid.");
   if (state.version !== 1) throw new Error("Legacy game state version is unsupported.");
@@ -221,11 +298,37 @@ export function migrateLegacyGameStateV1(value: unknown): GameState {
       regionId: "farm",
       x: finiteNumber(player.x, "Legacy player X is invalid."),
       y: finiteNumber(player.y, "Legacy player Y is invalid."),
+      appearanceId: DEFAULT_PLAYER_APPEARANCE_ID,
     },
     inventory: decodeInventory(state.inventory, true),
     resources,
     farmTiles,
+    friendships: {},
   };
+}
+
+/** Validates sparse friendship state while preserving catalog reconciliation as the identity owner. */
+function decodeFriendships(value: unknown, currentDay: number): Record<string, FriendshipState> {
+  const source = recordFrom(value, "Friendship state is invalid.");
+  const result: Record<string, FriendshipState> = {};
+  for (const [npcId, rawFriendship] of Object.entries(source)) {
+    assertStableId(npcId, "Friendship NPC ID");
+    const friendship = recordFrom(rawFriendship, "Friendship state is invalid.");
+    const points = nonNegativeSafeInteger(friendship.points, "Friendship points are invalid.");
+    const lastTalkedDay = nonNegativeSafeInteger(
+      friendship.lastTalkedDay,
+      "Friendship last-talked day is invalid.",
+    );
+    if (
+      friendship.npcId !== npcId
+      || points > FRIENDSHIP_MAX_POINTS
+      || lastTalkedDay > currentDay
+    ) {
+      throw new Error("Friendship state is inconsistent.");
+    }
+    result[npcId] = { npcId, points, lastTalkedDay };
+  }
+  return result;
 }
 
 /** Creates the reviewed default state for one catalog-owned farm plot. */
@@ -242,6 +345,20 @@ function decodePlayerState(value: unknown): PlayerState {
     regionId,
     x: finiteNumber(player.x, "Player X is invalid."),
     y: finiteNumber(player.y, "Player Y is invalid."),
+    appearanceId: decodePlayerAppearanceId(player.appearanceId),
+  };
+}
+
+/** Migrates a pre-v6 player position while preserving the released farmer as its appearance. */
+function migratePlayerState(value: unknown): PlayerState {
+  const player = recordFrom(value, "Player state is invalid.");
+  const regionId = stringFrom(player.regionId, "Player region is invalid.");
+  assertStableId(regionId, "Player region ID");
+  return {
+    regionId,
+    x: finiteNumber(player.x, "Player X is invalid."),
+    y: finiteNumber(player.y, "Player Y is invalid."),
+    appearanceId: DEFAULT_PLAYER_APPEARANCE_ID,
   };
 }
 

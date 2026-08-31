@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-27T00:00:00Z",
+  "generated_at": "2026-08-28T00:00:00Z",
   "media_base_url": "https://img.pingxingxian.space/game/media/v1",
-  "tracked_image_count": 13,
-  "tracked_image_bytes": 201601,
+  "tracked_image_count": 14,
+  "tracked_image_bytes": 214731,
   "entries": [
     {
       "source": "content/character/ninja_blue/sprite.png",
@@ -180,6 +180,21 @@
       "content_type": "image/png",
       "object_key": "assets/vendor/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16/generic_people.png",
       "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16/generic_people.png"
+    },
+    {
+      "source": "all the icons (gardens).png",
+      "source_url": "https://ivoryred.itch.io/gardens-16x16-icon-pack",
+      "source_snapshot_date": "2026-08-27",
+      "license": "CC-BY-4.0",
+      "attribution": "GARDENS, 16x16 icon pack by IvoryRed",
+      "transformation": "None; exact reviewed official PNG bytes.",
+      "width": 160,
+      "height": 176,
+      "bytes": 13130,
+      "sha256": "de4dbbb56936520882e1217aad9dae22e60a5f57dde15512f673ec031b581536",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png"
     }
   ]
 }

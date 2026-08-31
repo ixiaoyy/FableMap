@@ -64,11 +64,16 @@ export async function flushLocalGameSession(): Promise<void> {
 /** Flushes and releases the current browser-local session and IndexedDB handle. */
 export async function shutdownLocalGameSession(): Promise<void> {
   const activeSession = session;
+  const activeRepository = repository;
+  const activeStopStoreProjection = stopStoreProjection;
   session = null;
-  if (activeSession) await activeSession.flush();
-  stopStoreProjection?.();
-  stopStoreProjection = null;
-  repository?.close();
   repository = null;
-  clearGameState();
+  stopStoreProjection = null;
+  try {
+    if (activeSession) await activeSession.flush();
+  } finally {
+    activeStopStoreProjection?.();
+    activeRepository?.close();
+    if (!session) clearGameState();
+  }
 }

@@ -50,6 +50,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
+    "easystarjs": "0.4.4",
     "express": "5.2.1",
     "jose": "6.2.9",
     "oidc-provider": "9.11.1",

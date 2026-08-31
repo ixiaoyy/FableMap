@@ -1,6 +1,10 @@
 import type { GameState } from "../state/game-state.ts";
-import { activeNpcSpawnsInRegion } from "./npc-schedules.ts";
-import type { WorldCatalog } from "./regions.ts";
+import {
+  PLAYER_FEET_HALF_HEIGHT,
+  PLAYER_FEET_HALF_WIDTH,
+  type NpcSpawnDefinition,
+  type WorldCatalog,
+} from "./regions.ts";
 
 export const PLAYER_SPEED_PIXELS_PER_SECOND = 96;
 
@@ -11,6 +15,7 @@ export function movePlayer(
   xAxis: -1 | 0 | 1,
   yAxis: -1 | 0 | 1,
   deltaMs: number,
+  activeNpcs: readonly NpcSpawnDefinition[],
 ): boolean {
   if ((xAxis === 0 && yAxis === 0) || !Number.isFinite(deltaMs) || deltaMs <= 0) return false;
   const boundedDeltaMs = Math.min(deltaMs, 100);
@@ -19,11 +24,32 @@ export function movePlayer(
   const previousX = state.player.x;
   const previousY = state.player.y;
   const region = catalog.requireRegion(state.player.regionId);
-  const activeNpcs = activeNpcSpawnsInRegion(catalog, state.player.regionId, state.minuteOfDay);
-  const nextX = clamp(previousX + (xAxis / magnitude) * distance, 5, region.widthPixels - 5);
-  if (!catalog.isBlocked(state.player.regionId, nextX, previousY, 5, 4, activeNpcs)) state.player.x = nextX;
-  const nextY = clamp(previousY + (yAxis / magnitude) * distance, 4, region.heightPixels - 4);
-  if (!catalog.isBlocked(state.player.regionId, state.player.x, nextY, 5, 4, activeNpcs)) state.player.y = nextY;
+  const nextX = clamp(
+    previousX + (xAxis / magnitude) * distance,
+    PLAYER_FEET_HALF_WIDTH,
+    region.widthPixels - PLAYER_FEET_HALF_WIDTH,
+  );
+  if (!catalog.isBlocked(
+    state.player.regionId,
+    nextX,
+    previousY,
+    PLAYER_FEET_HALF_WIDTH,
+    PLAYER_FEET_HALF_HEIGHT,
+    activeNpcs,
+  )) state.player.x = nextX;
+  const nextY = clamp(
+    previousY + (yAxis / magnitude) * distance,
+    PLAYER_FEET_HALF_HEIGHT,
+    region.heightPixels - PLAYER_FEET_HALF_HEIGHT,
+  );
+  if (!catalog.isBlocked(
+    state.player.regionId,
+    state.player.x,
+    nextY,
+    PLAYER_FEET_HALF_WIDTH,
+    PLAYER_FEET_HALF_HEIGHT,
+    activeNpcs,
+  )) state.player.y = nextY;
   return state.player.x !== previousX || state.player.y !== previousY;
 }
 

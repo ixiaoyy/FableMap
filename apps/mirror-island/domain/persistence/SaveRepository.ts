@@ -1,13 +1,15 @@
 import {
   cloneGameState,
   decodeGameState,
+  migrateGameStateV5,
+  migrateGameStateV4,
   migrateGameStateV3,
   migrateGameStateV2,
   migrateLegacyGameStateV1,
   type GameState,
 } from "../state/game-state.ts";
 
-export const SAVE_FORMAT_VERSION = 4 as const;
+export const SAVE_FORMAT_VERSION = 6 as const;
 export const MAIN_SAVE_SLOT = "main";
 
 export interface StoredGame {
@@ -62,6 +64,20 @@ export function decodeStoredGame(value: unknown): StoredGame {
       version: SAVE_FORMAT_VERSION,
       updatedAt: game.updatedAt,
       state: migrateGameStateV3(game.state),
+    };
+  }
+  if (game.version === 4) {
+    return {
+      version: SAVE_FORMAT_VERSION,
+      updatedAt: game.updatedAt,
+      state: migrateGameStateV4(game.state),
+    };
+  }
+  if (game.version === 5) {
+    return {
+      version: SAVE_FORMAT_VERSION,
+      updatedAt: game.updatedAt,
+      state: migrateGameStateV5(game.state),
     };
   }
   if (game.version !== SAVE_FORMAT_VERSION) throw new Error("Save format is unsupported.");

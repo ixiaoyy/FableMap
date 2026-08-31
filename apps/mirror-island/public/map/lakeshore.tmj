@@ -179,6 +179,46 @@
           "width": 0,
           "x": 208,
           "y": 432
+        },
+        {
+          "height": 0,
+          "id": 164,
+          "name": "Xiangzi Dock West",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "npc-xiangzi-dock-west"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 280,
+          "y": 296
+        },
+        {
+          "height": 0,
+          "id": 165,
+          "name": "Xiangzi Dock East",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "npc-xiangzi-dock-east"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 344,
+          "y": 296
         }
       ],
       "opacity": 1,
@@ -702,7 +742,7 @@
     }
   ],
   "nextlayerid": 12,
-  "nextobjectid": 164,
+  "nextobjectid": 166,
   "orientation": "orthogonal",
   "properties": [
     {

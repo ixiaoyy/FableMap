@@ -8,6 +8,7 @@ const vendorBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/vendo
 const ninjaBaseUrl = `${vendorBaseUrl}/ninja-adventure/2024-04-19`;
 const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08/original/16x16`;
 const vectoraithNpcBaseUrl = `${vendorBaseUrl}/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16`;
+const ivoryRedBaseUrl = `${vendorBaseUrl}/ivoryred/gardens-2026-08-27/original`;
 const assets = [
   {
     name: "male player",
@@ -120,6 +121,13 @@ const assets = [
     outputs: ["public/game-media/v1/assets/vendor/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16/generic_people.png"],
     bytes: 17354,
     sha256: "eb1fe419def5a351cfc147a8273b133f1e7daaa9f59a418fe4a7d3f8d7d67ba0",
+  },
+  {
+    name: "IvoryRed GARDENS icons",
+    url: `${ivoryRedBaseUrl}/all-the-icons-gardens.png`,
+    outputs: ["public/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png"],
+    bytes: 13130,
+    sha256: "de4dbbb56936520882e1217aad9dae22e60a5f57dde15512f673ec031b581536",
   },
 ];
 
