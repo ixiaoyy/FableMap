@@ -473,7 +473,7 @@ catalog.isBlocked(regionId, x, y, 5, 4, active);
 ### 1. Scope / Trigger
 
 - Trigger：八名 NPC 已有工作地点和移动 runtime，需要用低成本环境行为表达职业/地点关系，而不提前建设职业服务、任务或持久 NPC AI。
-- 本场景拥有八名 NPC 的 day activity；非 day 休息动作、休息日和特殊日程继续延期，walking 避让由下一场景统一处理。
+- 本场景拥有八名 NPC 的 morning/day/evening/night activity；工作日/休息日、天气/节日特殊动作继续延期，walking 避让由下一场景统一处理。
 
 ### 2. Signatures
 
@@ -486,7 +486,14 @@ type NpcActivityKind =
   | "mountain-patrol"
   | "observe"
   | "organize"
-  | "dock-watch";
+  | "dock-watch"
+  | "stock"
+  | "close"
+  | "prepare"
+  | "tea"
+  | "record"
+  | "sew"
+  | "rope-check";
 
 interface NpcRuntimeSpawn extends NpcSpawnDefinition {
   readonly activity: NpcActivityKind | null;
@@ -502,34 +509,36 @@ function npcActivityAt(
 
 ### 3. Contracts
 
-- `npc-activities.ts` 是 identity → day activity/route 的唯一 registry；Phaser 不按 npcId 复制活动规则。
-- 华强=`serve`/Seed Shop、昊天=`forge`/Town、阿禾=`tend`/Town、墨子=`repair`/Town、浩南=`mountain-patrol`/Foothills、阿澜=`observe`/Lakeshore、昊美丽=`organize`/Blacksmith、祥子=`dock-watch`/Lakeshore；八人非 day 均投影 `activity=null`。
+- `npc-activities.ts` 是 identity → phase → activity/route 的唯一 registry；Phaser 不按 npcId/phase 复制活动规则。
+- day 保持华强=`serve`、昊天=`forge`、阿禾=`tend`、墨子=`repair`、浩南=`mountain-patrol`、阿澜=`observe`、昊美丽=`organize`、祥子=`dock-watch`；morning/evening/night 使用 prepare/stock/close/tea/record/sew/rope-check 与可复用既有 kind 表达备工、收店、观察和居家。
 - 浩南 route 从 `npc-haonan-trail` 出发，经 `npc-haonan-patrol-mid`、`npc-haonan-patrol-lookout` 闭环；祥子 route 从 `npc-xiangzi-dock` 出发，经 east/west 两点闭环。坐标只属于 Tiled SpawnPoints。
 - patrol 每点停留 2400ms，再复用既有 EasyStar 四方向路径；schedule phase 变化立即取消 ambient loop，从当前 runtime 坐标前往新 anchor。
 - `activityPhase` 每 400ms 在 0/1 间切换，并只随 pause-aware GameSession tick 推进；刷新/continue/sleep 从当前 schedule target 重建，不保存进度。
+- 阿禾/阿澜与昊天/昊美丽 night 均使用 `tea`；同一 phase transition 将各自 cadence 从0同步启动，不增加 pair/group owner、互相等待或额外寻路。
+- walking/transfer 期间 arrival activity 不投影；NPC 抵达当前 phase anchor 并 idle 后才开始 stationary activity。day patrol 是唯一允许 walking 时保留 activity 的 ambient route。
 - NpcEntity 只根据 activity/phase 偏移 body 并显示单字动作标记；container、点击、击打、depth 和碰撞继续使用 GameSession runtime 坐标。
 
 ### 4. Validation & Error Matrix
 
 | 条件 | 结果 |
 |---|---|
-| activity npcId 不在八名 schedule identity 中 | world catalog 启动失败 |
-| activity region 与 day schedule region 不同 | 启动失败 |
-| patrol 第一项不等于 day schedule anchor | 启动失败 |
+| 任一 identity 缺 activity phase 或 registry identity 不在 schedule | 启动失败 |
+| activity region 与对应 phase schedule region 不同 | 启动失败 |
+| patrol 第一项不等于对应 phase schedule anchor | 启动失败 |
 | route point 缺失、被 Collision 阻挡或任一闭环 leg 不可达 | 启动失败，不在运行时瞬移兜底 |
-| walking/leaving/arriving 属于 schedule transition | activity 为 null，抵达 day target 后才建立 activity |
+| walking/leaving/arriving 属于 schedule transition | activity 为 null，抵达 phase target 后才建立 arrival activity |
 | modal/action/region transition paused | activity cadence、dwell 和 patrol position 均不推进 |
 
 ### 5. Good/Base/Bad Cases
 
-- Good：浩南到岗后停留、沿山路走到 lookout、再继续闭环；沿途点击/击打/碰撞位置与画面一致。
-- Base：墨子在修缮点以两相 body-local 动作显示“修”，17:00 开始离岗后活动立即消失。
-- Bad：WorldScene 按“浩南”硬编码 tween container，或把 activity/progress/routeIndex 写进 StoredGame。
+- Good：浩南白天闭环巡山，傍晚抵镇后记录；阿禾/阿澜夜间同屋同步显示两相喝茶动作。
+- Base：墨子白天/傍晚修缮，夜间回家整理；17:00 离岗开始后旧活动立即消失，抵达后再建立新活动。
+- Bad：WorldScene 按 npcId/phase 硬编码 tween，建立双人 group 状态，或把 activity/progress/routeIndex 写进 StoredGame。
 
 ### 6. Tests Required
 
-- 正式 12-region catalog 调用 schedule/activity validators，断言八种 day activity、非 day 全空和四个巡逻 SpawnPoints。
-- runtime 断言 400ms activity phase、2400ms dwell、浩南/祥子从 day anchor 真实移动并精确到下一个 Tiled point。
+- 正式 12-region catalog 调用 schedule/activity validators，断言八人四时段 activity region 与 schedule 一致，并保留四个巡逻 SpawnPoints。
+- runtime 断言 400ms activity phase、家庭 night cadence 同步、phase transition 到达前 activity=null，以及浩南/祥子 day patrol 精确到下一个 Tiled point。
 - typecheck 与 client build；不增加数据库、身份、Life Loop 全套、E2E 或图片检查矩阵。
 - 真实浏览器人工检查单字标记、body-local 动作、巡逻路线和对话/击打暂停体感。
 
@@ -539,7 +548,7 @@ function npcActivityAt(
 // Wrong: presentation owns an untracked route and moves only the sprite container.
 if (npc.npcId === "town-resident-haonan") scene.tweens.add({ targets: npc.container, x: 424 });
 
-// Correct: domain resolves semantic activity and the existing runtime owns every route coordinate.
+// Correct: domain resolves semantic phase activity and the existing runtime owns every cadence/route.
 const activity = npcActivityAt(catalog, npc.npcId, minuteOfDay);
 runtime.advance(deltaMs);
 npcEntity.project(session.activeNpcById(npc.npcId));

@@ -20,7 +20,7 @@
 - [ ] 玩家四向移动、idle、持有物、工具 windup/impact/recovery。
 - [ ] 树、农田、空手收获和错误工具的目标反馈。
 - [ ] 空手挥拳、命中/挥空、NPC hit 恢复和 modal/切图取消。
-- [ ] NPC walking、waiting、动态避让、activity、跨区离场/到场和朝向。
+- [ ] NPC walking、waiting、动态避让、白天/早晚夜 activity、跨区离场/到场和朝向。
 - [ ] 房屋/区域淡出淡入、重复触发和出生点安全。
 
 ## 地图

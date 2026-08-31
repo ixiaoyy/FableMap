@@ -32,7 +32,7 @@
 - [x] 跨区域时增加进门/出门或淡出提示，不要求跨地图连续寻路。
 - [x] NPC 动态避让玩家与其他 NPC，避免时段切换重叠或封路。
 - [x] 每名 NPC 增加首批白天工作、观察、修缮等轻量环境动作。
-- [ ] 增加 morning/evening 的休息、收工或家庭轻量动作；不得与 day 工作 activity 并行。
+- [x] 增加 morning/evening/night 的准备、收工和家庭轻量动作；schedule transition 期间不与 day 工作 activity 并行。
 - [ ] 增加工作日/休息日与商店营业时间；华强离柜后 ShopPanel 不可打开。
 - [ ] 增加特殊日程优先级模型，为雨天、节日、事件日预留单一规则 owner。
 
