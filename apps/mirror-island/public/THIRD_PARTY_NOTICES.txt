@@ -7,3 +7,40 @@ License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 License text: https://creativecommons.org/licenses/by/4.0/
 Use in Mirror Island: Hotbar tool and seed icons selected from the original sheet.
 Modification: None. The published PNG is byte-identical to the reviewed official file.
+
+Mirror Island Audio MVP
+License: Creative Commons CC0 1.0 Universal
+Use: Footsteps, farming/tool interactions, doors, trade, dialogue, sleep, and Farm/Town/Lakeshore/interior ambience.
+Published files are byte-identical to the reviewed official archive members or official source/preview files.
+
+RPG Audio
+Author: Kenney
+Official source: https://kenney.nl/assets/rpg-audio
+
+100 CC0 SFX #2
+Author: rubberduck
+Official source: https://opengameart.org/content/100-cc0-sfx-2
+
+Water Splash and sand footsteps
+Author: Peludo
+Official source: https://opengameart.org/content/water-splash-and-sand-footsteps
+
+Birds and Wind - Ambient
+Author: Spring Spring
+Official source: https://opengameart.org/content/birds-and-wind-ambient-birds-wind-and-synth
+
+Village ambience
+Author: Milkybread
+Official source: https://freesound.org/people/Milkybread/sounds/830375/
+
+People talking (Adults & Children)
+Author: Breviceps
+Official source: https://freesound.org/people/Breviceps/sounds/473586/
+
+Wavesound
+Author: transitking
+Official source: https://freesound.org/people/transitking/sounds/11505/
+
+Roomtone Bedroom Yew
+Author: leonelmail
+Official source: https://freesound.org/people/leonelmail/sounds/329569/

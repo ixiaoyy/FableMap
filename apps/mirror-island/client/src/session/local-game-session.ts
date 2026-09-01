@@ -3,6 +3,10 @@ import type { ActionFeedback, GameCommand } from "../../../domain/session/comman
 import type { WorldCatalog } from "../../../domain/world/regions.ts";
 import { IndexedDbSaveRepository } from "../persistence/IndexedDbSaveRepository.ts";
 import {
+  audioCueForCommandResult,
+  emitAudioCue,
+} from "../audio/audio-events.ts";
+import {
   applyGameState,
   clearGameState,
   setActionFeedback,
@@ -38,6 +42,8 @@ export function getLocalGameSession(): GameSession {
 export function dispatchLocalGameCommand(command: GameCommand): ActionFeedback | null {
   const activeSession = getLocalGameSession();
   const feedback = activeSession.dispatch(command);
+  const audioCue = audioCueForCommandResult(command, feedback);
+  if (audioCue) emitAudioCue(audioCue);
   if (feedback) setActionFeedback(feedback);
   if (feedback?.tone === "success") {
     void activeSession.flush().catch(() => {

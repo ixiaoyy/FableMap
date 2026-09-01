@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
+import { AudioDirector } from "../../audio/AudioDirector.ts";
+import { AUDIO_CUE } from "../../audio/audio-catalog.ts";
+import { emitAudioCue } from "../../audio/audio-events.ts";
 import type {
   ExitDefinition,
   RegionDefinition,
@@ -66,9 +69,11 @@ import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
 const BED_INTERACTION_DISTANCE = 42;
+const ROCK_INTERACTION_DISTANCE = 42;
 const INSPECT_INTERACTION_DISTANCE = 48;
 const EXIT_HINT_DISTANCE = 52;
 const WORLD_CAMERA_ZOOM = 2;
+const FOOTSTEP_INTERVAL_MS = 280;
 
 interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
@@ -108,7 +113,9 @@ export class WorldScene extends Phaser.Scene {
   private transitionPhase: TransitionPhase = "idle";
   private entityFactory!: EntityFactory;
   private actionTimeline!: ActionTimeline;
+  private audioDirector: AudioDirector | null = null;
   private facing: Facing = "down";
+  private lastFootstepAt = 0;
   private disposed = false;
 
   /** Creates the Tiled-backed scene with catalog entities and one shared player action timeline. */
@@ -167,6 +174,13 @@ export class WorldScene extends Phaser.Scene {
     this.registerMediaFrames();
     this.createPlayerAnimations();
     this.actionTimeline = new ActionTimeline(this);
+    this.audioDirector = new AudioDirector(() => {
+      setActionFeedback({
+        tone: "error",
+        code: "audio-playback-blocked",
+        message: "浏览器尚未启用声音，请打开声音设置并点击测试声音。",
+      });
+    });
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Keyboard input is unavailable.");
     this.cursors = keyboard.createCursorKeys();
@@ -189,7 +203,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Applies collision-aware movement and one exit transition while no action or modal owns input. */
-  override update(_time: number, delta: number): void {
+  override update(time: number, delta: number): void {
     const worldInputLocked = isWorldInputLocked();
     tickLocalGameSession(
       Date.now(),
@@ -213,8 +227,17 @@ export class WorldScene extends Phaser.Scene {
       - Number(this.cursors.up.isDown || this.movementKeys.W.isDown),
     );
     if (xAxis !== 0 || yAxis !== 0) {
+      const before = this.latestState?.player;
+      const beforeX = before?.x;
+      const beforeY = before?.y;
       this.setMovementAnimation(xAxis, yAxis);
       dispatchLocalGameCommand({ type: "move", xAxis, yAxis, deltaMs: delta });
+      const after = this.latestState?.player;
+      const moved = after && (after.x !== beforeX || after.y !== beforeY);
+      if (moved && time - this.lastFootstepAt >= FOOTSTEP_INTERVAL_MS) {
+        this.lastFootstepAt = time;
+        emitAudioCue(AUDIO_CUE.footstep);
+      }
     } else {
       this.setIdleFrame();
     }
@@ -271,6 +294,7 @@ export class WorldScene extends Phaser.Scene {
     this.entityFactory = new EntityFactory(this, entityMediaForRegion(regionId));
     this.activeMap = map;
     this.activeRegionId = regionId;
+    this.audioDirector?.setRegion(regionId);
     this.cameras.main.setBounds(0, 0, region.widthPixels, region.heightPixels);
     this.cameras.main.setZoom(WORLD_CAMERA_ZOOM);
     this.cameras.main.startFollow(playerView.container, true, 1, 1);
@@ -467,7 +491,7 @@ export class WorldScene extends Phaser.Scene {
         const resource = state.resources[spawn.entityId];
         if (resource) view.project(resource);
       } else if (spawn.kind === "stone" && !this.rockViews.has(spawn.entityId)) {
-        this.rockViews.set(spawn.entityId, this.entityFactory.createRock(spawn));
+        this.rockViews.set(spawn.entityId, this.entityFactory.createRock(spawn, (entity) => this.tapRock(entity)));
       }
     }
   }
@@ -885,6 +909,22 @@ export class WorldScene extends Phaser.Scene {
     openSleepConfirmation(() => this.beginSleep(bed.entityId));
   }
 
+  /** Plays a nearby non-minable rock tap and clearly reports that no mining rule exists yet. */
+  private tapRock(entity: RockEntity): void {
+    const player = this.latestState?.player;
+    if (!player || isWorldInputLocked() || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
+    if (
+      player.regionId !== entity.spawn.regionId
+      || Math.hypot(player.x - entity.spawn.x, player.y - entity.spawn.y) > ROCK_INTERACTION_DISTANCE
+    ) {
+      setActionFeedback({ tone: "error", code: "rock-too-far", message: "走近一些再敲敲看。" });
+      return;
+    }
+    entity.playTap();
+    emitAudioCue(AUDIO_CUE.stone);
+    setActionFeedback({ tone: "error", code: "rock-unbreakable", message: "石头纹丝不动，现有工具还敲不开。" });
+  }
+
   /** Opens the exact nearby clicked NPC's existing dialogue or shop projection. */
   private interactWithNpc(npc: NpcEntity): void {
     const state = this.latestState;
@@ -960,10 +1000,13 @@ export class WorldScene extends Phaser.Scene {
   /** Locks input, fades out, then asks GameSession to resolve one reviewed exit ID. */
   private beginRegionTransition(exitId: string): void {
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    const exit = this.catalog.requireRegion(this.activeRegionId).exits.find((candidate) => candidate.id === exitId);
+    const playsDoor = Boolean(exit && isOutdoorRegion(this.activeRegionId) !== isOutdoorRegion(exit.targetRegionId));
     this.transitionPhase = "fading-out";
     this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      dispatchLocalGameCommand({ type: "transition-region", exitId });
+      const feedback = dispatchLocalGameCommand({ type: "transition-region", exitId });
+      if (playsDoor && feedback === null) emitAudioCue(AUDIO_CUE.door);
     });
   }
 
@@ -990,6 +1033,8 @@ export class WorldScene extends Phaser.Scene {
     if (this.disposed) return;
     this.disposed = true;
     cancelSleepConfirmation();
+    this.audioDirector?.destroy();
+    this.audioDirector = null;
     this.stopProjection?.();
     this.stopProjection = undefined;
     if (destroyViews) this.destroyRegionViews();
