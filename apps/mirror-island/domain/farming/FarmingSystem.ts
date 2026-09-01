@@ -1,9 +1,10 @@
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
-import { calendarAt } from "../calendar/game-calendar.ts";
+import { playableCalendarAt } from "../calendar/game-calendar.ts";
 import { cropDefinition, cropForSeed } from "./crops.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { FarmTileState, GameState } from "../state/game-state.ts";
-import type { WorldCatalog } from "../world/regions.ts";
+import type { InteractionDefinition, WorldCatalog } from "../world/regions.ts";
+import { facingVector, type Facing } from "../world/facing.ts";
 
 const FARM_INTERACTION_DISTANCE_PIXELS = 42;
 
@@ -27,7 +28,7 @@ export class FarmingSystem {
   ) {}
 
   /** Applies one selected item or empty hand to a nearby tile without inferring the intended action. */
-  use(state: GameState, tileId: string, itemId: ItemId | ""): FarmingResult {
+  use(state: GameState, tileId: string, itemId: ItemId | "", facing?: Facing): FarmingResult {
     const interaction = this.catalog.interaction(tileId);
     const tile = state.farmTiles[tileId];
     if (!interaction || interaction.kind !== "farm-plot" || !tile) return "missing-tile";
@@ -40,7 +41,9 @@ export class FarmingSystem {
     if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return "no-effect";
     if (itemId === ITEM_ID.hoe && tile.phase === "untilled") return this.till(tile);
     if (itemId !== "" && cropForSeed(itemId) && tile.phase === "tilled") return this.plant(state, tile, itemId);
-    if (itemId === ITEM_ID.wateringCan && tile.phase === "growing") return this.water(state, tile);
+    if (itemId === ITEM_ID.wateringCan && tile.phase === "growing") {
+      return this.water(state, tile, interaction, facing);
+    }
     if (itemId === "" && tile.phase === "mature") return this.harvest(state, tile);
     return "no-effect";
   }
@@ -71,7 +74,7 @@ export class FarmingSystem {
   private plant(state: GameState, tile: FarmTileState, seedId: ItemId): FarmingResult {
     const crop = cropForSeed(seedId);
     if (!crop) return "no-effect";
-    if (!crop.seasons.includes(calendarAt(state.day).season)) return "out-of-season";
+    if (!crop.seasons.includes(playableCalendarAt(state.day).season)) return "out-of-season";
     if (!this.inventory.consume(state.inventory, seedId, 1)) return "no-effect";
     tile.phase = "growing";
     tile.cropId = crop.cropId;
@@ -80,12 +83,52 @@ export class FarmingSystem {
     return "planted";
   }
 
-  /** Requires the starter watering can and marks this crop for the next sleep settlement once. */
-  private water(state: GameState, tile: FarmTileState): FarmingResult {
-    if (tile.watered) return "waiting";
+  /** Waters one Lv1 tile or up to three contiguous Lv2 tiles along the supplied facing. */
+  private water(
+    state: GameState,
+    tile: FarmTileState,
+    interaction: InteractionDefinition,
+    facing?: Facing,
+  ): FarmingResult {
     if (this.inventory.quantity(state.inventory, ITEM_ID.wateringCan) < 1) return "no-effect";
-    tile.watered = true;
-    return "watered";
+    const targets = state.wateringCanLevel === 2 && facing
+      ? this.contiguousWateringTargets(state, interaction, facing)
+      : [tile];
+    const eligible = targets.filter((candidate) => candidate.phase === "growing" && !candidate.watered);
+    for (const candidate of eligible) candidate.watered = true;
+    if (eligible.length > 0) return "watered";
+    return targets.some((candidate) => candidate.phase === "growing" && candidate.watered)
+      ? "waiting"
+      : "no-effect";
+  }
+
+  /** Resolves the clicked plot and the next two registered same-region plots without synthesizing grid IDs. */
+  private contiguousWateringTargets(
+    state: GameState,
+    interaction: InteractionDefinition,
+    facing: Facing,
+  ): FarmTileState[] {
+    if (interaction.kind !== "farm-plot") return [];
+    const direction = facingVector(facing);
+    const centerX = interaction.x + interaction.width / 2;
+    const centerY = interaction.y + interaction.height / 2;
+    const plots = this.catalog.requireRegion(interaction.regionId).interactions.filter((candidate) => (
+      candidate.kind === "farm-plot"
+    ));
+    const result: FarmTileState[] = [];
+    for (let offset = 0; offset < 3; offset += 1) {
+      const expectedX = centerX + direction.x * interaction.width * offset;
+      const expectedY = centerY + direction.y * interaction.height * offset;
+      const adjacent = plots.find((candidate) => (
+        candidate.x + candidate.width / 2 === expectedX
+        && candidate.y + candidate.height / 2 === expectedY
+      ));
+      if (!adjacent) break;
+      const adjacentState = state.farmTiles[adjacent.entityId];
+      if (!adjacentState) throw new Error(`Farm state is missing for contiguous plot ${adjacent.entityId}.`);
+      result.push(adjacentState);
+    }
+    return result;
   }
 
   /** Adds one mature crop before resetting the tile to prepared soil. */

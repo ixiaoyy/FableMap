@@ -1,4 +1,4 @@
-import { calendarAt } from "../calendar/game-calendar.ts";
+import { playableCalendarAt } from "../calendar/game-calendar.ts";
 import { cropForSeed, sellPriceForItem } from "../farming/crops.ts";
 import { type ItemId } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
@@ -19,7 +19,7 @@ export class ShopSystem {
   buySeed(state: GameState, activeNpcs: readonly NpcSpawnDefinition[], itemId: ItemId): BuyResult {
     if (!this.isPlayerAtSeedKeeper(state, activeNpcs)) return "not-at-shop";
     const crop = cropForSeed(itemId);
-    if (!crop || !crop.seasons.includes(calendarAt(state.day).season)) return "unavailable-item";
+    if (!crop || !crop.seasons.includes(playableCalendarAt(state.day).season)) return "unavailable-item";
     if (state.gold < crop.seedPrice) return "insufficient-gold";
     if (!this.inventory.canAdd(state.inventory, itemId, 1)) return "inventory-full";
     const inventoryBefore = state.inventory.map((slot) => ({ ...slot }));

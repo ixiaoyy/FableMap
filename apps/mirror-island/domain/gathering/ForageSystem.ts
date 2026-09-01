@@ -1,4 +1,4 @@
-import { calendarAt } from "../calendar/game-calendar.ts";
+import { playableCalendarAt } from "../calendar/game-calendar.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 import type { GameState } from "../state/game-state.ts";
@@ -14,7 +14,7 @@ export class ForageSystem {
 
   /** Returns active uncollected spring forage candidates for one region and game day. */
   activeSpawns(state: GameState, regionId: string): readonly ResourceSpawnDefinition[] {
-    if (calendarAt(state.day).season !== "spring") return [];
+    if (playableCalendarAt(state.day).season !== "spring") return [];
     const collected = new Set(state.dailyForage.day === state.day ? state.dailyForage.collectedIds : []);
     return this.catalog.requireRegion(regionId).resources.filter((spawn) => (
       forageItemId(spawn.kind) !== null && forageAppearsOnDay(spawn.entityId, state.day) && !collected.has(spawn.entityId)

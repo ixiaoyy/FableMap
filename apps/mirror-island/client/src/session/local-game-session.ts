@@ -1,5 +1,10 @@
 import { GameSession } from "../../../domain/session/GameSession.ts";
-import type { ActionFeedback, GameCommand } from "../../../domain/session/commands.ts";
+import type {
+  ActionFeedback,
+  GameCommand,
+  GameCommandResult,
+  NpcInteractionResult,
+} from "../../../domain/session/commands.ts";
 import type { WorldCatalog } from "../../../domain/world/regions.ts";
 import { IndexedDbSaveRepository } from "../persistence/IndexedDbSaveRepository.ts";
 import {
@@ -38,10 +43,20 @@ export function getLocalGameSession(): GameSession {
   return session;
 }
 
-/** Dispatches one local gameplay command and projects its fixed feedback into Vue. */
-export function dispatchLocalGameCommand(command: GameCommand): ActionFeedback | null {
+type NpcInteractionCommand = Extract<GameCommand, { readonly type: "talk-to-npc" }>;
+type NonNpcGameCommand = Exclude<GameCommand, NpcInteractionCommand>;
+
+/** Dispatches one NPC command and returns its saved dialogue selection. */
+export function dispatchLocalGameCommand(command: NpcInteractionCommand): NpcInteractionResult | null;
+/** Dispatches one non-NPC command and returns fixed action feedback. */
+export function dispatchLocalGameCommand(command: NonNpcGameCommand): ActionFeedback | null;
+/** Dispatches one caller-held command union and projects any nested action feedback into Vue. */
+export function dispatchLocalGameCommand(command: GameCommand): GameCommandResult;
+/** Dispatches one local gameplay command, routes feedback/audio and preserves the closed result union. */
+export function dispatchLocalGameCommand(command: GameCommand): GameCommandResult {
   const activeSession = getLocalGameSession();
-  const feedback = activeSession.dispatch(command);
+  const result = activeSession.dispatch(command);
+  const feedback = result && "kind" in result ? result.feedback : result;
   const audioCue = audioCueForCommandResult(command, feedback);
   if (audioCue) emitAudioCue(audioCue);
   if (feedback) setActionFeedback(feedback);
@@ -54,7 +69,7 @@ export function dispatchLocalGameCommand(command: GameCommand): ActionFeedback |
       });
     });
   }
-  return feedback;
+  return result;
 }
 
 /** Advances bounded movement/time checkpoints with an explicit transient pause signal. */

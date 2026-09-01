@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import { ITEM_DEFINITIONS, ITEM_ID, type ItemId } from "../../../../domain/items/definitions.ts";
-import { calendarAt } from "../../../../domain/calendar/game-calendar.ts";
+import { playableCalendarAt } from "../../../../domain/calendar/game-calendar.ts";
 import { CROP_DEFINITIONS, cropsForSeason, sellPriceForItem } from "../../../../domain/farming/crops.ts";
 import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
 import { closeShop, gameUiState } from "../../stores/game-store.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
 
 const panel = ref<HTMLElement | null>(null);
-const seedGoods = computed(() => cropsForSeason(calendarAt(gameUiState.day).season));
+const seedGoods = computed(() => cropsForSeason(playableCalendarAt(gameUiState.day).season));
 const sellGoods = computed(() => [
   ...CROP_DEFINITIONS.map(({ cropId }) => cropId),
   ITEM_ID.springWildflower,

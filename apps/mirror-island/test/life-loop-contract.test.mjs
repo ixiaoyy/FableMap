@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { InventorySystem } from "../domain/inventory/InventorySystem.ts";
 import { ITEM_ID } from "../domain/items/definitions.ts";
-import { decodeStoredGame } from "../domain/persistence/SaveRepository.ts";
+import { createStoredGame, decodeStoredGame } from "../domain/persistence/SaveRepository.ts";
 import { GameSession } from "../domain/session/GameSession.ts";
 import { ShopSystem } from "../domain/shop/ShopSystem.ts";
 import { FriendshipSystem } from "../domain/social/FriendshipSystem.ts";
@@ -17,11 +17,18 @@ import {
 import { activeNpcSpawns } from "../domain/world/npc-schedules.ts";
 import { WorldCatalog } from "../domain/world/regions.ts";
 import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
-import { calendarAt } from "../domain/calendar/game-calendar.ts";
+import { calendarAt, playableCalendarAt } from "../domain/calendar/game-calendar.ts";
 import { CROP_DEFINITIONS } from "../domain/farming/crops.ts";
+import { FarmingSystem } from "../domain/farming/FarmingSystem.ts";
 import { ForageSystem, forageAppearsOnDay } from "../domain/gathering/ForageSystem.ts";
+import { UpgradeSystem } from "../domain/progression/UpgradeSystem.ts";
+import { DailyRequestSystem } from "../domain/requests/DailyRequestSystem.ts";
+import { createDailyRequestState } from "../domain/requests/definitions.ts";
+import { NpcDialogueSystem } from "../domain/dialogue/NpcDialogueSystem.ts";
 
 const FARM_PLOT_ID = "farm-plot-001";
+const FARM_PLOT_2_ID = "farm-plot-002";
+const FARM_PLOT_3_ID = "farm-plot-003";
 const BED_ID = "cottage-bed";
 const TREE_ID = "test-tree-001";
 const FORAGE_ID = "test-forage-flower-001";
@@ -83,6 +90,8 @@ function createLifeLoopCatalog() {
     interactions: [
       { entityId: BED_ID, regionId: "cottage", kind: "bed", x: 16, y: 16, width: 32, height: 48 },
       { entityId: FARM_PLOT_ID, regionId: "cottage", kind: "farm-plot", x: 40, y: 32, width: 16, height: 16 },
+      { entityId: FARM_PLOT_2_ID, regionId: "cottage", kind: "farm-plot", x: 56, y: 32, width: 16, height: 16 },
+      { entityId: FARM_PLOT_3_ID, regionId: "cottage", kind: "farm-plot", x: 72, y: 32, width: 16, height: 16 },
     ],
     npcs: [{
       entityId: "seed-shop-keeper",
@@ -169,6 +178,7 @@ test("calendar, spring crop catalog and daily forage use deterministic domain ru
   assert.equal(calendarAt(29).season, "summer");
   assert.equal(calendarAt(112).season, "winter");
   assert.deepEqual(calendarAt(113), { absoluteDay: 113, year: 2, season: "spring", dayOfSeason: 1, weekday: "monday" });
+  assert.deepEqual(playableCalendarAt(29), { absoluteDay: 29, season: "spring", weekday: "monday" });
   assert.deepEqual(CROP_DEFINITIONS.map(({ cropId, growthDays, seedPrice, sellPrice }) => (
     [cropId, growthDays, seedPrice, sellPrice]
   )), [
@@ -191,10 +201,10 @@ test("calendar, spring crop catalog and daily forage use deterministic domain ru
   assert.equal(state.dailyForage.collectedIds.includes(FORAGE_ID), true);
 });
 
-test("released saves migrate to v7 and repeated v7 decode is idempotent", () => {
+test("released saves migrate to v8 and repeated v8 decode is idempotent", () => {
   const migrated = decodeStoredGame(createV2StoredGame());
-  assert.equal(migrated.version, 7);
-  assert.equal(migrated.state.version, 7);
+  assert.equal(migrated.version, 8);
+  assert.equal(migrated.state.version, 8);
   assert.equal(migrated.state.day, 1);
   assert.equal(migrated.state.minuteOfDay, DAY_START_MINUTE);
   assert.equal(migrated.state.gold, 100);
@@ -210,6 +220,11 @@ test("released saves migrate to v7 and repeated v7 decode is idempotent", () => 
   assert.equal(migrated.state.farmTiles["farm-plot-002"].growthDays, 3);
   assert.deepEqual(migrated.state.dailyForage, { day: 1, collectedIds: [] });
   assert.deepEqual(migrated.state.friendships, {});
+  assert.equal(migrated.state.inventoryCapacity, 24);
+  assert.equal(migrated.state.wateringCanLevel, 1);
+  assert.equal(migrated.state.dailyRequest, null);
+  assert.deepEqual(migrated.state.npcDialogue, {});
+  assert.deepEqual(migrated.state.seenEventIds, []);
   assert.deepEqual(decodeStoredGame(migrated), migrated);
   const legacyFarmTiles = Object.fromEntries(Object.entries(migrated.state.farmTiles).map(([id, tile]) => [id, {
     ...tile,
@@ -237,6 +252,15 @@ test("released saves migrate to v7 and repeated v7 decode is idempotent", () => 
   };
   delete versionSix.state.dailyForage;
   assert.deepEqual(decodeStoredGame(versionSix).state.dailyForage, { day: 1, collectedIds: [] });
+  const versionSeven = structuredClone(migrated);
+  versionSeven.version = 7;
+  versionSeven.state.version = 7;
+  delete versionSeven.state.inventoryCapacity;
+  delete versionSeven.state.wateringCanLevel;
+  delete versionSeven.state.dailyRequest;
+  delete versionSeven.state.npcDialogue;
+  delete versionSeven.state.seenEventIds;
+  assert.equal(decodeStoredGame(versionSeven).state.inventoryCapacity, 24);
   assert.throws(
     () => decodeStoredGame({ ...migrated, state: { ...migrated.state, minuteOfDay: 365 } }),
     /time is invalid/i,
@@ -251,7 +275,33 @@ test("released saves migrate to v7 and repeated v7 decode is idempotent", () => 
     }),
     /friendship/i,
   );
-  assert.throws(() => decodeStoredGame({ ...migrated, version: 8 }), /unsupported/i);
+  const currentState = createInitialGameState(createLifeLoopCatalog());
+  currentState.day = 2;
+  currentState.dailyForage = { day: 2, collectedIds: [] };
+  currentState.dailyRequest = createDailyRequestState(2);
+  const currentStored = createStoredGame(currentState, 456);
+  assert.throws(
+    () => decodeStoredGame({
+      ...currentStored,
+      state: { ...currentStored.state, dailyRequest: { day: 2, requestId: "unknown", completed: false } },
+    }),
+    /daily request/i,
+  );
+  assert.throws(
+    () => decodeStoredGame({
+      ...currentStored,
+      state: { ...currentStored.state, inventoryCapacity: 32 },
+    }),
+    /inventory/i,
+  );
+  assert.throws(
+    () => decodeStoredGame({
+      ...currentStored,
+      state: { ...currentStored.state, seenEventIds: ["unknown-event"] },
+    }),
+    /event/i,
+  );
+  assert.throws(() => decodeStoredGame({ ...migrated, version: 9 }), /unsupported/i);
 });
 
 test("friendship records first daily talk, applies light decay and stops decay at max hearts", () => {
@@ -272,6 +322,109 @@ test("friendship records first daily talk, applies light decay and stops decay a
   state.day += 1;
   assert.equal(friendship.settleDay(state), false);
   assert.equal(state.friendships["seed-keeper"].points, FRIENDSHIP_MAX_POINTS);
+});
+
+test("v8 upgrades, three-tile watering and deterministic requests stay atomic", () => {
+  const catalog = createLifeLoopCatalog();
+  const inventory = new InventorySystem();
+  const friendship = new FriendshipSystem();
+  const upgrades = new UpgradeSystem(inventory);
+  const requests = new DailyRequestSystem(inventory, friendship);
+
+  const wateringState = createInitialGameState(catalog);
+  wateringState.day = 3;
+  wateringState.gold = 900;
+  wateringState.player.regionId = "town";
+  assert.equal(inventory.add(wateringState.inventory, ITEM_ID.wood, 15), true);
+  const blacksmith = [{
+    entityId: "test-blacksmith",
+    regionId: wateringState.player.regionId,
+    npcId: "town-blacksmith",
+    dialogueId: "blacksmith-intro",
+    interactionType: "dialogue",
+    x: wateringState.player.x,
+    y: wateringState.player.y,
+  }];
+  assert.equal(upgrades.upgradeWateringCan(wateringState, blacksmith), "upgraded-watering-can");
+  assert.equal(wateringState.wateringCanLevel, 2);
+  assert.equal(wateringState.gold, 0);
+  assert.equal(inventory.quantity(wateringState.inventory, ITEM_ID.wood), 0);
+  wateringState.player.regionId = "cottage";
+  wateringState.player.x = 48;
+  assert.equal(inventory.add(wateringState.inventory, ITEM_ID.turnipSeed, 3), true);
+  const farming = new FarmingSystem(inventory, catalog);
+  for (const plotId of [FARM_PLOT_ID, FARM_PLOT_2_ID, FARM_PLOT_3_ID]) {
+    assert.equal(farming.use(wateringState, plotId, ITEM_ID.hoe), "tilled");
+    assert.equal(farming.use(wateringState, plotId, ITEM_ID.turnipSeed), "planted");
+  }
+  assert.equal(farming.use(wateringState, FARM_PLOT_ID, ITEM_ID.wateringCan, "right"), "watered");
+  assert.equal(wateringState.farmTiles[FARM_PLOT_ID].watered, true);
+  assert.equal(wateringState.farmTiles[FARM_PLOT_2_ID].watered, true);
+  assert.equal(wateringState.farmTiles[FARM_PLOT_3_ID].watered, true);
+
+  const backpackState = createInitialGameState(catalog);
+  backpackState.day = 5;
+  backpackState.gold = 1_500;
+  backpackState.player.regionId = "seed-shop";
+  const seedKeeper = [{
+    entityId: "test-seed-keeper",
+    regionId: backpackState.player.regionId,
+    npcId: "seed-keeper",
+    dialogueId: "seed-keeper-welcome",
+    interactionType: "shop",
+    x: backpackState.player.x,
+    y: backpackState.player.y,
+  }];
+  const firstTwentyFour = structuredClone(backpackState.inventory);
+  assert.equal(upgrades.upgradeBackpack(backpackState, seedKeeper), "upgraded-backpack");
+  assert.equal(backpackState.inventoryCapacity, 32);
+  assert.deepEqual(backpackState.inventory.slice(0, 24), firstTwentyFour);
+  assert.deepEqual(backpackState.inventory.slice(24), Array.from({ length: 8 }, () => ({ itemId: "", quantity: 0 })));
+  assert.equal(upgrades.upgradeBackpack(backpackState, seedKeeper), "backpack-already-upgraded");
+
+  const requestState = createInitialGameState(catalog);
+  assert.equal(friendship.talk(requestState, "seed-keeper"), "recorded");
+  requestState.day = 2;
+  requestState.dailyForage = { day: 2, collectedIds: [] };
+  requestState.dailyRequest = createDailyRequestState(2);
+  assert.equal(inventory.add(requestState.inventory, ITEM_ID.wood, 6), true);
+  assert.equal(requests.submitForNpc(requestState, "seed-keeper").result, "request-completed");
+  assert.equal(friendship.talk(requestState, "seed-keeper"), "recorded");
+  assert.equal(requestState.gold, 200);
+  assert.equal(requestState.friendships["seed-keeper"].points, 210);
+  assert.equal(requests.submitForNpc(requestState, "seed-keeper").result, "request-already-completed");
+  requestState.day = 3;
+  assert.equal(friendship.talk(requestState, "seed-keeper"), "recorded");
+  requestState.day = 4;
+  assert.equal(friendship.talk(requestState, "seed-keeper"), "recorded");
+  assert.equal(requestState.friendships["seed-keeper"].points, 250);
+});
+
+test("NPC dialogue selection excludes the prior three days and records two-heart events once", () => {
+  const state = createInitialGameState(createLifeLoopCatalog());
+  const npc = createLifeLoopCatalog().requireRegion("cottage").npcs[0];
+  const dialogue = new NpcDialogueSystem();
+  const selections = [];
+  for (let day = 1; day <= 5; day += 1) {
+    state.day = day;
+    state.dailyForage = { day, collectedIds: [] };
+    state.dailyRequest = createDailyRequestState(day);
+    const selection = dialogue.select(
+      state,
+      npc,
+      { result: "request-not-target", request: null },
+    );
+    assert.equal(selections.slice(-3).includes(selection.dialogueId), false);
+    selections.push(selection.dialogueId);
+  }
+  state.day = 6;
+  state.dailyRequest = createDailyRequestState(6);
+  state.friendships["seed-keeper"].points = 500;
+  const event = dialogue.select(state, npc, { result: "request-not-target", request: null });
+  assert.equal(event.dialogueId, "event:seed-keeper-two-heart");
+  assert.deepEqual(state.seenEventIds, ["seed-keeper-two-heart"]);
+  const next = dialogue.select(state, npc, { result: "request-not-target", request: null });
+  assert.notEqual(next.dialogueId, event.dialogueId);
 });
 
 test("clock advances in ten-minute steps, pauses without catch-up and sleep resets 06:00", async () => {
@@ -307,6 +460,38 @@ test("clock advances in ten-minute steps, pauses without catch-up and sleep rese
   await session.flush();
 });
 
+test("a released Day-28 v7 save migrates and sleeps into an unbounded Day 29", async () => {
+  const catalog = createLifeLoopCatalog();
+  const current = createInitialGameState(catalog);
+  current.day = 28;
+  current.dailyForage = { day: 28, collectedIds: [] };
+  current.friendships["seed-keeper"].points = 250;
+  const {
+    inventoryCapacity: _inventoryCapacity,
+    wateringCanLevel: _wateringCanLevel,
+    dailyRequest: _dailyRequest,
+    npcDialogue: _npcDialogue,
+    seenEventIds: _seenEventIds,
+    ...releasedFields
+  } = current;
+  const repository = new MemorySaveRepository();
+  repository.game = decodeStoredGame({
+    version: 7,
+    updatedAt: 700,
+    state: { ...releasedFields, version: 7 },
+  });
+  const session = new GameSession(repository, "day-29-owner", catalog, "main", () => 701);
+  await session.continueGame();
+  assert.equal(session.snapshot().inventoryCapacity, 24);
+  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
+  const day29 = session.snapshot();
+  assert.equal(day29.day, 29);
+  assert.equal(day29.friendships["seed-keeper"].points, 248);
+  assert.equal(day29.dailyRequest?.day, 29);
+  assert.equal(playableCalendarAt(day29.day).season, "spring");
+  await session.flush();
+});
+
 test("one real session completes buy, three watered sleeps, harvest, sale and repeat purchase", async () => {
   const repository = new MemorySaveRepository();
   let wallClock = 1_000;
@@ -337,9 +522,13 @@ test("one real session completes buy, three watered sleeps, harvest, sale and re
   assert.deepEqual(session.activeNpcById("seed-keeper"), pausedKeeper);
   wallClock = advanceNpcToIdle(session, wallClock, "seed-keeper");
   assert.equal(session.activeNpcById("seed-keeper")?.interactionType, "shop");
-  assert.equal(session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" }), null);
+  const firstInteraction = session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" });
+  assert.equal(firstInteraction?.kind, "npc-interaction");
+  assert.equal(firstInteraction?.firstTalkToday, true);
   assert.equal(session.snapshot().friendships["seed-keeper"].points, 20);
-  assert.equal(session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" }), null);
+  const repeatInteraction = session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" });
+  assert.equal(repeatInteraction?.kind, "npc-interaction");
+  assert.equal(repeatInteraction?.firstTalkToday, false);
   assert.equal(session.snapshot().friendships["seed-keeper"].points, 20);
   assert.equal(session.dispatch({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 })?.code, "bought");
   assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID })?.code, "tilled");

@@ -2,6 +2,9 @@ import {
   schedulePhaseAt,
   type NpcSchedulePhase,
 } from "../../../../domain/time/game-time.ts";
+import { getNpcDialogueProfile } from "../../../../domain/dialogue/definitions.ts";
+import { getDailyRequest } from "../../../../domain/requests/definitions.ts";
+import { ITEM_DEFINITIONS } from "../../../../domain/items/definitions.ts";
 
 type DialogueLines = readonly [string, ...string[]];
 type DialogueVariantPair = readonly [DialogueLines, DialogueLines];
@@ -548,11 +551,80 @@ const SEED_KEEPER_OPENING_DIALOGUE: DialogueVariantPair = [
   ["账本还没摊开，先让我走到柜台把种袋摆好。"],
 ];
 
+const PERSONALITY_DIALOGUES: Readonly<Record<string, readonly [DialogueLines, DialogueLines, DialogueLines]>> = {
+  "seed-keeper": [
+    ["种袋最怕潮气，我每天都要摸一遍封口。"],
+    ["账本上的数字不会发芽，但能让我知道明天该补什么货。"],
+    ["镇上谁家第一次种地，我通常看鞋底就知道。"],
+  ],
+  "town-blacksmith": [
+    ["铁的颜色比钟表准，亮到哪一步就该落哪一锤。"],
+    ["农具握柄顺不顺手，比刃口亮不亮更重要。"],
+    ["炉火熄了以后，工坊才会慢慢说出今天哪里没做好。"],
+  ],
+  "town-resident-01": [
+    ["我喜欢记哪朵花先开，可从来记不住账本放在哪。"],
+    ["阿澜看水色，我看树影，我们常常得到同一个答案。"],
+    ["镇口风大，站一会儿就能听见每条街不同的声音。"],
+  ],
+  "town-resident-mozi": [
+    ["好木头不怕旧，怕的是没人知道它该往哪里受力。"],
+    ["修东西前先听一听，松动和开裂的声音完全不同。"],
+    ["我留下每块还能用的边角料，总有一天会碰上合适的位置。"],
+  ],
+  "town-resident-haonan": [
+    ["山路不会突然变坏，它总会提前留下几处小迹象。"],
+    ["我出门带的东西不多，但绳子和干布从不落下。"],
+    ["巡山最重要的不是走得远，是知道什么时候该回来。"],
+  ],
+  "town-resident-alan": [
+    ["同一片水每天都有不同的灰，我还没画到满意过。"],
+    ["布样晒久一点，颜色会比刚染出来诚实。"],
+    ["我画地图不是为了把路框死，是怕人错过沿途的变化。"],
+  ],
+  "town-resident-haomeili": [
+    ["针脚藏在背面，穿的人看不见，它也得一样整齐。"],
+    ["昊天总把修补说成小事，真少了扣带又第一个来找我。"],
+    ["布料和人一样，拉得太紧反而更容易裂。"],
+  ],
+  "town-resident-xiangzi": [
+    ["码头的绳结每天都一样打，受力的位置却天天不同。"],
+    ["湖面越安静，我越会多看两眼木桩下面。"],
+    ["我习惯把信压在窗边，等水汽退了再读第二遍。"],
+  ],
+};
+
+const RELATIONSHIP_DIALOGUES: Readonly<Record<string, Readonly<Record<"familiar" | "friendly", DialogueLines>>>> = {
+  "seed-keeper": { familiar: ["你来得正好，我给你留了一袋干燥些的种子。"], friendly: ["你的田我大概记住了，缺什么先来跟我说。"] },
+  "town-blacksmith": { familiar: ["你的工具握痕我认得，放到架上就行。"], friendly: ["下次开炉早点来，我让你看看火候怎么分。"] },
+  "town-resident-01": { familiar: ["今天树影挪得早，我猜你也会经过这里。"], friendly: ["我替你记了一朵最早开的花，别告诉阿澜。"] },
+  "town-resident-mozi": { familiar: ["你家哪处门窗不顺，路过时告诉我一声。"], friendly: ["我留了块纹理很稳的木料，觉得你以后用得上。"] },
+  "town-resident-haonan": { familiar: ["看见你来，我就知道镇口那段路有人照应了。"], friendly: ["哪天想看山泉最清的时候，我带你走一段。"] },
+  "town-resident-alan": { familiar: ["我在图上添了你常走的那条小路。"], friendly: ["这张湖岸草图给你看，很多地方我还没给别人看过。"] },
+  "town-resident-haomeili": { familiar: ["你的袖口有点松，下次带来我顺手补好。"], friendly: ["我给你留了更结实的线，农活时不容易磨断。"] },
+  "town-resident-xiangzi": { familiar: ["今天湖风稳，你来了正好一起听听木桩的声音。"], friendly: ["码头最安静的时辰我只告诉熟人，你算一个。"] },
+};
+
+const EVENT_DIALOGUES: Readonly<Record<string, DialogueDefinition>> = {
+  "event:seed-keeper-two-heart": {
+    id: "event:seed-keeper-two-heart",
+    speaker: "华强",
+    lines: ["等等，这本旧种植簿借你。", "空白处不少，正好记你自己的田。", "用完不用急着还，我知道你会保管好。"],
+  },
+  "event:blacksmith-two-heart": {
+    id: "event:blacksmith-two-heart",
+    speaker: "昊天",
+    lines: ["听这一下，声音比昨天稳。", "工具顺手不是因为它新，是因为有人认真用。", "以后要调哪里，直接告诉我。"],
+  },
+};
+
 /** Returns one fixed or deterministic day/phase dialogue, or null for an unknown catalog ID. */
 export function getDialogueDefinition(
   dialogueId: string,
   context?: DialogueContext,
 ): DialogueDefinition | null {
+  const selected = selectedDialogueDefinition(dialogueId, context);
+  if (selected) return selected;
   const definition = DIALOGUES[dialogueId];
   if (!definition) return null;
   const variants = CONTEXTUAL_DIALOGUES[dialogueId];
@@ -568,4 +640,63 @@ export function getDialogueDefinition(
     ? SEED_KEEPER_OPENING_DIALOGUE[variantIndex]!
     : variants[phase][variantIndex]!;
   return { ...definition, lines };
+}
+
+/** Resolves one domain-selected stable dialogue ID into client presentation text. */
+function selectedDialogueDefinition(
+  dialogueId: string,
+  context?: DialogueContext,
+): DialogueDefinition | null {
+  if (EVENT_DIALOGUES[dialogueId]) return EVENT_DIALOGUES[dialogueId]!;
+  const parts = dialogueId.split(":");
+  const kind = parts[0];
+  if (kind === "activity" && parts.length === 4) {
+    const [, npcId, rawPhase, rawVariant] = parts;
+    const profile = getNpcDialogueProfile(npcId!);
+    const variants = profile ? CONTEXTUAL_DIALOGUES[profile.baseDialogueId] : null;
+    const definition = profile ? DIALOGUES[profile.baseDialogueId] : null;
+    if (!profile || !variants || !definition || !isSchedulePhase(rawPhase)) return null;
+    const variant = rawVariant === "0" ? 0 : rawVariant === "1" ? 1 : null;
+    if (variant === null) return null;
+    const lines = npcId === "seed-keeper"
+      && rawPhase === "day"
+      && context?.shopAvailable === false
+      ? SEED_KEEPER_OPENING_DIALOGUE[variant]
+      : variants[rawPhase][variant];
+    return { id: dialogueId, speaker: definition.speaker, lines };
+  }
+  if (kind === "personality" && parts.length === 3) {
+    const [, npcId, rawVariant] = parts;
+    const profile = getNpcDialogueProfile(npcId!);
+    const definition = profile ? DIALOGUES[profile.baseDialogueId] : null;
+    const variant = rawVariant === "0" ? 0 : rawVariant === "1" ? 1 : rawVariant === "2" ? 2 : null;
+    const lines = variant === null ? null : PERSONALITY_DIALOGUES[npcId!]?.[variant] ?? null;
+    return definition && lines ? { id: dialogueId, speaker: definition.speaker, lines } : null;
+  }
+  if (kind === "relationship" && parts.length === 3) {
+    const [, npcId, rawStage] = parts;
+    const profile = getNpcDialogueProfile(npcId!);
+    const definition = profile ? DIALOGUES[profile.baseDialogueId] : null;
+    const stage = rawStage === "familiar" || rawStage === "friendly" ? rawStage : null;
+    const lines = stage ? RELATIONSHIP_DIALOGUES[npcId!]?.[stage] ?? null : null;
+    return definition && lines ? { id: dialogueId, speaker: definition.speaker, lines } : null;
+  }
+  if (kind === "request" && parts.length === 3) {
+    const [, requestId, rawStatus] = parts;
+    const request = getDailyRequest(requestId);
+    const profile = request ? getNpcDialogueProfile(request.npcId) : null;
+    const definition = profile ? DIALOGUES[profile.baseDialogueId] : null;
+    if (!request || !definition || (rawStatus !== "missing" && rawStatus !== "thanks")) return null;
+    const itemName = ITEM_DEFINITIONS[request.itemId].name;
+    const lines: DialogueLines = rawStatus === "thanks"
+      ? [`正是我需要的${itemName}，这些帮了大忙。`]
+      : [`还差 ${request.quantity} 份${itemName}，不用着急，今天带来就好。`];
+    return { id: dialogueId, speaker: definition.speaker, lines };
+  }
+  return null;
+}
+
+/** Narrows one persisted activity token to the four reviewed NPC schedule phases. */
+function isSchedulePhase(value: string | undefined): value is NpcSchedulePhase {
+  return value === "morning" || value === "day" || value === "evening" || value === "night";
 }

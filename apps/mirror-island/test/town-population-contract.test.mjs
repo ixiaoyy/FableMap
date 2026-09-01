@@ -518,11 +518,15 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
     gold: 100,
     player: { regionId: "farm", x: 0, y: 0 },
     inventory,
+    inventoryCapacity: 24,
+    wateringCanLevel: 1,
     resources: {},
     farmTiles: {},
     friendships: {
       "seed-keeper": { npcId: "seed-keeper", points: 20, lastTalkedDay: 1 },
     },
+    dailyRequest: null,
+    seenEventIds: [],
   };
   applyGameState(state);
   assert.equal(gameUiState.selectedHotbarIndex, null);
