@@ -1503,11 +1503,99 @@ const hero = "https://gist.githubusercontent.com/.../hero.png";
 const homeHeroStyle = { "--home-hero-image": `url("${HOME_HERO_URL}")` };
 ```
 
+## Scenario: browser-local audio feedback and ambience
+
+### 1. Scope / Trigger
+
+- Trigger：Farm/Town/Lakeshore/室内需要真实 SFX 与环境层，并提供独立于 gameplay save 的 Master/Music/SFX 本地音量设置。
+
+### 2. Signatures
+
+```typescript
+interface AudioSettings {
+  readonly version: 1;
+  readonly master: number;
+  readonly music: number;
+  readonly sfx: number;
+}
+
+type AudioCue =
+  | "footstep" | "hoe" | "watering" | "axe" | "stone"
+  | "harvest" | "pickup" | "door" | "buy" | "sell"
+  | "dialogue-page" | "sleep";
+
+function audioCueForCommandResult(
+  command: GameCommand,
+  feedback: ActionFeedback | null,
+): AudioCue | null;
+
+function updateAudioVolume(channel: "master" | "music" | "sfx", value: number): AudioSettings;
+```
+
+### 3. Contracts
+
+- `AudioDirector` 是声音实例、one-shot、脚步轮换、区域 loop crossfade 和 teardown 的唯一 client owner；Vue、GameSession 与实体不得保存 `HTMLAudioElement`。
+- typed command/result 先完成 gameplay mutation，再由 `audioCueForCommandResult` 映射成功 cue；失败交易、错误工具和无 mutation 结果不得播放成功音。
+- 门声只在室内/室外边界播放，Farm↔Town、Town↔Foothills/Lakeshore 等纯室外切图不播放门声。
+- 石头保持非采矿表现：近距离点击只震动、播放 stone cue 并提示现有工具敲不开；不增加掉落、物品、耐久或 save 字段。
+- 音量设置 key 固定 `mirror-island.audio-settings.v1`，只含有限 0..1 数值；不进入 IndexedDB `GameState`，不包含身份、URL 或 secret。
+- `Music Volume` 在本阶段保存但没有音乐轨；SFX 同时控制 one-shot 和环境层。
+- 音频只从 manifest 登记的同源 `/game-media/v1` URL 读取。manifest schema v1 分别记录 `tracked_image_*` 与 `tracked_audio_*`；音频 MIME allowlist 为 `audio/ogg`、`audio/mpeg`、`audio/wav`，不得伪造 width/height。
+- 19 个采用音频对象必须由 CDN 回读验证 bytes、SHA-256、MIME 与 `public,max-age=31536000,immutable`；Git tracked audio binary 必须为 0。
+- autoplay/load rejection 只显示一次可恢复提示，游戏继续可用；直接用户点击“测试声音”后可恢复 one-shot 并重新启动当前环境层。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| localStorage 缺失、损坏、未来 version 或非有限音量 | 使用 reviewed defaults，不阻断游戏 |
+| 音量超出 0..1 | decoder/update clamp 到边界 |
+| buy/sell/harvest/pickup/tool mutation 失败 | 无对应成功 cue |
+| autoplay 或单个文件 load/play reject | 一次错误提示；移除失败 voice，玩法继续；可通过测试声音重试 |
+| 同 ambience group 重复 render | 保留当前层，不叠加 duplicate loop |
+| region group 改变 | 旧层 650ms fade-out 并释放，新层从 0 fade-in |
+| Scene shutdown/HMR | 取消 animation frame、停止所有 voice、解绑 cue/settings listener |
+| manifest 音频包含 dimensions、未知 MIME、错误 totals/hash/URL | 构建/部署媒体校验失败 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：玩家在 Farm 行走、耕作和浇水，进入 Town/室内/Lakeshore 时环境平滑切换；刷新后 80/70/80 音量偏好恢复。
+- Base：Music slider 可调整并保存，但明确显示本阶段暂无配乐。
+- Bad：Vue 直接 `new Audio`、失败购买也响金币、每次 render 都新增 loop、把音量写入 GameState，或从 Freesound/OpenGameArt URL 直接运行时加载。
+
+### 6. Tests Required
+
+- 纯合同断言 settings v1 decode/default/clamp、成功/失败 command→cue 映射和 region→ambience group。
+- `test:town-population`、typecheck、client build；`prepare:media` 必须准备 19 个音频且逐项 hash 匹配。
+- manifest validator 断言图片仍需正尺寸、音频禁止尺寸且 totals 分类型匹配；CDN verifier 对所有媒体检查 bytes/hash/MIME/cache，仅 PNG 检查 IHDR。
+- 真人按交付清单听取所有 cue、Farm/Town/Lakeshore/室内层、循环接缝、相对响度、静音和 autoplay 恢复；Agent 不伪造听感通过。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: component duplicates mutation rules and plays success before the domain result.
+coinSound.play();
+dispatchLocalGameCommand({ type: "buy-item", itemId, quantity: 1 });
+
+// Correct: one adapter maps the committed typed result into a semantic cue.
+const feedback = activeSession.dispatch(command);
+const cue = audioCueForCommandResult(command, feedback);
+if (cue) emitAudioCue(cue);
+```
+
+```typescript
+// Wrong: audio preference changes the durable gameplay schema.
+state.musicVolume = sliderValue;
+
+// Correct: non-sensitive local preference remains outside GameState.
+updateAudioVolume("music", sliderValue);
+```
+
 ## Open-source contract
 
 - Phaser/Vue 和既有固定开源来源继续锁版本；规则迁移以当前 checkpoint 源码为依据，不建立复制分叉。
 - 已评审 `idb@8.0.3`，许可证 ISC 不在默认 allowlist，且当前接口窄，因此采用受控原生 IndexedDB 薄层并记录拒绝原因。
-- 图片仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 图片二进制为零。
+- 图片与音频仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 游戏媒体二进制为零。
 - VectoRaith Farming v1.08 与 NPC v1.6 DEMO 采用自定义项目使用许可。用户已批准 Web runtime 直接读取登记的官方完整 PNG 并接受作者回复前的残余风险；禁止原 ZIP、32/48px 版本、未采用目录、素材浏览/下载入口或素材包式产品。作者回复若附加条件则 forward-fix。
 
 ## Verification

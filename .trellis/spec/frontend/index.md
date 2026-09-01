@@ -14,7 +14,7 @@
 2. 新 helper/常量/配置前搜索现有所有者，不复制 payload 解码、路由或密钥合同。
 3. 区分 browser GameSession、IndexedDB、Keycloak、OIDC bridge、未来云 API、Prisma 和 deployment env 的信任边界。
 4. 不让 Prisma/pg/SSO secret 进入 browser bundle；domain 只有一个规则 owner，Phaser/Vue 不复制状态机。
-5. 只引用 `game-media-manifest.json` 已登记的 HTTPS/同源代理资源，Git 不新增图片二进制。
+5. 只引用 `game-media-manifest.json` 已登记的 HTTPS/同源代理资源，Git 不新增游戏图片或音频二进制。
 6. 数据库改动先核对单 migration、部署顺序、备份和 forward-fix 边界。
 
 ## Verification Baseline
