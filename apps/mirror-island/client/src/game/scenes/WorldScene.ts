@@ -19,6 +19,7 @@ import {
   gameUiState,
   isWorldInputLocked,
   openShop,
+  openRequestBoard,
   openSleepConfirmation,
   selectHotbarSlot,
   setActionFeedback,
@@ -971,7 +972,12 @@ export class WorldScene extends Phaser.Scene {
       openShop(selectedDialogue.lines[0]);
       return;
     }
-    setDialogue({ speaker: selectedDialogue.speaker, lines: selectedDialogue.lines });
+    setDialogue({
+      dialogueId: interaction.dialogueId,
+      npcId: interaction.npcId,
+      speaker: selectedDialogue.speaker,
+      lines: selectedDialogue.lines,
+    });
   }
 
   /** Opens one nearby environment hotspot through the existing transient dialogue projection. */
@@ -981,6 +987,10 @@ export class WorldScene extends Phaser.Scene {
     if (player.regionId !== entity.interaction.regionId) return;
     if (entity.distanceTo(player.x, player.y) > INSPECT_INTERACTION_DISTANCE) {
       setActionFeedback({ tone: "error", code: "inspect-too-far", message: "走近一些再查看。" });
+      return;
+    }
+    if (entity.entityId === "town-notice-board") {
+      openRequestBoard();
       return;
     }
     const dialogue = getDialogueDefinition(entity.interaction.dialogueId);

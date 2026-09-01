@@ -9,12 +9,16 @@ import {
   applyGameState,
   cancelSleepConfirmation,
   clearGameState,
+  closeBackpack,
+  closeRequestBoard,
   closeShop,
   closeSocial,
   confirmSleep,
   gameUiState,
   isWorldInputLocked,
   openShop,
+  openBackpack,
+  openRequestBoard,
   openSocial,
   openSleepConfirmation,
   selectHotbarSlot,
@@ -586,6 +590,20 @@ test("sleep confirmation locks world input and resolves yes or no exactly once",
   assert.equal(isWorldInputLocked(), false);
   assert.equal(sleepRequests, 1);
   clearGameState();
+});
+
+test("backpack and request board join the shared modal input lock", () => {
+  clearGameState();
+  assert.equal(openBackpack(), true);
+  assert.equal(gameUiState.backpackOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  assert.equal(openRequestBoard(), false);
+  closeBackpack();
+  assert.equal(openRequestBoard(), true);
+  assert.equal(gameUiState.requestBoardOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  closeRequestBoard();
+  assert.equal(isWorldInputLocked(), false);
 });
 
 test("punch targeting selects only the deterministic nearest NPC in the facing corridor", () => {

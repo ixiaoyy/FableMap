@@ -6,7 +6,7 @@ import {
 } from "../../../../domain/items/definitions.ts";
 import {
   itemIconForItem,
-  type ItemIconDefinition,
+  itemIconStyle,
 } from "../../game/assets/item-icons.ts";
 import {
   gameUiState,
@@ -25,14 +25,6 @@ const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index
   };
 }));
 
-/** Converts one source-sheet frame into an integer 2× CSS sprite without generating a derivative image. */
-function iconStyle(icon: ItemIconDefinition): Record<string, string> {
-  return {
-    backgroundImage: `url("${icon.url}")`,
-    backgroundPosition: `${-icon.x * 2}px ${-icon.y * 2}px`,
-    backgroundSize: `${icon.sourceWidth * 2}px ${icon.sourceHeight * 2}px`,
-  };
-}
 </script>
 
 <template>
@@ -56,7 +48,7 @@ function iconStyle(icon: ItemIconDefinition): Record<string, string> {
           <span
             v-if="slot.icon"
             class="hotbar-slot__image"
-            :style="iconStyle(slot.icon)"
+            :style="itemIconStyle(slot.icon)"
             aria-hidden="true"
           />
           <span v-else-if="slot.definition" class="hotbar-slot__mark">{{ slot.definition.hotbarMark }}</span>

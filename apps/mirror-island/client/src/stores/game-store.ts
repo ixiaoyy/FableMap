@@ -29,6 +29,8 @@ export interface InventorySlotProjection {
 }
 
 export interface DialogueProjection {
+  readonly dialogueId: string | null;
+  readonly npcId: string | null;
   readonly speaker: string;
   readonly lines: readonly string[];
   readonly lineIndex: number;
@@ -73,6 +75,8 @@ const mutableState = reactive({
   socialOpen: false,
   calendarOpen: false,
   audioSettingsOpen: false,
+  backpackOpen: false,
+  requestBoardOpen: false,
   audioSettings: getAudioSettings(),
 });
 
@@ -171,11 +175,22 @@ export function setActionFeedback(feedback: ActionFeedback | null): void {
 }
 
 /** Opens one fixed ephemeral dialogue projection above the Phaser world. */
-export function setDialogue(dialogue: Pick<DialogueProjection, "speaker" | "lines">): void {
+export function setDialogue(
+  dialogue: Pick<DialogueProjection, "speaker" | "lines"> & {
+    readonly dialogueId?: string | null;
+    readonly npcId?: string | null;
+  },
+): void {
   if (dialogue.lines.length === 0) throw new Error("Dialogue requires at least one line.");
   mutableState.shopOpen = false;
   mutableState.shopWelcome = "";
-  mutableState.dialogue = { speaker: dialogue.speaker, lines: [...dialogue.lines], lineIndex: 0 };
+  mutableState.dialogue = {
+    dialogueId: dialogue.dialogueId ?? null,
+    npcId: dialogue.npcId ?? null,
+    speaker: dialogue.speaker,
+    lines: [...dialogue.lines],
+    lineIndex: 0,
+  };
 }
 
 /** Advances one fixed linear dialogue line and closes after the final line. */
@@ -239,6 +254,8 @@ export function openSocial(): boolean {
     || mutableState.sleepConfirmationOpen
     || mutableState.calendarOpen
     || mutableState.audioSettingsOpen
+    || mutableState.backpackOpen
+    || mutableState.requestBoardOpen
   ) return false;
   mutableState.socialOpen = true;
   return true;
@@ -274,6 +291,26 @@ export function setAudioVolume(channel: AudioVolumeChannel, value: number): void
   mutableState.audioSettings = updateAudioVolume(channel, value);
 }
 
+/** Opens the complete inventory projection while no other modal owns world input. */
+export function openBackpack(): boolean {
+  if (isWorldInputLocked()) return false;
+  mutableState.backpackOpen = true;
+  return true;
+}
+
+/** Closes the complete inventory projection without moving or mutating item slots. */
+export function closeBackpack(): void { mutableState.backpackOpen = false; }
+
+/** Opens the deterministic daily-request board while no other modal owns world input. */
+export function openRequestBoard(): boolean {
+  if (isWorldInputLocked()) return false;
+  mutableState.requestBoardOpen = true;
+  return true;
+}
+
+/** Closes the request-board projection without accepting, rerolling or completing a request. */
+export function closeRequestBoard(): void { mutableState.requestBoardOpen = false; }
+
 /** Reports whether a modal Vue panel currently owns Phaser world input. */
 export function isWorldInputLocked(): boolean {
   return mutableState.worldActionBusy
@@ -282,7 +319,9 @@ export function isWorldInputLocked(): boolean {
     || mutableState.sleepConfirmationOpen
     || mutableState.socialOpen
     || mutableState.calendarOpen
-    || mutableState.audioSettingsOpen;
+    || mutableState.audioSettingsOpen
+    || mutableState.backpackOpen
+    || mutableState.requestBoardOpen;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
@@ -309,6 +348,8 @@ export function clearGameState(): void {
   mutableState.socialOpen = false;
   mutableState.calendarOpen = false;
   mutableState.audioSettingsOpen = false;
+  mutableState.backpackOpen = false;
+  mutableState.requestBoardOpen = false;
   mutableState.audioSettings = getAudioSettings();
   cancelSleepConfirmation();
 }
