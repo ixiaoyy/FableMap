@@ -117,6 +117,18 @@ jobs:
                 exit 1
               fi
               ;;
+            assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png)
+              if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
+                echo "::error::The Mirror Island homepage hero must use image/png"
+                exit 1
+              fi
+              CDN_S3_PREFIX="${CDN_S3_PREFIX#/}"
+              CDN_S3_PREFIX="${CDN_S3_PREFIX%/}"
+              if [ "${CDN_S3_PREFIX}" != "game" ]; then
+                echo "::error::The Mirror Island homepage hero must publish under the game prefix"
+                exit 1
+              fi
+              ;;
             *) echo "::error::Object key is outside the reviewed media allowlist"; exit 1 ;;
           esac
           if ! [[ "${MEDIA_EXPECTED_BYTES}" =~ ^[1-9][0-9]{0,6}$ ]]; then

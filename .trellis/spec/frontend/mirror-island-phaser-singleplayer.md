@@ -1223,7 +1223,7 @@ function itemIconForItem(itemId: string): ItemIconDefinition | null;
 
 ### 6. Tests Required
 
-- manifest 断言 14 images / 214731 bytes，并从 CDN 校验全部 SHA-256、dimensions、MIME 与 immutable cache。
+- manifest 断言 15 images / 2874147 bytes，并从 CDN 校验全部 SHA-256、dimensions、MIME 与 immutable cache。
 - typecheck、client build；产物包含正式 GARDENS URL 和 `THIRD_PARTY_NOTICES.txt`，不包含旧 local GARDENS candidate URL。
 - Git 图片 binary diff 为 0；真实浏览器断言前三格使用图标且 notice 可访问。
 
@@ -1443,6 +1443,61 @@ frontend:
 frontend:
   build:
     dockerfile: apps/mirror-island/Dockerfile.web
+```
+
+## Scenario: generated homepage hero media
+
+### 1. Scope / Trigger
+
+- Trigger：公开 `/` 的非 playing 启动页需要一张项目原创东方田园主视觉；交互文字、按钮和存档状态仍由 Vue/HTML 渲染。
+
+### 2. Signatures
+
+```typescript
+export const HOME_HERO_URL: string;
+```
+
+```text
+assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png
+```
+
+### 3. Contracts
+
+- `client/src/game/assets/media-catalog.ts` 是首页 hero URL 的唯一 owner；`App.vue` 只把该 URL 注入 CSS custom property，不散落 CDN 地址。
+- 正式 PNG 固定为 1672×941、2659416 bytes、SHA-256 `f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf`。
+- 图像不包含文字、按钮、品牌、存档状态或其他交互 UI；这些信息必须保持可访问 DOM。
+- 对象通过 `/game-media/v1` 同源加载，CDN key 不可覆盖；生成 prompt 与采用记录位于 `docs/assets/mirror-island-home-hero-2026-08-31.md`。
+- `prepare-media.mjs` 可以复用已存在且 bytes/hash 完全匹配的 ignored 本地输出；本地缺失或不匹配时必须从正式 CDN 下载并重新校验。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 本地 ignored hero bytes/hash 完全匹配 | `prepare:media` 复用，不发起重复下载 |
+| 本地 hero 缺失或不匹配，CDN 对象正确 | 下载后校验并写入 ignored `public/game-media` |
+| CDN 缺失、bytes/hash 不符或 key 已存在不同内容 | 发布/准备失败，不回退临时 Gist 或把图片提交 Git |
+| 背景运行时加载失败 | CSS 同色系背景仍显示，菜单 DOM 和操作保持可用 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：生产浏览器只请求登记的同源 PNG，画卷菜单和存档状态可被键盘与辅助技术读取。
+- Base：本地已有精确生成输出时，开发启动不依赖重复网络下载。
+- Bad：把生成图 base64 内联、指向临时 Gist、把按钮烘焙进 PNG，或把 PNG 加入 Git。
+
+### 6. Tests Required
+
+- `prepare:media` 断言 15 个对象并校验 hero bytes/hash；typecheck、client build 必须通过。
+- manifest 断言 15 images / 2874147 bytes；发布后从 CDN 和同源代理回读 hero 的尺寸、MIME、SHA-256 与 immutable cache。
+- Git 图片 binary diff 为 0；真实浏览器覆盖桌面、手机、200% zoom、无存档/有存档、加载和错误状态。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: temporary generation output becomes a runtime dependency.
+const hero = "https://gist.githubusercontent.com/.../hero.png";
+
+// Correct: Vue injects the reviewed same-origin immutable media URL into CSS.
+const homeHeroStyle = { "--home-hero-image": `url("${HOME_HERO_URL}")` };
 ```
 
 ## Open-source contract
