@@ -31,6 +31,15 @@ export function itemIconForItem(itemId: string): ItemIconDefinition | null {
   return ITEM_ICONS[itemId as ItemId] ?? null;
 }
 
+/** Converts one reviewed source-sheet frame into a crisp integer-scale CSS sprite. */
+export function itemIconStyle(iconDefinition: ItemIconDefinition, scale = 2): Record<string, string> {
+  return {
+    backgroundImage: `url("${iconDefinition.url}")`,
+    backgroundPosition: `${-iconDefinition.x * scale}px ${-iconDefinition.y * scale}px`,
+    backgroundSize: `${iconDefinition.sourceWidth * scale}px ${iconDefinition.sourceHeight * scale}px`,
+  };
+}
+
 /** Creates one immutable 16×16 frame reference into an unchanged reviewed source sheet. */
 function icon(
   source: { readonly url: string; readonly width: number; readonly height: number },

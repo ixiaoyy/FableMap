@@ -4,6 +4,10 @@ import { ITEM_DEFINITIONS, ITEM_ID, type ItemId } from "../../../../domain/items
 import { playableCalendarAt } from "../../../../domain/calendar/game-calendar.ts";
 import { CROP_DEFINITIONS, cropsForSeason, sellPriceForItem } from "../../../../domain/farming/crops.ts";
 import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
+import {
+  BACKPACK_UPGRADE_DAY,
+  BACKPACK_UPGRADE_GOLD,
+} from "../../../../domain/progression/definitions.ts";
 import { closeShop, gameUiState } from "../../stores/game-store.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
 
@@ -30,6 +34,11 @@ function buyItem(itemId: ItemId): void {
 /** Requests one fixed-price harvested turnip sale from GameSession. */
 function sellItem(itemId: ItemId): void {
   dispatchLocalGameCommand({ type: "sell-item", itemId, quantity: 1 });
+}
+
+/** Requests the fixed Day-5 backpack expansion without mutating the Vue inventory projection. */
+function upgradeBackpack(): void {
+  dispatchLocalGameCommand({ type: "upgrade-backpack" });
 }
 
 /** Leaves the shop and restores keyboard control to the world canvas. */
@@ -63,6 +72,21 @@ watch(() => gameUiState.shopOpen, (open) => {
       </header>
 
       <p class="shop-panel__welcome">{{ gameUiState.shopWelcome }}</p>
+
+      <article v-if="gameUiState.day >= BACKPACK_UPGRADE_DAY" class="shop-panel__backpack">
+        <div>
+          <span>长期目标</span>
+          <h3>扩容背包 · 24 → 32 格</h3>
+          <p>现有物品和前八格快捷栏保持原位。</p>
+        </div>
+        <button
+          type="button"
+          :disabled="gameUiState.inventoryCapacity === 32 || gameUiState.gold < BACKPACK_UPGRADE_GOLD"
+          @click="upgradeBackpack"
+        >
+          {{ gameUiState.inventoryCapacity === 32 ? '已扩容' : gameUiState.gold >= BACKPACK_UPGRADE_GOLD ? `购买 ${BACKPACK_UPGRADE_GOLD}g` : `还差 ${BACKPACK_UPGRADE_GOLD - gameUiState.gold}g` }}
+        </button>
+      </article>
 
       <div class="shop-panel__goods">
         <article v-for="crop in seedGoods" :key="crop.seedId">

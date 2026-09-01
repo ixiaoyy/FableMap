@@ -32,6 +32,8 @@ import TouchControls from "./ui/controls/TouchControls.vue";
 import CalendarPanel from "./ui/calendar/CalendarPanel.vue";
 import CharacterCreator from "./ui/character/CharacterCreator.vue";
 import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
+import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
+import RequestBoardPanel from "./ui/requests/RequestBoardPanel.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -182,7 +184,7 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
@@ -190,6 +192,8 @@ onUnmounted(() => {
       <LifeHud />
       <SocialPanel />
       <AudioSettingsPanel />
+      <BackpackPanel />
+      <RequestBoardPanel />
       <CalendarPanel />
       <TouchControls v-if="!debugMode" />
       <DialoguePanel />
