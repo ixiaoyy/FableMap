@@ -1,5 +1,6 @@
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 import type { RecipeId } from "../recipes/definitions.ts";
+import type { RetentionEventId } from "../dialogue/definitions.ts";
 import type { Facing } from "../world/facing.ts";
 
 export type GameCommand =
@@ -12,6 +13,7 @@ export type GameCommand =
   | { readonly type: "sell-item"; readonly itemId: ItemId; readonly quantity: 1 }
   | { readonly type: "upgrade-watering-can" }
   | { readonly type: "upgrade-backpack" }
+  | { readonly type: "acknowledge-retention-event"; readonly eventId: RetentionEventId }
   | { readonly type: "transition-region"; readonly exitId: string };
 
 export interface ActionFeedback {

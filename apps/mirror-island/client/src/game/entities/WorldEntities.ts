@@ -339,6 +339,7 @@ export class InspectEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
   private readonly prompt: Phaser.GameObjects.Text;
+  private readonly mirrorTeaser: MirrorTeaserView | null;
   private hovered = false;
   private nearby = false;
   private inputLocked = false;
@@ -352,6 +353,7 @@ export class InspectEntity {
     this.entityId = interaction.entityId;
     const hitArea = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0xffffff, 0.001)
       .setInteractive({ useHandCursor: true });
+    this.mirrorTeaser = createMirrorTeaser(scene, interaction);
     this.prompt = scene.add.text(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2 + inspectPromptOffsetY(interaction.height),
@@ -374,7 +376,7 @@ export class InspectEntity {
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      [hitArea],
+      this.mirrorTeaser ? [this.mirrorTeaser.container, hitArea] : [hitArea],
     ).setDepth(100 + interaction.y + interaction.height);
   }
 
@@ -390,8 +392,19 @@ export class InspectEntity {
     this.refreshPrompt();
   }
 
+  /** Projects the Day-7 visual tease from absolute day without persisting presentation state. */
+  projectRetentionDay(absoluteDay: number): void {
+    if (!this.mirrorTeaser) return;
+    const active = absoluteDay >= 7;
+    this.mirrorTeaser.container.setVisible(active);
+    this.prompt.setText(active ? "查看异光" : inspectPromptLabel(this.interaction.dialogueId));
+  }
+
   /** Destroys the complete temporary inspect hotspot and all pointer listeners. */
   destroy(): void {
+    if (this.mirrorTeaser) {
+      for (const target of this.mirrorTeaser.animatedTargets) this.container.scene.tweens.killTweensOf(target);
+    }
     this.prompt.destroy();
     this.container.destroy(true);
   }
@@ -400,6 +413,52 @@ export class InspectEntity {
   private refreshPrompt(): void {
     this.prompt.setVisible(!this.inputLocked && (this.hovered || this.nearby));
   }
+}
+
+interface MirrorTeaserView {
+  readonly container: Phaser.GameObjects.Container;
+  readonly animatedTargets: readonly Phaser.GameObjects.Rectangle[];
+}
+
+/** Creates the single code-drawn Lakeshore mirror shimmer, or null for ordinary inspect anchors. */
+function createMirrorTeaser(
+  scene: Phaser.Scene,
+  interaction: InspectInteractionDefinition,
+): MirrorTeaserView | null {
+  if (interaction.dialogueId !== "lakeshore-waystone") return null;
+  const width = Math.max(12, Math.min(18, interaction.width - 4));
+  const height = Math.max(16, Math.min(24, interaction.height - 4));
+  const frame = scene.add.graphics()
+    .fillStyle(0x352f42, 0.96)
+    .fillRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4)
+    .lineStyle(1, 0xb7e5dd, 0.9)
+    .strokeRect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2);
+  const surface = scene.add.rectangle(0, 0, width, height, 0x31546b, 0.78);
+  const shimmer = scene.add.rectangle(-width / 3, 0, 2, height - 4, 0xb9fff0, 0.64)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const glint = scene.add.rectangle(0, -height / 2 - 4, 3, 3, 0xd8fff6, 0.88)
+    .setAngle(45);
+  const container = scene.add.container(0, 0, [frame, surface, shimmer, glint]).setVisible(false);
+  scene.tweens.add({
+    targets: shimmer,
+    x: width / 3,
+    alpha: { from: 0.28, to: 0.82 },
+    duration: 1_100,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.InOut",
+  });
+  scene.tweens.add({
+    targets: glint,
+    alpha: { from: 0.25, to: 0.95 },
+    scaleX: { from: 0.75, to: 1.25 },
+    scaleY: { from: 0.75, to: 1.25 },
+    duration: 720,
+    yoyo: true,
+    repeat: -1,
+    ease: "Quad.InOut",
+  });
+  return { container, animatedTargets: [shimmer, glint] };
 }
 
 export class ExitHintEntity {

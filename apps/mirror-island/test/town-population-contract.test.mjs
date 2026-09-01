@@ -491,6 +491,10 @@ test("linear dialogue and shop share one transient world-input lock", () => {
   assert.equal(getDialogueDefinition("relationship:seed-keeper:familiar")?.lines.length, 1);
   assert.equal(getDialogueDefinition("event:blacksmith-two-heart")?.lines.length, 3);
   assert.equal(getDialogueDefinition("request:seed-rack-repair:thanks")?.speaker, "华强");
+  assert.equal(getDialogueDefinition("lakeshore-waystone", { day: 6, minuteOfDay: 720 })?.lines.length, 1);
+  const mirrorTeaser = getDialogueDefinition("lakeshore-waystone", { day: 7, minuteOfDay: 720 });
+  assert.equal(mirrorTeaser?.lines.length, 3);
+  assert.equal(mirrorTeaser?.lines.some((line) => line.includes("镜门未开")), true);
   const dialogue = getDialogueDefinition("blacksmith-intro");
   assert.ok(dialogue);
   setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });

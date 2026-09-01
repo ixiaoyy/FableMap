@@ -26,6 +26,11 @@ import { UpgradeSystem } from "../domain/progression/UpgradeSystem.ts";
 import { DailyRequestSystem } from "../domain/requests/DailyRequestSystem.ts";
 import { createDailyRequestState } from "../domain/requests/definitions.ts";
 import { NpcDialogueSystem } from "../domain/dialogue/NpcDialogueSystem.ts";
+import {
+  FirstWeekMilestoneSystem,
+  latestFirstWeekMilestoneAt,
+} from "../domain/retention/FirstWeekMilestoneSystem.ts";
+import { getDailyRequest } from "../domain/requests/definitions.ts";
 
 const FARM_PLOT_ID = "farm-plot-001";
 const FARM_PLOT_2_ID = "farm-plot-002";
@@ -430,6 +435,40 @@ test("NPC dialogue selection excludes the prior three days and records two-heart
   assert.deepEqual(state.seenEventIds, ["seed-keeper-two-heart"]);
   const next = dialogue.select(state, eventNpc, { result: "request-not-target", request: null });
   assert.notEqual(next.dialogueId, event.dialogueId);
+});
+
+test("first-week milestones acknowledge only unlocked presentation IDs and persist through GameSession", async () => {
+  const catalog = createLifeLoopCatalog();
+  const state = createInitialGameState(catalog);
+  const milestones = new FirstWeekMilestoneSystem();
+  assert.equal(latestFirstWeekMilestoneAt(2), null);
+  assert.equal(latestFirstWeekMilestoneAt(6)?.eventId, "day-5-backpack-intro");
+  assert.equal(milestones.acknowledge(state, "day-3-watering-intro"), "milestone-not-yet-available");
+  assert.equal(milestones.acknowledge(state, "seed-keeper-two-heart"), "milestone-unsupported");
+  assert.deepEqual(state.seenEventIds, []);
+
+  state.day = 3;
+  state.dailyForage = { day: 3, collectedIds: [] };
+  state.dailyRequest = createDailyRequestState(3);
+  const repository = new MemorySaveRepository();
+  repository.game = createStoredGame(state, 0);
+  const session = new GameSession(repository, "milestone-owner", catalog);
+  await session.continueGame();
+  assert.equal(
+    session.dispatch({ type: "acknowledge-retention-event", eventId: "day-3-watering-intro" })?.code,
+    "milestone-acknowledged",
+  );
+  assert.equal(
+    session.dispatch({ type: "acknowledge-retention-event", eventId: "day-3-watering-intro" })?.code,
+    "milestone-already-seen",
+  );
+  await session.flush();
+  assert.deepEqual(repository.game.state.seenEventIds, ["day-3-watering-intro"]);
+  const daySixRequest = getDailyRequest(createDailyRequestState(6)?.requestId);
+  assert.equal(daySixRequest?.itemId, ITEM_ID.wood);
+  assert.equal(daySixRequest?.quantity, 15);
+  assert.equal(daySixRequest?.goldReward, 320);
+  assert.equal(daySixRequest?.friendshipReward, 100);
 });
 
 test("clock advances in ten-minute steps, pauses without catch-up and sleep resets 06:00", async () => {
