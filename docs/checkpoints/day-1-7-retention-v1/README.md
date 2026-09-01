@@ -1,7 +1,9 @@
 # Day 1–7 留存纵向切片 checkpoint
 
-记录日期：2026-09-01  
-实现提交：`85b7b629`（`feat: add first-week pacing and mirror teaser`）  
+记录日期：2026-09-01
+
+实现提交：`85b7b629`（`feat: add first-week pacing and mirror teaser`）
+
 静态验证基线：`7460a7d395b079f306865f9d605372ac717198aa`
 
 ## Status
