@@ -25,7 +25,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v7 包含 region、player appearance、absolute day、minuteOfDay、gold、通用作物、每日采集与 NPC friendship，旧 v1–v6 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v8 包含 region、player appearance、absolute day、minuteOfDay、gold、可扩容 inventory、水壶等级、通用作物、每日采集/委托、NPC friendship/dialogue history 与 once-only event IDs，旧 v1–v7 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源、农田和 friendship；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -1589,6 +1589,105 @@ state.musicVolume = sliderValue;
 
 // Correct: non-sensitive local preference remains outside GameState.
 updateAudioVolume("music", sliderValue);
+```
+
+## Scenario: retention GameState v8
+
+### 1. Scope / Trigger
+
+- Trigger：首周需要 24→32 背包、水壶 Lv2、确定性每日委托、关系对话历史、once-only 事件和 Spring28 后继续 Day N，必须一次升级本地 durable contract。
+
+### 2. Signatures
+
+```typescript
+type InventoryCapacity = 24 | 32;
+type WateringCanLevel = 1 | 2;
+type RelationshipStage = "stranger" | "familiar" | "friendly";
+
+interface DailyRequestState {
+  day: number;
+  requestId: string;
+  completed: boolean;
+}
+
+interface NpcDialogueState {
+  recent: Array<{ dialogueId: string; day: number }>;
+  acknowledgedStage: RelationshipStage;
+}
+
+interface GameState {
+  readonly version: 8;
+  inventory: InventorySlot[];
+  inventoryCapacity: InventoryCapacity;
+  wateringCanLevel: WateringCanLevel;
+  dailyRequest: DailyRequestState | null;
+  npcDialogue: Record<string, NpcDialogueState>;
+  seenEventIds: RetentionEventId[];
+}
+```
+
+```typescript
+type GameCommand =
+  | { type: "use-item-on-target"; itemId: ItemId | ""; targetId: string; facing?: Facing }
+  | { type: "upgrade-watering-can" }
+  | { type: "upgrade-backpack" }
+  | /* existing commands */;
+```
+
+### 3. Contracts
+
+- `SAVE_FORMAT_VERSION` 与 `GAME_STATE_VERSION` 同步为 8；v7 通过唯一 `migrateGameStateV7` 增加 24/Lv1、deterministic current request、空 dialogue/event state，v1–v6 继续走各自 released decoder 后补同一 v8 defaults。
+- current v8 inventory length 必须等于 `inventoryCapacity`；v1–v7 迁移输入仍必须先满足 released 24-slot shape。24→32 只在华强附近、Day≥5、1500g 时追加八个空槽，前24槽和八格 Hotbar 不移动。
+- 水壶 Lv2 只在 Town/Blacksmith 的昊天附近、Day≥3、900g+15 wood 时购买；无耐久、体力、水量或通用 upgrade tree。
+- Lv2 watering 先验证 clicked plot 42px 距离，再按 facing 的 0/16/32 像素中心查找 catalog 注册的 same-region contiguous plots；只改变 `growing && !watered`，不得合成 ID 或越界。
+- Day1 `dailyRequest=null`；Day≥2 使用 `(day-2)%8` 选择并保存 request ID。submit 必须 target NPC、足量 item、safe Gold；consume + Gold + capped Friendship + completed 在同一 GameSession mutation 中完成，重复 submit 不领奖，sleep 无惩罚替换次日 request。
+- 内部 friendship 保持 250 points/heart、2500 max、daily talk +20、missed -2；外显 stage 只投影 250 familiar / 500 friendly。
+- Domain `NpcDialogueSystem` 按 request→event→new stage→activity→personality 选择稳定 ID，排除当前及前三个 absolute day history，最多保存12条。中文文本由 client catalog 按 stable ID 渲染，不进入 save；候选/优先级/history mutation 不能在 client 复制。
+- `seenEventIds` 是 closed catalog，当前含华强/昊天两心事件与 Day3/5/7 里程碑；unknown/duplicate ID current decode 失败。
+- 当前 gameplay 使用 `playableCalendarAt`：absolute Day N 永不进入未实现 Summer，crop/shop/forage 继续 spring content。`calendarAt` 只保留未来四季工具，不得被当前 gameplay/UI 用来重置 Day29。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| v7 合法 Day1/Day28 save | 确定性迁移 v8；保留位置、Gold、inventory、farm、friendship |
+| current v8 缺字段、future version、unknown request/dialogue/event | load 明确失败，原 IndexedDB record 不覆盖 |
+| capacity=32 但 inventory=24 或其他长度 | `Inventory state is invalid` |
+| upgrade locked/remote/already owned/Gold或wood不足 | fixed error feedback；inventory/Gold/level/capacity 不变 |
+| request missing item/non-target/already completed | 无扣物、无奖励；对应 dialogue state 可见 |
+| request reward Gold 超 safe integer 或 friendship missing | mutation 抛错并恢复 inventory/Gold/friendship |
+| dialogue history >12、future/过旧 day、unknown/duplicate recent ID | current v8 decode 失败 |
+| Day28 sleep | friendship/farm/forage/request 只结算一次，进入 Day29 06:00 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Day2 华强委托完成后加170，Day1–4 每日交谈各20，Day4 恰好250并优先 familiar 台词；刷新不 reroll。
+- Base：玩家不做委托，睡觉后请求自然过期，无惩罚；absolute day 继续增长。
+- Bad：Vue 直接 push 8 slots、Phaser 循环调用三次 watering、用 `Math.random()` 生成委托、保存中文 dialogue text，或让 `calendarAt(29).season` 驱动当前玩法。
+
+### 6. Tests Required
+
+- `test:life-loop` 覆盖 v1–v7→v8、current round-trip、unknown/future/capacity mismatch、upgrade atomicity、three-tile boundary、request once-only、Day4 points、dialogue history、event once-only、Day28→29。
+- `test:town-population` 覆盖现有 modal/Hotbar/NPC contracts 与新 snapshot 字段兼容。
+- typecheck + client build；不连接数据库、不新增 migration/E2E 矩阵。
+- 真人后续验证 IndexedDB refresh/continue、三格实际朝向、委托交付和 Day29 UI；Agent 不伪造人工通过。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: UI owns the permanent capacity mutation.
+gameUiState.inventory.push(...eightEmptySlots);
+
+// Correct: UI sends a typed command; GameSession owns the atomic upgrade.
+dispatchLocalGameCommand({ type: "upgrade-backpack" });
+```
+
+```typescript
+// Wrong: reload can reroll the same day.
+state.dailyRequest = requests[Math.floor(Math.random() * requests.length)];
+
+// Correct: absolute day selects and save records one deterministic ID.
+state.dailyRequest = createDailyRequestState(state.day);
 ```
 
 ## Open-source contract
