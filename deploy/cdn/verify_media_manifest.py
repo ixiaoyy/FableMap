@@ -89,7 +89,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _validate_manifest(manifest: dict[str, Any], expected_media_base_url: str) -> list[dict[str, Any]]:
-    """Validate manifest totals, immutable URL mapping, hashes, dimensions, and unique object keys."""
+    """Validate media totals, immutable URL mapping, hashes, type-specific fields, and unique keys."""
     if manifest.get("schema_version") != 1:
         raise ValueError("media manifest schema_version must be 1")
 
@@ -107,7 +107,10 @@ def _validate_manifest(manifest: dict[str, Any], expected_media_base_url: str) -
 
     entries: list[dict[str, Any]] = []
     object_keys: set[str] = set()
-    total_bytes = 0
+    image_count = 0
+    image_bytes = 0
+    audio_count = 0
+    audio_bytes = 0
     for index, raw_entry in enumerate(raw_entries):
         if not isinstance(raw_entry, dict):
             raise ValueError(f"media manifest entry {index} must be an object")
@@ -127,28 +130,40 @@ def _validate_manifest(manifest: dict[str, Any], expected_media_base_url: str) -
         object_keys.add(object_key)
 
         byte_count = raw_entry.get("bytes")
-        width = raw_entry.get("width")
-        height = raw_entry.get("height")
         if not isinstance(byte_count, int) or byte_count <= 0:
             raise ValueError(f"media manifest entry {index} has invalid bytes")
-        if not isinstance(width, int) or width <= 0 or not isinstance(height, int) or height <= 0:
-            raise ValueError(f"media manifest entry {index} has invalid dimensions")
         if not re.fullmatch(r"[0-9a-f]{64}", str(raw_entry.get("sha256") or "")):
             raise ValueError(f"media manifest entry {index} has invalid sha256")
-        if str(raw_entry.get("content_type") or "") != "image/png":
-            raise ValueError(f"media manifest entry {index} must use image/png")
+        content_type = str(raw_entry.get("content_type") or "")
+        if content_type == "image/png":
+            width = raw_entry.get("width")
+            height = raw_entry.get("height")
+            if not isinstance(width, int) or width <= 0 or not isinstance(height, int) or height <= 0:
+                raise ValueError(f"media manifest entry {index} has invalid image dimensions")
+            image_count += 1
+            image_bytes += byte_count
+        elif content_type in {"audio/ogg", "audio/mpeg", "audio/wav"}:
+            if "width" in raw_entry or "height" in raw_entry:
+                raise ValueError(f"media manifest entry {index} must not assign dimensions to audio")
+            audio_count += 1
+            audio_bytes += byte_count
+        else:
+            raise ValueError(f"media manifest entry {index} has unsupported content_type")
 
         expected_url = f"{media_base_url}/{object_key}"
         if raw_entry.get("url") != expected_url:
             raise ValueError(f"media manifest entry {index} URL does not match object_key")
 
-        total_bytes += byte_count
         entries.append(raw_entry)
 
-    if manifest.get("tracked_image_count") != len(entries):
-        raise ValueError("media manifest tracked_image_count does not match entries")
-    if manifest.get("tracked_image_bytes") != total_bytes:
-        raise ValueError("media manifest tracked_image_bytes does not match entries")
+    if manifest.get("tracked_image_count") != image_count:
+        raise ValueError("media manifest tracked_image_count does not match image entries")
+    if manifest.get("tracked_image_bytes") != image_bytes:
+        raise ValueError("media manifest tracked_image_bytes does not match image entries")
+    if manifest.get("tracked_audio_count") != audio_count:
+        raise ValueError("media manifest tracked_audio_count does not match audio entries")
+    if manifest.get("tracked_audio_bytes") != audio_bytes:
+        raise ValueError("media manifest tracked_audio_bytes does not match audio entries")
     return entries
 
 
