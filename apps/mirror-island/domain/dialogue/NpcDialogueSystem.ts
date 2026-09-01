@@ -45,7 +45,7 @@ export class NpcDialogueSystem {
         groups.push([requestDialogueId(request.requestId, "missing")]);
       }
     }
-    const eventId = twoHeartEventId(npc.npcId, friendship.points);
+    const eventId = twoHeartEventId(npc, friendship.points);
     if (eventId && !state.seenEventIds.includes(eventId)) groups.push([eventDialogueId(eventId)]);
     const stage = relationshipStageAt(friendship.points);
     if (isRelationshipStageAfter(stage, memory.acknowledgedStage)) {
@@ -92,9 +92,11 @@ function deterministicAvailable(
 }
 
 /** Returns the supported once-only two-heart event for one eligible NPC identity. */
-function twoHeartEventId(npcId: string, points: number): RetentionEventId | null {
+function twoHeartEventId(npc: NpcSpawnDefinition, points: number): RetentionEventId | null {
   if (relationshipStageAt(points) !== "friendly") return null;
-  if (npcId === "seed-keeper") return "seed-keeper-two-heart";
-  if (npcId === "town-blacksmith") return "blacksmith-two-heart";
+  if (npc.npcId === "seed-keeper" && npc.regionId === "seed-shop") return "seed-keeper-two-heart";
+  if (npc.npcId === "town-blacksmith" && (npc.regionId === "town" || npc.regionId === "blacksmith")) {
+    return "blacksmith-two-heart";
+  }
   return null;
 }

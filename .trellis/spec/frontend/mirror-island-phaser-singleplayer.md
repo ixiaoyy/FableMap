@@ -1643,6 +1643,7 @@ type GameCommand =
 - Day1 `dailyRequest=null`；Day≥2 使用 `(day-2)%8` 选择并保存 request ID。submit 必须 target NPC、足量 item、safe Gold；consume + Gold + capped Friendship + completed 在同一 GameSession mutation 中完成，重复 submit 不领奖，sleep 无惩罚替换次日 request。
 - 内部 friendship 保持 250 points/heart、2500 max、daily talk +20、missed -2；外显 stage 只投影 250 familiar / 500 friendly。
 - Domain `NpcDialogueSystem` 按 request→event→new stage→activity→personality 选择稳定 ID，排除当前及前三个 absolute day history，最多保存12条。中文文本由 client catalog 按 stable ID 渲染，不进入 save；候选/优先级/history mutation 不能在 client 复制。
+- 两心事件继续由同一 `NpcDialogueSystem` 按 NPC identity + 当前 `regionId` 判定：华强只允许在 `seed-shop`，昊天只允许在 `town` 或 `blacksmith`；住宅或其他日程地点的普通交谈不得消费 once-only event ID。
 - `seenEventIds` 是 closed catalog，当前含华强/昊天两心事件与 Day3/5/7 里程碑；unknown/duplicate ID current decode 失败。
 - 当前 gameplay 使用 `playableCalendarAt`：absolute Day N 永不进入未实现 Summer，crop/shop/forage 继续 spring content。`calendarAt` 只保留未来四季工具，不得被当前 gameplay/UI 用来重置 Day29。
 
@@ -1655,6 +1656,7 @@ type GameCommand =
 | capacity=32 但 inventory=24 或其他长度 | `Inventory state is invalid` |
 | upgrade locked/remote/already owned/Gold或wood不足 | fixed error feedback；inventory/Gold/level/capacity 不变 |
 | request missing item/non-target/already completed | 无扣物、无奖励；对应 dialogue state 可见 |
+| 两心 NPC 在非工作地点交谈 | 不选择 event dialogue，不写入 `seenEventIds`；到正确地点后仍可触发一次 |
 | request reward Gold 超 safe integer 或 friendship missing | mutation 抛错并恢复 inventory/Gold/friendship |
 | dialogue history >12、future/过旧 day、unknown/duplicate recent ID | current v8 decode 失败 |
 | Day28 sleep | friendship/farm/forage/request 只结算一次，进入 Day29 06:00 |

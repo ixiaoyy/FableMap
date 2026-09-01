@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import {
-  FRIENDSHIP_MAX_POINTS,
   FRIENDSHIP_POINTS_PER_HEART,
 } from "../../../../domain/social/definitions.ts";
+import {
+  relationshipStageAt,
+  type RelationshipStage,
+} from "../../../../domain/social/relationship-stage.ts";
 import { getDialogueDefinition } from "../../game/dialogue/definitions.ts";
 import { getWorldCatalog } from "../../game/world/world-catalog.ts";
 import {
@@ -39,15 +42,16 @@ const residents = computed<readonly SocialEntry[]>(() => catalogNpcs.map((npc) =
     points: 0,
     lastTalkedDay: 0,
   };
-  const heartValue = friendship.points / FRIENDSHIP_POINTS_PER_HEART;
+  const stage = relationshipStageAt(friendship.points);
+  const hearts = stage === "friendly" ? 2 : stage === "familiar" ? 1 : 0;
   return {
     npcId: npc.npcId,
     name: getDialogueDefinition(npc.dialogueId)?.speaker ?? "未登记居民",
-    hearts: Math.floor(heartValue),
-    heartLabel: `${heartValue.toFixed(1)} / 10 心`,
-    relationship: relationshipLabel(heartValue),
+    hearts,
+    heartLabel: `${relationshipLabel(stage)} · 已解锁 ${hearts} / 2 颗内容心`,
+    relationship: relationshipLabel(stage),
     talkedToday: friendship.lastTalkedDay === gameUiState.day,
-    progressPercent: friendship.points / FRIENDSHIP_MAX_POINTS * 100,
+    progressPercent: Math.min(100, friendship.points / (FRIENDSHIP_POINTS_PER_HEART * 2) * 100),
   };
 }));
 
@@ -65,14 +69,11 @@ function uniqueCatalogNpcs(): readonly { readonly npcId: string; readonly dialog
   return result;
 }
 
-/** Maps a zero-to-ten heart value to one restrained relationship label. */
-function relationshipLabel(hearts: number): string {
-  if (hearts >= 10) return "挚友";
-  if (hearts >= 8) return "知心";
-  if (hearts >= 6) return "信赖";
-  if (hearts >= 4) return "亲近";
-  if (hearts >= 2) return "熟面";
-  return "初识";
+/** Maps one content-backed domain stage to its restrained Social label. */
+function relationshipLabel(stage: RelationshipStage): string {
+  if (stage === "friendly") return "友好";
+  if (stage === "familiar") return "熟悉";
+  return "陌生";
 }
 
 /** Requests the world-locking Social ledger and focuses its titled surface. */
@@ -136,7 +137,7 @@ watch(() => gameUiState.socialOpen, (open) => {
           </div>
           <div class="social-ledger__hearts" :aria-label="`${entry.name}，${entry.heartLabel}`">
             <span
-              v-for="index in 10"
+              v-for="index in 2"
               :key="index"
               aria-hidden="true"
               :data-filled="index <= entry.hearts"
