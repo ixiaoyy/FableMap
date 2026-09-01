@@ -487,6 +487,10 @@ test("formal world maps decode NPCs, expansion exits and inspect hotspots throug
 
 test("linear dialogue and shop share one transient world-input lock", () => {
   clearGameState();
+  assert.equal(getDialogueDefinition("personality:town-resident-alan:1")?.speaker, "阿澜");
+  assert.equal(getDialogueDefinition("relationship:seed-keeper:familiar")?.lines.length, 1);
+  assert.equal(getDialogueDefinition("event:blacksmith-two-heart")?.lines.length, 3);
+  assert.equal(getDialogueDefinition("request:seed-rack-repair:thanks")?.speaker, "华强");
   const dialogue = getDialogueDefinition("blacksmith-intro");
   assert.ok(dialogue);
   setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });

@@ -8,6 +8,7 @@ import { GameSession } from "../domain/session/GameSession.ts";
 import { ShopSystem } from "../domain/shop/ShopSystem.ts";
 import { FriendshipSystem } from "../domain/social/FriendshipSystem.ts";
 import { FRIENDSHIP_MAX_POINTS } from "../domain/social/definitions.ts";
+import { relationshipStageAt } from "../domain/social/relationship-stage.ts";
 import { createInitialGameState } from "../domain/state/game-state.ts";
 import {
   DAY_END_MINUTE,
@@ -398,6 +399,7 @@ test("v8 upgrades, three-tile watering and deterministic requests stay atomic", 
   requestState.day = 4;
   assert.equal(friendship.talk(requestState, "seed-keeper"), "recorded");
   assert.equal(requestState.friendships["seed-keeper"].points, 250);
+  assert.equal(relationshipStageAt(requestState.friendships["seed-keeper"].points), "familiar");
 });
 
 test("NPC dialogue selection excludes the prior three days and records two-heart events once", () => {
@@ -420,10 +422,13 @@ test("NPC dialogue selection excludes the prior three days and records two-heart
   state.day = 6;
   state.dailyRequest = createDailyRequestState(6);
   state.friendships["seed-keeper"].points = 500;
-  const event = dialogue.select(state, npc, { result: "request-not-target", request: null });
+  const awayFromWork = dialogue.select(state, npc, { result: "request-not-target", request: null });
+  assert.notEqual(awayFromWork.dialogueId, "event:seed-keeper-two-heart");
+  const eventNpc = { ...npc, regionId: "seed-shop" };
+  const event = dialogue.select(state, eventNpc, { result: "request-not-target", request: null });
   assert.equal(event.dialogueId, "event:seed-keeper-two-heart");
   assert.deepEqual(state.seenEventIds, ["seed-keeper-two-heart"]);
-  const next = dialogue.select(state, npc, { result: "request-not-target", request: null });
+  const next = dialogue.select(state, eventNpc, { result: "request-not-target", request: null });
   assert.notEqual(next.dialogueId, event.dialogueId);
 });
 
