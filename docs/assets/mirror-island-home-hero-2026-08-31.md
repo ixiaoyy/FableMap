@@ -39,7 +39,7 @@ Composition/framing: immersive low eye-level garden-edge view; airy pale mountai
   "content_type": "image/png",
   "bytes": 2659416,
   "sha256": "f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf",
-  "source_url": "https://gist.githubusercontent.com/ixiaoyy/1aaf24bfffda8acdbf7e648a7150e950/raw/6c1e1503060006935d2e668b9ab2fee938eeac39/mirror-island-home-hero.png.base64",
+  "source_url": "https://gist.githubusercontent.com/ixiaoyy/1aaf24bfffda8acdbf7e648a7150e950/raw/7e2d5ca3a846b3fac239e040f15135447eeca503/mirror-island-home-hero.png.base64",
   "source_encoding": "base64"
 }
 ```

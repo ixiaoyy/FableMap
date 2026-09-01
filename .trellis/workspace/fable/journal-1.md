@@ -1860,3 +1860,37 @@ Published the reviewed CC-BY GARDENS icon sheet to immutable media, promoted Hot
 ### Next Steps
 
 - None - task complete
+
+
+## Session 56: 东方田园首页改版
+
+**Date**: 2026-09-01
+**Task**: 东方田园首页改版
+**Branch**: `codex/oriental-homepage-followup`
+
+### Summary
+
+重做镜像岛公开首页为东方田园画卷，生成并发布原创主视觉，完成本地存档入口、移动端、200% 缩放、键盘与 CDN 不可变资源验收。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `086ff2bd` | (see git log) |
+| `af2c0db9` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
