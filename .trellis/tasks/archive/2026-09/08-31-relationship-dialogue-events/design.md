@@ -5,4 +5,3 @@
 - Client dialogue catalog 只把 stable ID 映射为中文 speaker/lines；不重新决定优先级或写 save。
 - SocialPanel 用 `relationshipStageAt(points)` 显示陌生/熟悉/友好；只渲染两颗内容心，进度限制在 0..500，隐藏 raw 0..2500 数值。
 - 委托感谢和新阶段已由 v8 result/history 持久化；本任务不增加送礼/生日/婚恋。
-
