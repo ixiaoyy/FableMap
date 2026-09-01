@@ -1631,6 +1631,7 @@ type GameCommand =
   | { type: "use-item-on-target"; itemId: ItemId | ""; targetId: string; facing?: Facing }
   | { type: "upgrade-watering-can" }
   | { type: "upgrade-backpack" }
+  | { type: "acknowledge-retention-event"; eventId: RetentionEventId }
   | /* existing commands */;
 ```
 
@@ -1645,7 +1646,10 @@ type GameCommand =
 - Domain `NpcDialogueSystem` 按 request→event→new stage→activity→personality 选择稳定 ID，排除当前及前三个 absolute day history，最多保存12条。中文文本由 client catalog 按 stable ID 渲染，不进入 save；候选/优先级/history mutation 不能在 client 复制。
 - 两心事件继续由同一 `NpcDialogueSystem` 按 NPC identity + 当前 `regionId` 判定：华强只允许在 `seed-shop`，昊天只允许在 `town` 或 `blacksmith`；住宅或其他日程地点的普通交谈不得消费 once-only event ID。
 - `seenEventIds` 是 closed catalog，当前含华强/昊天两心事件与 Day3/5/7 里程碑；unknown/duplicate ID current decode 失败。
+- `FirstWeekMilestoneSystem` 只接受 Day3/5/7 三个 milestone ID：日期未到、两心 event ID 或重复确认均不写 state；成功确认由 GameSession 立即 publish/save，并由现有 feedback toast 展示一次。功能可用性始终按 absolute day 判定，不能反向依赖 seen ID。
 - 当前 gameplay 使用 `playableCalendarAt`：absolute Day N 永不进入未实现 Summer，crop/shop/forage 继续 spring content。`calendarAt` 只保留未来四季工具，不得被当前 gameplay/UI 用来重置 Day29。
+- LifeHud/CalendarPanel 只外显 absolute `Day N`、星期与滚动 28 天页，不显示“春季结束”或未实现季节；TodayHint 只从 snapshot 派生首周目标，Day4 必须读取实际 friendship points。
+- Lakeshore `lakeshore-waystone` 在 Day7+ 由 `InspectEntity` 投影代码绘制微光；点击仍只解析现有 inspect dialogue，不注册 exit、传送或 Expedition state，视觉持续性不由 seen ID 控制。
 
 ### 4. Validation & Error Matrix
 
@@ -1659,13 +1663,35 @@ type GameCommand =
 | 两心 NPC 在非工作地点交谈 | 不选择 event dialogue，不写入 `seenEventIds`；到正确地点后仍可触发一次 |
 | request reward Gold 超 safe integer 或 friendship missing | mutation 抛错并恢复 inventory/Gold/friendship |
 | dialogue history >12、future/过旧 day、unknown/duplicate recent ID | current v8 decode 失败 |
+| milestone 日期未到 / two-heart ID / 已确认 | 返回固定 feedback，`seenEventIds` 不变；只有首次已解锁 milestone 追加并保存 |
 | Day28 sleep | friendship/farm/forage/request 只结算一次，进入 Day29 06:00 |
 
 ### 5. Good/Base/Bad Cases
 
 - Good：Day2 华强委托完成后加170，Day1–4 每日交谈各20，Day4 恰好250并优先 familiar 台词；刷新不 reroll。
 - Base：玩家不做委托，睡觉后请求自然过期，无惩罚；absolute day 继续增长。
-- Bad：Vue 直接 push 8 slots、Phaser 循环调用三次 watering、用 `Math.random()` 生成委托、保存中文 dialogue text，或让 `calendarAt(29).season` 驱动当前玩法。
+- Bad：Vue 直接 push 8 slots/seen ID、Phaser 循环调用三次 watering、用 `Math.random()` 生成委托、保存中文 dialogue text，让 `calendarAt(29).season` 驱动当前玩法，或把 Day7 石标注册成出口。
+
+### 6. Tests Required
+
+- Life Loop：Day3 之前确认失败、two-heart ID 不被 milestone system 接受、首次确认保存、重复确认幂等；Day6 deterministic request 仍为15木材/320g/100关系奖励。
+- Town/client：Day6 waystone 保持一句普通说明，Day7 返回三句镜门预告；新增 typed command 在 audio mapping 明确静音。
+- 自动门禁：`test:life-loop`、`test:town-population`、typecheck、client build；镜光体感、提示时机、手机/200% zoom 与 Day1–7/Day29 连玩由真人验收，不由 Agent 代签。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: UI writes durable presentation history or uses it as an unlock flag.
+state.seenEventIds.push("day-5-backpack-intro");
+const backpackAvailable = state.seenEventIds.includes("day-5-backpack-intro");
+
+// Correct: UI dispatches one closed acknowledgement; domain unlocks remain day-owned.
+dispatchLocalGameCommand({
+  type: "acknowledge-retention-event",
+  eventId: "day-5-backpack-intro",
+});
+const backpackAvailable = state.day >= 5;
+```
 
 ### 6. Tests Required
 

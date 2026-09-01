@@ -17,6 +17,11 @@ import {
 } from "../requests/DailyRequestSystem.ts";
 import { NpcDialogueSystem } from "../dialogue/NpcDialogueSystem.ts";
 import {
+  FirstWeekMilestoneSystem,
+  getFirstWeekMilestone,
+  type FirstWeekMilestoneResult,
+} from "../retention/FirstWeekMilestoneSystem.ts";
+import {
   UpgradeSystem,
   type BackpackUpgradeResult,
   type WateringCanUpgradeResult,
@@ -79,6 +84,7 @@ export class GameSession {
   private readonly friendship = new FriendshipSystem();
   private readonly requests = new DailyRequestSystem(this.inventory, this.friendship);
   private readonly dialogue = new NpcDialogueSystem();
+  private readonly firstWeekMilestones = new FirstWeekMilestoneSystem();
   private readonly upgrades = new UpgradeSystem(this.inventory);
   private readonly npcMotions: NpcMotionRuntime;
   private readonly listeners = new Set<GameStateListener>();
@@ -211,6 +217,11 @@ export class GameSession {
         const result = this.upgrades.upgradeBackpack(state, this.npcMotions.activeSpawns());
         if (result === "upgraded-backpack") this.commitCriticalChange();
         return backpackUpgradeFeedback(result);
+      }
+      case "acknowledge-retention-event": {
+        const result = this.firstWeekMilestones.acknowledge(state, command.eventId);
+        if (result === "milestone-acknowledged") this.commitCriticalChange();
+        return firstWeekMilestoneFeedback(result, command.eventId);
       }
       case "transition-region": {
         const exit = this.catalog.exitAt(
@@ -531,6 +542,23 @@ function backpackUpgradeFeedback(result: BackpackUpgradeResult): ActionFeedback 
     case "backpack-already-upgraded": return { tone: "error", code: result, message: "背包已经扩充到 32 格。" };
     case "backpack-upgrade-unavailable": return { tone: "error", code: result, message: "需要到华强身边购买背包扩容。" };
     case "backpack-upgrade-insufficient-gold": return { tone: "error", code: result, message: "背包扩容需要 1500g。" };
+  }
+}
+
+/** Maps one narrow first-week presentation acknowledgement to fixed local feedback. */
+function firstWeekMilestoneFeedback(
+  result: FirstWeekMilestoneResult,
+  eventId: Parameters<typeof getFirstWeekMilestone>[0],
+): ActionFeedback {
+  switch (result) {
+    case "milestone-acknowledged": return {
+      tone: "success",
+      code: result,
+      message: getFirstWeekMilestone(eventId)?.message ?? "今天有了新的变化。",
+    };
+    case "milestone-already-seen": return { tone: "error", code: result, message: "这条今日提示已经看过了。" };
+    case "milestone-not-yet-available": return { tone: "error", code: result, message: "这件事还没有发生。" };
+    case "milestone-unsupported": return { tone: "error", code: result, message: "这不是首周提示事件。" };
   }
 }
 

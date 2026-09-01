@@ -39,6 +39,7 @@ export function audioCueForCommandResult(
     case "craft":
     case "talk-to-npc":
     case "upgrade-watering-can":
-    case "upgrade-backpack": return null;
+    case "upgrade-backpack":
+    case "acknowledge-retention-event": return null;
   }
 }

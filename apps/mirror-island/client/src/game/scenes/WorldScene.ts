@@ -560,6 +560,7 @@ export class WorldScene extends Phaser.Scene {
           this.inspectEnvironment(entity);
         }));
       }
+      this.inspectViews.get(interaction.entityId)?.projectRetentionDay(this.latestState?.day ?? 1);
     }
   }
 
@@ -982,8 +983,9 @@ export class WorldScene extends Phaser.Scene {
 
   /** Opens one nearby environment hotspot through the existing transient dialogue projection. */
   private inspectEnvironment(entity: InspectEntity): void {
-    const player = this.latestState?.player;
-    if (!player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    const state = this.latestState;
+    const player = state?.player;
+    if (!state || !player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
     if (player.regionId !== entity.interaction.regionId) return;
     if (entity.distanceTo(player.x, player.y) > INSPECT_INTERACTION_DISTANCE) {
       setActionFeedback({ tone: "error", code: "inspect-too-far", message: "走近一些再查看。" });
@@ -993,7 +995,10 @@ export class WorldScene extends Phaser.Scene {
       openRequestBoard();
       return;
     }
-    const dialogue = getDialogueDefinition(entity.interaction.dialogueId);
+    const dialogue = getDialogueDefinition(entity.interaction.dialogueId, {
+      day: state.day,
+      minuteOfDay: state.minuteOfDay,
+    });
     if (!dialogue) {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "这里暂时没有可查看的内容。" });
       return;

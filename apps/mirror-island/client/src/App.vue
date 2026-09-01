@@ -34,6 +34,7 @@ import CharacterCreator from "./ui/character/CharacterCreator.vue";
 import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
 import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
 import RequestBoardPanel from "./ui/requests/RequestBoardPanel.vue";
+import TodayHint from "./ui/retention/TodayHint.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -190,6 +191,7 @@ onUnmounted(() => {
         {{ gameUiState.feedback.message }}
       </p>
       <LifeHud />
+      <TodayHint />
       <SocialPanel />
       <AudioSettingsPanel />
       <BackpackPanel />

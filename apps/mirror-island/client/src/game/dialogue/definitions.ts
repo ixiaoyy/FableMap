@@ -618,11 +618,24 @@ const EVENT_DIALOGUES: Readonly<Record<string, DialogueDefinition>> = {
   },
 };
 
+const LAKESHORE_MIRROR_TEASER: DialogueDefinition = {
+  id: "lakeshore-waystone",
+  speaker: "湖岸石标",
+  lines: [
+    "石标正面像蒙了一层水，却照不出你的影子。",
+    "冷光深处闪过一座倒悬的山门，随后被细小涟漪吞没。",
+    "刻痕下多了一行很浅的字：镜门未开，彼岸仍在。",
+  ],
+};
+
 /** Returns one fixed or deterministic day/phase dialogue, or null for an unknown catalog ID. */
 export function getDialogueDefinition(
   dialogueId: string,
   context?: DialogueContext,
 ): DialogueDefinition | null {
+  if (dialogueId === "lakeshore-waystone" && context && context.day >= 7) {
+    return LAKESHORE_MIRROR_TEASER;
+  }
   const selected = selectedDialogueDefinition(dialogueId, context);
   if (selected) return selected;
   const definition = DIALOGUES[dialogueId];

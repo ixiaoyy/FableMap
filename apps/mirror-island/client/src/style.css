@@ -1167,6 +1167,36 @@ button {
 .life-hud__date:hover,
 .life-hud__date:focus-visible { color: #8a5428; outline: 1px solid #8a5428; outline-offset: 3px; }
 
+.today-hint {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  left: 50%;
+  width: min(430px, calc(100% - 600px));
+  min-width: 260px;
+  padding: 9px 13px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(225, 198, 137, 0.9);
+  color: #f7e8bd;
+  background: rgba(48, 37, 26, 0.88);
+  box-shadow: 3px 4px 0 rgba(24, 18, 12, 0.28);
+  pointer-events: none;
+}
+
+.today-hint span {
+  display: block;
+  color: #d8b970;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.today-hint p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .calendar-backdrop {
   position: absolute;
   z-index: 8;
@@ -2426,6 +2456,13 @@ button {
   .social-ledger-trigger {
     top: 10px;
     left: 10px;
+  }
+
+  .today-hint {
+    top: 100px;
+    width: calc(100% - 20px);
+    min-width: 0;
+    padding: 7px 10px;
   }
 
   .audio-settings-trigger {
