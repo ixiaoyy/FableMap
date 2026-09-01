@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,6 +9,7 @@ const ninjaBaseUrl = `${vendorBaseUrl}/ninja-adventure/2024-04-19`;
 const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08/original/16x16`;
 const vectoraithNpcBaseUrl = `${vendorBaseUrl}/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16`;
 const ivoryRedBaseUrl = `${vendorBaseUrl}/ivoryred/gardens-2026-08-27/original`;
+const homeArtBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31";
 const assets = [
   {
     name: "male player",
@@ -129,6 +130,13 @@ const assets = [
     bytes: 13130,
     sha256: "de4dbbb56936520882e1217aad9dae22e60a5f57dde15512f673ec031b581536",
   },
+  {
+    name: "Mirror Island homepage hero",
+    url: `${homeArtBaseUrl}/mirror-island-home-hero.png`,
+    outputs: ["public/game-media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png"],
+    bytes: 2659416,
+    sha256: "f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf",
+  },
 ];
 
 /** Returns the lowercase SHA-256 digest for one downloaded byte buffer. */
@@ -136,8 +144,19 @@ function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-/** Downloads one immutable asset, verifies its contract, and writes it only after validation. */
+/** Reuses exact local outputs or downloads one immutable asset and writes it only after validation. */
 async function downloadVerifiedAsset(asset) {
+  const localBuffers = await Promise.all(asset.outputs.map(async (output) => {
+    try {
+      return await readFile(join(root, output));
+    } catch {
+      return null;
+    }
+  }));
+  if (localBuffers.every((buffer) => buffer?.byteLength === asset.bytes && sha256(buffer) === asset.sha256)) {
+    return;
+  }
+
   const response = await fetch(asset.url);
   if (!response.ok) {
     throw new Error(`${asset.name} download failed with HTTP ${response.status}.`);

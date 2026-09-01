@@ -1,11 +1,17 @@
 const DEFAULT_MEDIA_BASE_URL = "/game-media/v1";
 const VENDOR_PATH = "assets/vendor/ninja-adventure/2024-04-19";
+const HOME_ART_PATH = "assets/original/mirror-island-home/2026-08-31";
 
 /** Resolves the reviewed same-origin media namespace or one explicit development override. */
-function mediaUrl(fileName: string, version: string): string {
+function mediaUrl(relativePath: string, version: string): string {
   const baseUrl = String(import.meta.env.VITE_MEDIA_BASE_URL || DEFAULT_MEDIA_BASE_URL).replace(/\/+$/u, "");
-  return `${baseUrl}/${VENDOR_PATH}/${fileName}?v=${version}`;
+  return `${baseUrl}/${relativePath}?v=${version}`;
 }
+
+export const HOME_HERO_URL = mediaUrl(
+  `${HOME_ART_PATH}/mirror-island-home-hero.png`,
+  "f1182c1e",
+);
 
 export const MEDIA_KEYS = {
   floor: "ninja-floor",
@@ -17,11 +23,11 @@ export const MEDIA_KEYS = {
 } as const;
 
 export const MEDIA_URLS = {
-  floor: mediaUrl("floor.png", "e1110650"),
-  village: mediaUrl("village.png", "6787c6e2"),
-  interiorFloor: mediaUrl("interior-floor.png", "e281598e"),
-  wall: mediaUrl("wall.png", "ad5eb80a"),
-  hero: mediaUrl("player.png", "f2dd61a2"),
+  floor: mediaUrl(`${VENDOR_PATH}/floor.png`, "e1110650"),
+  village: mediaUrl(`${VENDOR_PATH}/village.png`, "6787c6e2"),
+  interiorFloor: mediaUrl(`${VENDOR_PATH}/interior-floor.png`, "e281598e"),
+  wall: mediaUrl(`${VENDOR_PATH}/wall.png`, "ad5eb80a"),
+  hero: mediaUrl(`${VENDOR_PATH}/player.png`, "f2dd61a2"),
 } as const;
 
 export const VILLAGE_FRAMES = {

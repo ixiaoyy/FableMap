@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-28T00:00:00Z",
+  "generated_at": "2026-08-31T00:00:00Z",
   "media_base_url": "https://img.pingxingxian.space/game/media/v1",
-  "tracked_image_count": 14,
-  "tracked_image_bytes": 214731,
+  "tracked_image_count": 15,
+  "tracked_image_bytes": 2874147,
   "entries": [
     {
       "source": "content/character/ninja_blue/sprite.png",
@@ -195,6 +195,19 @@
       "content_type": "image/png",
       "object_key": "assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png",
       "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png"
+    },
+    {
+      "source": "OpenAI built-in image generation output selected as homepage candidate 3",
+      "source_url": "docs/assets/mirror-island-home-hero-2026-08-31.md",
+      "license": "Project-original AI-generated art",
+      "transformation": "None; exact selected generated PNG bytes.",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2659416,
+      "sha256": "f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf",
+      "content_type": "image/png",
+      "object_key": "assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png"
     }
   ]
 }
