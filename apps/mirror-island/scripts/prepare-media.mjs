@@ -10,6 +10,8 @@ const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08/origina
 const vectoraithNpcBaseUrl = `${vendorBaseUrl}/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16`;
 const ivoryRedBaseUrl = `${vendorBaseUrl}/ivoryred/gardens-2026-08-27/original`;
 const homeArtBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31";
+const kenneyAudioBaseUrl = `${vendorBaseUrl}/kenney/rpg-audio-2014`;
+const rubberduckAudioBaseUrl = `${vendorBaseUrl}/rubberduck/100-cc0-sfx-2-2018`;
 const assets = [
   {
     name: "male player",
@@ -136,6 +138,139 @@ const assets = [
     outputs: ["public/game-media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png"],
     bytes: 2659416,
     sha256: "f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf",
+  },
+  {
+    name: "Kenney footstep 1",
+    url: `${kenneyAudioBaseUrl}/footstep-01.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/footstep-01.ogg"],
+    bytes: 9475,
+    sha256: "6fe61ef1fc3bcf0e253bf2eb64759db6cb69e2fe452f4d88cc597ecf78a3d601",
+  },
+  {
+    name: "Kenney footstep 2",
+    url: `${kenneyAudioBaseUrl}/footstep-02.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/footstep-02.ogg"],
+    bytes: 9900,
+    sha256: "313472dba31fd0c855376069fa368bb5a198c27251cc8398ef464578b7047a4c",
+  },
+  {
+    name: "Kenney footstep 3",
+    url: `${kenneyAudioBaseUrl}/footstep-03.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/footstep-03.ogg"],
+    bytes: 9528,
+    sha256: "2d9575b7dead6e1217ca113991fc5229e9b6d998ea0726ebbb277e7398ab888f",
+  },
+  {
+    name: "Kenney axe chop",
+    url: `${kenneyAudioBaseUrl}/axe-chop.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/axe-chop.ogg"],
+    bytes: 9370,
+    sha256: "d00c2b3c9fff07e376145c8c8c45c90e5084ec192f6ce0387db233f7b86f1486",
+  },
+  {
+    name: "Kenney door open",
+    url: `${kenneyAudioBaseUrl}/door-open.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/door-open.ogg"],
+    bytes: 22848,
+    sha256: "4ab93bab96522d8eb109ff96dc57cb6765deb02448fe14c10472084be5bb2a0b",
+  },
+  {
+    name: "Kenney buy coins",
+    url: `${kenneyAudioBaseUrl}/coins-buy.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/coins-buy.ogg"],
+    bytes: 25394,
+    sha256: "8a91f969e932df709df80ee124d86a51389eed9b67f22e5e716bc2bbf60d8dab",
+  },
+  {
+    name: "Kenney sell coins",
+    url: `${kenneyAudioBaseUrl}/coins-sell.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/coins-sell.ogg"],
+    bytes: 13094,
+    sha256: "4b857968d64f9ac9336a10ffac6694d7547e1f01566ad6857b30bc8db3ee6c32",
+  },
+  {
+    name: "Kenney dialogue page",
+    url: `${kenneyAudioBaseUrl}/dialogue-page.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/dialogue-page.ogg"],
+    bytes: 18248,
+    sha256: "fa81ac2fedc8c641661b87e349630a36c9800e795e0c800e029214efdbe26a7d",
+  },
+  {
+    name: "Kenney sleep cue",
+    url: `${kenneyAudioBaseUrl}/sleep.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/kenney/rpg-audio-2014/sleep.ogg"],
+    bytes: 9292,
+    sha256: "81e976532565f4372abd14e83d2684195fa548d0a28d345de221e56052454f32",
+  },
+  {
+    name: "rubberduck hoe impact",
+    url: `${rubberduckAudioBaseUrl}/hoe.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/rubberduck/100-cc0-sfx-2-2018/hoe.ogg"],
+    bytes: 7629,
+    sha256: "84abc80d93011d86f29bc55c10a023265ece0851d0784d1bf07c5990f08daeab",
+  },
+  {
+    name: "rubberduck stone impact",
+    url: `${rubberduckAudioBaseUrl}/stone.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/rubberduck/100-cc0-sfx-2-2018/stone.ogg"],
+    bytes: 12669,
+    sha256: "20d293a892e1fa6330da2569065aa260a822198bddce2b183f8c11642e7deb4d",
+  },
+  {
+    name: "rubberduck pickup",
+    url: `${rubberduckAudioBaseUrl}/pickup.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/rubberduck/100-cc0-sfx-2-2018/pickup.ogg"],
+    bytes: 13577,
+    sha256: "828940e6c04c63ea22f15ff47b6722c2b9fde54f148b26935d95a645baf770f4",
+  },
+  {
+    name: "rubberduck harvest",
+    url: `${rubberduckAudioBaseUrl}/harvest.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/rubberduck/100-cc0-sfx-2-2018/harvest.ogg"],
+    bytes: 12726,
+    sha256: "fe585eaf85fbbc0f56653174bc374aa9d2143c9dad68154bf9c596f7c1ee62d6",
+  },
+  {
+    name: "Peludo watering splash",
+    url: `${vendorBaseUrl}/peludo/water-splash-2021/watering.wav`,
+    outputs: ["public/game-media/v1/assets/vendor/peludo/water-splash-2021/watering.wav"],
+    bytes: 150572,
+    sha256: "ad9472b711666de2d43c3b102d155a5d1118b1fcd0ecd29cb63177256ab63f31",
+  },
+  {
+    name: "Spring Spring farm ambience",
+    url: `${vendorBaseUrl}/spring-spring/birds-and-wind-2019/farm-ambience.ogg`,
+    outputs: ["public/game-media/v1/assets/vendor/spring-spring/birds-and-wind-2019/farm-ambience.ogg"],
+    bytes: 1883864,
+    sha256: "28f99f536a0772d80052f03bcb22c9ed8fd7c6e4db7f2e8356efcf26a8e24f01",
+  },
+  {
+    name: "Milkybread town ambience",
+    url: `${vendorBaseUrl}/milkybread/village-ambience-830375/town-ambience.mp3`,
+    outputs: ["public/game-media/v1/assets/vendor/milkybread/village-ambience-830375/town-ambience.mp3"],
+    bytes: 513898,
+    sha256: "8255e9ca011fbfc606216afc3ec4da178b013b6648523b64d9c3b5e512fb2778",
+  },
+  {
+    name: "Breviceps town walla",
+    url: `${vendorBaseUrl}/breviceps/people-talking-473586/town-walla.mp3`,
+    outputs: ["public/game-media/v1/assets/vendor/breviceps/people-talking-473586/town-walla.mp3"],
+    bytes: 849809,
+    sha256: "53d77cb7894c8ab371310d637a00d453ff744ac9b3868a3628e1766b623ac0a9",
+  },
+  {
+    name: "transitking lakeshore water",
+    url: `${vendorBaseUrl}/transitking/water-waves-11505/lakeshore-water.mp3`,
+    outputs: ["public/game-media/v1/assets/vendor/transitking/water-waves-11505/lakeshore-water.mp3"],
+    bytes: 3549217,
+    sha256: "ea2a900f500c32330b6ecafcf7fe283d854048f5f7364ec115f267b7faf7b29f",
+  },
+  {
+    name: "leonelmail interior room tone",
+    url: `${vendorBaseUrl}/leonelmail/roomtone-bedroom-329569/interior-room-tone.mp3`,
+    outputs: ["public/game-media/v1/assets/vendor/leonelmail/roomtone-bedroom-329569/interior-room-tone.mp3"],
+    bytes: 685824,
+    sha256: "47efe63c314f93d1ebef554955ce7132506d15a13b317a99e084fc6c030ef0c2",
   },
 ];
 

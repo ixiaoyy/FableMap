@@ -1238,6 +1238,142 @@ button {
   opacity: 0.72;
 }
 
+.audio-settings-trigger {
+  position: absolute;
+  z-index: 3;
+  top: 72px;
+  left: 18px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 2px solid #b7a26f;
+  outline: 2px solid rgba(52, 42, 29, 0.68);
+  color: #4b3b29;
+  background: #dfcc9b;
+  box-shadow: 3px 4px 0 rgba(42, 31, 20, 0.3);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.audio-settings-trigger span { margin-right: 5px; color: #47704b; }
+
+.audio-settings-trigger:hover,
+.audio-settings-trigger:focus-visible {
+  color: #2f281e;
+  background: #eedba8;
+  outline-color: #fff0b4;
+}
+
+.audio-settings-trigger:disabled {
+  color: #877b65;
+  background: #c5b68e;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.audio-settings-backdrop {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(21, 20, 16, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.audio-settings-panel {
+  width: min(540px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 20px;
+  border: 3px double #79603a;
+  color: #3d3022;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent 34%),
+    #ead7aa;
+  box-shadow: 8px 10px 0 rgba(24, 18, 12, 0.42), inset 0 0 0 2px #f4e6bd;
+}
+
+.audio-settings-panel > header {
+  display: flex;
+  gap: 18px;
+  align-items: start;
+  justify-content: space-between;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #b8955c;
+}
+
+.audio-settings-panel > header p {
+  margin: 0;
+  color: #80643f;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.audio-settings-panel h2 {
+  margin: 3px 0 0;
+  color: #3d4c36;
+  font-family: "STKaiti", KaiTi, Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.audio-settings-panel button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #73583a;
+  color: #3f3021;
+  background: #f3e2b6;
+  cursor: pointer;
+}
+
+.audio-settings-panel button:hover,
+.audio-settings-panel button:focus-visible {
+  background: #fff0c5;
+  outline: 2px solid #47704b;
+  outline-offset: 2px;
+}
+
+.audio-settings-panel__channels {
+  display: grid;
+  gap: 12px;
+  padding: 18px 0;
+}
+
+.audio-settings-panel__channels label {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1.3fr) 48px;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 13px;
+  border: 1px solid #b99b66;
+  background: rgba(248, 232, 190, 0.58);
+}
+
+.audio-settings-panel__channels label > span { display: grid; gap: 3px; }
+.audio-settings-panel__channels strong { color: #3e4d37; font-size: 13px; }
+.audio-settings-panel__channels small { color: #756248; font-size: 10px; line-height: 1.35; }
+.audio-settings-panel__channels input { width: 100%; accent-color: #47704b; cursor: pointer; }
+.audio-settings-panel__channels output { color: #88572f; font-family: Georgia, serif; font-weight: 700; text-align: right; }
+
+.audio-settings-panel > footer {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 15px;
+  border-top: 1px solid #b8955c;
+}
+
+.audio-settings-panel > footer p {
+  margin: 0;
+  color: #76644c;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .social-ledger-backdrop {
   position: absolute;
   z-index: 8;
@@ -2290,6 +2426,30 @@ button {
   .social-ledger-trigger {
     top: 10px;
     left: 10px;
+  }
+
+  .audio-settings-trigger {
+    top: 60px;
+    left: 10px;
+  }
+
+  .audio-settings-backdrop { padding: 10px; }
+
+  .audio-settings-panel {
+    max-height: calc(100vh - 20px);
+    padding: 15px;
+  }
+
+  .audio-settings-panel__channels label {
+    grid-template-columns: 1fr 46px;
+    gap: 8px 12px;
+  }
+
+  .audio-settings-panel__channels label > span { grid-column: 1 / -1; }
+
+  .audio-settings-panel > footer {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .social-ledger-backdrop {

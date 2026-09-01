@@ -3,8 +3,8 @@ const VENDOR_PATH = "assets/vendor/ninja-adventure/2024-04-19";
 const HOME_ART_PATH = "assets/original/mirror-island-home/2026-08-31";
 
 /** Resolves the reviewed same-origin media namespace or one explicit development override. */
-function mediaUrl(relativePath: string, version: string): string {
-  const baseUrl = String(import.meta.env.VITE_MEDIA_BASE_URL || DEFAULT_MEDIA_BASE_URL).replace(/\/+$/u, "");
+export function mediaUrl(relativePath: string, version: string): string {
+  const baseUrl = String(import.meta.env?.VITE_MEDIA_BASE_URL || DEFAULT_MEDIA_BASE_URL).replace(/\/+$/u, "");
   return `${baseUrl}/${relativePath}?v=${version}`;
 }
 
