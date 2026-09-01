@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
+import { AUDIO_CUE } from "../../audio/audio-catalog.ts";
+import { emitAudioCue } from "../../audio/audio-events.ts";
 import {
   advanceDialogue,
   closeDialogue,
@@ -26,6 +28,7 @@ const lineProgress = computed(() => {
 function advanceConversation(): void {
   const dialogue = gameUiState.dialogue;
   const closing = dialogue !== null && dialogue.lineIndex + 1 >= dialogue.lines.length;
+  if (!closing) emitAudioCue(AUDIO_CUE.dialoguePage);
   advanceDialogue();
   if (closing) restoreWorldFocus();
 }

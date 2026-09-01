@@ -120,12 +120,34 @@ export class TreeEntity {
 export class RockEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Image;
 
-  /** Creates one non-minable rock from the supplied regional atlas without adding mining behavior. */
-  constructor(scene: Phaser.Scene, readonly spawn: ResourceSpawnDefinition, media: EntityMediaProfile) {
+  /** Creates one tappable non-minable rock without adding drops, durability or persistent mining state. */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    readonly spawn: ResourceSpawnDefinition,
+    media: EntityMediaProfile,
+    onInteract: (entity: RockEntity) => void,
+  ) {
     this.entityId = spawn.entityId;
-    const body = scene.add.image(0, 0, media.rock.textureKey, media.rock.frame.name).setOrigin(0.5, 1);
-    this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
+    this.body = scene.add.image(0, 0, media.rock.textureKey, media.rock.frame.name)
+      .setOrigin(0.5, 1)
+      .setInteractive({ useHandCursor: true });
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.container = scene.add.container(spawn.x, spawn.y, [this.body]).setDepth(100 + spawn.y);
+  }
+
+  /** Plays one short presentation-only stone tap without mutating world or inventory state. */
+  playTap(): void {
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      x: { from: this.spawn.x - 1, to: this.spawn.x + 1 },
+      duration: 45,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => this.container.setPosition(this.spawn.x, this.spawn.y),
+    });
   }
 
   /** Destroys the complete temporary rock view. */
@@ -713,9 +735,9 @@ export class EntityFactory {
     return new TreeEntity(this.scene, spawn, this.media, onInteract);
   }
 
-  /** Creates the reviewed non-minable rock entity kind. */
-  createRock(spawn: ResourceSpawnDefinition): RockEntity {
-    return new RockEntity(this.scene, spawn, this.media);
+  /** Creates the reviewed non-minable rock entity kind with a presentation-only tap callback. */
+  createRock(spawn: ResourceSpawnDefinition, onInteract: (entity: RockEntity) => void): RockEntity {
+    return new RockEntity(this.scene, spawn, this.media, onInteract);
   }
 
   /** Creates one farm plot entity from an interaction definition. */

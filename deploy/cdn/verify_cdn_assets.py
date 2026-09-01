@@ -17,7 +17,7 @@ EXPECTED_CACHE_DIRECTIVES = {"public", "max-age=31536000", "immutable"}
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the CDN verification command-line contract used by deployment."""
-    parser = argparse.ArgumentParser(description="Verify every adopted game image through the public CDN.")
+    parser = argparse.ArgumentParser(description="Verify every adopted game media object through the public CDN.")
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--timeout-seconds", type=int, default=20)
     parser.add_argument("--attempts", type=int, default=6)
@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Download every manifest entry and verify bytes, hash, MIME, cache policy, and PNG dimensions."""
+    """Download every manifest entry and verify bytes, hash, MIME, cache policy, and image dimensions."""
     args = build_parser().parse_args(argv)
     manifest = _read_manifest(args.manifest)
     entries = manifest.get("entries")
@@ -52,7 +52,7 @@ def _read_manifest(path: Path) -> dict[str, Any]:
 
 
 def _verify_entry(entry: dict[str, Any], timeout_seconds: int, attempts: int) -> None:
-    """Fetch one immutable CDN object with retries and compare it with every recorded delivery field."""
+    """Fetch one immutable CDN object with retries and compare its recorded delivery fields."""
     url = str(entry.get("url") or "")
     parsed = urlsplit(url)
     if parsed.scheme != "https" or not parsed.netloc:
@@ -77,9 +77,10 @@ def _verify_entry(entry: dict[str, Any], timeout_seconds: int, attempts: int) ->
     if not EXPECTED_CACHE_DIRECTIVES.issubset(cache_directives):
         raise ValueError(f"CDN Cache-Control is not immutable for {entry['object_key']}")
 
-    width, height = _png_dimensions(body)
-    if width != int(entry["width"]) or height != int(entry["height"]):
-        raise ValueError(f"CDN PNG dimensions mismatch for {entry['object_key']}")
+    if content_type == "image/png":
+        width, height = _png_dimensions(body)
+        if width != int(entry["width"]) or height != int(entry["height"]):
+            raise ValueError(f"CDN PNG dimensions mismatch for {entry['object_key']}")
 
 
 def _download(url: str, timeout_seconds: int, attempts: int) -> tuple[bytes, Any]:

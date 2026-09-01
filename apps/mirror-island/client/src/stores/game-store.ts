@@ -11,6 +11,11 @@ import {
   type PlayerAppearanceId,
 } from "../../../domain/player/appearance.ts";
 import { DAY_START_MINUTE } from "../../../domain/time/game-time.ts";
+import {
+  getAudioSettings,
+  updateAudioVolume,
+  type AudioVolumeChannel,
+} from "../audio/audio-settings.ts";
 
 export type GamePhase = "initializing" | "menu" | "character-creation" | "loading" | "playing" | "error";
 
@@ -57,6 +62,8 @@ const mutableState = reactive({
   sleepConfirmationOpen: false,
   socialOpen: false,
   calendarOpen: false,
+  audioSettingsOpen: false,
+  audioSettings: getAudioSettings(),
 });
 
 let confirmSleepAction: (() => void) | null = null;
@@ -217,6 +224,7 @@ export function openSocial(): boolean {
     || mutableState.dialogue !== null
     || mutableState.sleepConfirmationOpen
     || mutableState.calendarOpen
+    || mutableState.audioSettingsOpen
   ) return false;
   mutableState.socialOpen = true;
   return true;
@@ -237,6 +245,21 @@ export function openCalendar(): boolean {
 /** Closes the transient calendar without mutating the absolute game day. */
 export function closeCalendar(): void { mutableState.calendarOpen = false; }
 
+/** Opens audio preferences only when no gameplay action or modal already owns input. */
+export function openAudioSettings(): boolean {
+  if (isWorldInputLocked()) return false;
+  mutableState.audioSettingsOpen = true;
+  return true;
+}
+
+/** Closes audio preferences without changing gameplay or IndexedDB state. */
+export function closeAudioSettings(): void { mutableState.audioSettingsOpen = false; }
+
+/** Persists one normalized audio channel and projects the resulting immutable preference snapshot. */
+export function setAudioVolume(channel: AudioVolumeChannel, value: number): void {
+  mutableState.audioSettings = updateAudioVolume(channel, value);
+}
+
 /** Reports whether a modal Vue panel currently owns Phaser world input. */
 export function isWorldInputLocked(): boolean {
   return mutableState.worldActionBusy
@@ -244,7 +267,8 @@ export function isWorldInputLocked(): boolean {
     || mutableState.dialogue !== null
     || mutableState.sleepConfirmationOpen
     || mutableState.socialOpen
-    || mutableState.calendarOpen;
+    || mutableState.calendarOpen
+    || mutableState.audioSettingsOpen;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
@@ -266,5 +290,7 @@ export function clearGameState(): void {
   mutableState.shopWelcome = "";
   mutableState.socialOpen = false;
   mutableState.calendarOpen = false;
+  mutableState.audioSettingsOpen = false;
+  mutableState.audioSettings = getAudioSettings();
   cancelSleepConfirmation();
 }
