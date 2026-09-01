@@ -1468,6 +1468,7 @@ assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png
 - 图像不包含文字、按钮、品牌、存档状态或其他交互 UI；这些信息必须保持可访问 DOM。
 - 对象通过 `/game-media/v1` 同源加载，CDN key 不可覆盖；生成 prompt 与采用记录位于 `docs/assets/mirror-island-home-hero-2026-08-31.md`。
 - `prepare-media.mjs` 可以复用已存在且 bytes/hash 完全匹配的 ignored 本地输出；本地缺失或不匹配时必须从正式 CDN 下载并重新校验。
+- repository-dispatch 使用 base64 临时源时，文本必须是无 BOM、无换行的纯 ASCII；本 hero 的精确长度为 3545888 字符。PowerShell 管道默认编码不可作为发布源，必须用 `UTF8Encoding(false)` 或等价无 BOM 写法并在 dispatch 前核对字符数和文件字节数相等。
 
 ### 4. Validation & Error Matrix
 
@@ -1475,6 +1476,7 @@ assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png
 |---|---|
 | 本地 ignored hero bytes/hash 完全匹配 | `prepare:media` 复用，不发起重复下载 |
 | 本地 hero 缺失或不匹配，CDN 对象正确 | 下载后校验并写入 ignored `public/game-media` |
+| base64 临时源含 UTF-8 BOM、换行污染或长度不等于 3545888 | 工作流在 `base64 --decode` 阶段失败，S3 写入前终止；修正源后以同 object key/hash 幂等重试 |
 | CDN 缺失、bytes/hash 不符或 key 已存在不同内容 | 发布/准备失败，不回退临时 Gist 或把图片提交 Git |
 | 背景运行时加载失败 | CSS 同色系背景仍显示，菜单 DOM 和操作保持可用 |
 
@@ -1487,6 +1489,7 @@ assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png
 ### 6. Tests Required
 
 - `prepare:media` 断言 15 个对象并校验 hero bytes/hash；typecheck、client build 必须通过。
+- dispatch 前断言 base64 字符数与无 BOM UTF-8 文件字节数都为 3545888；失败 run 必须确认停在 S3 写入之前。
 - manifest 断言 15 images / 2874147 bytes；发布后从 CDN 和同源代理回读 hero 的尺寸、MIME、SHA-256 与 immutable cache。
 - Git 图片 binary diff 为 0；真实浏览器覆盖桌面、手机、200% zoom、无存档/有存档、加载和错误状态。
 
