@@ -24,6 +24,12 @@ export interface GameCalendarDate {
   readonly weekday: Weekday;
 }
 
+export interface PlayableCalendarDate {
+  readonly absoluteDay: number;
+  readonly season: "spring";
+  readonly weekday: Weekday;
+}
+
 /** Projects one positive absolute game day into the fixed four-season, 28-day calendar. */
 export function calendarAt(absoluteDay: number): GameCalendarDate {
   if (!Number.isSafeInteger(absoluteDay) || absoluteDay < 1) {
@@ -39,8 +45,13 @@ export function calendarAt(absoluteDay: number): GameCalendarDate {
   };
 }
 
+/** Projects the current pre-Summer game into an unbounded Day-N spring-content calendar. */
+export function playableCalendarAt(absoluteDay: number): PlayableCalendarDate {
+  const date = calendarAt(absoluteDay);
+  return { absoluteDay, season: "spring", weekday: date.weekday };
+}
+
 /** Reports whether the current content slice supports sleeping into the following game day. */
 export function canAdvancePlayableCalendar(absoluteDay: number): boolean {
-  const date = calendarAt(absoluteDay);
-  return date.season === "spring" && date.dayOfSeason < DAYS_PER_SEASON;
+  return Number.isSafeInteger(absoluteDay) && absoluteDay >= 1 && absoluteDay < Number.MAX_SAFE_INTEGER;
 }

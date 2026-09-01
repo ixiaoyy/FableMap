@@ -4,15 +4,23 @@ import { GatheringSystem, type GatheringResult } from "../gathering/GatheringSys
 import { ForageSystem, type ForageResult } from "../gathering/ForageSystem.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { getItemDefinition } from "../items/definitions.ts";
-import { canAdvancePlayableCalendar } from "../calendar/game-calendar.ts";
 import {
   DEFAULT_PLAYER_APPEARANCE_ID,
   type PlayerAppearanceId,
 } from "../player/appearance.ts";
 import {
   FriendshipSystem,
-  type TalkFriendshipResult,
 } from "../social/FriendshipSystem.ts";
+import {
+  DailyRequestSystem,
+  type DailyRequestSubmission,
+} from "../requests/DailyRequestSystem.ts";
+import { NpcDialogueSystem } from "../dialogue/NpcDialogueSystem.ts";
+import {
+  UpgradeSystem,
+  type BackpackUpgradeResult,
+  type WateringCanUpgradeResult,
+} from "../progression/UpgradeSystem.ts";
 import {
   MAIN_SAVE_SLOT,
   createStoredGame,
@@ -43,13 +51,21 @@ import {
   type NpcRuntimeSpawn,
 } from "../world/npc-motions.ts";
 import type { ResourceSpawnDefinition, WorldCatalog } from "../world/regions.ts";
-import type { ActionFeedback, GameCommand } from "./commands.ts";
+import type { Facing } from "../world/facing.ts";
+import type {
+  ActionFeedback,
+  GameCommand,
+  GameCommandResult,
+  NpcInteractionResult,
+} from "./commands.ts";
 
 const MOVEMENT_CHECKPOINT_INTERVAL_MS = 500;
 const SLEEP_INTERACTION_DISTANCE_PIXELS = 42;
 const NPC_INTERACTION_DISTANCE_PIXELS = 42;
 
-type SleepResult = "slept" | "missing-bed" | "too-far" | "already-saving" | "day-limit" | "season-content-limit";
+type SleepResult = "slept" | "missing-bed" | "too-far" | "already-saving" | "day-limit";
+type NpcInteractionCommand = Extract<GameCommand, { readonly type: "talk-to-npc" }>;
+type NonNpcGameCommand = Exclude<GameCommand, NpcInteractionCommand>;
 
 export type GameStateListener = (state: GameState) => void;
 
@@ -61,6 +77,9 @@ export class GameSession {
   private readonly farming: FarmingSystem;
   private readonly shop: ShopSystem;
   private readonly friendship = new FriendshipSystem();
+  private readonly requests = new DailyRequestSystem(this.inventory, this.friendship);
+  private readonly dialogue = new NpcDialogueSystem();
+  private readonly upgrades = new UpgradeSystem(this.inventory);
   private readonly npcMotions: NpcMotionRuntime;
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState | null = null;
@@ -131,8 +150,14 @@ export class GameSession {
     return this.snapshot();
   }
 
-  /** Applies one typed local intent and returns fixed feedback for visible player actions. */
-  dispatch(command: GameCommand): ActionFeedback | null {
+  /** Applies one typed NPC interaction and returns its saved dialogue selection. */
+  dispatch(command: NpcInteractionCommand): NpcInteractionResult | null;
+  /** Applies one typed non-NPC local intent and returns fixed action feedback. */
+  dispatch(command: NonNpcGameCommand): ActionFeedback | null;
+  /** Applies a caller-held command union and returns the corresponding closed result union. */
+  dispatch(command: GameCommand): GameCommandResult;
+  /** Applies one typed local intent while preserving narrow result types for NPC and action callers. */
+  dispatch(command: GameCommand): GameCommandResult {
     const state = this.requireState();
     switch (command.type) {
       case "move": {
@@ -143,7 +168,12 @@ export class GameSession {
         }
         return null;
       }
-      case "use-item-on-target": return this.useItemOnTarget(state, command.itemId, command.targetId);
+      case "use-item-on-target": return this.useItemOnTarget(
+        state,
+        command.itemId,
+        command.targetId,
+        command.facing,
+      );
       case "craft": {
         const result = this.crafting.craft(state, command.recipeId);
         if (result === "success") this.commitCriticalChange();
@@ -159,8 +189,8 @@ export class GameSession {
       }
       case "talk-to-npc": {
         const result = this.talkToNpc(state, command.npcId);
-        if (result === "recorded") this.commitCriticalChange();
-        return null;
+        if (result) this.commitCriticalChange();
+        return result;
       }
       case "buy-item": {
         const result = this.shop.buySeed(state, this.npcMotions.activeSpawns(), command.itemId);
@@ -171,6 +201,16 @@ export class GameSession {
         const result = this.shop.sellItem(state, this.npcMotions.activeSpawns(), command.itemId);
         if (result === "sold") this.commitCriticalChange();
         return sellFeedback(result, command.itemId);
+      }
+      case "upgrade-watering-can": {
+        const result = this.upgrades.upgradeWateringCan(state, this.npcMotions.activeSpawns());
+        if (result === "upgraded-watering-can") this.commitCriticalChange();
+        return wateringCanUpgradeFeedback(result);
+      }
+      case "upgrade-backpack": {
+        const result = this.upgrades.upgradeBackpack(state, this.npcMotions.activeSpawns());
+        if (result === "upgraded-backpack") this.commitCriticalChange();
+        return backpackUpgradeFeedback(result);
       }
       case "transition-region": {
         const exit = this.catalog.exitAt(
@@ -224,7 +264,12 @@ export class GameSession {
   }
 
   /** Routes one selected inventory item or empty hand to the catalog-owned target at impact time. */
-  private useItemOnTarget(state: GameState, rawItemId: string, targetId: string): ActionFeedback | null {
+  private useItemOnTarget(
+    state: GameState,
+    rawItemId: string,
+    targetId: string,
+    facing?: Facing,
+  ): ActionFeedback | null {
     const itemId = rawItemId === "" ? "" : getItemDefinition(rawItemId)?.id;
     if (itemId === undefined) return null;
     if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return null;
@@ -242,7 +287,7 @@ export class GameSession {
     }
     const interaction = this.catalog.interaction(targetId);
     if (interaction?.kind === "farm-plot") {
-      const result = this.farming.use(state, targetId, itemId);
+      const result = this.farming.use(state, targetId, itemId, facing);
       if (["tilled", "planted", "watered", "harvested"].includes(result)) {
         this.commitCriticalChange();
       }
@@ -256,15 +301,30 @@ export class GameSession {
     return cloneGameState(this.requireState());
   }
 
-  /** Validates one active nearby NPC before recording the domain-owned daily conversation. */
-  private talkToNpc(state: GameState, npcId: string): TalkFriendshipResult | "unavailable" {
+  /** Validates one nearby NPC, settles its request/talk rewards and records one dialogue selection. */
+  private talkToNpc(state: GameState, npcId: string): NpcInteractionResult | null {
     const npc = this.npcMotions.activeByNpcId(npcId);
     if (
       !npc
       || npc.regionId !== state.player.regionId
       || Math.hypot(state.player.x - npc.x, state.player.y - npc.y) > NPC_INTERACTION_DISTANCE_PIXELS
-    ) return "unavailable";
-    return this.friendship.talk(state, npcId);
+    ) return null;
+    const friendship = state.friendships[npcId];
+    if (!friendship) throw new Error(`NPC friendship is missing: ${npcId}.`);
+    const firstTalkToday = friendship.lastTalkedDay !== state.day;
+    const submission = this.requests.submitForNpc(state, npcId);
+    const talkResult = this.friendship.talk(state, npcId);
+    if (talkResult === "missing-friendship") throw new Error(`NPC friendship is missing: ${npcId}.`);
+    const selection = this.dialogue.select(state, npc, submission);
+    return {
+      kind: "npc-interaction",
+      npcId,
+      dialogueId: selection.dialogueId,
+      baseDialogueId: selection.baseDialogueId,
+      shopAvailable: npc.interactionType === "shop",
+      firstTalkToday,
+      feedback: requestSubmissionFeedback(submission),
+    };
   }
 
   /** Returns defensive runtime projections for every NPC without exposing transient motion state. */
@@ -347,12 +407,12 @@ export class GameSession {
       return "too-far";
     }
     if (state.day >= Number.MAX_SAFE_INTEGER) return "day-limit";
-    if (!canAdvancePlayableCalendar(state.day)) return "season-content-limit";
     const safeSpawn = this.catalog.requireDefaultSpawn("cottage");
     this.friendship.settleDay(state);
     this.farming.settleDay(state);
     state.day += 1;
     state.dailyForage = { day: state.day, collectedIds: [] };
+    this.requests.settleDay(state);
     state.minuteOfDay = DAY_START_MINUTE;
     state.player.regionId = "cottage";
     state.player.x = safeSpawn.x;
@@ -438,7 +498,39 @@ function sleepFeedback(result: SleepResult): ActionFeedback {
     case "too-far": return { tone: "error", code: result, message: "需要再靠近床一些。" };
     case "already-saving": return { tone: "error", code: result, message: "这一天正在结算，请稍候。" };
     case "day-limit": return { tone: "error", code: result, message: "日期已经达到存档上限。" };
-    case "season-content-limit": return { tone: "error", code: result, message: "春季已经结束，夏季内容准备完成后才能继续休息。" };
+  }
+}
+
+/** Maps one daily-request submission into a reward toast while non-target/missing states stay in dialogue. */
+function requestSubmissionFeedback(submission: DailyRequestSubmission): ActionFeedback | null {
+  if (submission.result !== "request-completed" || !submission.request) return null;
+  return {
+    tone: "success",
+    code: submission.result,
+    message: `完成了今日委托：+${submission.request.goldReward}g，关系更近了一步。`,
+  };
+}
+
+/** Maps the fixed watering-can upgrade result without exposing prices or materials to the UI reducer. */
+function wateringCanUpgradeFeedback(result: WateringCanUpgradeResult): ActionFeedback {
+  switch (result) {
+    case "upgraded-watering-can": return { tone: "success", code: result, message: "水壶已升级到 Lv2，一次最多浇三格。" };
+    case "watering-upgrade-locked": return { tone: "error", code: result, message: "昊天会在 Day 3 介绍这项升级。" };
+    case "watering-already-upgraded": return { tone: "error", code: result, message: "水壶已经是 Lv2。" };
+    case "watering-upgrade-unavailable": return { tone: "error", code: result, message: "需要到昊天身边升级水壶。" };
+    case "watering-upgrade-insufficient-gold": return { tone: "error", code: result, message: "升级需要 900g。" };
+    case "watering-upgrade-insufficient-wood": return { tone: "error", code: result, message: "升级还需要 15 份木材。" };
+  }
+}
+
+/** Maps the fixed backpack upgrade result without duplicating capacity mutation in Vue. */
+function backpackUpgradeFeedback(result: BackpackUpgradeResult): ActionFeedback {
+  switch (result) {
+    case "upgraded-backpack": return { tone: "success", code: result, message: "背包已经扩充到 32 格。" };
+    case "backpack-upgrade-locked": return { tone: "error", code: result, message: "华强会在 Day 5 带来扩容背包。" };
+    case "backpack-already-upgraded": return { tone: "error", code: result, message: "背包已经扩充到 32 格。" };
+    case "backpack-upgrade-unavailable": return { tone: "error", code: result, message: "需要到华强身边购买背包扩容。" };
+    case "backpack-upgrade-insufficient-gold": return { tone: "error", code: result, message: "背包扩容需要 1500g。" };
   }
 }
 

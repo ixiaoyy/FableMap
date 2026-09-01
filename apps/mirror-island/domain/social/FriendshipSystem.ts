@@ -6,6 +6,7 @@ import {
 } from "./definitions.ts";
 
 export type TalkFriendshipResult = "recorded" | "already-counted" | "missing-friendship";
+export type RewardFriendshipResult = "rewarded" | "missing-friendship" | "points-limit";
 
 export class FriendshipSystem {
   /** Records one valid daily conversation and applies the capped twenty-point gain exactly once. */
@@ -16,6 +17,15 @@ export class FriendshipSystem {
     friendship.points = Math.min(FRIENDSHIP_MAX_POINTS, friendship.points + DAILY_TALK_POINTS);
     friendship.lastTalkedDay = state.day;
     return "recorded";
+  }
+
+  /** Adds one positive capped request reward without changing the daily-talk marker. */
+  reward(state: GameState, npcId: string, points: number): RewardFriendshipResult {
+    const friendship = state.friendships[npcId];
+    if (!friendship) return "missing-friendship";
+    if (!Number.isSafeInteger(points) || points <= 0) return "points-limit";
+    friendship.points = Math.min(FRIENDSHIP_MAX_POINTS, friendship.points + points);
+    return "rewarded";
   }
 
   /** Applies one pre-increment daily decay to missed, non-zero and non-maxed resident friendships. */

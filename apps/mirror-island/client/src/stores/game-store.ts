@@ -40,6 +40,12 @@ export interface FriendshipProjection {
   readonly lastTalkedDay: number;
 }
 
+export interface DailyRequestProjection {
+  readonly day: number;
+  readonly requestId: string;
+  readonly completed: boolean;
+}
+
 const mutableState = reactive({
   phase: "initializing" as GamePhase,
   saveAvailable: false,
@@ -51,7 +57,11 @@ const mutableState = reactive({
   playerAppearanceId: DEFAULT_PLAYER_APPEARANCE_ID as PlayerAppearanceId,
   gold: 0,
   inventory: [] as InventorySlotProjection[],
+  inventoryCapacity: 24 as 24 | 32,
+  wateringCanLevel: 1 as 1 | 2,
   friendships: {} as Record<string, FriendshipProjection>,
+  dailyRequest: null as DailyRequestProjection | null,
+  seenEventIds: [] as string[],
   selectedHotbarIndex: null as number | null,
   selectedItemId: "" as ItemId | "",
   worldActionBusy: false,
@@ -96,9 +106,13 @@ export function applyGameState(state: GameState): void {
     itemId: slot.itemId,
     quantity: slot.quantity,
   }));
+  mutableState.inventoryCapacity = state.inventoryCapacity;
+  mutableState.wateringCanLevel = state.wateringCanLevel;
   mutableState.friendships = Object.fromEntries(
     Object.entries(state.friendships).map(([npcId, friendship]) => [npcId, { ...friendship }]),
   );
+  mutableState.dailyRequest = state.dailyRequest ? { ...state.dailyRequest } : null;
+  mutableState.seenEventIds = [...state.seenEventIds];
   const selectedIndex = mutableState.selectedHotbarIndex;
   if (selectedIndex !== null) {
     const selectedSlot = mutableState.inventory[selectedIndex];
@@ -281,7 +295,11 @@ export function clearGameState(): void {
   mutableState.playerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID;
   mutableState.gold = 0;
   mutableState.inventory = [];
+  mutableState.inventoryCapacity = 24;
+  mutableState.wateringCanLevel = 1;
   mutableState.friendships = {};
+  mutableState.dailyRequest = null;
+  mutableState.seenEventIds = [];
   clearHotbarSelection();
   mutableState.worldActionBusy = false;
   setActionFeedback(null);

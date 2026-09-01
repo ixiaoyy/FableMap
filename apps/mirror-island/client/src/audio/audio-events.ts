@@ -37,6 +37,8 @@ export function audioCueForCommandResult(
     }
     case "move":
     case "craft":
-    case "talk-to-npc": return null;
+    case "talk-to-npc":
+    case "upgrade-watering-can":
+    case "upgrade-backpack": return null;
   }
 }

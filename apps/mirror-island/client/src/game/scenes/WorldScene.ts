@@ -661,6 +661,7 @@ export class WorldScene extends Phaser.Scene {
         type: "use-item-on-target",
         itemId: selectedItemId,
         targetId: entity.entityId,
+        facing: this.facing,
       });
       if (feedback?.tone === "success") entity.playImpact();
     });
@@ -947,22 +948,30 @@ export class WorldScene extends Phaser.Scene {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
       return;
     }
-    const friendshipBefore = gameUiState.friendships[npc.spawn.npcId];
-    const firstTalkToday = friendshipBefore !== undefined && friendshipBefore.lastTalkedDay !== gameUiState.day;
-    dispatchLocalGameCommand({ type: "talk-to-npc", npcId: npc.spawn.npcId });
-    if (firstTalkToday && gameUiState.friendships[npc.spawn.npcId]?.lastTalkedDay === gameUiState.day) {
-      npc.playFriendshipPulse();
-      setActionFeedback({
-        tone: "success",
-        code: "friendship-talked",
-        message: `与${dialogue.speaker}更熟悉了一点。`,
-      });
-    }
-    if (npc.spawn.interactionType === "shop") {
-      openShop(dialogue.lines[0]);
+    const interaction = dispatchLocalGameCommand({ type: "talk-to-npc", npcId: npc.spawn.npcId });
+    if (!interaction) return;
+    const selectedDialogue = getDialogueDefinition(interaction.dialogueId, {
+      day: state.day,
+      minuteOfDay: state.minuteOfDay,
+      shopAvailable: interaction.shopAvailable,
+    });
+    if (!selectedDialogue) {
+      setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
       return;
     }
-    setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });
+    if (interaction.firstTalkToday && gameUiState.friendships[npc.spawn.npcId]?.lastTalkedDay === gameUiState.day) {
+      npc.playFriendshipPulse();
+      if (!interaction.feedback) setActionFeedback({
+        tone: "success",
+        code: "friendship-talked",
+        message: `与${selectedDialogue.speaker}更熟悉了一点。`,
+      });
+    }
+    if (interaction.shopAvailable && !interaction.dialogueId.startsWith("event:")) {
+      openShop(selectedDialogue.lines[0]);
+      return;
+    }
+    setDialogue({ speaker: selectedDialogue.speaker, lines: selectedDialogue.lines });
   }
 
   /** Opens one nearby environment hotspot through the existing transient dialogue projection. */
