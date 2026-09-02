@@ -15,8 +15,8 @@
 - 宠物不得复用 NPC friendship/schedule 身份，也不得进入 NPC 碰撞/避让集合。
 - 素材缺方向或风格不匹配时，不用 CSS 翻转/模糊缩放伪装完整动画。
 
-## External Publication Gate
+## External Publication Verification
 
-- 2026-09-02 实测两个正式 CDN key 均为 HTTP 404；代码使用 code-drawn fallback，因此本地玩法/构建可继续，但不能宣称媒体发布完成。
-- 已在工作区补齐 `publish-media.yml` 精确 allowlist、manifest、prepare-media 与 NOTICE；必须先让 workflow 改动进入默认分支，再分别 dispatch 原始 `cat_0.png` / `dog_2.png`。
-- 发布后回读核对 cat `8348` bytes / `914bae85...`、dog `9202` bytes / `77f4667a...`、`image/png` 与 `public,max-age=31536000,immutable`，随后才能完成任务媒体门禁。
+- GitHub Actions runs `33610500461` / `33610500474` 已从精确 allowlist 发布原始 `cat_0.png` / `dog_2.png`。
+- CDN 回读已核对 cat `8348` bytes / `914bae85...`、dog `9202` bytes / `77f4667a...`、512×256、`image/png` 与 `public,max-age=31536000,immutable`。
+- 最新 `origin/main` 的隔离 worktree 已从 CDN 成功执行 `prepare:media`，共准备 36 项媒体；媒体发布门禁完成。
