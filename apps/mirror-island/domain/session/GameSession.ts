@@ -27,6 +27,11 @@ import {
   type WateringCanUpgradeResult,
 } from "../progression/UpgradeSystem.ts";
 import {
+  PetSystem,
+  type PetAdoptionResult,
+  type PetInteractionResult,
+} from "../pets/PetSystem.ts";
+import {
   MAIN_SAVE_SLOT,
   createStoredGame,
   type SaveRepository,
@@ -86,6 +91,7 @@ export class GameSession {
   private readonly dialogue = new NpcDialogueSystem();
   private readonly firstWeekMilestones = new FirstWeekMilestoneSystem();
   private readonly upgrades = new UpgradeSystem(this.inventory);
+  private readonly pets = new PetSystem();
   private readonly npcMotions: NpcMotionRuntime;
   private readonly listeners = new Set<GameStateListener>();
   private state: GameState | null = null;
@@ -222,6 +228,16 @@ export class GameSession {
         const result = this.firstWeekMilestones.acknowledge(state, command.eventId);
         if (result === "milestone-acknowledged") this.commitCriticalChange();
         return firstWeekMilestoneFeedback(result, command.eventId);
+      }
+      case "adopt-pet": {
+        const result = this.pets.adopt(state, command.species, command.name);
+        if (result === "adopted") this.commitCriticalChange();
+        return petAdoptionFeedback(result, state.pet?.name ?? command.name);
+      }
+      case "pet-home-pet": {
+        const result = this.pets.pet(state);
+        if (result === "petted") this.commitCriticalChange();
+        return petInteractionFeedback(result, state.pet?.name ?? "伙伴");
       }
       case "transition-region": {
         const exit = this.catalog.exitAt(
@@ -498,6 +514,27 @@ function farmingFeedback(result: FarmingResult): ActionFeedback | null {
     case "too-far": return error("离农田太远。");
     case "inventory-full": return error("背包已满。");
     case "missing-tile": return error("农田不存在。");
+  }
+}
+
+/** Maps irreversible adoption outcomes without exposing pet mutation rules to Vue. */
+function petAdoptionFeedback(result: PetAdoptionResult, petName: string): ActionFeedback {
+  switch (result) {
+    case "adopted": return { tone: "success", code: "pet-adopted", message: `${petName}来到家里了。` };
+    case "not-ready": return { tone: "error", code: result, message: "等到 Day 2，再来迎接家园伙伴。" };
+    case "already-adopted": return { tone: "error", code: result, message: "这个家已经有一位伙伴了。" };
+    case "invalid-species": return { tone: "error", code: result, message: "只能在猫和狗之间选择。" };
+    case "invalid-name": return { tone: "error", code: result, message: "名字需为 1～12 个字符，且不能含控制字符。" };
+  }
+}
+
+/** Maps the once-per-day home interaction to one warm visible result while bond stays hidden. */
+function petInteractionFeedback(result: PetInteractionResult, petName: string): ActionFeedback {
+  switch (result) {
+    case "petted": return { tone: "success", code: "pet-petted", message: `轻轻摸了摸${petName}，它开心地蹭了蹭你。` };
+    case "already-petted": return { tone: "success", code: result, message: `${petName}今天已经被好好摸过了。` };
+    case "missing-pet": return { tone: "error", code: result, message: "家里还没有可以抚摸的伙伴。" };
+    case "pet-not-present": return { tone: "error", code: result, message: `${petName}这会儿不在这里。` };
   }
 }
 

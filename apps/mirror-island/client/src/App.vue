@@ -18,6 +18,7 @@ import {
 } from "./session/local-game-session.ts";
 import {
   gameUiState,
+  openPetAdoption,
   setGamePhase,
   setSaveAvailable,
 } from "./stores/game-store.ts";
@@ -35,6 +36,7 @@ import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
 import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
 import RequestBoardPanel from "./ui/requests/RequestBoardPanel.vue";
 import TodayHint from "./ui/retention/TodayHint.vue";
+import PetAdoptionPanel from "./ui/pets/PetAdoptionPanel.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -49,6 +51,10 @@ const daylightStyle = computed(() => ({
 const homeHeroStyle = {
   "--home-hero-image": `url("${HOME_HERO_URL}")`,
 };
+const petAdoptionPending = computed(() => (
+  gameUiState.day >= 2
+  && gameUiState.pet === null
+));
 
 const phaseLabel = computed(() => ({
   initializing: "正在准备本地世界",
@@ -185,7 +191,7 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
@@ -197,10 +203,21 @@ onUnmounted(() => {
       <BackpackPanel />
       <RequestBoardPanel />
       <CalendarPanel />
+      <button
+        v-if="petAdoptionPending && !gameUiState.petAdoptionOpen && gameUiState.regionId === 'farm'"
+        type="button"
+        class="pet-adoption-invite"
+        @click="openPetAdoption"
+      >
+        <span aria-hidden="true">◇</span>
+        <strong>院门边的竹篮</strong>
+        <small>选择家园伙伴</small>
+      </button>
       <TouchControls v-if="!debugMode" />
       <DialoguePanel />
       <ShopPanel />
       <SleepConfirmationPanel />
+      <PetAdoptionPanel />
       <div v-if="!debugMode" class="game-hud">
         <Hotbar />
       </div>

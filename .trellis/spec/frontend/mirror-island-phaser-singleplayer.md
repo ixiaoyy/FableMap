@@ -25,7 +25,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v8 包含 region、player appearance、absolute day、minuteOfDay、gold、可扩容 inventory、水壶等级、通用作物、每日采集/委托、NPC friendship/dialogue history 与 once-only event IDs，旧 v1–v7 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v9 在 v8 retention 字段之外增加 nullable home pet identity、name、adopted day、hidden bond 与 last-petted day，旧 v1–v8 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源、农田和 friendship；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -1716,6 +1716,82 @@ state.dailyRequest = requests[Math.floor(Math.random() * requests.length)];
 
 // Correct: absolute day selects and save records one deterministic ID.
 state.dailyRequest = createDailyRequestState(state.day);
+```
+
+## Scenario: home cat and dog GameState v9
+
+### 1. Scope / Trigger
+
+- Trigger：Retention v8 已稳定，但 Day 2 缺少一个可恢复、低负担的家园伙伴循环；本场景只拥有一次猫/狗领养、Farm/Cottage 表现与每日一次抚摸。
+- 饥饿、喂食、疾病、繁殖、战斗、农场工作、第二只宠物、换宠和通用 animal framework 均不在本场景。
+
+### 2. Signatures
+
+```typescript
+type PetSpecies = "cat" | "dog";
+
+interface PetState {
+  readonly species: PetSpecies;
+  readonly name: string;
+  readonly adoptedDay: number;
+  bond: number;          // hidden 0..100
+  lastPettedDay: number; // 0 or adoptedDay..state.day
+}
+
+type GameCommand =
+  | { readonly type: "adopt-pet"; readonly species: PetSpecies; readonly name: string }
+  | { readonly type: "pet-home-pet" }
+  | ExistingGameCommand;
+
+function homePetRegionAt(minuteOfDay: number): "farm" | "cottage";
+```
+
+### 3. Contracts
+
+- `SAVE_FORMAT_VERSION` 与 `GAME_STATE_VERSION` 同步为 9；v8 完整验证后由唯一 `migrateGameStateV8` 补 `pet:null`，v1–v7 的既有 decoder 直接输出相同 current default。
+- `adopt-pet` 只在 Day≥2 且 `pet===null` 成功；species 是 closed cat/dog，name trim 后为 1–12 Unicode code points 且不含控制字符。确认后没有遗弃、替换或重领命令。
+- Day≥2、`pet===null` 只在玩家进入 Farm 小院时打开领养 modal；取消只写 client transient deferral，不写 `seenEventIds` 或 save，下一次进入 Farm/playing 仍可补发。
+- `pet-home-pet` 只在当前 `homePetRegionAt` 对应区域成功；每日首次设置 `lastPettedDay=day` 并把 bond 加一、封顶100，同日重复只返回温和反馈且不 publish/save。
+- 06:00–17:59 宠物在 Farm，18:00–24:00 在 Cottage；位置、anchor index、motion、idle/rest cadence 和 sprite frame 均为 client presentation，不进入 GameState/StoredGame。
+- Farm/Cottage 各有三个 Tiled `SpawnPoints` pet anchor；client 在启动时采样验证短直线路径不穿 Collision。PetEntity 不进入 NPC registry、schedule、friendship、dynamic avoidance 或玩家碰撞集合。
+- 正式媒体为 bluecarrot16 `[LPC] Cats and Dogs` 两个原始 512×256 PNG，按 CC BY 3.0 选项采用并交付 NOTICE；runtime 只选橘猫/黄犬 32×32 frame。CDN 缺图时 code-drawn fallback 保持命令与存档可用，Git 不跟踪媒体二进制。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| v8 合法 save | 迁移 v9 `pet:null`，其余 retention/progression 字段保持 |
+| current v9 缺 pet、unknown species、非法 name/bond/day | decode 明确失败，原 IndexedDB record 不覆盖 |
+| Day1 adopt / 已有 pet 再 adopt | fixed error feedback；state byte-equivalent |
+| Farm 白天或 Cottage 夜间首次 pet | bond +1、lastPettedDay=current day、critical save |
+| 同日重复 pet | bond/day 不变，只返回 already-petted feedback |
+| 非 home region、Town/Foothills/Lakeshore | 无宠物 projection；命令返回 pet-not-present |
+| CDN pet sheet 缺失 | 显示可恢复媒体提示并使用 code-drawn pet；玩法继续 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Day 2 走出 Cottage 到小院，选择黄犬并命名“来福”，确认后 Farm 看见闲逛；刷新仍是来福，当日重复抚摸不加 bond，睡觉后可再互动。
+- Base：选择“稍后再说”零 mutation；离开/刷新后再次进入 Farm 仍出现同一 pending choice。
+- Bad：把宠物复用为 NPC friendship/schedule identity、保存 world 坐标/animation frame、Vue 直接写 bond，或用 seen event 永久吞掉取消后的领养。
+
+### 6. Tests Required
+
+- `test:life-loop` 覆盖 v8→v9、v9 幂等、损坏宠物字段、Unicode name、不可重复领养、每日 bond 与刷新恢复。
+- `test:town-population` 覆盖 Farm-only pending modal、取消 deferral、统一 input lock 与 pet command 静音映射。
+- 正式 Farm/Cottage decoder 断言各三个 anchor 且闭环采样不穿 Collision；typecheck、client build、manifest totals 与 Git 媒体二进制为0。
+- 真人检查猫/狗各一次、闲逛/休息/爱心、手机/键盘/200% zoom、CDN 缺图 fallback；Agent 不代签 CDN 对象或听感。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation invents durable identity/progress and joins NPC collision.
+gameUiState.pet.bond += 1;
+activeNpcs.push(petSprite);
+
+// Correct: UI dispatches one typed command; domain owns durable progress and client owns only motion.
+dispatchLocalGameCommand({ type: "pet-home-pet" });
+const snapshot = session.snapshot();
+if (snapshot.pet) petEntity.project(snapshot.pet, snapshot.day, presentationAnchors);
 ```
 
 ## Open-source contract

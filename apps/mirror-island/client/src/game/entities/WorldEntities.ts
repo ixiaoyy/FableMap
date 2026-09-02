@@ -1,13 +1,17 @@
 import Phaser from "phaser";
 import type { FarmTileState, ResourceState } from "../../../../domain/state/game-state.ts";
+import type { PetState } from "../../../../domain/pets/definitions.ts";
 import { cropDefinition } from "../../../../domain/farming/crops.ts";
 import type { NpcRuntimeSpawn } from "../../../../domain/world/npc-motions.ts";
+import type { Facing } from "../../../../domain/world/facing.ts";
 import type {
   ExitDefinition,
   InspectInteractionDefinition,
   InteractionDefinition,
   ResourceSpawnDefinition,
+  WorldPoint,
 } from "../../../../domain/world/regions.ts";
+import type { PetMediaProfile } from "../assets/pet-media.ts";
 import type { EntityMediaProfile } from "../assets/visual-profile.ts";
 
 const INTERACTION_PROMPT_DEPTH = 10_100;
@@ -666,6 +670,282 @@ export class NpcEntity {
   }
 }
 
+type PetMotionKind = "idle" | "walking" | "resting";
+
+const PET_WALK_SPEED_PIXELS_PER_SECOND = 18;
+const PET_IDLE_DURATION_MS = 1_400;
+const PET_REST_DURATION_MS = 2_600;
+
+export class PetEntity {
+  readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Sprite;
+  private readonly prompt: Phaser.GameObjects.Text;
+  private readonly heart: Phaser.GameObjects.Text;
+  private readonly usesFormalTexture: boolean;
+  private currentPet: PetState;
+  private anchors: readonly WorldPoint[];
+  private currentDay: number;
+  private anchorIndex: number;
+  private motion: PetMotionKind = "idle";
+  private pauseRemainingMs = PET_IDLE_DURATION_MS;
+  private facing: Facing = "down";
+  private hovered = false;
+  private nearby = false;
+  private inputLocked = false;
+  private animationPaused = false;
+
+  /** Creates one non-colliding client pet over a reviewed home-anchor loop. */
+  constructor(
+    scene: Phaser.Scene,
+    pet: PetState,
+    day: number,
+    anchors: readonly WorldPoint[],
+    private readonly media: PetMediaProfile,
+    onInteract: (entity: PetEntity) => void,
+  ) {
+    if (anchors.length < 2) throw new Error("Pet presentation requires at least two anchors.");
+    if (pet.species !== media.species) throw new Error("Pet media species does not match durable state.");
+    this.currentPet = { ...pet };
+    this.currentDay = day;
+    this.anchors = [...anchors];
+    this.anchorIndex = petAnchorIndex(pet, day, anchors.length);
+    const start = this.anchors[this.anchorIndex]!;
+    this.usesFormalTexture = scene.textures.exists(media.textureKey);
+    const textureKey = this.usesFormalTexture
+      ? media.textureKey
+      : createPetFallbackTexture(scene, media);
+    if (this.usesFormalTexture) registerPetWalkAnimations(scene, media);
+    this.body = scene.add.sprite(0, 0, textureKey, this.usesFormalTexture ? media.idle.down : 0)
+      .setOrigin(0.5, 0.76)
+      .setDisplaySize(this.usesFormalTexture ? 32 : 18, this.usesFormalTexture ? 32 : 18)
+      .setInteractive({ useHandCursor: true });
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.body.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.hovered = true;
+      this.refreshPrompt();
+    });
+    this.body.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.hovered = false;
+      this.refreshPrompt();
+    });
+    this.prompt = scene.add.text(start.x, start.y - 23, `${pet.name} · 抚摸`, {
+      ...textStyle("#fff0c6"),
+      backgroundColor: "#4a321f",
+      padding: { x: 3, y: 1 },
+    }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
+    this.heart = scene.add.text(start.x, start.y - 25, "♥", {
+      ...textStyle("#ff8d86"),
+      fontSize: "12px",
+      stroke: "#663433",
+      strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH + 1).setVisible(false);
+    this.container = scene.add.container(start.x, start.y, [this.body]).setDepth(100 + start.y);
+    this.refreshVisual();
+  }
+
+  /** Returns Euclidean distance from the pet's presentation position to one player point. */
+  distanceTo(x: number, y: number): number {
+    return Math.hypot(x - this.container.x, y - this.container.y);
+  }
+
+  /** Projects durable identity changes while preserving unsaved movement within the same day and region. */
+  project(pet: PetState, day: number, anchors: readonly WorldPoint[]): void {
+    if (pet.species !== this.currentPet.species) throw new Error("Adopted pet species cannot change.");
+    this.currentPet = { ...pet };
+    this.prompt.setText(`${pet.name} · 抚摸`);
+    if (day === this.currentDay) return;
+    this.currentDay = day;
+    this.anchors = [...anchors];
+    this.anchorIndex = petAnchorIndex(pet, day, anchors.length);
+    const start = this.anchors[this.anchorIndex]!;
+    this.container.setPosition(start.x, start.y).setDepth(100 + start.y);
+    this.motion = "idle";
+    this.pauseRemainingMs = PET_IDLE_DURATION_MS;
+    this.refreshVisual();
+    this.refreshDetachedObjects();
+  }
+
+  /** Advances deterministic short-path idle, walk and rest presentation without touching GameState. */
+  advance(deltaMs: number, paused: boolean): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
+    if (paused) {
+      this.pauseAnimation();
+      return;
+    }
+    this.resumeAnimation();
+    const elapsed = Math.min(deltaMs, 100);
+    if (this.motion !== "walking") {
+      this.pauseRemainingMs -= elapsed;
+      if (this.pauseRemainingMs <= 0) this.startWalking();
+      return;
+    }
+    this.advanceWalking(elapsed);
+  }
+
+  /** Projects proximity and modal ownership into one touch-safe pet affordance. */
+  projectAffordance(nearby: boolean, inputLocked: boolean): void {
+    this.nearby = nearby;
+    this.inputLocked = inputLocked;
+    this.refreshPrompt();
+  }
+
+  /** Plays the once-per-day heart response and briefly settles the pet into a resting pose. */
+  playHeartPulse(): void {
+    this.motion = "resting";
+    this.pauseRemainingMs = 1_800;
+    this.refreshVisual();
+    this.container.scene.tweens.killTweensOf(this.heart);
+    this.heart
+      .setVisible(true)
+      .setAlpha(1)
+      .setPosition(this.container.x, this.container.y - 25)
+      .setScale(0.75);
+    this.container.scene.tweens.add({
+      targets: this.heart,
+      y: this.container.y - 39,
+      alpha: 0,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 760,
+      ease: "Quad.Out",
+      onComplete: () => this.heart.setVisible(false),
+    });
+  }
+
+  /** Destroys the complete transient pet view and any detached feedback objects. */
+  destroy(): void {
+    this.container.scene.tweens.killTweensOf(this.heart);
+    this.prompt.destroy();
+    this.heart.destroy();
+    this.container.destroy(true);
+  }
+
+  /** Starts the next direct anchor leg and chooses a four-direction walk animation. */
+  private startWalking(): void {
+    const target = this.anchors[(this.anchorIndex + 1) % this.anchors.length]!;
+    this.facing = petFacingForDelta(target.x - this.container.x, target.y - this.container.y);
+    this.motion = "walking";
+    this.refreshVisual();
+  }
+
+  /** Consumes one bounded walking slice and settles exactly on the reviewed target anchor. */
+  private advanceWalking(deltaMs: number): void {
+    const targetIndex = (this.anchorIndex + 1) % this.anchors.length;
+    const target = this.anchors[targetIndex]!;
+    const deltaX = target.x - this.container.x;
+    const deltaY = target.y - this.container.y;
+    const distance = Math.hypot(deltaX, deltaY);
+    const step = PET_WALK_SPEED_PIXELS_PER_SECOND * deltaMs / 1_000;
+    if (distance <= step || distance === 0) {
+      this.container.setPosition(target.x, target.y);
+      this.anchorIndex = targetIndex;
+      this.motion = (this.currentDay + targetIndex + (this.currentPet.species === "dog" ? 1 : 0)) % 3 === 0
+        ? "resting"
+        : "idle";
+      this.pauseRemainingMs = this.motion === "resting" ? PET_REST_DURATION_MS : PET_IDLE_DURATION_MS;
+      this.refreshVisual();
+    } else {
+      this.container.setPosition(
+        this.container.x + deltaX / distance * step,
+        this.container.y + deltaY / distance * step,
+      );
+    }
+    this.container.setDepth(100 + Math.floor(this.container.y));
+    this.refreshDetachedObjects();
+  }
+
+  /** Applies one formal frame/animation or leaves the code-drawn fallback stable and readable. */
+  private refreshVisual(): void {
+    if (!this.usesFormalTexture) return;
+    if (this.motion === "walking") {
+      this.body.play(petWalkAnimationKey(this.media, this.facing), true);
+      return;
+    }
+    this.body.stop();
+    if (this.motion === "resting") {
+      this.body.setFrame(this.media.rest[this.facing === "left" ? "left" : "right"]);
+    } else {
+      this.body.setFrame(this.media.idle[this.facing]);
+    }
+  }
+
+  /** Keeps prompt and hidden heart origins synchronized with the moving container. */
+  private refreshDetachedObjects(): void {
+    this.prompt.setPosition(this.container.x, this.container.y - 23);
+    if (!this.heart.visible) this.heart.setPosition(this.container.x, this.container.y - 25);
+  }
+
+  /** Shows the pet verb only while hover or nearest-player proximity makes it actionable. */
+  private refreshPrompt(): void {
+    this.prompt.setVisible(!this.inputLocked && (this.hovered || this.nearby));
+  }
+
+  /** Pauses an in-flight walk animation while modal or transition ownership freezes the world. */
+  private pauseAnimation(): void {
+    if (!this.usesFormalTexture || this.animationPaused || !this.body.anims.isPlaying) return;
+    this.body.anims.pause();
+    this.animationPaused = true;
+  }
+
+  /** Resumes only the walk animation paused by the pet's own presentation owner. */
+  private resumeAnimation(): void {
+    if (!this.animationPaused) return;
+    this.body.anims.resume();
+    this.animationPaused = false;
+  }
+}
+
+/** Creates a stable starting anchor from durable identity and the current absolute day. */
+function petAnchorIndex(pet: PetState, day: number, anchorCount: number): number {
+  if (!Number.isInteger(anchorCount) || anchorCount < 1) throw new Error("Pet anchor count is invalid.");
+  return (pet.adoptedDay + day + (pet.species === "dog" ? 1 : 0)) % anchorCount;
+}
+
+/** Chooses the dominant four-direction facing for one short client-only route leg. */
+function petFacingForDelta(deltaX: number, deltaY: number): Facing {
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) return deltaX < 0 ? "left" : "right";
+  return deltaY < 0 ? "up" : "down";
+}
+
+/** Returns one globally stable Phaser animation key for a species and facing. */
+function petWalkAnimationKey(media: PetMediaProfile, facing: Facing): string {
+  return `${media.textureKey}-walk-${facing}`;
+}
+
+/** Registers four non-duplicated walk loops over one reviewed LPC sprite sheet. */
+function registerPetWalkAnimations(scene: Phaser.Scene, media: PetMediaProfile): void {
+  for (const facing of ["down", "left", "right", "up"] as const) {
+    const key = petWalkAnimationKey(media, facing);
+    if (scene.anims.exists(key)) continue;
+    scene.anims.create({
+      key,
+      frames: scene.anims.generateFrameNumbers(media.textureKey, { frames: [...media.walk[facing]] }),
+      frameRate: 6,
+      repeat: -1,
+    });
+  }
+}
+
+/** Generates a small species-colored texture only when reviewed CDN media is unavailable. */
+function createPetFallbackTexture(scene: Phaser.Scene, media: PetMediaProfile): string {
+  const key = `${media.textureKey}-fallback`;
+  if (scene.textures.exists(key)) return key;
+  const graphics = scene.add.graphics().setVisible(false);
+  graphics.fillStyle(media.fallbackAccent, 1);
+  graphics.fillRect(4, 3, 3, 3);
+  graphics.fillRect(9, 3, 3, 3);
+  graphics.fillRect(3, 6, 10, 7);
+  graphics.fillStyle(media.fallbackColor, 1);
+  graphics.fillRect(4, 5, 8, 7);
+  graphics.fillRect(2, 8, 3, 3);
+  graphics.fillStyle(0x241b16, 1);
+  graphics.fillRect(6, 7, 1, 1);
+  graphics.fillRect(9, 7, 1, 1);
+  graphics.generateTexture(key, 16, 16);
+  graphics.destroy();
+  return key;
+}
+
 interface NpcActivityVisual {
   readonly label: string;
   readonly bodyX: number;
@@ -837,6 +1117,17 @@ export class EntityFactory {
   /** Creates one runtime-projected NPC entity from catalog identity and transient motion metadata. */
   createNpc(spawn: NpcRuntimeSpawn, onInteract: (entity: NpcEntity) => void): NpcEntity {
     return new NpcEntity(this.scene, spawn, this.media, onInteract);
+  }
+
+  /** Creates one presentation-only home pet without adding it to NPC or collision collections. */
+  createPet(
+    pet: PetState,
+    day: number,
+    anchors: readonly WorldPoint[],
+    media: PetMediaProfile,
+    onInteract: (entity: PetEntity) => void,
+  ): PetEntity {
+    return new PetEntity(this.scene, pet, day, anchors, media, onInteract);
   }
 }
 

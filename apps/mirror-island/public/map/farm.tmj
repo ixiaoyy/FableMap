@@ -139,6 +139,66 @@
           "width": 0,
           "x": 288,
           "y": 256
+        },
+        {
+          "height": 0,
+          "id": 102,
+          "name": "Pet Yard West",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "pet-farm-yard-west"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 352,
+          "y": 272
+        },
+        {
+          "height": 0,
+          "id": 103,
+          "name": "Pet Yard East",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "pet-farm-yard-east"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 400,
+          "y": 304
+        },
+        {
+          "height": 0,
+          "id": 104,
+          "name": "Pet Yard Rest",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "pet-farm-yard-rest"
+            }
+          ],
+          "rotation": 0,
+          "type": "spawn",
+          "visible": true,
+          "width": 0,
+          "x": 368,
+          "y": 336
         }
       ],
       "opacity": 1,
@@ -745,7 +805,7 @@
     }
   ],
   "nextlayerid": 12,
-  "nextobjectid": 102,
+  "nextobjectid": 105,
   "orientation": "orthogonal",
   "properties": [
     {

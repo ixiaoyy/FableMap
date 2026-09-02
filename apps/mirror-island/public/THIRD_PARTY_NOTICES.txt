@@ -1,5 +1,13 @@
 Mirror Island — Third-Party Notices
 
+[LPC] Cats and Dogs
+Artist: bluecarrot16
+Official source: https://opengameart.org/content/lpc-cats-and-dogs
+License option used: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+License text: https://creativecommons.org/licenses/by/3.0/
+Use in Mirror Island: Orange cat and yellow dog home-pet walk, idle, and rest frames.
+Modification: None. Both published PNG files are byte-identical to the reviewed official files; runtime selects frames from the original sheets.
+
 GARDENS, 16x16 icon pack
 Author: IvoryRed
 Official source: https://ivoryred.itch.io/gardens-16x16-icon-pack

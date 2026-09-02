@@ -2,6 +2,7 @@ import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 import type { RecipeId } from "../recipes/definitions.ts";
 import type { RetentionEventId } from "../dialogue/definitions.ts";
 import type { Facing } from "../world/facing.ts";
+import type { PetSpecies } from "../pets/definitions.ts";
 
 export type GameCommand =
   | { readonly type: "move"; readonly xAxis: -1 | 0 | 1; readonly yAxis: -1 | 0 | 1; readonly deltaMs: number }
@@ -14,6 +15,8 @@ export type GameCommand =
   | { readonly type: "upgrade-watering-can" }
   | { readonly type: "upgrade-backpack" }
   | { readonly type: "acknowledge-retention-event"; readonly eventId: RetentionEventId }
+  | { readonly type: "adopt-pet"; readonly species: PetSpecies; readonly name: string }
+  | { readonly type: "pet-home-pet" }
   | { readonly type: "transition-region"; readonly exitId: string };
 
 export interface ActionFeedback {

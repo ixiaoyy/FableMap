@@ -169,6 +169,19 @@ jobs:
                 exit 1
               fi
               ;;
+            assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/cat.png|\
+            assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/dog.png)
+              if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
+                echo "::error::Reviewed LPC home pet media must use image/png"
+                exit 1
+              fi
+              CDN_S3_PREFIX="${CDN_S3_PREFIX#/}"
+              CDN_S3_PREFIX="${CDN_S3_PREFIX%/}"
+              if [ "${CDN_S3_PREFIX}" != "game" ]; then
+                echo "::error::Reviewed LPC home pet media must publish under the game prefix"
+                exit 1
+              fi
+              ;;
             assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png)
               if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
                 echo "::error::The Mirror Island homepage hero must use image/png"
@@ -262,6 +275,8 @@ jobs:
               case "${MEDIA_OBJECT_KEY}|${MEDIA_SOURCE_URL}" in
                 assets/vendor/peludo/water-splash-2021/watering.wav\|https://opengameart.org/sites/default/files/splash2_0.wav|\
                 assets/vendor/spring-spring/birds-and-wind-2019/farm-ambience.ogg\|https://opengameart.org/sites/default/files/Birds%20and%20Wind%20-%20Ambient_1.ogg|\
+                assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/cat.png\|https://opengameart.org/sites/default/files/cat_0.png|\
+                assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/dog.png\|https://opengameart.org/sites/default/files/dog_2.png|\
                 assets/vendor/milkybread/village-ambience-830375/town-ambience.mp3\|https://cdn.freesound.org/previews/830/830375_15877700-hq.mp3|\
                 assets/vendor/breviceps/people-talking-473586/town-walla.mp3\|https://cdn.freesound.org/previews/473/473586_9159316-hq.mp3|\
                 assets/vendor/transitking/water-waves-11505/lakeshore-water.mp3\|https://cdn.freesound.org/previews/11/11505_31028-hq.mp3|\

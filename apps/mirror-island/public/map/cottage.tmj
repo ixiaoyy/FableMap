@@ -10,7 +10,7 @@
   "tilewidth": 16,
   "tileheight": 16,
   "nextlayerid": 12,
-  "nextobjectid": 100,
+  "nextobjectid": 103,
   "properties": [
     {
       "name": "regionId",
@@ -186,6 +186,63 @@
               "name": "spawnId",
               "type": "string",
               "value": "entry"
+            }
+          ]
+        },
+        {
+          "id": 100,
+          "name": "Pet Hearth",
+          "type": "spawn",
+          "point": true,
+          "x": 272,
+          "y": 304,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "pet-cottage-hearth"
+            }
+          ]
+        },
+        {
+          "id": 101,
+          "name": "Pet Window",
+          "type": "spawn",
+          "point": true,
+          "x": 352,
+          "y": 304,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "pet-cottage-window"
+            }
+          ]
+        },
+        {
+          "id": 102,
+          "name": "Pet Rug",
+          "type": "spawn",
+          "point": true,
+          "x": 320,
+          "y": 368,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            {
+              "name": "spawnId",
+              "type": "string",
+              "value": "pet-cottage-rug"
             }
           ]
         }

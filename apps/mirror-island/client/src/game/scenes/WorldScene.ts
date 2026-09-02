@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
+import { homePetRegionAt } from "../../../../domain/pets/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
 import { AudioDirector } from "../../audio/AudioDirector.ts";
 import { AUDIO_CUE } from "../../audio/audio-catalog.ts";
@@ -27,6 +28,11 @@ import {
   setWorldActionBusy,
 } from "../../stores/game-store.ts";
 import { MEDIA_KEYS, MEDIA_URLS } from "../assets/media-catalog.ts";
+import {
+  PET_MEDIA_KEYS,
+  PET_MEDIA_URLS,
+  petMediaProfile,
+} from "../assets/pet-media.ts";
 import {
   candidateActionForItem,
   GARDENS_ICON_FRAMES,
@@ -61,14 +67,17 @@ import {
   ForageEntity,
   InspectEntity,
   NpcEntity,
+  PetEntity,
   RockEntity,
   TreeEntity,
 } from "../entities/WorldEntities.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
+import { petAnchorsForRegion } from "../pets/pet-presentation.ts";
 
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
+const PET_INTERACTION_DISTANCE = 42;
 const BED_INTERACTION_DISTANCE = 42;
 const ROCK_INTERACTION_DISTANCE = 42;
 const INSPECT_INTERACTION_DISTANCE = 48;
@@ -102,6 +111,7 @@ export class WorldScene extends Phaser.Scene {
   private readonly inspectViews = new Map<string, InspectEntity>();
   private readonly exitHintViews = new Map<string, ExitHintEntity>();
   private readonly npcViews = new Map<string, NpcEntity>();
+  private petView: PetEntity | null = null;
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private activeMap: Phaser.Tilemaps.Tilemap | null = null;
   private activeRegionId = "";
@@ -151,6 +161,8 @@ export class WorldScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 32,
     });
+    this.load.spritesheet(PET_MEDIA_KEYS.cat, PET_MEDIA_URLS.cat, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(PET_MEDIA_KEYS.dog, PET_MEDIA_URLS.dog, { frameWidth: 32, frameHeight: 32 });
     if (this.toolArtCandidateEnabled) {
       this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.plowing, TOOL_ART_CANDIDATE_URLS.plowing, {
         frameWidth: 32,
@@ -211,6 +223,10 @@ export class WorldScene extends Phaser.Scene {
       this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || worldInputLocked,
     );
     if (this.activeRegionId) this.renderNpcs(this.activeRegionId);
+    this.petView?.advance(
+      delta,
+      worldInputLocked || this.transitionPhase !== "idle" || this.actionTimeline.isBusy(),
+    );
     this.projectInteractionAffordances(worldInputLocked);
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
     if (worldInputLocked) {
@@ -263,6 +279,7 @@ export class WorldScene extends Phaser.Scene {
     this.renderInspects(region.id);
     this.renderExitHints(region);
     this.renderNpcs(region.id);
+    this.renderPet(region.id, state);
   }
 
   /** Replaces all current Tilemap layers while preserving GameSession and the player view. */
@@ -595,6 +612,29 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Creates one adopted home pet only in its time-derived Farm or Cottage region. */
+  private renderPet(regionId: string, state: GameState): void {
+    const pet = state.pet;
+    if (!pet || homePetRegionAt(state.minuteOfDay) !== regionId) {
+      this.petView?.destroy();
+      this.petView = null;
+      return;
+    }
+    const homeRegion = homePetRegionAt(state.minuteOfDay);
+    const anchors = petAnchorsForRegion(this.catalog, homeRegion);
+    if (this.petView) {
+      this.petView.project(pet, state.day, anchors);
+      return;
+    }
+    this.petView = this.entityFactory.createPet(
+      pet,
+      state.day,
+      anchors,
+      petMediaProfile(pet.species),
+      (entity) => this.interactWithPet(entity),
+    );
+  }
+
   /** Projects player proximity into every shared interaction hint without mutating gameplay state. */
   private projectInteractionAffordances(worldInputLocked: boolean): void {
     const player = this.latestState?.player;
@@ -627,6 +667,11 @@ export class WorldScene extends Phaser.Scene {
         distance: view.distanceTo(player.x, player.y),
         limit: NPC_INTERACTION_DISTANCE,
       })),
+      ...(this.petView ? [{
+        view: this.petView,
+        distance: this.petView.distanceTo(player.x, player.y),
+        limit: PET_INTERACTION_DISTANCE,
+      }] : []),
     ];
     const nearest = candidates.reduce<(typeof candidates)[number] | null>((current, candidate) => {
       if (candidate.distance > candidate.limit) return current;
@@ -1034,6 +1079,19 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  /** Dispatches one nearby pet interaction and plays a heart only for the first valid touch that day. */
+  private interactWithPet(pet: PetEntity): void {
+    const state = this.latestState;
+    const player = state?.player;
+    if (!state || !player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    if (pet.distanceTo(player.x, player.y) > PET_INTERACTION_DISTANCE) {
+      setActionFeedback({ tone: "error", code: "pet-too-far", message: `再靠近${state.pet?.name ?? "伙伴"}一点。` });
+      return;
+    }
+    const feedback = dispatchLocalGameCommand({ type: "pet-home-pet" });
+    if (feedback?.code === "pet-petted") pet.playHeartPulse();
+  }
+
   /** Destroys current map/entity views and cancels ephemeral actions before rendering another region. */
   private destroyRegionViews(): void {
     this.actionTimeline?.cancel();
@@ -1050,6 +1108,8 @@ export class WorldScene extends Phaser.Scene {
     destroyAll(this.inspectViews);
     destroyAll(this.exitHintViews);
     destroyAll(this.npcViews);
+    this.petView?.destroy();
+    this.petView = null;
   }
 
   /** Releases subscriptions and optionally destroys views while the scene systems are still valid. */
@@ -1062,7 +1122,10 @@ export class WorldScene extends Phaser.Scene {
     this.stopProjection?.();
     this.stopProjection = undefined;
     if (destroyViews) this.destroyRegionViews();
-    else setWorldActionBusy(false);
+    else {
+      this.petView = null;
+      setWorldActionBusy(false);
+    }
   }
 }
 

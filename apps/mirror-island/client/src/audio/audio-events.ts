@@ -40,6 +40,8 @@ export function audioCueForCommandResult(
     case "talk-to-npc":
     case "upgrade-watering-can":
     case "upgrade-backpack":
-    case "acknowledge-retention-event": return null;
+    case "acknowledge-retention-event":
+    case "adopt-pet":
+    case "pet-home-pet": return null;
   }
 }
