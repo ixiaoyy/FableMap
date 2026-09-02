@@ -1,5 +1,6 @@
 import type { WorldCatalog } from "../../../../domain/world/regions.ts";
 import { validateNpcActivities } from "../../../../domain/world/npc-activities.ts";
+import { validatePetAnchors } from "../pets/pet-presentation.ts";
 import { validateNpcSchedules } from "../../../../domain/world/npc-schedules.ts";
 import { createWorldCatalog, decodeTiledRegion } from "./tiled-region-decoder.ts";
 
@@ -32,6 +33,7 @@ export function loadWorldCatalog(): Promise<WorldCatalog> {
     loadedCatalog = createWorldCatalog(regions);
     validateNpcSchedules(loadedCatalog);
     validateNpcActivities(loadedCatalog);
+    validatePetAnchors(loadedCatalog);
     return loadedCatalog;
   });
   return catalogPromise;

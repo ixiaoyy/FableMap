@@ -48,8 +48,12 @@ import {
   type RetentionEventId,
 } from "../dialogue/definitions.ts";
 import { decodeRelationshipStage } from "../social/relationship-stage.ts";
+import {
+  decodePetState,
+  type PetState,
+} from "../pets/definitions.ts";
 
-export const GAME_STATE_VERSION = 8 as const;
+export const GAME_STATE_VERSION = 9 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
 const LEGACY_TREE_ID = "tree-01";
@@ -105,9 +109,10 @@ export interface GameState {
   dailyRequest: DailyRequestState | null;
   npcDialogue: Record<string, NpcDialogueState>;
   seenEventIds: RetentionEventId[];
+  pet: PetState | null;
 }
 
-/** Creates a deterministic v8 game state for one validated appearance and Tiled-derived catalog. */
+/** Creates a deterministic v9 game state for one validated appearance and Tiled-derived catalog. */
 export function createInitialGameState(
   catalog: WorldCatalog,
   appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
@@ -233,10 +238,11 @@ export function cloneGameState(state: GameState): GameState {
       acknowledgedStage: memory.acknowledgedStage,
     }])),
     seenEventIds: [...state.seenEventIds],
+    pet: state.pet ? { ...state.pet } : null,
   };
 }
 
-/** Validates one unknown value as a complete version-8 game state and returns a defensive clone. */
+/** Validates one unknown value as a complete version-9 game state and returns a defensive clone. */
 export function decodeGameState(value: unknown): GameState {
   const state = recordFrom(value, "Game state is invalid.");
   if (state.version !== GAME_STATE_VERSION) throw new Error("Game state version is unsupported.");
@@ -258,10 +264,37 @@ export function decodeGameState(value: unknown): GameState {
     dailyRequest: decodeDailyRequest(state.dailyRequest, day),
     npcDialogue: decodeNpcDialogue(state.npcDialogue, day),
     seenEventIds: decodeSeenEventIds(state.seenEventIds),
+    pet: decodePetState(state.pet, day),
   };
 }
 
-/** Explicitly migrates a released v7 state into the v8 retention and progression contract. */
+/** Explicitly migrates a released v8 retention state into the nullable home-pet contract. */
+export function migrateGameStateV8(value: unknown): GameState {
+  const state = recordFrom(value, "Version-8 game state is invalid.");
+  if (state.version !== 8) throw new Error("Version-8 game state is unsupported.");
+  const day = positiveSafeInteger(state.day, "Game day is invalid.");
+  const inventoryCapacity = decodeInventoryCapacity(state.inventoryCapacity);
+  return {
+    version: GAME_STATE_VERSION,
+    day,
+    minuteOfDay: decodeGameMinute(state.minuteOfDay),
+    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
+    player: decodePlayerState(state.player),
+    inventory: decodeInventory(state.inventory, false, inventoryCapacity),
+    inventoryCapacity,
+    wateringCanLevel: decodeWateringCanLevel(state.wateringCanLevel),
+    resources: decodeResources(state.resources),
+    farmTiles: decodeFarmTilesV7(state.farmTiles),
+    friendships: decodeFriendships(state.friendships, day),
+    dailyForage: decodeDailyForage(state.dailyForage, day),
+    dailyRequest: decodeDailyRequest(state.dailyRequest, day),
+    npcDialogue: decodeNpcDialogue(state.npcDialogue, day),
+    seenEventIds: decodeSeenEventIds(state.seenEventIds),
+    pet: null,
+  };
+}
+
+/** Explicitly migrates a released v7 state into current retention, progression and pet defaults. */
 export function migrateGameStateV7(value: unknown): GameState {
   const state = recordFrom(value, "Version-7 game state is invalid.");
   if (state.version !== 7) throw new Error("Version-7 game state is unsupported.");
@@ -504,12 +537,12 @@ function decodeSeenEventIds(value: unknown): RetentionEventId[] {
   return eventIds;
 }
 
-/** Creates the v8 retention defaults shared by new games and every explicit older migration. */
+/** Creates current retention and pet defaults shared by new games and every pre-v8 migration. */
 function retentionDefaults(
   day: number,
 ): Pick<
   GameState,
-  "inventoryCapacity" | "wateringCanLevel" | "dailyRequest" | "npcDialogue" | "seenEventIds"
+  "inventoryCapacity" | "wateringCanLevel" | "dailyRequest" | "npcDialogue" | "seenEventIds" | "pet"
 > {
   return {
     inventoryCapacity: BASE_INVENTORY_CAPACITY,
@@ -517,6 +550,7 @@ function retentionDefaults(
     dailyRequest: createDailyRequestState(day),
     npcDialogue: {},
     seenEventIds: [],
+    pet: null,
   };
 }
 

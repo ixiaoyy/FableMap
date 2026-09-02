@@ -14,6 +14,7 @@
 | Ninja Adventure | 固定提交 `6ac78232...` | CC0-1.0 | 只使用 manifest 已登记角色/地形子集 |
 | VectoRaith Farming Sim | v1.08 ZIP SHA-256 `1957927a...` | 自定义项目使用许可 | Farm v1；只发布 used-tile compact atlases、EntityFactory frames 和 farmer sheet，不再分发原 ZIP/完整图集 |
 | IvoryRed GARDENS | 2026-08-27 原图 SHA-256 `de4dbbb...` | CC BY 4.0 | 只发布原始 160×176 图标 sheet；Hotbar 选择四个 16×16 frame，并在产品内交付署名 |
+| bluecarrot16 `[LPC] Cats and Dogs` | 2026-09-02 快照；cat SHA-256 `914bae85...`、dog `77f4667a...` | CC BY 3.0（采用页面提供的可选许可） | 只发布两个原始 512×256 PNG；运行时固定选择橘猫/黄犬 32×32 四方向 walk、idle 与 rest 帧，并在产品内交付署名 |
 | Phaser Vue TS template | 固定提交 `2fe6c3e...` | MIT | 只采用 Vue/Phaser 生命周期与 Vite 结构 |
 | Cabacos | 固定提交 `79e423d...` | 仓库声明 MIT，holder 待澄清 | 仅行为级移植物品、背包、种田和 Tiled 模式 |
 | Rick Survival | 固定提交 `ea9738c...` | 源码 MIT，素材禁用 | 首阶段不采用；后续仅参考战斗结构 |

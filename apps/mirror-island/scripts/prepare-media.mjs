@@ -9,6 +9,7 @@ const ninjaBaseUrl = `${vendorBaseUrl}/ninja-adventure/2024-04-19`;
 const vectoraithBaseUrl = `${vendorBaseUrl}/vectoraith/farming-sim-v1.08/original/16x16`;
 const vectoraithNpcBaseUrl = `${vendorBaseUrl}/vectoraith/top-down-rpg-npc-v1.6-demo/original/16x16`;
 const ivoryRedBaseUrl = `${vendorBaseUrl}/ivoryred/gardens-2026-08-27/original`;
+const bluecarrotPetBaseUrl = `${vendorBaseUrl}/bluecarrot16/lpc-cats-and-dogs-2016`;
 const homeArtBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31";
 const kenneyAudioBaseUrl = `${vendorBaseUrl}/kenney/rpg-audio-2014`;
 const rubberduckAudioBaseUrl = `${vendorBaseUrl}/rubberduck/100-cc0-sfx-2-2018`;
@@ -131,6 +132,20 @@ const assets = [
     outputs: ["public/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png"],
     bytes: 13130,
     sha256: "de4dbbb56936520882e1217aad9dae22e60a5f57dde15512f673ec031b581536",
+  },
+  {
+    name: "bluecarrot16 LPC orange cat",
+    url: `${bluecarrotPetBaseUrl}/cat.png`,
+    outputs: ["public/game-media/v1/assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/cat.png"],
+    bytes: 8348,
+    sha256: "914bae85486052a70d29b26d881bfce3dcaa987f6f95cab08e4a65e30fa13f97",
+  },
+  {
+    name: "bluecarrot16 LPC yellow dog",
+    url: `${bluecarrotPetBaseUrl}/dog.png`,
+    outputs: ["public/game-media/v1/assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/dog.png"],
+    bytes: 9202,
+    sha256: "77f4667ab3f681408a8afa528f3fff0bea3e3cd7d0e28d5c11f2d09c7729b891",
   },
   {
     name: "Mirror Island homepage hero",

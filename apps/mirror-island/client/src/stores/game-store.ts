@@ -6,6 +6,7 @@ import {
 } from "../../../domain/items/definitions.ts";
 import type { ActionFeedback } from "../../../domain/session/commands.ts";
 import type { GameState } from "../../../domain/state/game-state.ts";
+import type { PetState } from "../../../domain/pets/definitions.ts";
 import {
   DEFAULT_PLAYER_APPEARANCE_ID,
   type PlayerAppearanceId,
@@ -64,6 +65,7 @@ const mutableState = reactive({
   friendships: {} as Record<string, FriendshipProjection>,
   dailyRequest: null as DailyRequestProjection | null,
   seenEventIds: [] as string[],
+  pet: null as PetState | null,
   selectedHotbarIndex: null as number | null,
   selectedItemId: "" as ItemId | "",
   worldActionBusy: false,
@@ -77,18 +79,21 @@ const mutableState = reactive({
   audioSettingsOpen: false,
   backpackOpen: false,
   requestBoardOpen: false,
+  petAdoptionOpen: false,
   audioSettings: getAudioSettings(),
 });
 
 let confirmSleepAction: (() => void) | null = null;
 let feedbackTimer: number | null = null;
 let feedbackRevision = 0;
+let petAdoptionDeferredDay: number | null = null;
 
 export const gameUiState = readonly(mutableState);
 
 /** Updates the application shell phase without exposing persistence objects. */
 export function setGamePhase(phase: GamePhase): void {
   mutableState.phase = phase;
+  if (phase === "playing") refreshPetAdoptionPrompt();
 }
 
 /** Updates whether this browser can continue its anonymous local slot. */
@@ -98,6 +103,7 @@ export function setSaveAvailable(available: boolean): void {
 
 /** Projects the session-owned inventory into a serializable Vue read model. */
 export function applyGameState(state: GameState): void {
+  const previousDay = mutableState.day;
   mutableState.day = state.day;
   mutableState.minuteOfDay = state.minuteOfDay;
   mutableState.regionId = state.player.regionId;
@@ -117,6 +123,9 @@ export function applyGameState(state: GameState): void {
   );
   mutableState.dailyRequest = state.dailyRequest ? { ...state.dailyRequest } : null;
   mutableState.seenEventIds = [...state.seenEventIds];
+  mutableState.pet = state.pet ? { ...state.pet } : null;
+  if (previousDay !== state.day) petAdoptionDeferredDay = null;
+  refreshPetAdoptionPrompt();
   const selectedIndex = mutableState.selectedHotbarIndex;
   if (selectedIndex !== null) {
     const selectedSlot = mutableState.inventory[selectedIndex];
@@ -256,6 +265,7 @@ export function openSocial(): boolean {
     || mutableState.audioSettingsOpen
     || mutableState.backpackOpen
     || mutableState.requestBoardOpen
+    || mutableState.petAdoptionOpen
   ) return false;
   mutableState.socialOpen = true;
   return true;
@@ -311,6 +321,39 @@ export function openRequestBoard(): boolean {
 /** Closes the request-board projection without accepting, rerolling or completing a request. */
 export function closeRequestBoard(): void { mutableState.requestBoardOpen = false; }
 
+/** Opens the pending Day 2 adoption folio when no other modal or action owns input. */
+export function openPetAdoption(): boolean {
+  if (
+    mutableState.day < 2
+    || mutableState.regionId !== "farm"
+    || mutableState.pet
+    || isWorldInputLocked()
+  ) return false;
+  petAdoptionDeferredDay = null;
+  mutableState.petAdoptionOpen = true;
+  return true;
+}
+
+/** Defers the nullable adoption without writing a seen event or permanently dismissing the choice. */
+export function deferPetAdoption(): void {
+  if (!mutableState.pet && mutableState.day >= 2) petAdoptionDeferredDay = mutableState.day;
+  mutableState.petAdoptionOpen = false;
+}
+
+/** Reconciles Day 2+ durable pet state into the transient modal projection. */
+function refreshPetAdoptionPrompt(): void {
+  if (mutableState.pet || mutableState.day < 2) {
+    mutableState.petAdoptionOpen = false;
+    petAdoptionDeferredDay = null;
+    return;
+  }
+  if (mutableState.regionId !== "farm") {
+    mutableState.petAdoptionOpen = false;
+    return;
+  }
+  if (petAdoptionDeferredDay !== mutableState.day) mutableState.petAdoptionOpen = true;
+}
+
 /** Reports whether a modal Vue panel currently owns Phaser world input. */
 export function isWorldInputLocked(): boolean {
   return mutableState.worldActionBusy
@@ -321,7 +364,8 @@ export function isWorldInputLocked(): boolean {
     || mutableState.calendarOpen
     || mutableState.audioSettingsOpen
     || mutableState.backpackOpen
-    || mutableState.requestBoardOpen;
+    || mutableState.requestBoardOpen
+    || mutableState.petAdoptionOpen;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
@@ -339,6 +383,7 @@ export function clearGameState(): void {
   mutableState.friendships = {};
   mutableState.dailyRequest = null;
   mutableState.seenEventIds = [];
+  mutableState.pet = null;
   clearHotbarSelection();
   mutableState.worldActionBusy = false;
   setActionFeedback(null);
@@ -350,6 +395,8 @@ export function clearGameState(): void {
   mutableState.audioSettingsOpen = false;
   mutableState.backpackOpen = false;
   mutableState.requestBoardOpen = false;
+  mutableState.petAdoptionOpen = false;
+  petAdoptionDeferredDay = null;
   mutableState.audioSettings = getAudioSettings();
   cancelSleepConfirmation();
 }

@@ -207,10 +207,10 @@ test("calendar, spring crop catalog and daily forage use deterministic domain ru
   assert.equal(state.dailyForage.collectedIds.includes(FORAGE_ID), true);
 });
 
-test("released saves migrate to v8 and repeated v8 decode is idempotent", () => {
+test("released saves migrate to v9 and repeated v9 decode is idempotent", () => {
   const migrated = decodeStoredGame(createV2StoredGame());
-  assert.equal(migrated.version, 8);
-  assert.equal(migrated.state.version, 8);
+  assert.equal(migrated.version, 9);
+  assert.equal(migrated.state.version, 9);
   assert.equal(migrated.state.day, 1);
   assert.equal(migrated.state.minuteOfDay, DAY_START_MINUTE);
   assert.equal(migrated.state.gold, 100);
@@ -231,6 +231,7 @@ test("released saves migrate to v8 and repeated v8 decode is idempotent", () => 
   assert.equal(migrated.state.dailyRequest, null);
   assert.deepEqual(migrated.state.npcDialogue, {});
   assert.deepEqual(migrated.state.seenEventIds, []);
+  assert.equal(migrated.state.pet, null);
   assert.deepEqual(decodeStoredGame(migrated), migrated);
   const legacyFarmTiles = Object.fromEntries(Object.entries(migrated.state.farmTiles).map(([id, tile]) => [id, {
     ...tile,
@@ -266,7 +267,13 @@ test("released saves migrate to v8 and repeated v8 decode is idempotent", () => 
   delete versionSeven.state.dailyRequest;
   delete versionSeven.state.npcDialogue;
   delete versionSeven.state.seenEventIds;
+  delete versionSeven.state.pet;
   assert.equal(decodeStoredGame(versionSeven).state.inventoryCapacity, 24);
+  const versionEight = structuredClone(migrated);
+  versionEight.version = 8;
+  versionEight.state.version = 8;
+  delete versionEight.state.pet;
+  assert.equal(decodeStoredGame(versionEight).state.pet, null);
   assert.throws(
     () => decodeStoredGame({ ...migrated, state: { ...migrated.state, minuteOfDay: 365 } }),
     /time is invalid/i,
@@ -307,7 +314,7 @@ test("released saves migrate to v8 and repeated v8 decode is idempotent", () => 
     }),
     /event/i,
   );
-  assert.throws(() => decodeStoredGame({ ...migrated, version: 9 }), /unsupported/i);
+  assert.throws(() => decodeStoredGame({ ...migrated, version: 10 }), /unsupported/i);
 });
 
 test("friendship records first daily talk, applies light decay and stops decay at max hearts", () => {
@@ -330,7 +337,7 @@ test("friendship records first daily talk, applies light decay and stops decay a
   assert.equal(state.friendships["seed-keeper"].points, FRIENDSHIP_MAX_POINTS);
 });
 
-test("v8 upgrades, three-tile watering and deterministic requests stay atomic", () => {
+test("v9 upgrades, three-tile watering and deterministic requests stay atomic", () => {
   const catalog = createLifeLoopCatalog();
   const inventory = new InventorySystem();
   const friendship = new FriendshipSystem();
@@ -516,6 +523,7 @@ test("a released Day-28 v7 save migrates and sleeps into an unbounded Day 29", a
     dailyRequest: _dailyRequest,
     npcDialogue: _npcDialogue,
     seenEventIds: _seenEventIds,
+    pet: _pet,
     ...releasedFields
   } = current;
   const repository = new MemorySaveRepository();

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-01T00:00:00Z",
+  "generated_at": "2026-09-02T00:00:00Z",
   "media_base_url": "https://img.pingxingxian.space/game/media/v1",
-  "tracked_image_count": 15,
-  "tracked_image_bytes": 2874147,
+  "tracked_image_count": 17,
+  "tracked_image_bytes": 2891697,
   "tracked_audio_count": 19,
   "tracked_audio_bytes": 7806934,
   "entries": [
@@ -210,6 +210,38 @@
       "content_type": "image/png",
       "object_key": "assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png",
       "url": "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png"
+    },
+    {
+      "source": "cat.png",
+      "source_url": "https://opengameart.org/content/lpc-cats-and-dogs",
+      "source_file_url": "https://opengameart.org/sites/default/files/cat_0.png",
+      "source_snapshot_date": "2026-09-02",
+      "license": "CC-BY-3.0",
+      "attribution": "[LPC] Cats and Dogs by bluecarrot16",
+      "transformation": "None; exact official OpenGameArt PNG bytes. Runtime selects reviewed orange-cat 32x32 frames.",
+      "width": 512,
+      "height": 256,
+      "bytes": 8348,
+      "sha256": "914bae85486052a70d29b26d881bfce3dcaa987f6f95cab08e4a65e30fa13f97",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/cat.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/cat.png"
+    },
+    {
+      "source": "dog.png",
+      "source_url": "https://opengameart.org/content/lpc-cats-and-dogs",
+      "source_file_url": "https://opengameart.org/sites/default/files/dog_2.png",
+      "source_snapshot_date": "2026-09-02",
+      "license": "CC-BY-3.0",
+      "attribution": "[LPC] Cats and Dogs by bluecarrot16",
+      "transformation": "None; exact official OpenGameArt PNG bytes. Runtime selects reviewed yellow-dog 32x32 frames.",
+      "width": 512,
+      "height": 256,
+      "bytes": 9202,
+      "sha256": "77f4667ab3f681408a8afa528f3fff0bea3e3cd7d0e28d5c11f2d09c7729b891",
+      "content_type": "image/png",
+      "object_key": "assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/dog.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/dog.png"
     },
     {
       "source": "Audio/footstep00.ogg",

@@ -37,6 +37,10 @@ test("successful typed command results map to semantic cues while failures remai
     { type: "acknowledge-retention-event", eventId: "day-3-watering-intro" },
     { tone: "success", code: "milestone-acknowledged", message: "ok" },
   ), null);
+  assert.equal(audioCueForCommandResult(
+    { type: "pet-home-pet" },
+    { tone: "success", code: "pet-petted", message: "ok" },
+  ), null);
 });
 
 test("world regions select one stable ambience group without adding gameplay state", () => {

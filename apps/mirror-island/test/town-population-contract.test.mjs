@@ -14,10 +14,12 @@ import {
   closeShop,
   closeSocial,
   confirmSleep,
+  deferPetAdoption,
   gameUiState,
   isWorldInputLocked,
   openShop,
   openBackpack,
+  openPetAdoption,
   openRequestBoard,
   openSocial,
   openSleepConfirmation,
@@ -515,6 +517,47 @@ test("linear dialogue and shop share one transient world-input lock", () => {
   assert.equal(isWorldInputLocked(), true);
   closeShop();
   assert.equal(isWorldInputLocked(), false);
+});
+
+test("Day 2 adoption waits for the Farm yard, defers transiently and locks every world input", () => {
+  clearGameState();
+  const state = {
+    version: 9,
+    day: 2,
+    minuteOfDay: 360,
+    gold: 100,
+    player: { regionId: "cottage", x: 320, y: 416, appearanceId: "farmer-original" },
+    inventory: [],
+    inventoryCapacity: 24,
+    wateringCanLevel: 1,
+    resources: {},
+    farmTiles: {},
+    friendships: {},
+    dailyRequest: null,
+    seenEventIds: [],
+    pet: null,
+  };
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, false);
+  assert.equal(openPetAdoption(), false);
+
+  state.player.regionId = "farm";
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  deferPetAdoption();
+  assert.equal(gameUiState.petAdoptionOpen, false);
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, false);
+
+  clearGameState();
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, true);
+  state.pet = { species: "cat", name: "团子", adoptedDay: 2, bond: 0, lastPettedDay: 0 };
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, false);
+  assert.equal(isWorldInputLocked(), false);
+  clearGameState();
 });
 
 test("Hotbar selection is transient, toggleable and modal-safe", () => {
