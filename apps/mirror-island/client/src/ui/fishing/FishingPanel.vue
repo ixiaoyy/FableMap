@@ -14,6 +14,7 @@ import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
 import { gameUiState } from "../../stores/game-store.ts";
 import { trapDialogTab } from "../focus/dialog-focus.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
+import ItemIcon from "../items/ItemIcon.vue";
 
 const panel = ref<HTMLElement | null>(null);
 const control = ref<HTMLButtonElement | null>(null);
@@ -136,7 +137,7 @@ onUnmounted(() => window.removeEventListener("blur", release));
         </div>
       </div>
     </template>
-    <div v-else-if="fish" class="fishing-panel__result"><span aria-hidden="true">{{ fish.hotbarMark }}</span><strong>{{ fish.name }}</strong><small>{{ gameUiState.fishing.phase === 'caught' ? (saveBlocked ? '尚未保存' : '已收入背包 × 1') : '等待放生' }}</small></div>
+    <div v-else-if="fish" class="fishing-panel__result"><ItemIcon :item-id="fish.id" :scale="3" /><strong>{{ fish.name }}</strong><small>{{ gameUiState.fishing.phase === 'caught' ? (saveBlocked ? '尚未保存' : '已收入背包 × 1') : '等待放生' }}</small></div>
 
     <button v-if="!terminal" ref="control" type="button" class="fishing-panel__control"
       :data-held="held" @pointerdown.prevent="press" @pointerup.prevent="release"

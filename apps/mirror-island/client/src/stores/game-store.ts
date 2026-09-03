@@ -199,7 +199,7 @@ export function clearHotbarSelection(): void {
   mutableState.selectedItemId = "";
 }
 
-/** Locks or unlocks transient Hotbar selection while Phaser owns one action timeline. */
+/** Locks shared keyboard, touch and HUD input during a client-owned action or camera transition. */
 export function setWorldActionBusy(busy: boolean): void {
   mutableState.worldActionBusy = busy;
 }
