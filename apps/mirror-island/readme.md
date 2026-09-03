@@ -14,7 +14,7 @@ npm run dev:client
 
 公开游戏入口是无账号本地试玩；客户端不读取 Keycloak 会话，也不启动 gameplay server。本地 GameSession 通过 IndexedDB SaveRepository 保存单人状态。论坛登录仍经 `/forum-sso/` OIDC 桥进入保留的 Keycloak 基础设施，Prisma/PostgreSQL 只为未来云能力保留。
 
-当前春季 v10 已实现午夜提醒/02:00 昏倒、体力/天气、自由种田与补水、六作物、资源再生、钓鱼和送礼，等待真人验收；发布状态以 main 流水线为准。正常试玩无需 `dev:server`，也不得为验证玩法连接数据库。
+当前春季 v10 已实现午夜提醒/02:00 昏倒、体力/天气、自由种田与补水、六作物、资源再生、钓鱼和送礼，用户已于2026-09-03确认真人验收全部完成；发布状态以 main 流水线为准。正常试玩无需 `dev:server`，也不得为验证玩法连接数据库。
 
 按修改范围选择最小检查；本次只涉及客户端/domain：
 

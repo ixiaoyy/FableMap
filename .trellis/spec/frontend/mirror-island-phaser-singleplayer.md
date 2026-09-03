@@ -1,6 +1,6 @@
 # Mirror Island Phaser Single-player
 
-## Active Spring v10 contract (implemented, manual acceptance pending)
+## Active Spring v10 contract (human acceptance confirmed 2026-09-03)
 
 ### 1. Scope / Trigger
 
@@ -49,7 +49,7 @@
 
 ### 6. Checks
 
-- 相关检查：life-loop 21 项、town/audio 12 项、typecheck 与 client build；仍需真人覆盖完整种植/钓鱼/送礼手感、真实 v9 备份、02:00 与 200% 浏览器缩放，不连接服务端数据库。
+- 相关检查：life-loop 21 项、town/audio 12 项、typecheck 与 client build 通过；用户于2026-09-03明确确认本批真人验收全部完成。后续改动仍按范围覆盖完整种植/钓鱼/送礼手感、真实 v9 备份、02:00 与 200% 浏览器缩放，不连接服务端数据库。
 - 开发 HMR 若仍返回旧 domain 模块，重新构建并用隔离 origin 的 production preview 复验；不能把热更新中 GameSession 重建错误记为生产验收通过。
 
 ### 7. Wrong vs Correct

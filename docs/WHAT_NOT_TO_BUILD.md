@@ -19,7 +19,7 @@
 - 云存档、通用 ECS、大型全局状态库、地图编辑平台或无界程序生成框架；本地 GameSession 只服务 Stardew Core 当前闭环。
 - 书屋、异闻世界和《乔女》《画皮》《聂小倩》等《聊斋》内容当前不做；东方志怪未来作为独立异闻故事世界逐项规划。
 - World Foundation、Farm Gate A/B/C、Town Gate A/B/C 与 Town Population MVP 均已通过；当前地图扩展只允许增加功能入口和独立区域，不重新调整 Town 大构图、均匀添加装饰或扩建 NPC 系统。
-- 当前世界保持无上限 `Day N` 与 spring-content；工作区 v10 已实现已批准日常系统、待真人验收，不加入夏秋冬、剧情/镜门伏笔、生日/节庆/公共活动、品质/肥料、私人内屋解锁或复杂经济。
+- 当前世界保持无上限 `Day N` 与 spring-content；v10 已实现已批准日常系统，用户已确认真人验收全部完成，不加入夏秋冬、剧情/镜门伏笔、生日/节庆/公共活动、品质/肥料、私人内屋解锁或复杂经济。
 - 当前不做 Tauri/Rust/FileSystem adapter/Steam API，不做 Unity 或 Godot 技术验证；未来桌面目标只保留架构边界。
 - VectoRaith 已成为生产 Farm v1 与 Town Gate A 的正式美术底座；不提交 ZIP、截图或图片二进制到 Git。用户已要求运行时直接使用 6 张官方 Original/16×16 PNG，禁止再次裁剪、重排、合图或重编码；作者若补充许可条件则 forward-fix。
 
