@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import { getItemDefinition } from "../../../../domain/items/definitions.ts";
-import { itemIconForItem, itemIconStyle } from "../../game/assets/item-icons.ts";
+import ItemIcon from "../items/ItemIcon.vue";
 import {
   closeBackpack,
   gameUiState,
@@ -21,7 +21,6 @@ const slots = computed(() => Array.from({ length: gameUiState.inventoryCapacity 
   return {
     index,
     definition,
-    icon: definition ? itemIconForItem(definition.id) : null,
     quantity: slot?.quantity ?? 0,
     hotbar: index < 8,
   };
@@ -103,13 +102,7 @@ watch(() => gameUiState.backpackOpen, (open) => {
             @click="holdSlot(slot.index)"
           >
           <span class="backpack-panel__index">{{ slot.index + 1 }}</span>
-          <span
-            v-if="slot.icon"
-            class="backpack-panel__icon"
-            :style="itemIconStyle(slot.icon)"
-            aria-hidden="true"
-          />
-          <strong v-else-if="slot.definition">{{ slot.definition.hotbarMark }}</strong>
+          <ItemIcon v-if="slot.definition" :item-id="slot.definition.id" class="backpack-panel__icon" />
           <small v-if="slot.quantity > 1">{{ slot.quantity }}</small>
           <em v-if="slot.hotbar">快捷</em>
           <span class="backpack-slot__name">{{ slot.definition?.name ?? '空' }}</span>

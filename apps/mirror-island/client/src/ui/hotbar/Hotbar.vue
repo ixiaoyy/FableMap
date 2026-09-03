@@ -5,10 +5,7 @@ import {
   getItemDefinition,
   type ItemId,
 } from "../../../../domain/items/definitions.ts";
-import {
-  itemIconForItem,
-  itemIconStyle,
-} from "../../game/assets/item-icons.ts";
+import ItemIcon from "../items/ItemIcon.vue";
 import {
   gameUiState,
   selectHotbarSlot,
@@ -22,7 +19,6 @@ const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index
   return {
     index,
     definition,
-    icon: definition ? itemIconForItem(definition.id) : null,
     quantity: slot?.quantity ?? 0,
     selected: gameUiState.selectedInventoryIndex === index,
     water: definition?.id === "watering-can"
@@ -60,13 +56,7 @@ function eat(itemId: ItemId): void {
           @click="selectHotbarSlot(slot.index)"
         >
           <span class="hotbar-slot__index">{{ slot.index + 1 }}</span>
-          <span
-            v-if="slot.icon"
-            class="hotbar-slot__image"
-            :style="itemIconStyle(slot.icon)"
-            aria-hidden="true"
-          />
-          <span v-else-if="slot.definition" class="hotbar-slot__mark">{{ slot.definition.hotbarMark }}</span>
+          <ItemIcon v-if="slot.definition" :item-id="slot.definition.id" class="hotbar-slot__image" />
           <span v-if="slot.quantity > 1" class="hotbar-slot__quantity">{{ slot.quantity }}</span>
           <span v-if="slot.water" class="hotbar-slot__quantity">{{ slot.water }}</span>
           <span v-if="slot.definition" class="hotbar-slot__name">{{ slot.definition.name }}</span>

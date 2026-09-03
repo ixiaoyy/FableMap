@@ -25,7 +25,7 @@
 
 用户于 2026-09-02 明确要求不要复杂远征方向，先养猫/狗。`Expedition Prototype` 规划再次暂停；不创建 map、Cargo、敌人、捕获、战斗代码或相关 v9 字段，也不得借宠物 MVP 建设完整动物/宠物框架。
 
-当前获批实施范围以 [春季基础玩法 v1 PRD](../.trellis/tasks/09-02-spring-complete-v1/prd.md) 为准；历史远征 PRD 和长期产品方向不能扩张本版本。
+当前春季规则基线以 [春季基础玩法 v1 PRD](../.trellis/tasks/09-02-spring-complete-v1/prd.md) 为准；2026-09-03 获批的 [首批美术精修](../.trellis/tasks/09-03-spring-art-polish-v1/prd.md) 覆盖小屋、图标和动作，随后获批的 [第二批室内精修](../.trellis/tasks/09-03-shop-interiors-polish-v1/prd.md) 只扩展到种子店与铁匠铺，不扩展规则、存档或其他地图。历史远征 PRD 和长期产品方向不能扩张本版本。
 
 当前不做但已确认应在未来评审的 Town 能力，不从文档中删除，统一保留在 [Town 后续开发路线图](TOWN_ROADMAP.md)；列入路线图不等于已批准开发。
 

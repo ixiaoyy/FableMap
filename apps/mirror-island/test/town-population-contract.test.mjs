@@ -133,6 +133,15 @@ test("daylight projection keeps outdoor phases distinct and indoor night readabl
   assert.throws(() => daylightVisualAt(365, "farm"), /time is invalid/i);
 });
 
+test("seed shop return landing clears the entrance trigger before controls resume", async () => {
+  const town = decodeTiledRegion(await loadMap("town"), "test-town-return");
+  const landing = town.spawns["seed-shop-door"];
+  const entrance = town.exits.find((exit) => exit.id === "town-seed-shop-entry");
+  assert.ok(landing && entrance);
+  assert.ok(landing.y - PLAYER_FEET_HALF_HEIGHT > entrance.y + entrance.height,
+    "The return landing must clear the inclusive entrance boundary to avoid immediately entering again.");
+});
+
 test("formal world maps decode NPCs, expansion exits and inspect hotspots through one catalog", async () => {
   const [
     farmMap, townMap, cottageMap, seedShopMap, blacksmithMap,

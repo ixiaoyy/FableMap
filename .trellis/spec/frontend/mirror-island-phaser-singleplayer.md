@@ -57,6 +57,29 @@
 - Wrong：Phaser 更新背包后再按钓鱼动画判断成功。
 - Correct：FishingSystem 判定成功并由 GameSession 原子保存，客户端只显示结果。
 
+## Spring art polish v1 (2026-09-03, human review pending)
+
+- 范围为 Cottage、当前 25 个物品与种田动作，保留 v10；不从本表现合同扩展其他地图或玩法。
+- `itemIconForItem()` 是 Hotbar、Backpack、Gift、Fishing result 与 Phaser 持物的共享源。原图 frame 使用 `AtlasItemIcon`，原创小图形使用 `PixelArt`；seed badge 复用 `cropForSeed()` 身份，不复制种植规则。
+- GARDENS 正式坐标：hoe `(0,2)`、watering `(0,5)`、axe `(0,10)`、seed bag `(6,5)`；旧 Gate A 记录中的部分坐标误指铁锹/镰刀/钳子，不能作为现行依据。
+- `FarmingActionPresenter` 只拥有原角色 pose、tool grip、held item 与有限视觉效果；`ActionTimeline -> WorldScene impact -> GameSession` 仍只有一次 mutation。错误反馈不产生成功效果，切图/动作结束清理本实例拥有的 tweens。
+- 工具图片翻转时握点也要镜像；各工具使用其原图的手柄/提手位置，不共用一个任意旋转中心。九种外观都使用自身 profile，不能套用另一角色的 plowing sheet。
+- Cottage 的 256×128 `cottage-woodwork` texture 由源码配方生成；Tiled metadata 的 PNG 只作为 ignored 编辑缓存，不是运行时 URL 或新 CDN 对象。布局、Collision、床/出口及 `cottage-room-view` 镜头点仍属于 TMJ。
+- 即使 Collision 层不渲染，非零 GID 也必须属于当前内嵌 tileset；Phaser 解析全部图层，遗留 GID 会使切图失败。
+- Cottage 收紧布局保留所有旧 stable IDs 与宠物锚点；旧坐标撞到新 Collision 时复用既有 `reconcileGameStateWithCatalog()` 安全入口逻辑，不添加迁移。
+- 最小检查：typecheck、client build、Tiled/图标结构检查及当前画面；真人手感与审美单独确认，不扩大测试矩阵。
+
+## Shop interiors and safe doorway transitions (2026-09-03)
+
+- 第二批仅覆盖 Seed Shop/Blacksmith 的室内表现和接近路径；保留 NPC、商品、日程与 v10。Town 只允许本次已复现门口缺陷所需的单一落点调整。
+- `shop-interiors` 在 256×256 Canvas atlas 内复用 Cottage 原有配方，再添加职业陈设；新图 GID 5001–5256，包括隐藏 Collision。静态摆放与脚部阻挡须一致。
+- `fixedInteriorViewAnchorForRegion()` 只返回地图拥有的 camera spawn ID；有 anchor 的室内使用固定 2× 镜头，其余区域继续跟随角色。
+- 华强的 home/counter/shelves 必须连通，柜台前有 42px 内的可达交谈点；炉前/架前有 48px 内的可达查看点，其他服务由 domain 决定。
+- `WorldCatalog.exitAt()` 当前包含矩形上边界。返回点必须位于入口之外并保留脚部净空，禁止依赖玩家在淡入期间赶快移开来逃离反向触发。
+- `WorldScene` 从淡出开始到淡入结束都须持有 `setWorldActionBusy(true)`；仅锁私有 transition phase 无法停止 DOM 方向控制。
+- `fadeIntoWorld(durationMs)` 集中恢复画面并释放共享输入锁。拒绝切图也必须走淡入恢复，不得永久停留在黑屏。
+- 不新增保存字段、数据迁移或动画框架；本次真实缺陷只增加一条门外落点净空回归检查。
+
 ## Ownership
 
 - 唯一应用位于 `apps/mirror-island/`；公开 `/` 只服务一份 Phaser/Vue 单人 client。

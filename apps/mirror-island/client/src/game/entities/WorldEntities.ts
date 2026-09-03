@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { COTTAGE_BED_FRAME, COTTAGE_TEXTURE_KEY } from "../presentation/cottage-art.ts";
 import type { FarmTileState, ResourceState } from "../../../../domain/state/game-state.ts";
 import type { PetState } from "../../../../domain/pets/definitions.ts";
 import { cropDefinition } from "../../../../domain/farming/crops.ts";
@@ -247,8 +248,7 @@ export class BedEntity {
     onInteract: (entity: BedEntity) => void,
   ) {
     this.entityId = interaction.entityId;
-    const frame = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0x81502f, 1)
-      .setStrokeStyle(2, 0x4d311f, 1)
+    const frame = scene.add.image(0, 0, COTTAGE_TEXTURE_KEY, COTTAGE_BED_FRAME)
       .setInteractive({ useHandCursor: true });
     frame.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     frame.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -259,22 +259,6 @@ export class BedEntity {
       this.hovered = false;
       this.refreshPrompt();
     });
-    const blanket = scene.add.rectangle(
-      0,
-      interaction.height * 0.13,
-      Math.max(8, interaction.width - 6),
-      interaction.height * 0.54,
-      0x78945e,
-      1,
-    ).setStrokeStyle(1, 0x506a45, 1);
-    const pillow = scene.add.rectangle(
-      0,
-      -interaction.height * 0.31,
-      Math.max(8, interaction.width - 8),
-      Math.max(6, interaction.height * 0.18),
-      0xead9ae,
-      1,
-    );
     this.prompt = scene.add.text(
       interaction.x + interaction.width / 2,
       interaction.y - 6,
@@ -288,7 +272,7 @@ export class BedEntity {
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      [frame, blanket, pillow],
+      [frame],
     ).setDepth(100 + interaction.y + interaction.height);
   }
 

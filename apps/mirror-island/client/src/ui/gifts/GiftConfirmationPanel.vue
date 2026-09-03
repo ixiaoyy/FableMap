@@ -5,6 +5,7 @@ import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
 import { closeGiftConfirmation, gameUiState } from "../../stores/game-store.ts";
 import { trapDialogTab } from "../focus/dialog-focus.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
+import ItemIcon from "../items/ItemIcon.vue";
 
 const panel = ref<HTMLElement | null>(null);
 const item = computed(() => getItemDefinition(gameUiState.giftConfirmation?.itemId));
@@ -31,7 +32,7 @@ watch(() => gameUiState.giftConfirmation, (gift) => {
       aria-labelledby="gift-title" tabindex="-1" @keydown.esc.stop.prevent="cancel"
       @keydown="trapDialogTab($event, panel)">
       <h2 id="gift-title">送给{{ gameUiState.giftConfirmation.npcName }}？</h2>
-      <p class="gift-confirmation__item"><span aria-hidden="true">{{ item?.hotbarMark }}</span>{{ item?.name }} × 1</p>
+      <p class="gift-confirmation__item"><ItemIcon v-if="item" :item-id="item.id" />{{ item?.name }} × 1</p>
       <p>确认后会从背包取出一份。每位居民每天最多收一份，每周两份。</p>
       <div class="spring-dialog__actions">
         <button type="button" data-cancel @click="cancel">先收着</button>
