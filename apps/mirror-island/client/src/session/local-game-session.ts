@@ -13,7 +13,10 @@ import {
 } from "../audio/audio-events.ts";
 import {
   applyGameState,
+  applyFishingState,
+  applyDaySettlement,
   clearGameState,
+  gameUiState,
   setActionFeedback,
 } from "../stores/game-store.ts";
 
@@ -22,6 +25,9 @@ const LOCAL_PLAYTEST_OWNER_KEY = "local-playtest-v1";
 let session: GameSession | null = null;
 let repository: IndexedDbSaveRepository | null = null;
 let stopStoreProjection: (() => void) | null = null;
+let stopFishingProjection: (() => void) | null = null;
+let stopDayProjection: (() => void) | null = null;
+let stopVisibilityTracking: (() => void) | null = null;
 
 /** Initializes the single anonymous playtest slot without creating a user or device identity. */
 export function initializeLocalPlaytestGameSession(catalog: WorldCatalog): GameSession {
@@ -34,6 +40,14 @@ export function initializeLocalGameSession(ownerKey: string, catalog: WorldCatal
   repository = new IndexedDbSaveRepository();
   session = new GameSession(repository, ownerKey, catalog);
   stopStoreProjection = session.subscribe((state) => applyGameState(state));
+  stopFishingProjection = session.subscribeFishing((state) => applyFishingState(state));
+  stopDayProjection = session.subscribeDaySettlement((state) => applyDaySettlement(state));
+  if (typeof document !== "undefined") {
+    /** Discards hidden-tab elapsed time before the next visible simulation frame. */
+    const onVisibility = (): void => tickLocalGameSession(Date.now(), true, true);
+    document.addEventListener("visibilitychange", onVisibility);
+    stopVisibilityTracking = () => document.removeEventListener("visibilitychange", onVisibility);
+  }
   return session;
 }
 
@@ -60,7 +74,7 @@ export function dispatchLocalGameCommand(command: GameCommand): GameCommandResul
   const audioCue = audioCueForCommandResult(command, feedback);
   if (audioCue) emitAudioCue(audioCue);
   if (feedback) setActionFeedback(feedback);
-  if (feedback?.tone === "success") {
+  if (feedback?.tone === "success" && feedback.code !== "day-saving") {
     void activeSession.flush().catch(() => {
       setActionFeedback({
         tone: "error",
@@ -73,8 +87,10 @@ export function dispatchLocalGameCommand(command: GameCommand): GameCommandResul
 }
 
 /** Advances bounded movement/time checkpoints with an explicit transient pause signal. */
-export function tickLocalGameSession(now: number, paused: boolean): void {
-  getLocalGameSession().tick(now, paused);
+export function tickLocalGameSession(now: number, paused: boolean, activityPaused = false): void {
+  if (!session || gameUiState.phase !== "playing") return;
+  const feedback = session.tick(now, paused, activityPaused);
+  if (feedback) setActionFeedback(feedback);
 }
 
 /** Flushes pending snapshots without disposing the active renderer or UI subscription. */
@@ -87,13 +103,22 @@ export async function shutdownLocalGameSession(): Promise<void> {
   const activeSession = session;
   const activeRepository = repository;
   const activeStopStoreProjection = stopStoreProjection;
+  const activeStopFishingProjection = stopFishingProjection;
+  const activeStopDayProjection = stopDayProjection;
+  const activeStopVisibility = stopVisibilityTracking;
   session = null;
   repository = null;
   stopStoreProjection = null;
+  stopFishingProjection = null;
+  stopDayProjection = null;
+  stopVisibilityTracking = null;
+  activeStopVisibility?.();
   try {
     if (activeSession) await activeSession.flush();
   } finally {
     activeStopStoreProjection?.();
+    activeStopFishingProjection?.();
+    activeStopDayProjection?.();
     activeRepository?.close();
     if (!session) clearGameState();
   }

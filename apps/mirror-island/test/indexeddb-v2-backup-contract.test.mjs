@@ -7,6 +7,7 @@ import {
   indexedDbSlotKeys,
   planIndexedDbSave,
   v2BackupKey,
+  v9BackupKey,
 } from "../client/src/persistence/v2-migration-backup.ts";
 
 /** Builds the smallest valid catalog needed to produce one current v5 save. */
@@ -66,10 +67,22 @@ test("existing backup, current v5 and new slots never create another v2 backup",
   assert.equal(planIndexedDbSave(mainKey, undefined, undefined, v5).backup, null);
 });
 
-test("explicit slot deletion owns only its main and v2 backup keys", () => {
+test("v10 preserves an exact released v9 envelope only once", () => {
+  const mainKey = "owner-hash:main";
+  const raw = { version: 9, updatedAt: 789, state: { version: 9, marker: "original-pet-save" } };
+  const current = createStoredGame(createInitialGameState(createCatalog()), 999);
+  const plan = planIndexedDbSave(mainKey, { key: mainKey, game: raw }, undefined, current, 9);
+  assert.deepEqual(plan.backup, { key: v9BackupKey(mainKey), game: raw });
+  assert.strictEqual(plan.backup.game, raw);
+  assert.equal(planIndexedDbSave(mainKey, { key: mainKey, game: raw }, plan.backup, current, 9).backup, null);
+  assert.equal(planIndexedDbSave(mainKey, plan.main, undefined, current, 9).backup, null);
+});
+
+test("explicit slot deletion owns only its main, v2 and v9 backup keys", () => {
   assert.deepEqual(indexedDbSlotKeys("owner-hash:main"), [
     "owner-hash:main",
     "owner-hash:main:backup:v2",
+    "owner-hash:main:backup:v9",
   ]);
   assert.throws(() => v2BackupKey(""), /invalid/i);
 });

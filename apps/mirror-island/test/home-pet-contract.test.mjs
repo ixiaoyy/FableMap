@@ -117,8 +117,8 @@ function createReleasedV8(catalog) {
 test("v8 saves gain pet null and current pet corruption fails closed", () => {
   const catalog = createPetCatalog();
   const migrated = decodeStoredGame(createReleasedV8(catalog));
-  assert.equal(migrated.version, 9);
-  assert.equal(migrated.state.version, 9);
+  assert.equal(migrated.version, 10);
+  assert.equal(migrated.state.version, 10);
   assert.equal(migrated.state.pet, null);
 
   const state = migrated.state;

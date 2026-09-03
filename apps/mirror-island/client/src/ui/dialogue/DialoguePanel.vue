@@ -15,6 +15,7 @@ import {
   gameUiState,
 } from "../../stores/game-store.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
+import { trapDialogTab } from "../focus/dialog-focus.ts";
 
 const panel = ref<HTMLElement | null>(null);
 const currentLine = computed(() => {
@@ -35,7 +36,7 @@ const woodQuantity = computed(() => gameUiState.inventory.reduce((total, slot) =
 ), 0));
 const wateringServiceVisible = computed(() => (
   gameUiState.day >= WATERING_CAN_UPGRADE_DAY
-  && gameUiState.dialogue?.npcId === "town-blacksmith"
+  && gameUiState.dialogue?.wateringServiceAvailable
   && !gameUiState.dialogue.dialogueId?.startsWith("event:")
 ));
 const wateringUpgradeReady = computed(() => (
@@ -43,6 +44,10 @@ const wateringUpgradeReady = computed(() => (
   && gameUiState.gold >= WATERING_CAN_UPGRADE_GOLD
   && woodQuantity.value >= WATERING_CAN_UPGRADE_WOOD
 ));
+const fishingRodServiceVisible = computed(() => (
+  gameUiState.day >= 7 && gameUiState.dialogue?.npcId === "town-resident-xiangzi"
+));
+const hasFishingRod = computed(() => gameUiState.inventory.some((slot) => slot.itemId === ITEM_ID.fishingRod));
 
 /** Advances one line and returns focus to the world after the final line. */
 function advanceConversation(): void {
@@ -64,6 +69,11 @@ function upgradeWateringCan(): void {
   dispatchLocalGameCommand({ type: "upgrade-watering-can" });
 }
 
+/** Requests the one owned bamboo rod from nearby Xiangzi, leaving inventory validation to GameSession. */
+function claimFishingRod(): void {
+  dispatchLocalGameCommand({ type: "claim-fishing-rod", npcId: "town-resident-xiangzi" });
+}
+
 watch(() => gameUiState.dialogue, (dialogue, previous) => {
   if (dialogue && !previous) void nextTick(() => panel.value?.focus());
 });
@@ -79,10 +89,20 @@ watch(() => gameUiState.dialogue, (dialogue, previous) => {
     aria-labelledby="dialogue-speaker"
     tabindex="-1"
     @keydown.esc.stop.prevent="closeConversation"
+    @keydown="trapDialogTab($event, panel)"
   >
     <span id="dialogue-speaker" class="dialogue-panel__speaker">{{ gameUiState.dialogue.speaker }}</span>
     <span class="dialogue-panel__progress" :aria-label="`当前对话 ${lineProgress}`">{{ lineProgress }}</span>
     <p>{{ currentLine }}</p>
+    <aside v-if="fishingRodServiceVisible" class="dialogue-panel__service">
+      <div>
+        <strong>竹制鱼竿</strong>
+        <span>旧码头选中鱼竿，点击水边标记即可抛竿。</span>
+      </div>
+      <button type="button" :disabled="hasFishingRod" @click="claimFishingRod">
+        {{ hasFishingRod ? '已领取' : '免费领取' }}
+      </button>
+    </aside>
     <aside v-if="wateringServiceVisible" class="dialogue-panel__service">
       <div>
         <strong>水壶 Lv2 · 一次最多浇三格</strong>

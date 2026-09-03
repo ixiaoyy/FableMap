@@ -2,7 +2,7 @@ import {
   npcActivityAt,
   type NpcActivityKind,
 } from "./npc-activities.ts";
-import { activeNpcSpawns } from "./npc-schedules.ts";
+import { activeNpcSpawns, type NpcDayContext } from "./npc-schedules.ts";
 import { findNpcPath } from "./npc-pathfinding.ts";
 import {
   NPC_FEET_HALF_HEIGHT,
@@ -79,21 +79,24 @@ interface NpcAvoidanceObstacle extends NpcAvoidancePosition {
 
 export class NpcMotionRuntime {
   private motions = new Map<string, NpcMotionState>();
+  private dayContext: NpcDayContext = { day: 2, weather: "sunny" };
 
   /** Creates one transient NPC movement owner over the immutable world catalog and fixed schedules. */
   constructor(private readonly catalog: WorldCatalog) {}
 
   /** Resets every NPC directly to the schedule anchor for one persisted game minute. */
-  reset(minuteOfDay: number): void {
-    this.motions = new Map(activeNpcSpawns(this.catalog, minuteOfDay).map((target) => (
+  reset(minuteOfDay: number, context: NpcDayContext = this.dayContext): void {
+    this.dayContext = context;
+    this.motions = new Map(activeNpcSpawns(this.catalog, minuteOfDay, context).map((target) => (
       [target.entityId, this.createIdleMotion(target, minuteOfDay)]
     )));
   }
 
   /** Starts routes from each current runtime position to the anchors owned by one new schedule phase. */
-  transitionTo(minuteOfDay: number): void {
+  transitionTo(minuteOfDay: number, context: NpcDayContext = this.dayContext): void {
+    this.dayContext = context;
     const next = new Map<string, NpcMotionState>();
-    for (const target of activeNpcSpawns(this.catalog, minuteOfDay)) {
+    for (const target of activeNpcSpawns(this.catalog, minuteOfDay, context)) {
       const current = this.motions.get(target.entityId);
       const source = current ? projectMotion(current) : idleProjection(target, null);
       const arrivalActivity = this.createActivityState(target, minuteOfDay);
@@ -140,6 +143,7 @@ export class NpcMotionRuntime {
 
   /** Resolves one applicable transient phase activity while leaving unknown fixture identities activity-free. */
   private createActivityState(target: NpcSpawnDefinition, minuteOfDay: number): NpcActivityState | null {
+    if (target.routine === "rest" || target.routine === "rain") return null;
     const plan = npcActivityAt(this.catalog, target.npcId, minuteOfDay);
     if (!plan || plan.regionId !== target.regionId) return null;
     const routeIndex = plan.route.findIndex((point) => point.x === target.x && point.y === target.y);

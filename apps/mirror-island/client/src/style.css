@@ -1045,6 +1045,8 @@ button {
 
 .game-canvas {
   position: relative;
+  /* Contain Phaser FIT's inline canvas margins so they cannot move the surrounding HUD. */
+  display: flow-root;
   z-index: 0;
   width: 100%;
   height: 100%;
@@ -3186,4 +3188,116 @@ button {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+/* Spring v10 extends the incumbent paper-and-bamboo game controls. */
+.life-hud {
+  grid-template-columns: auto auto 1fr;
+  min-width: 230px;
+  max-width: calc(100% - 128px);
+}
+.life-hud__stamina { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+.life-hud__stamina > span { font-size: 12px; }
+.life-hud__stamina > i { flex: 1; height: 8px; overflow: hidden; background: #b59d6b; }
+.life-hud__stamina b { display: block; height: 100%; background: #3f693e; }
+.life-hud__stamina small { min-width: 47px; color: #4b321f; font-size: 11px; text-align: right; }
+.life-hud__forecast { grid-column: 1 / -1; color: #4b513c; font-size: 11px; text-align: right; }
+.backpack-trigger { top: 123px; right: auto; left: 18px; }
+.hotbar-held-item { display: flex; min-height: 38px; gap: 12px; align-items: center; justify-content: space-between; padding: 5px 3px 0; color: #3f3021; font-size: 12px; }
+.hotbar-held-item button { min-height: 34px; padding: 4px 10px; border: 1px solid #536b45; color: #f4eedc; background: #354c33; cursor: pointer; }
+.hotbar-held-item button:disabled { opacity: .65; cursor: not-allowed; }
+.hotbar-held-item button:focus-visible { outline: 3px solid #354c33; outline-offset: 2px; }
+.backpack-panel__slots li { min-height: 88px; }
+.backpack-slot__button { position: relative; display: grid; gap: 5px; align-content: center; justify-items: center; width: 100%; height: 100%; min-height: 84px; padding: 13px 3px 10px; border: 0; color: #3d3022; background: transparent; cursor: pointer; }
+.backpack-slot__button:hover { background: #ead7aa; }
+.backpack-slot__button:focus-visible { outline: 3px solid #354c33; outline-offset: -3px; }
+.backpack-slot__button:disabled { cursor: default; }
+.backpack-slot__name { max-width: 100%; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.backpack-panel__slots em { top: 2px; right: 3px; bottom: auto; left: auto; transform: none; }
+.backpack-panel__slots small { bottom: 3px; }
+.dialogue-panel__service { grid-column: 1 / -1; }
+.dialogue-panel__service button { flex-shrink: 0; min-height: 44px; }
+.social-ledger__gift-status { grid-column: 1 / -1; color: #4c5539; font-size: 12px; }
+
+.spring-dialog-backdrop { position: absolute; inset: 0; z-index: 14; display: grid; place-items: center; padding: 16px; background: rgba(22, 29, 21, .64); }
+.spring-dialog { width: min(440px, 100%); max-height: calc(100dvh - 32px); padding: 24px; overflow: auto; border: 3px double #79603a; color: #34402d; background: var(--home-paper); box-shadow: 6px 8px 0 rgba(24, 18, 12, .36); font-family: "STKaiti", KaiTi, Georgia, serif; }
+.spring-dialog h2 { margin: 0 0 16px; font-size: 25px; line-height: 1.3; }
+.spring-dialog p { margin: 0 0 18px; font-size: 15px; line-height: 1.65; }
+.spring-dialog button { min-height: 44px; padding: 9px 16px; border: 1px solid #536b45; color: #354c33; background: #e8dcc0; cursor: pointer; }
+.spring-dialog .is-primary { color: #f4eedc; background: #354c33; }
+.spring-dialog button:hover { filter: brightness(1.08); }
+.spring-dialog button:focus-visible { outline: 3px solid #b79350; outline-offset: 3px; }
+.spring-dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.gift-confirmation__item { display: flex; gap: 16px; align-items: center; padding: 15px 0; color: #354c33; font-weight: 700; }
+.gift-confirmation__item > span { display: grid; width: 44px; height: 44px; place-items: center; color: #6b4b28; background: #dfbf7f; font-size: 25px; }
+.day-settlement-backdrop { z-index: 18; background: rgba(12, 20, 16, .9); }
+.day-settlement { text-align: center; }
+.day-settlement p { margin-bottom: 12px; }
+
+.fishing-panel { position: absolute; z-index: 12; left: 50%; bottom: 150px; transform: translateX(-50%); width: min(460px, calc(100% - 28px)); max-height: calc(100% - 164px); overflow: auto; padding: 20px; border: 3px double #79603a; color: #34402d; background: var(--home-paper); box-shadow: 7px 9px 0 rgba(24, 18, 12, .35); font-family: "STKaiti", KaiTi, Georgia, serif; }
+.fishing-panel__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.fishing-panel__header span { color: #536b45; font-size: 12px; }
+.fishing-panel__header h2 { margin: 5px 0 10px; font-size: 26px; line-height: 1.2; }
+.fishing-panel__close { min-width: 48px; min-height: 44px; padding: 5px 9px; border: 1px solid #79603a; color: #4d3b28; background: transparent; cursor: pointer; }
+.fishing-panel__instruction { margin: 0 0 18px; min-height: 44px; color: #4e5140; font-size: 14px; line-height: 1.6; }
+.fishing-panel__meter { margin: 14px 0; }
+.fishing-panel__meter > span { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 13px; }
+.fishing-meter { height: 13px; overflow: hidden; background: #d7ccb1; }
+.fishing-meter b { display: block; height: 100%; background: #536b45; }
+.fishing-tension { position: relative; height: 29px; background: #c9b18a; }
+.fishing-tension__safe { position: absolute; inset-block: 0; display: grid; place-items: center; background: #536b45; color: #fff7df; font-size: 12px; }
+.fishing-tension > i { position: absolute; top: -4px; bottom: -4px; width: 4px; transform: translateX(-50%); background: #fff7df; box-shadow: 1px 2px 0 #3d3022; }
+.fishing-panel__ends { display: flex; justify-content: space-between; padding-top: 7px; color: #695438; font-size: 11px; }
+.fishing-panel__control { width: 100%; min-height: 56px; margin-top: 7px; padding: 12px; border: 0; color: #fff5d9; background: #354c33; box-shadow: 0 4px 0 #20301f; font-size: 17px; cursor: pointer; touch-action: none; user-select: none; }
+.fishing-panel__control[data-held="true"] { transform: translateY(2px); color: #354c33; background: #d8bd7d; box-shadow: 0 2px 0 #536b45; }
+.fishing-panel button:focus-visible { outline: 3px solid #b79350; outline-offset: 3px; }
+.fishing-panel footer { margin-top: 15px; color: #4e5140; font-size: 11px; line-height: 1.5; }
+.fishing-panel__float { display: flex; justify-content: center; align-items: center; gap: 22px; min-height: 90px; color: #536b45; }
+.fishing-float { position: relative; display: inline-block; width: 24px; height: 60px; }
+.fishing-float > i { position: absolute; left: 11px; top: 0; width: 2px; height: 55px; background: #536b45; }
+.fishing-float > b { position: absolute; top: 21px; left: 5px; width: 14px; height: 24px; border-top: 10px solid #a4513f; background: #dfbf7f; }
+.fishing-panel__float[data-bite="true"] { color: #884331; }
+.fishing-panel__float[data-bite="true"] .fishing-float { transform: translateY(9px) rotate(-8deg); }
+.fishing-panel__result { display: flex; gap: 13px; align-items: center; min-height: 82px; }
+.fishing-panel__result > span { display: grid; place-items: center; width: 56px; height: 56px; color: #f4eedc; background: #536b45; font-size: 28px; }
+.fishing-panel__result small { margin-left: auto; color: #536b45; }
+
+.weather-layer { position: absolute; z-index: 2; inset: 0; overflow: hidden; pointer-events: none; }
+.weather-layer[data-weather="rain"] { background: rgba(67, 95, 103, .1); }
+.weather-layer > i { position: absolute; pointer-events: none; }
+.weather-layer[data-weather="rain"] > i { width: 2px; height: 14px; background: rgba(223, 244, 249, .7); animation: spring-rain var(--particle-duration) linear var(--particle-delay) infinite; }
+.weather-layer[data-weather="wind"] > i { width: 6px; height: 3px; background: rgba(104, 122, 52, .65); animation: spring-wind 4s linear var(--particle-delay) infinite; }
+.world-action-trigger { position: absolute; right: 18px; bottom: 154px; z-index: 4; min-width: 68px; min-height: 48px; border: 2px solid #cdb47a; color: #f5e8c3; background: #354c33; font-size: 14px; cursor: pointer; touch-action: manipulation; }
+.world-action-trigger:disabled { opacity: .6; cursor: not-allowed; }
+.world-action-trigger:focus-visible { outline: 3px solid #fff0b4; outline-offset: 3px; }
+.pet-adoption-invite { bottom: 214px; }
+@keyframes spring-rain { from { transform: translate(0, -50px) rotate(15deg); } to { transform: translate(-22px, 180px) rotate(15deg); } }
+@keyframes spring-wind { from { transform: translate(-100px, 0) rotate(0); opacity: 0; } 15% { opacity: .8; } to { transform: translate(290px, 45px) rotate(90deg); opacity: 0; } }
+@media (max-width: 640px) {
+  .life-hud { min-width: 190px; width: calc(100% - 116px); gap: 5px 9px; padding: 7px 9px; }
+  .life-hud span { font-size: 13px; }
+  .life-hud strong { font-size: 15px; }
+  .life-hud__stamina > span, .life-hud__forecast { font-size: 10px; }
+  .backpack-trigger { top: 108px; left: 10px; right: auto; min-height: 40px; padding: 6px 9px; }
+  .today-hint { top: 159px; max-width: calc(100% - 20px); }
+  .touch-controls { bottom: 154px; }
+  .world-action-trigger { right: 12px; bottom: 155px; }
+  .fishing-panel { bottom: 10px; width: calc(100% - 20px); max-height: calc(100% - 20px); padding: 16px; }
+  .fishing-panel__header h2 { font-size: 23px; }
+  .fishing-panel__instruction { min-height: 0; }
+  .fishing-panel__control { min-height: 52px; font-size: 15px; }
+  .spring-dialog { padding: 18px; }
+  .hotbar-held-item { gap: 8px; font-size: 11px; }
+  .hotbar-held-item button { min-height: 36px; padding-inline: 7px; }
+  .world-frame--game .action-feedback { max-width: calc(100% - 24px); white-space: normal; bottom: 144px; text-align: center; }
+  .action-feedback[data-modal-open="true"] { top: 12px; bottom: auto; }
+}
+@media (max-height: 480px) {
+  .today-hint { display: none; }
+  .fishing-panel { top: 10px; bottom: auto; max-height: calc(100% - 20px); }
+  .life-hud { top: 8px; }
+  .world-action-trigger, .touch-controls { bottom: 119px; }
+  .pet-adoption-invite { bottom: 179px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weather-layer > i { animation: none !important; }
 }

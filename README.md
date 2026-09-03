@@ -1,8 +1,10 @@
 # 镜像岛
 
-镜像岛是一个单人 Web 2D 像素生活 RPG。当前先完成农场生活循环，长期再按独立里程碑验证灵兽收集培养、轻量撤离探索、肉鸽随机事件、阶段性守家事件和东方志怪故事；新主线由 Phaser/Vue、GameSession、纯 TypeScript 规则和 IndexedDB 本地存档组成。
+镜像岛是一款东方风格、未来拥有独立剧情的星露谷式单人 Web 像素生活 RPG。当前只做正常种田、采集、钓鱼与日常社交，不做剧情、节庆或远征；主线由 Phaser/Vue、GameSession、纯 TypeScript 规则和 IndexedDB 本地存档组成。
 
 RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行时。公开根入口 `/` 只服务镜像岛单人主线。
+
+当前版本已实现春季基础玩法 v10：午夜提醒、02:00 昏倒、体力与天气、自由耕地、水壶补水、六作物、资源再生、钓鱼和送礼。相关自动检查通过，真人验收仍待完成；部署结果以 main 发布流水线为准，详见 [当前状态](docs/CURRENT_STATE.md)。
 
 ## 新主线底座
 
@@ -41,6 +43,7 @@ npm --prefix .\apps\mirror-island run build:server
 ## 文档
 
 - [文档索引](docs/INDEX.md)
+- [当前状态](docs/CURRENT_STATE.md)
 - [产品简报](docs/PRODUCT_BRIEF.md)
 - [明确不做](docs/WHAT_NOT_TO_BUILD.md)
 - [Town 后续开发路线图](docs/TOWN_ROADMAP.md)

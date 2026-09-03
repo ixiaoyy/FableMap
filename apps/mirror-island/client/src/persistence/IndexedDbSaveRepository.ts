@@ -7,6 +7,7 @@ import {
   indexedDbSlotKeys,
   planIndexedDbSave,
   v2BackupKey,
+  v9BackupKey,
   type IndexedDbGameRecord,
 } from "./v2-migration-backup.ts";
 
@@ -55,7 +56,7 @@ export class IndexedDbSaveRepository implements SaveRepository {
     return decodeStoredGame(rawRecord.game);
   }
 
-  /** Atomically preserves the first raw v2 payload before replacing its main slot with the current save. */
+  /** Atomically preserves first raw v2/v9 payloads before replacing the main slot with the current save. */
   async save(ownerKey: string, slotId: string, game: StoredGame): Promise<void> {
     const validatedGame = decodeStoredGame(game);
     const mainKey = saveKey(ownerKey, slotId);
@@ -65,12 +66,14 @@ export class IndexedDbSaveRepository implements SaveRepository {
     const store = transaction.objectStore(SAVE_STORE_NAME);
     const mainRequest = store.get(mainKey);
     const backupRequest = store.get(v2BackupKey(mainKey));
+    const springBackupRequest = store.get(v9BackupKey(mainKey));
     let mainReady = false;
     let backupReady = false;
+    let springBackupReady = false;
     let writesQueued = false;
-    /** Queues the complete migration plan once both transaction-owned reads have succeeded. */
+    /** Queues the complete migration plan once all three transaction-owned reads have succeeded. */
     const queueWrites = (): void => {
-      if (!mainReady || !backupReady || writesQueued) return;
+      if (!mainReady || !backupReady || !springBackupReady || writesQueued) return;
       writesQueued = true;
       const plan = planIndexedDbSave(
         mainKey,
@@ -78,7 +81,15 @@ export class IndexedDbSaveRepository implements SaveRepository {
         backupRequest.result as IndexedDbGameRecord | undefined,
         validatedGame,
       );
+      const springPlan = planIndexedDbSave(
+        mainKey,
+        mainRequest.result as IndexedDbGameRecord | undefined,
+        springBackupRequest.result as IndexedDbGameRecord | undefined,
+        validatedGame,
+        9,
+      );
       if (plan.backup) store.put(plan.backup);
+      if (springPlan.backup) store.put(springPlan.backup);
       store.put(plan.main);
     };
     mainRequest.onsuccess = () => {
@@ -89,10 +100,14 @@ export class IndexedDbSaveRepository implements SaveRepository {
       backupReady = true;
       queueWrites();
     };
+    springBackupRequest.onsuccess = () => {
+      springBackupReady = true;
+      queueWrites();
+    };
     await completion;
   }
 
-  /** Deletes the requested account slot and its v2 migration backup while preserving every other record. */
+  /** Deletes only the requested slot and its scoped v2/v9 raw backups. */
   async delete(ownerKey: string, slotId: string): Promise<void> {
     const database = await this.openDatabase();
     const transaction = database.transaction(SAVE_STORE_NAME, "readwrite");

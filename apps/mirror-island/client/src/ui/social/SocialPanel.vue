@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from "vue";
 import {
   FRIENDSHIP_POINTS_PER_HEART,
+  giftWeekIndex,
 } from "../../../../domain/social/definitions.ts";
 import {
   relationshipStageAt,
@@ -9,10 +10,13 @@ import {
 } from "../../../../domain/social/relationship-stage.ts";
 import { getDialogueDefinition } from "../../game/dialogue/definitions.ts";
 import { getWorldCatalog } from "../../game/world/world-catalog.ts";
+import { npcRestDay } from "../../../../domain/world/npc-schedules.ts";
+import { trapDialogTab } from "../focus/dialog-focus.ts";
 import {
   closeSocial,
   gameUiState,
   openSocial,
+  isWorldInputLocked,
 } from "../../stores/game-store.ts";
 
 interface SocialEntry {
@@ -23,24 +27,25 @@ interface SocialEntry {
   readonly relationship: string;
   readonly talkedToday: boolean;
   readonly progressPercent: number;
+  readonly giftStatus: string;
+  readonly restDay: string;
 }
 
 const trigger = ref<HTMLButtonElement | null>(null);
 const panel = ref<HTMLElement | null>(null);
 const catalogNpcs = uniqueCatalogNpcs();
 
-const unavailable = computed(() => (
-  gameUiState.worldActionBusy
-  || gameUiState.shopOpen
-  || gameUiState.dialogue !== null
-  || gameUiState.sleepConfirmationOpen
-));
+const unavailable = computed(() => isWorldInputLocked());
+const weekdayLabels = { monday: "周一", tuesday: "周二", wednesday: "周三", thursday: "周四", friday: "周五", saturday: "周六", sunday: "周日" } as const;
 
 const residents = computed<readonly SocialEntry[]>(() => catalogNpcs.map((npc) => {
   const friendship = gameUiState.friendships[npc.npcId] ?? {
     npcId: npc.npcId,
     points: 0,
     lastTalkedDay: 0,
+    lastGiftDay: 0,
+    giftWeekIndex: 0,
+    giftsThisWeek: 0,
   };
   const stage = relationshipStageAt(friendship.points);
   const hearts = stage === "friendly" ? 2 : stage === "familiar" ? 1 : 0;
@@ -52,6 +57,9 @@ const residents = computed<readonly SocialEntry[]>(() => catalogNpcs.map((npc) =
     relationship: relationshipLabel(stage),
     talkedToday: friendship.lastTalkedDay === gameUiState.day,
     progressPercent: Math.min(100, friendship.points / (FRIENDSHIP_POINTS_PER_HEART * 2) * 100),
+    giftStatus: (friendship.lastGiftDay === gameUiState.day ? "今日已送" : "今日未送")
+      + ` · 本周 ${friendship.giftWeekIndex === giftWeekIndex(Math.max(1, gameUiState.day)) ? friendship.giftsThisWeek : 0}/2`,
+    restDay: weekdayLabels[npcRestDay(npc.npcId) ?? "sunday"],
   };
 }));
 
@@ -120,6 +128,7 @@ watch(() => gameUiState.socialOpen, (open) => {
       aria-labelledby="social-ledger-title"
       tabindex="-1"
       @keydown.esc.stop="closeLedger"
+      @keydown="trapDialogTab($event, panel)"
     >
       <header class="social-ledger__header">
         <div>
@@ -150,6 +159,7 @@ watch(() => gameUiState.socialOpen, (open) => {
           <span class="social-ledger__daily" :data-complete="entry.talkedToday">
             {{ entry.talkedToday ? "今日已聊" : "今日未聊" }}
           </span>
+          <span class="social-ledger__gift-status">{{ entry.giftStatus }} · {{ entry.restDay }}休息</span>
         </li>
       </ol>
     </section>

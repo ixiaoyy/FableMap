@@ -25,9 +25,9 @@ export const FIRST_WEEK_MILESTONES: readonly FirstWeekMilestone[] = [
     message: "华强添了背包扩容服务：1500g，可从 24 格扩到 32 格。",
   },
   {
-    eventId: "day-7-mirror-teaser",
+    eventId: "day-7-fishing-intro",
     unlockDay: 7,
-    message: "湖岸传来奇怪的回声。那块指向东方的石标，正映出不属于这里的光。",
+    message: "从今天起可以向祥子领取竹制鱼竿，再到湖岸旧码头试钓。雨天可以去东岸民宅找他。",
   },
 ];
 

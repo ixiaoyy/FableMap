@@ -35,13 +35,28 @@ export function audioCueForCommandResult(
       if (feedback?.code === "success") return AUDIO_CUE.axe;
       return null;
     }
+    case "use-item-on-tile": {
+      if (feedback?.code === "tilled") return AUDIO_CUE.hoe;
+      if (feedback?.code === "watered" || feedback?.code === "refilled") return AUDIO_CUE.watering;
+      if (feedback?.code === "harvested") return AUDIO_CUE.harvest;
+      return null;
+    }
     case "move":
     case "craft":
+    case "refill-watering-can":
+    case "eat-item":
     case "talk-to-npc":
+    case "gift-item-to-npc":
     case "upgrade-watering-can":
     case "upgrade-backpack":
     case "acknowledge-retention-event":
     case "adopt-pet":
-    case "pet-home-pet": return null;
+    case "pet-home-pet":
+    case "start-fishing":
+    case "set-fishing-input":
+    case "dismiss-fishing": return null;
+    case "retry-fishing-save": return null;
+    case "retry-day-settlement": return null;
+    case "claim-fishing-rod": return feedback?.code === "fishing-rod-received" ? AUDIO_CUE.pickup : null;
   }
 }

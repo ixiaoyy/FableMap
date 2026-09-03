@@ -9,6 +9,8 @@ import {
   type AudioCue,
 } from "./audio-catalog.ts";
 import { subscribeAudioCues } from "./audio-events.ts";
+import type { WeatherKind } from "../../../domain/weather/definitions.ts";
+import { WeatherAmbience } from "./WeatherAmbience.ts";
 import {
   getAudioSettings,
   subscribeAudioSettings,
@@ -32,10 +34,12 @@ export class AudioDirector {
   private readonly bases = new Map<string, HTMLAudioElement>();
   private readonly oneShots = new Set<ActiveVoice>();
   private readonly ambience = new Set<AmbientVoice>();
+  private readonly weatherAmbience = new WeatherAmbience();
   private readonly stopCues: () => void;
   private readonly stopSettings: () => void;
   private settings = getAudioSettings();
   private currentGroup: AmbientGroup | null = null;
+  private weather: WeatherKind = "sunny";
   private footstepIndex = 0;
   private blockedNoticeShown = false;
   private disposed = false;
@@ -60,13 +64,22 @@ export class AudioDirector {
     const nextGroup = ambientGroupForRegion(regionId);
     if (nextGroup === this.currentGroup && this.hasCurrentAmbience()) return;
     this.currentGroup = nextGroup;
+    this.updateWeatherMix();
     for (const voice of [...this.ambience]) this.fadeAmbient(voice, 0, true);
     this.startCurrentAmbience();
+  }
+
+  /** Applies saved weather to the original weather bed without loading unreviewed media URLs. */
+  setWeather(weather: WeatherKind): void {
+    if (this.disposed || this.weather === weather) return;
+    this.weather = weather;
+    this.updateWeatherMix();
   }
 
   /** Plays one semantic cue, rotating the three footstep variants without runtime randomness. */
   playCue(cue: AudioCue): void {
     if (this.disposed) return;
+    this.weatherAmbience.unlock();
     const definition = cue === AUDIO_CUE.footstep
       ? FOOTSTEP_ASSETS[this.footstepIndex++ % FOOTSTEP_ASSETS.length]!
       : ONE_SHOT_ASSETS[cue];
@@ -79,6 +92,7 @@ export class AudioDirector {
     this.disposed = true;
     this.stopCues();
     this.stopSettings();
+    this.weatherAmbience.destroy();
     for (const voice of this.oneShots) voice.audio.pause();
     this.oneShots.clear();
     for (const voice of this.ambience) {
@@ -176,6 +190,14 @@ export class AudioDirector {
     this.settings = settings;
     for (const voice of this.oneShots) voice.audio.volume = this.effectiveVolume(voice.gain);
     for (const voice of this.ambience) voice.audio.volume = this.effectiveVolume(voice.gain * voice.mix);
+    this.updateWeatherMix();
+  }
+
+  /** Routes the existing SFX bus and committed region into the private weather-audio projection. */
+  private updateWeatherMix(): void {
+    this.weatherAmbience.setMix(
+      this.weather, this.currentGroup !== null && this.currentGroup !== "interior", this.effectiveVolume(1),
+    );
   }
 
   /** Calculates the current SFX-bus volume while Music remains a saved future-only channel. */

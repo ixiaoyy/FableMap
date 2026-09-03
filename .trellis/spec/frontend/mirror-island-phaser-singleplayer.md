@@ -1,5 +1,62 @@
 # Mirror Island Phaser Single-player
 
+## Active Spring v10 contract (implemented, manual acceptance pending)
+
+### 1. Scope / Trigger
+
+- 用户已批准 `.trellis/tasks/09-02-spring-complete-v1/`。本节优先于下方历史 v3–v9 场景：实施日程/体力/天气、动态农田、六作物、资源再生、钓鱼、送礼和营业；删除镜门伏笔，不增加剧情/节庆/数据库。
+
+### 2. Signatures
+
+- `GameState.version = StoredGame.version = 10`；`minuteOfDay` 为 360..1560，10 分钟粒度。
+- 新命令：`use-item-on-tile`、`refill-watering-can`、`eat-item`、`gift-item-to-npc`、`claim-fishing-rod`、钓鱼 press/release/dismiss、`retry-fishing-save`、`retry-day-settlement`；payload 以 `domain/session/commands.ts` 为准。
+- `tick(now, paused, activityPaused)` 返回 `ActionFeedback | null`；`subscribeFishing` 与 `subscribeDaySettlement` 提供不进入存档的防御性 UI 投影。
+- 坐标农田键为 `farm:column:row`；允许区域只由 Tiled 提供。
+- `facingFromVector(x, y, fallback)` 为输入无关的朝向解析；Phaser 必须用同区域 snapshot 位移同步触摸方向，不能仅从 WASD 读取。
+
+### 3. Contracts
+
+- `GameSession` 是唯一 mutable aggregate，所有新状态只保存在一个 v10 中；Phaser/Vue 消费只读投影。
+- 午夜提醒一次，02:00 强制日结；Cottage 外扣 `min(floor(gold/10),1000)`，不丢物品。晚睡恢复下降但不低于50%。
+- 日结先生成候选 snapshot，保存失败不得推进日期或重复扣款；失败有明确重试路径。
+- `.game-canvas` 必须建立独立 formatting context，约束 Phaser FIT 注入的 canvas 居中 margin；手机方向键、聚焦和 resize 后 `.world-frame.scrollTop` 保持 0。恢复画布焦点使用 `preventScroll: true`。
+- v9 原记录在首次 v10 写入的同一个 IndexedDB transaction 中备份；不枚举旧账号、不增加可玩槽。
+- 钓鱼只有 casting/waiting 继续岛上计时，reeling/result 暂停；隐藏页面冻结两者且不补算隐藏时间。开始一竿扣 6 体力并保存 attempt；刷新取消 runtime，不返还体力。
+- caught 投影附加 `saveStatus: saving/saved/failed`。只有写入成功才能收竿；失败持续显示重试入口，重试不得重新加鱼。escaped 不暴露未获得的鱼名。
+- 所有 DOM dialog 的 keydown/keyup 在 App 边界停止冒泡，但不取消按钮原生默认行为；Tab 留在 dialog，钓鱼输入 blur/pointercancel 必须释放。
+- HUD 原生 Space/Enter 激活也与 Phaser 捕获隔离；输入转为 locked 时 WorldScene 重置已有 keyboard keys，防止被 dialog 接走的 keyup 导致回到世界后继续移动。
+- 方向键长按必须在 modal lock、全局 pointerup/pointercancel、blur、visibilitychange 时停止；首个 nudge 触发弹框后不得再创建 interval，防止按钮禁用吞掉 pointerup 后自动续走。
+- 体力上限 100，锄地/砍伐 2、浇水每实际格 1；水壶 20/40 水。雨天新开垦与采收后土壤保持湿润，重复浇水不扣资源。
+- Farm `Tillable` 当前 492 格，稀疏 key 必须是规范 `farm:column:row`，不接受前导零或越界。原 8 格迁移到列 27–30、行 18–19。
+- Farm 外清桩 7 天再生，Farm 树不再生；枯枝不刷在已有农田上。Foothills 春笋仅每轮 28 天第 4–14 天参与候选，其他地区仍保留零星来源。
+- 礼物每日/每周计数按 NPC 保存：1/日、2/周，周日重置，没有全镇总限制。营业 09:00–17:00，休息日优先于雨天覆盖；UI 不另算服务资格。
+- Day 7 从祥子免费领取鱼竿，雨天去东岸民宅；不得让提示断言 NPC 此刻必在码头。原始剧情/节庆/品质/矿洞均不进入本版。
+- 天气图层与 `AudioDirector -> WeatherAmbience` 只表现 saved weather；后者用原生 Web Audio 合成原创噪声，不新增第三方素材 URL、库或二进制。
+
+### 4. Validation & Error Matrix
+
+- 不可耕/越界/远距/遮挡坐标：无 mutation；不足体力/水/库存：明确失败且原子保持。
+- v9 合法记录：原8格按发布坐标迁移，镜门 marker 移除；未知字段值/未来版本：不覆盖原记录。
+- 02:00 与床铺竞态：只能一个日结；保存失败重试复用同一候选，不能再次扣钱。
+- 鱼获保存失败：结果框保持失败状态，`dismiss-fishing` 被拒绝，`retry-fishing-save` 保存同一背包。
+- 菜单/角色创建时 visibilitychange：不调用未开始的 GameSession.tick；显式新游戏只等待旧队列结束，不能因旧失败标记永久禁止重建。
+
+### 5. Good / Base / Bad
+
+- Good：种田、雨天、钓鱼、送礼均可刷新恢复，Day28→29继续春季内容。
+- Base：剧情和活动为空，不用虚构入口承诺后续玩法。
+- Bad：客户端计算鱼获/扣体力、静默覆盖坏档、重载重抽结果或部署半完成 v10。
+
+### 6. Checks
+
+- 相关检查：life-loop 21 项、town/audio 12 项、typecheck 与 client build；仍需真人覆盖完整种植/钓鱼/送礼手感、真实 v9 备份、02:00 与 200% 浏览器缩放，不连接服务端数据库。
+- 开发 HMR 若仍返回旧 domain 模块，重新构建并用隔离 origin 的 production preview 复验；不能把热更新中 GameSession 重建错误记为生产验收通过。
+
+### 7. Wrong vs Correct
+
+- Wrong：Phaser 更新背包后再按钓鱼动画判断成功。
+- Correct：FishingSystem 判定成功并由 GameSession 原子保存，客户端只显示结果。
+
 ## Ownership
 
 - 唯一应用位于 `apps/mirror-island/`；公开 `/` 只服务一份 Phaser/Vue 单人 client。
@@ -25,7 +82,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v9 在 v8 retention 字段之外增加 nullable home pet identity、name、adopted day、hidden bond 与 last-petted day，旧 v1–v8 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前工作区 save schema v10 保留 v9 宠物并增加春季玩法字段。旧 v1–v9 通过显式幂等 decoder 迁移，v9 原始记录在首次 v10 写入时同事务备份；不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源、农田和 friendship；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -1649,7 +1706,7 @@ type GameCommand =
 - `FirstWeekMilestoneSystem` 只接受 Day3/5/7 三个 milestone ID：日期未到、两心 event ID 或重复确认均不写 state；成功确认由 GameSession 立即 publish/save，并由现有 feedback toast 展示一次。功能可用性始终按 absolute day 判定，不能反向依赖 seen ID。
 - 当前 gameplay 使用 `playableCalendarAt`：absolute Day N 永不进入未实现 Summer，crop/shop/forage 继续 spring content。`calendarAt` 只保留未来四季工具，不得被当前 gameplay/UI 用来重置 Day29。
 - LifeHud/CalendarPanel 只外显 absolute `Day N`、星期与滚动 28 天页，不显示“春季结束”或未实现季节；TodayHint 只从 snapshot 派生首周目标，Day4 必须读取实际 friendship points。
-- Lakeshore `lakeshore-waystone` 在 Day7+ 由 `InspectEntity` 投影代码绘制微光；点击仍只解析现有 inspect dialogue，不注册 exit、传送或 Expedition state，视觉持续性不由 seen ID 控制。
+- v10 已删除 `lakeshore-waystone` 的微光和镜门预告；所有日期均是普通环境说明。Day7 改为领取鱼竿/旧码头钓鱼引导，不注册出口或 Expedition state。
 
 ### 4. Validation & Error Matrix
 
@@ -1675,7 +1732,7 @@ type GameCommand =
 ### 6. Tests Required
 
 - Life Loop：Day3 之前确认失败、two-heart ID 不被 milestone system 接受、首次确认保存、重复确认幂等；Day6 deterministic request 仍为15木材/320g/100关系奖励。
-- Town/client：Day6 waystone 保持一句普通说明，Day7 返回三句镜门预告；新增 typed command 在 audio mapping 明确静音。
+- Town/client：Day6/Day7 waystone 都保持同一句普通说明；新 typed command 在 audio mapping 明确映射或静音。
 - 自动门禁：`test:life-loop`、`test:town-population`、typecheck、client build；镜光体感、提示时机、手机/200% zoom 与 Day1–7/Day29 连玩由真人验收，不由 Agent 代签。
 
 ### 7. Wrong vs Correct

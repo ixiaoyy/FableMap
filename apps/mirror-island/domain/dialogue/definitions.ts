@@ -33,7 +33,7 @@ export const RETENTION_EVENT_IDS = [
   "blacksmith-two-heart",
   "day-3-watering-intro",
   "day-5-backpack-intro",
-  "day-7-mirror-teaser",
+  "day-7-fishing-intro",
 ] as const;
 
 export type RetentionEventId = typeof RETENTION_EVENT_IDS[number];
@@ -56,6 +56,11 @@ export function activityDialogueId(npcId: string, phase: NpcSchedulePhase, varia
 /** Creates one stable personality-variant ID from the fixed three-entry pool. */
 export function personalityDialogueId(npcId: string, variant: 0 | 1 | 2): string {
   return `personality:${npcId}:${variant}`;
+}
+
+/** Creates a weather/rest-day line identity while keeping the visible text in the client catalog. */
+export function routineDialogueId(npcId: string, routine: "rain" | "rest"): string {
+  return `routine:${npcId}:${routine}`;
 }
 
 /** Creates one stable relationship-stage dialogue ID. */
@@ -85,6 +90,8 @@ export function isKnownDialogueSelectionId(value: unknown): value is string {
     || value === personalityDialogueId(npcId, 2)
     || value === relationshipDialogueId(npcId, "familiar")
     || value === relationshipDialogueId(npcId, "friendly")
+    || value === routineDialogueId(npcId, "rain")
+    || value === routineDialogueId(npcId, "rest")
   ))) return true;
   if (DAILY_REQUESTS.some(({ requestId }) => (
     value === requestDialogueId(requestId, "missing") || value === requestDialogueId(requestId, "thanks")

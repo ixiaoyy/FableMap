@@ -11,6 +11,7 @@ import {
   personalityDialogueId,
   relationshipDialogueId,
   requestDialogueId,
+  routineDialogueId,
   type NpcDialogueState,
   type RetentionEventId,
 } from "./definitions.ts";
@@ -52,10 +53,14 @@ export class NpcDialogueSystem {
       groups.push([relationshipDialogueId(npc.npcId, stage === "friendly" ? "friendly" : "familiar")]);
     }
     const phase = schedulePhaseAt(state.minuteOfDay);
-    groups.push([
-      activityDialogueId(npc.npcId, phase, 0),
-      activityDialogueId(npc.npcId, phase, 1),
-    ]);
+    if (npc.routine === "rain" || npc.routine === "rest") {
+      groups.push([routineDialogueId(npc.npcId, npc.routine)]);
+    } else {
+      groups.push([
+        activityDialogueId(npc.npcId, phase, 0),
+        activityDialogueId(npc.npcId, phase, 1),
+      ]);
+    }
     groups.push([
       personalityDialogueId(npc.npcId, 0),
       personalityDialogueId(npc.npcId, 1),
@@ -71,6 +76,11 @@ export class NpcDialogueSystem {
     if (selected.startsWith("relationship:")) memory.acknowledgedStage = stage;
     if (eventId && selected === eventDialogueId(eventId)) state.seenEventIds.push(eventId);
     return { dialogueId: selected, baseDialogueId: profile.baseDialogueId };
+  }
+
+  /** Prunes all resident memories after day advancement so untouched residents keep valid save history. */
+  settleDay(state: GameState): void {
+    for (const memory of Object.values(state.npcDialogue)) this.prune(memory, state.day);
   }
 
   /** Prunes one NPC dialogue memory to the recent three-day, twelve-entry persisted bound. */
