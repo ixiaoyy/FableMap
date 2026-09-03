@@ -139,9 +139,12 @@ const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
     frame: { name: "vectoraith-soil", x: 1 * 16, y: 3 * 16, width: 16, height: 16 },
   },
   farmCrops: {
-    [ITEM_ID.turnip]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-turnip-growing", x: 13 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-turnip-mature", x: 14 * 16, y: 7 * 16, width: 16, height: 16 } },
+    [ITEM_ID.turnip]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-turnip-growing", x: 9 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-turnip-mature", x: 11 * 16, y: 7 * 16, width: 16, height: 16 } },
     [ITEM_ID.bokChoy]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-bok-choy-growing", x: 5 * 16, y: 3 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-bok-choy-mature", x: 7 * 16, y: 3 * 16, width: 16, height: 16 } },
     [ITEM_ID.cauliflower]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-cauliflower-growing", x: 5 * 16, y: 1 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-cauliflower-mature", x: 7 * 16, y: 1 * 16, width: 16, height: 16 } },
+    [ITEM_ID.greenPea]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-green-pea-growing", x: 1 * 16, y: 3 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-green-pea-mature", x: 3 * 16, y: 3 * 16, width: 16, height: 16 } },
+    [ITEM_ID.springPotato]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-spring-potato-growing", x: 13 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-spring-potato-mature", x: 15 * 16, y: 7 * 16, width: 16, height: 16 } },
+    [ITEM_ID.rapeseedFlower]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-rapeseed-growing", x: 13 * 16, y: 9 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-rapeseed-mature", x: 14 * 16, y: 9 * 16, width: 16, height: 16 } },
   },
   forage: {
     "spring-wildflower": { textureKey: VECTORAITH_MEDIA_KEYS.crops, frame: { name: "vectoraith-spring-wildflower", x: 2 * 16, y: 9 * 16, width: 16, height: 16 } },

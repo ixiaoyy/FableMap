@@ -17,6 +17,7 @@ const sellGoods = computed(() => [
   ...CROP_DEFINITIONS.map(({ cropId }) => cropId),
   ITEM_ID.springWildflower,
   ITEM_ID.bambooShoot,
+  ...Object.values(ITEM_DEFINITIONS).filter((item) => item.category === "fish").map((item) => item.id),
 ]);
 
 /** Returns one inventory projection total without owning domain inventory rules. */
@@ -92,7 +93,7 @@ watch(() => gameUiState.shopOpen, (open) => {
         <article v-for="crop in seedGoods" :key="crop.seedId">
           <div>
             <h3>{{ ITEM_DEFINITIONS[crop.seedId].name }}</h3>
-            <p>持有 {{ itemQuantity(crop.seedId) }} · 成长 {{ crop.growthDays }} 天</p>
+            <p>持有 {{ itemQuantity(crop.seedId) }} · 成长 {{ crop.growthDays }} 天<span v-if="crop.regrowDays"> · 每 {{ crop.regrowDays }} 天再收</span><span v-if="crop.yieldKind"> · 可能多产</span></p>
           </div>
           <button
             type="button"

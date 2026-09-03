@@ -184,7 +184,7 @@ const DIALOGUES: Readonly<Record<string, DialogueDefinition>> = {
   "foothills-trail-sign": {
     id: "foothills-trail-sign",
     speaker: "山路木牌",
-    lines: ["向北：旧矿洞。向东：泉眼林地。雨后石阶湿滑。"],
+    lines: ["向北：旧矿洞。向东：泉眼林地。雨后石阶湿滑。", "每轮春季第 4～14 天是山坡采笋时节。其他时日，也可去院边、镇上或湖边找找嫩笋。"],
   },
   "foothills-mine-mouth": {
     id: "foothills-mine-mouth",
@@ -618,14 +618,15 @@ const EVENT_DIALOGUES: Readonly<Record<string, DialogueDefinition>> = {
   },
 };
 
-const LAKESHORE_MIRROR_TEASER: DialogueDefinition = {
-  id: "lakeshore-waystone",
-  speaker: "湖岸石标",
-  lines: [
-    "石标正面像蒙了一层水，却照不出你的影子。",
-    "冷光深处闪过一座倒悬的山门，随后被细小涟漪吞没。",
-    "刻痕下多了一行很浅的字：镜门未开，彼岸仍在。",
-  ],
+const ROUTINE_DIALOGUES: Readonly<Record<string, { readonly rain: string; readonly rest: string }>> = {
+  "seed-keeper": { rain: "雨天种子要放干燥些，柜台照常开着。", rest: "周三盘货，今天不营业。陪我聊两句倒是有空。" },
+  "town-blacksmith": { rain: "雨天我在工坊里干活，要升级水壶就在这里找我。", rest: "今天让炉火歇歇，工具改天再调。" },
+  "town-resident-01": { rain: "雨替你浇了田，今天可以多歇一会儿。", rest: "今天不急着出门，窗边的花也值得看看。" },
+  "town-resident-mozi": { rain: "木料不能淋雨，今天就在家里整理。", rest: "今天把工具收好了，手也该歇一歇。" },
+  "town-resident-haonan": { rain: "山路湿滑，今天不巡山。你也小心脚下。", rest: "今天轮休，山里的事明天再说。" },
+  "town-resident-alan": { rain: "雨把湖边的颜色洗淡了，我在屋里补画。", rest: "今天在家理画稿，不去湖边了。" },
+  "town-resident-haomeili": { rain: "雨声正好伴着针线，今天就做些细活。", rest: "今天不去工坊，给自己留点闲工夫。" },
+  "town-resident-xiangzi": { rain: "雨天有雨鳅，想钓鱼就去旧码头，别站太靠边。", rest: "今天在家理鱼线，竹竿的事照样可以问我。" },
 };
 
 /** Returns one fixed or deterministic day/phase dialogue, or null for an unknown catalog ID. */
@@ -633,9 +634,6 @@ export function getDialogueDefinition(
   dialogueId: string,
   context?: DialogueContext,
 ): DialogueDefinition | null {
-  if (dialogueId === "lakeshore-waystone" && context && context.day >= 7) {
-    return LAKESHORE_MIRROR_TEASER;
-  }
   const selected = selectedDialogueDefinition(dialogueId, context);
   if (selected) return selected;
   const definition = DIALOGUES[dialogueId];
@@ -663,6 +661,15 @@ function selectedDialogueDefinition(
   if (EVENT_DIALOGUES[dialogueId]) return EVENT_DIALOGUES[dialogueId]!;
   const parts = dialogueId.split(":");
   const kind = parts[0];
+  if (kind === "routine" && parts.length === 3) {
+    const [, npcId, routine] = parts;
+    const profile = getNpcDialogueProfile(npcId!);
+    const definition = profile ? DIALOGUES[profile.baseDialogueId] : null;
+    const lines = ROUTINE_DIALOGUES[npcId!];
+    return definition && lines && (routine === "rain" || routine === "rest")
+      ? { id: dialogueId, speaker: definition.speaker, lines: [lines[routine]] }
+      : null;
+  }
   if (kind === "activity" && parts.length === 4) {
     const [, npcId, rawPhase, rawVariant] = parts;
     const profile = getNpcDialogueProfile(npcId!);

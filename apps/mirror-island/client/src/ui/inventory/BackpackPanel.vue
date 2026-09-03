@@ -7,8 +7,10 @@ import {
   gameUiState,
   isWorldInputLocked,
   openBackpack,
+  selectInventorySlot,
 } from "../../stores/game-store.ts";
 import { restoreWorldFocus } from "../focus/world-focus.ts";
+import { trapDialogTab } from "../focus/dialog-focus.ts";
 
 const trigger = ref<HTMLButtonElement | null>(null);
 const panel = ref<HTMLElement | null>(null);
@@ -40,6 +42,13 @@ function closePanel(): void {
   });
 }
 
+/** Selects a backpack stack for world use without moving any saved slots, then restores world focus. */
+function holdSlot(index: number): void {
+  closeBackpack();
+  selectInventorySlot(index);
+  void nextTick(restoreWorldFocus);
+}
+
 watch(() => gameUiState.backpackOpen, (open) => {
   if (open) void nextTick(() => panel.value?.focus());
 });
@@ -68,10 +77,11 @@ watch(() => gameUiState.backpackOpen, (open) => {
       aria-labelledby="backpack-title"
       tabindex="-1"
       @keydown.esc.stop.prevent="closePanel"
+      @keydown="trapDialogTab($event, panel)"
     >
       <header>
         <div>
-          <p>随身物品 · 前八格为快捷栏</p>
+          <p>点击物品拿在手上 · 前八格可用数字键选择</p>
           <h2 id="backpack-title">背包 {{ gameUiState.inventoryCapacity }} 格</h2>
         </div>
         <button type="button" @click="closePanel">合上</button>
@@ -85,6 +95,13 @@ watch(() => gameUiState.backpackOpen, (open) => {
           :data-empty="!slot.definition"
           :aria-label="`${slot.index + 1}：${slot.definition?.name ?? '空槽'}`"
         >
+          <button
+            type="button"
+            class="backpack-slot__button"
+            :disabled="!slot.definition"
+            :aria-label="`拿起${slot.definition?.name ?? '空槽'}`"
+            @click="holdSlot(slot.index)"
+          >
           <span class="backpack-panel__index">{{ slot.index + 1 }}</span>
           <span
             v-if="slot.icon"
@@ -95,6 +112,8 @@ watch(() => gameUiState.backpackOpen, (open) => {
           <strong v-else-if="slot.definition">{{ slot.definition.hotbarMark }}</strong>
           <small v-if="slot.quantity > 1">{{ slot.quantity }}</small>
           <em v-if="slot.hotbar">快捷</em>
+          <span class="backpack-slot__name">{{ slot.definition?.name ?? '空' }}</span>
+          </button>
         </li>
       </ol>
     </section>

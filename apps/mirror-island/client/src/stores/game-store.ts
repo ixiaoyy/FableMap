@@ -12,6 +12,15 @@ import {
   type PlayerAppearanceId,
 } from "../../../domain/player/appearance.ts";
 import { DAY_START_MINUTE } from "../../../domain/time/game-time.ts";
+import { MAX_STAMINA } from "../../../domain/stamina/definitions.ts";
+import { wateringCanCapacity } from "../../../domain/progression/definitions.ts";
+import type { WeatherKind } from "../../../domain/weather/definitions.ts";
+import {
+  IDLE_FISHING_SNAPSHOT,
+  fishingPausesClock,
+  type FishingSnapshot,
+} from "../../../domain/fishing/definitions.ts";
+import { IDLE_DAY_SETTLEMENT, type DaySettlementSnapshot } from "../../../domain/session/day-settlement.ts";
 import {
   getAudioSettings,
   updateAudioVolume,
@@ -30,6 +39,7 @@ export interface InventorySlotProjection {
 }
 
 export interface DialogueProjection {
+  readonly wateringServiceAvailable?: boolean;
   readonly dialogueId: string | null;
   readonly npcId: string | null;
   readonly speaker: string;
@@ -41,12 +51,21 @@ export interface FriendshipProjection {
   readonly npcId: string;
   readonly points: number;
   readonly lastTalkedDay: number;
+  readonly lastGiftDay: number;
+  readonly giftWeekIndex: number;
+  readonly giftsThisWeek: number;
 }
 
 export interface DailyRequestProjection {
   readonly day: number;
   readonly requestId: string;
   readonly completed: boolean;
+}
+
+export interface GiftConfirmation {
+  readonly npcId: string;
+  readonly npcName: string;
+  readonly itemId: ItemId;
 }
 
 const mutableState = reactive({
@@ -59,14 +78,23 @@ const mutableState = reactive({
   playerY: 0,
   playerAppearanceId: DEFAULT_PLAYER_APPEARANCE_ID as PlayerAppearanceId,
   gold: 0,
+  stamina: MAX_STAMINA,
+  maxStamina: MAX_STAMINA,
   inventory: [] as InventorySlotProjection[],
   inventoryCapacity: 24 as 24 | 32,
   wateringCanLevel: 1 as 1 | 2,
+  wateringCanWater: 20,
+  wateringCanCapacity: wateringCanCapacity(1),
+  weather: "sunny" as WeatherKind,
+  nextWeather: "sunny" as WeatherKind,
   friendships: {} as Record<string, FriendshipProjection>,
   dailyRequest: null as DailyRequestProjection | null,
   seenEventIds: [] as string[],
   pet: null as PetState | null,
-  selectedHotbarIndex: null as number | null,
+  fishing: { ...IDLE_FISHING_SNAPSHOT } as FishingSnapshot,
+  daySettlement: { ...IDLE_DAY_SETTLEMENT } as DaySettlementSnapshot,
+  giftConfirmation: null as GiftConfirmation | null,
+  selectedInventoryIndex: null as number | null,
   selectedItemId: "" as ItemId | "",
   worldActionBusy: false,
   feedback: null as ActionFeedback | null,
@@ -111,6 +139,7 @@ export function applyGameState(state: GameState): void {
   mutableState.playerY = state.player.y;
   mutableState.playerAppearanceId = state.player.appearanceId;
   mutableState.gold = state.gold;
+  mutableState.stamina = state.stamina;
   mutableState.inventory = state.inventory.map((slot, index) => ({
     index,
     itemId: slot.itemId,
@@ -118,6 +147,10 @@ export function applyGameState(state: GameState): void {
   }));
   mutableState.inventoryCapacity = state.inventoryCapacity;
   mutableState.wateringCanLevel = state.wateringCanLevel;
+  mutableState.wateringCanWater = state.wateringCanWater;
+  mutableState.wateringCanCapacity = wateringCanCapacity(state.wateringCanLevel);
+  mutableState.weather = state.weather.current;
+  mutableState.nextWeather = state.weather.next;
   mutableState.friendships = Object.fromEntries(
     Object.entries(state.friendships).map(([npcId, friendship]) => [npcId, { ...friendship }]),
   );
@@ -126,7 +159,7 @@ export function applyGameState(state: GameState): void {
   mutableState.pet = state.pet ? { ...state.pet } : null;
   if (previousDay !== state.day) petAdoptionDeferredDay = null;
   refreshPetAdoptionPrompt();
-  const selectedIndex = mutableState.selectedHotbarIndex;
+  const selectedIndex = mutableState.selectedInventoryIndex;
   if (selectedIndex !== null) {
     const selectedSlot = mutableState.inventory[selectedIndex];
     if (!selectedSlot || selectedSlot.itemId === "" || selectedSlot.itemId !== mutableState.selectedItemId) {
@@ -137,11 +170,17 @@ export function applyGameState(state: GameState): void {
 
 /** Selects or toggles one Hotbar slot while modal UI does not own gameplay input. */
 export function selectHotbarSlot(index: number): void {
-  if (isWorldInputLocked()) return;
   if (!Number.isInteger(index) || index < 0 || index >= HOTBAR_SLOT_COUNT) {
     throw new Error("Hotbar selection index is invalid.");
   }
-  if (mutableState.selectedHotbarIndex === index) {
+  selectInventorySlot(index);
+}
+
+/** Selects any inventory slot for world use without moving or rewriting its durable item stack. */
+export function selectInventorySlot(index: number): void {
+  if (isWorldInputLocked()) return;
+  if (!Number.isInteger(index) || index < 0 || index >= mutableState.inventory.length) return;
+  if (mutableState.selectedInventoryIndex === index) {
     clearHotbarSelection();
     return;
   }
@@ -150,13 +189,13 @@ export function selectHotbarSlot(index: number): void {
     clearHotbarSelection();
     return;
   }
-  mutableState.selectedHotbarIndex = index;
+  mutableState.selectedInventoryIndex = index;
   mutableState.selectedItemId = definition.id;
 }
 
 /** Clears the transient selected slot and returns the player to empty hand. */
 export function clearHotbarSelection(): void {
-  mutableState.selectedHotbarIndex = null;
+  mutableState.selectedInventoryIndex = null;
   mutableState.selectedItemId = "";
 }
 
@@ -183,11 +222,17 @@ export function setActionFeedback(feedback: ActionFeedback | null): void {
   }, duration);
 }
 
+/** Projects one transient fishing snapshot without writing it into durable GameState. */
+export function applyFishingState(state: FishingSnapshot): void {
+  mutableState.fishing = { ...state };
+}
+
 /** Opens one fixed ephemeral dialogue projection above the Phaser world. */
 export function setDialogue(
   dialogue: Pick<DialogueProjection, "speaker" | "lines"> & {
     readonly dialogueId?: string | null;
     readonly npcId?: string | null;
+    readonly wateringServiceAvailable?: boolean;
   },
 ): void {
   if (dialogue.lines.length === 0) throw new Error("Dialogue requires at least one line.");
@@ -196,6 +241,7 @@ export function setDialogue(
   mutableState.dialogue = {
     dialogueId: dialogue.dialogueId ?? null,
     npcId: dialogue.npcId ?? null,
+    wateringServiceAvailable: dialogue.wateringServiceAvailable ?? false,
     speaker: dialogue.speaker,
     lines: [...dialogue.lines],
     lineIndex: 0,
@@ -256,17 +302,7 @@ export function confirmSleep(): void {
 
 /** Opens the transient Social ledger only when no other modal or action owns world input. */
 export function openSocial(): boolean {
-  if (
-    mutableState.worldActionBusy
-    || mutableState.shopOpen
-    || mutableState.dialogue !== null
-    || mutableState.sleepConfirmationOpen
-    || mutableState.calendarOpen
-    || mutableState.audioSettingsOpen
-    || mutableState.backpackOpen
-    || mutableState.requestBoardOpen
-    || mutableState.petAdoptionOpen
-  ) return false;
+  if (isWorldInputLocked()) return false;
   mutableState.socialOpen = true;
   return true;
 }
@@ -356,6 +392,11 @@ function refreshPetAdoptionPrompt(): void {
 
 /** Reports whether a modal Vue panel currently owns Phaser world input. */
 export function isWorldInputLocked(): boolean {
+  return isGameClockPaused() || mutableState.fishing.phase !== "idle";
+}
+
+/** Reports clock pause independently of cast/wait input focus, which still allows time to advance. */
+export function isGameClockPaused(): boolean {
   return mutableState.worldActionBusy
     || mutableState.shopOpen
     || mutableState.dialogue !== null
@@ -365,7 +406,38 @@ export function isWorldInputLocked(): boolean {
     || mutableState.audioSettingsOpen
     || mutableState.backpackOpen
     || mutableState.requestBoardOpen
-    || mutableState.petAdoptionOpen;
+    || mutableState.petAdoptionOpen
+    || mutableState.daySettlement.phase !== "idle"
+    || mutableState.giftConfirmation !== null
+    || fishingPausesClock(mutableState.fishing.phase);
+}
+
+/** Opens a small confirmation for a nearby NPC/item selected by the world interaction layer. */
+export function openGiftConfirmation(gift: GiftConfirmation): void {
+  if (isWorldInputLocked()) return;
+  mutableState.giftConfirmation = { ...gift };
+}
+
+/** Cancels a gift confirmation without consuming inventory or changing friendship. */
+export function closeGiftConfirmation(): void {
+  mutableState.giftConfirmation = null;
+}
+
+/** Projects day-save status and closes other transient controls before forced overnight settlement. */
+export function applyDaySettlement(state: DaySettlementSnapshot): void {
+  mutableState.daySettlement = { ...state };
+  if (state.phase === "idle") return;
+  closeDialogue();
+  closeShop();
+  cancelSleepConfirmation();
+  closeGiftConfirmation();
+  mutableState.socialOpen = false;
+  mutableState.calendarOpen = false;
+  mutableState.audioSettingsOpen = false;
+  mutableState.backpackOpen = false;
+  mutableState.requestBoardOpen = false;
+  mutableState.petAdoptionOpen = false;
+  mutableState.worldActionBusy = false;
 }
 
 /** Clears only transient local gameplay projections when the application shell is disposed. */
@@ -377,13 +449,21 @@ export function clearGameState(): void {
   mutableState.playerY = 0;
   mutableState.playerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID;
   mutableState.gold = 0;
+  mutableState.stamina = MAX_STAMINA;
   mutableState.inventory = [];
   mutableState.inventoryCapacity = 24;
   mutableState.wateringCanLevel = 1;
+  mutableState.wateringCanWater = wateringCanCapacity(1);
+  mutableState.wateringCanCapacity = wateringCanCapacity(1);
+  mutableState.weather = "sunny";
+  mutableState.nextWeather = "sunny";
   mutableState.friendships = {};
   mutableState.dailyRequest = null;
   mutableState.seenEventIds = [];
   mutableState.pet = null;
+  mutableState.fishing = { ...IDLE_FISHING_SNAPSHOT };
+  mutableState.daySettlement = { ...IDLE_DAY_SETTLEMENT };
+  mutableState.giftConfirmation = null;
   clearHotbarSelection();
   mutableState.worldActionBusy = false;
   setActionFeedback(null);

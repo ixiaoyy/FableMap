@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
 import { homePetRegionAt } from "../../../../domain/pets/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
+import { facingFromVector } from "../../../../domain/world/facing.ts";
 import { AudioDirector } from "../../audio/AudioDirector.ts";
 import { AUDIO_CUE } from "../../audio/audio-catalog.ts";
 import { emitAudioCue } from "../../audio/audio-events.ts";
@@ -19,6 +20,8 @@ import {
   cancelSleepConfirmation,
   gameUiState,
   isWorldInputLocked,
+  isGameClockPaused,
+  openGiftConfirmation,
   openShop,
   openRequestBoard,
   openSleepConfirmation,
@@ -64,6 +67,7 @@ import {
   BedEntity,
   ExitHintEntity,
   FarmPlotEntity,
+  FishingSpotEntity,
   ForageEntity,
   InspectEntity,
   NpcEntity,
@@ -74,6 +78,7 @@ import {
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
 import { petAnchorsForRegion } from "../pets/pet-presentation.ts";
+import { subscribeWorldAction } from "../world/world-input.ts";
 
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
@@ -106,6 +111,7 @@ export class WorldScene extends Phaser.Scene {
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
   private readonly farmViews = new Map<string, FarmPlotEntity>();
+  private readonly fishingSpotViews = new Map<string, FishingSpotEntity>();
   private readonly forageViews = new Map<string, ForageEntity>();
   private readonly bedViews = new Map<string, BedEntity>();
   private readonly inspectViews = new Map<string, InspectEntity>();
@@ -120,13 +126,18 @@ export class WorldScene extends Phaser.Scene {
   private movementKeys!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private hotbarKeys!: readonly Phaser.Input.Keyboard.Key[];
   private attackKey!: Phaser.Input.Keyboard.Key;
+  private useKey!: Phaser.Input.Keyboard.Key;
+  private tileCursor: Phaser.GameObjects.Graphics | null = null;
+  private fishingLine: Phaser.GameObjects.Graphics | null = null;
   private stopProjection?: () => void;
+  private stopWorldAction?: () => void;
   private transitionPhase: TransitionPhase = "idle";
   private entityFactory!: EntityFactory;
   private actionTimeline!: ActionTimeline;
   private audioDirector: AudioDirector | null = null;
   private facing: Facing = "down";
   private lastFootstepAt = 0;
+  private inputWasLocked = false;
   private disposed = false;
 
   /** Creates the Tiled-backed scene with catalog entities and one shared player action timeline. */
@@ -210,6 +221,11 @@ export class WorldScene extends Phaser.Scene {
     ].map((code) => keyboard.addKey(code));
     keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.attackKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.useKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+    this.tileCursor = this.add.graphics().setDepth(9);
+    this.fishingLine = this.add.graphics().setDepth(9_900);
+    this.stopWorldAction = subscribeWorldAction(() => this.useFacingItem());
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.handleWorldPointer, this);
     this.stopProjection = getLocalGameSession().subscribe((state) => this.renderState(state));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.disposeScene(true));
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.disposeScene(false));
@@ -217,11 +233,17 @@ export class WorldScene extends Phaser.Scene {
 
   /** Applies collision-aware movement and one exit transition while no action or modal owns input. */
   override update(time: number, delta: number): void {
-    const worldInputLocked = isWorldInputLocked();
     tickLocalGameSession(
       Date.now(),
-      this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || worldInputLocked,
+      this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isGameClockPaused(),
+      document.hidden,
     );
+    const worldInputLocked = isWorldInputLocked();
+    // DOM dialogs own keyup after taking focus; do not retain a world key pressed before the handoff.
+    if (worldInputLocked && !this.inputWasLocked) this.input.keyboard?.resetKeys();
+    this.inputWasLocked = worldInputLocked;
+    this.renderTileCursor(worldInputLocked);
+    this.renderFishingLine();
     if (this.activeRegionId) this.renderNpcs(this.activeRegionId);
     this.petView?.advance(
       delta,
@@ -234,6 +256,7 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.updateHotbarSelectionInput();
+    if (Phaser.Input.Keyboard.JustDown(this.useKey)) { this.useFacingItem(); return; }
     if (Phaser.Input.Keyboard.JustDown(this.attackKey) && this.playPunch()) return;
     const xAxis = toAxis(
       Number(this.cursors.right.isDown || this.movementKeys.D.isDown)
@@ -266,9 +289,15 @@ export class WorldScene extends Phaser.Scene {
 
   /** Projects one state snapshot into the active region and every ephemeral entity view. */
   private renderState(state: GameState): void {
+    const previousDay = this.latestState?.day;
+    const previousPlayer = this.latestState?.player;
+    if (previousDay === state.day && previousPlayer?.regionId === state.player.regionId) {
+      this.facing = facingFromVector(state.player.x - previousPlayer.x, state.player.y - previousPlayer.y, this.facing);
+    }
     this.latestState = state;
     const playerView = this.playerView ?? this.createPlayerView();
     if (state.player.regionId !== this.activeRegionId) this.renderRegion(state.player.regionId, playerView);
+    this.audioDirector?.setWeather(state.weather.current);
     playerView.container.setPosition(state.player.x, state.player.y);
     playerView.container.setDepth(100 + Math.floor(state.player.y));
     const region = this.catalog.requireRegion(state.player.regionId);
@@ -280,6 +309,13 @@ export class WorldScene extends Phaser.Scene {
     this.renderExitHints(region);
     this.renderNpcs(region.id);
     this.renderPet(region.id, state);
+    this.renderFishingSpots(region);
+    if (previousDay !== undefined && previousDay !== state.day) {
+      this.transitionPhase = "fading-in";
+      this.cameras.main.fadeIn(400, 7, 16, 13);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => { this.transitionPhase = "idle"; });
+      emitAudioCue(AUDIO_CUE.sleep);
+    }
   }
 
   /** Replaces all current Tilemap layers while preserving GameSession and the player view. */
@@ -436,8 +472,7 @@ export class WorldScene extends Phaser.Scene {
   private setMovementAnimation(xAxis: -1 | 0 | 1, yAxis: -1 | 0 | 1): void {
     const player = this.playerView;
     if (!player) return;
-    if (Math.abs(xAxis) >= Math.abs(yAxis) && xAxis !== 0) this.facing = xAxis < 0 ? "left" : "right";
-    else if (yAxis !== 0) this.facing = yAxis < 0 ? "up" : "down";
+    this.facing = facingFromVector(xAxis, yAxis, this.facing);
     player.sprite.play(`hero-walk-${this.facing}`, true);
     this.projectHeldItem();
   }
@@ -534,17 +569,23 @@ export class WorldScene extends Phaser.Scene {
 
   /** Creates and projects catalog farm plots in the active region through EntityFactory. */
   private renderFarmPlots(regionId: string, state: GameState): void {
-    const plots = this.catalog.requireRegion(regionId).interactions.filter((interaction) => (
-      interaction.kind === "farm-plot"
-    ));
-    const activeIds = new Set(plots.map((plot) => plot.entityId));
+    const tiles = regionId === "farm" ? Object.values(state.farmTiles) : [];
+    const activeIds = new Set(tiles.map((tile) => tile.id));
     removeMissing(this.farmViews, activeIds);
-    for (const plot of plots) {
-      const view = this.farmViews.get(plot.entityId)
-        ?? this.entityFactory.createFarmPlot(plot, (entity) => this.playFarmAction(entity));
-      this.farmViews.set(plot.entityId, view);
-      const tile = state.farmTiles[plot.entityId];
-      if (tile) view.project(tile);
+    for (const tile of tiles) {
+      const interaction = {
+        entityId: tile.id,
+        regionId: "farm",
+        kind: "farm-plot" as const,
+        x: tile.column * 16,
+        y: tile.row * 16,
+        width: 16,
+        height: 16,
+      };
+      const view = this.farmViews.get(tile.id)
+        ?? this.entityFactory.createFarmPlot(interaction, (entity) => this.playFarmAction(entity));
+      this.farmViews.set(tile.id, view);
+      view.project(tile);
     }
   }
 
@@ -577,7 +618,16 @@ export class WorldScene extends Phaser.Scene {
           this.inspectEnvironment(entity);
         }));
       }
-      this.inspectViews.get(interaction.entityId)?.projectRetentionDay(this.latestState?.day ?? 1);
+    }
+  }
+
+  /** Projects stable fishing markers for only the current region's authored zones. */
+  private renderFishingSpots(region: RegionDefinition): void {
+    removeMissing(this.fishingSpotViews, new Set(region.fishingZones.map((zone) => zone.id)));
+    for (const zone of region.fishingZones) {
+      if (!this.fishingSpotViews.has(zone.id)) {
+        this.fishingSpotViews.set(zone.id, this.entityFactory.createFishingSpot(zone, () => this.startFishing(zone.id)));
+      }
     }
   }
 
@@ -667,6 +717,9 @@ export class WorldScene extends Phaser.Scene {
         distance: view.distanceTo(player.x, player.y),
         limit: NPC_INTERACTION_DISTANCE,
       })),
+      ...Array.from(this.fishingSpotViews.values(), (view) => ({
+        view, distance: view.distanceTo(player.x, player.y), limit: 52,
+      })),
       ...(this.petView ? [{
         view: this.petView,
         distance: this.petView.distanceTo(player.x, player.y),
@@ -685,15 +738,17 @@ export class WorldScene extends Phaser.Scene {
   /** Runs one tree windup/impact/recovery sequence and mutates gathering only on impact. */
   private playTreeAction(entity: TreeEntity): void {
     if (isWorldInputLocked()) return;
+    this.facePoint(entity.spawn.x, entity.spawn.y);
     const selectedItemId = gameUiState.selectedItemId;
     this.playToolAction(entity.spawn.x, 0xe8d19b, candidateActionForItem(selectedItemId), () => {
-      entity.playImpact(() => (
-        dispatchLocalGameCommand({
+      entity.playImpact(() => {
+        const code = dispatchLocalGameCommand({
           type: "use-item-on-target",
           itemId: selectedItemId,
           targetId: entity.entityId,
-        })?.code === "success"
-      ));
+        })?.code;
+        return code === "success" || code === "stump-cleared";
+      });
     });
   }
 
@@ -701,16 +756,25 @@ export class WorldScene extends Phaser.Scene {
   private playFarmAction(entity: FarmPlotEntity): void {
     if (isWorldInputLocked()) return;
     const targetX = entity.interaction.x + entity.interaction.width / 2;
+    this.facePoint(targetX, entity.interaction.y + entity.interaction.height / 2);
+    this.playFarmTile(Math.floor(entity.interaction.x / 16), Math.floor(entity.interaction.y / 16));
+  }
+
+  /** Plays one selected-item action against an existing or newly tillable coordinate without changing facing mid-action. */
+  private playFarmTile(column: number, row: number): void {
+    if (isWorldInputLocked()) return;
     const selectedItemId = gameUiState.selectedItemId;
+    const facing = this.facing;
     const action = candidateActionForItem(selectedItemId);
-    this.playToolAction(targetX, 0x8ed3c7, action, () => {
+    this.playToolAction(column * 16 + 8, 0x8ed3c7, action, () => {
       const feedback = dispatchLocalGameCommand({
-        type: "use-item-on-target",
+        type: "use-item-on-tile",
         itemId: selectedItemId,
-        targetId: entity.entityId,
-        facing: this.facing,
+        column,
+        row,
+        facing,
       });
-      if (feedback?.tone === "success") entity.playImpact();
+      if (feedback?.tone === "success") this.farmViews.get(`farm:${column}:${row}`)?.playImpact();
     });
   }
 
@@ -724,7 +788,6 @@ export class WorldScene extends Phaser.Scene {
     const playerView = this.playerView;
     if (!playerView) return;
     const direction = targetX >= playerView.container.x ? 1 : -1;
-    this.facing = direction > 0 ? "right" : "left";
     setWorldActionBusy(true);
     const started = this.actionTimeline.play({
       windupMs: 220,
@@ -957,6 +1020,135 @@ export class WorldScene extends Phaser.Scene {
     openSleepConfirmation(() => this.beginSleep(bed.entityId));
   }
 
+  /** Routes bare-map clicks into dynamic tilling, water refill or one authored fishing zone. */
+  private handleWorldPointer(pointer: Phaser.Input.Pointer): void {
+    const state = this.latestState;
+    if (
+      !state
+      || this.transitionPhase !== "idle"
+      || this.actionTimeline.isBusy()
+      || isWorldInputLocked()
+    ) return;
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const column = Math.floor(point.x / 16);
+    const row = Math.floor(point.y / 16);
+    if (gameUiState.selectedItemId === ITEM_ID.wateringCan && this.catalog.isWaterSource(state.player.regionId, column, row)) {
+      const feedback = dispatchLocalGameCommand({ type: "refill-watering-can", column, row });
+      if (feedback?.tone === "success") emitAudioCue(AUDIO_CUE.watering);
+      return;
+    }
+    if (gameUiState.selectedItemId === ITEM_ID.fishingRod) {
+      const zone = this.catalog.requireRegion(state.player.regionId).fishingZones.find((candidate) => (
+        point.x >= candidate.x
+        && point.x <= candidate.x + candidate.width
+        && point.y >= candidate.y
+        && point.y <= candidate.y + candidate.height
+      ));
+      if (zone) this.startFishing(zone.id);
+      return;
+    }
+    if (state.player.regionId !== "farm" || gameUiState.selectedItemId !== ITEM_ID.hoe) return;
+    if (state.farmTiles[`farm:${column}:${row}`]) return;
+    this.facePoint(column * 16 + 8, row * 16 + 8);
+    this.playFarmTile(column, row);
+  }
+
+  /** Applies C or the touch action button to the facing tile or a nearby context target. */
+  private useFacingItem(): void {
+    const state = this.latestState;
+    if (!state || isWorldInputLocked() || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
+    const itemId = gameUiState.selectedItemId;
+    const vector = facingVector(this.facing);
+    const column = Math.floor(state.player.x / 16) + vector.x;
+    const row = Math.floor(state.player.y / 16) + vector.y;
+    if (itemId === ITEM_ID.fishingRod) {
+      const zone = [...this.fishingSpotViews.values()].sort((a, b) => a.distanceTo(state.player.x, state.player.y) - b.distanceTo(state.player.x, state.player.y))[0];
+      if (zone) this.startFishing(zone.entityId);
+      else setActionFeedback({ tone: "error", code: "missing-zone", message: "去湖岸旧码头的浮漂标记处抛竿。" });
+      return;
+    }
+    if (itemId === ITEM_ID.axe) {
+      const tree = [...this.treeViews.values()].filter((view) => state.resources[view.entityId]?.phase !== "cleared")
+        .sort((a, b) => Math.hypot(a.spawn.x - state.player.x, a.spawn.y - state.player.y) - Math.hypot(b.spawn.x - state.player.x, b.spawn.y - state.player.y))[0];
+      if (tree && Math.hypot(tree.spawn.x - state.player.x, tree.spawn.y - state.player.y) <= 42) this.playTreeAction(tree);
+      return;
+    }
+    if (itemId === ITEM_ID.wateringCan && this.catalog.isWaterSource(state.player.regionId, column, row)) {
+      dispatchLocalGameCommand({ type: "refill-watering-can", column, row });
+      return;
+    }
+    const tile = state.farmTiles[`farm:${column}:${row}`];
+    if (state.player.regionId === "farm" && (itemId === ITEM_ID.hoe || itemId === ITEM_ID.wateringCan
+      || getItemDefinition(itemId)?.category === "seed" || (itemId === "" && tile?.phase === "mature"))) {
+      this.playFarmTile(column, row);
+      return;
+    }
+    const choices: Array<{ distance: number; action: () => void }> = [
+      ...[...this.npcViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.interactWithNpc(view) })),
+      ...[...this.bedViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.requestSleepConfirmation(view) })),
+      ...[...this.inspectViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.inspectEnvironment(view) })),
+    ];
+    if (itemId === "") {
+      for (const view of this.forageViews.values()) choices.push({
+        distance: Math.hypot(view.spawn.x - state.player.x, view.spawn.y - state.player.y),
+        action: () => { dispatchLocalGameCommand({ type: "use-item-on-target", itemId: "", targetId: view.entityId }); },
+      });
+      const pet = this.petView;
+      if (pet) choices.push({ distance: pet.distanceTo(state.player.x, state.player.y), action: () => this.interactWithPet(pet) });
+    }
+    choices.filter((candidate) => candidate.distance <= 42).sort((a, b) => a.distance - b.distance)[0]?.action();
+  }
+
+  /** Faces a clicked world point while preserving the previous direction for an exact overlap. */
+  private facePoint(x: number, y: number): void {
+    const player = this.latestState?.player;
+    if (!player) return;
+    const dx = x - player.x;
+    const dy = y - player.y;
+    this.facing = facingFromVector(dx, dy, this.facing);
+  }
+
+  /** Starts a single authored fishing interaction only when the player is holding the rod. */
+  private startFishing(zoneId: string): void {
+    if (isWorldInputLocked() || this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    if (gameUiState.selectedItemId !== ITEM_ID.fishingRod) {
+      setActionFeedback({ tone: "error", code: "rod-not-selected", message: "先从背包选中竹制鱼竿；Day 7 起可向祥子领取。" });
+      return;
+    }
+    dispatchLocalGameCommand({ type: "start-fishing", zoneId });
+  }
+
+  /** Shows the adjacent tool target with a tile-sized outline; validity still belongs to the domain. */
+  private renderTileCursor(locked: boolean): void {
+    const view = this.tileCursor;
+    view?.clear();
+    const state = this.latestState;
+    if (!view || !state || locked || state.player.regionId !== "farm") return;
+    const item = getItemDefinition(gameUiState.selectedItemId);
+    if (!item || (item.id !== ITEM_ID.hoe && item.id !== ITEM_ID.wateringCan && item.category !== "seed")) return;
+    const vector = facingVector(this.facing);
+    const column = Math.floor(state.player.x / 16) + vector.x;
+    const row = Math.floor(state.player.y / 16) + vector.y;
+    const valid = this.catalog.isTillable("farm", column, row) || (item.id === ITEM_ID.wateringCan && this.catalog.isWaterSource("farm", column, row));
+    view.lineStyle(1, valid ? 0xffefb1 : 0xac4d3b, .95).strokeRect(column * 16, row * 16, 16, 16);
+  }
+
+  /** Draws the current rod line and bobber from the read-only fishing projection. */
+  private renderFishingLine(): void {
+    const view = this.fishingLine;
+    view?.clear();
+    const state = this.latestState;
+    const fishing = gameUiState.fishing;
+    if (!view || !state || !fishing.zoneId || fishing.phase === "idle" || fishing.phase === "casting") return;
+    const zone = this.catalog.fishingZone(fishing.zoneId);
+    if (!zone || zone.regionId !== state.player.regionId) return;
+    const x = zone.x + zone.width / 2;
+    const y = zone.y + zone.height + 8 + fishing.castPower * .4 + (fishing.bite ? 4 : 0);
+    view.lineStyle(1, 0xf4ecd1, .8).lineBetween(state.player.x + 3, state.player.y - 16, x, y);
+    view.fillStyle(0xf4ecd1).fillRect(x - 1, y - 6, 3, 7);
+    view.fillStyle(0xa4513f).fillRect(x - 1, y - 8, 3, 4);
+  }
+
   /** Plays a nearby non-minable rock tap and clearly reports that no mining rule exists yet. */
   private tapRock(entity: RockEntity): void {
     const player = this.latestState?.player;
@@ -995,6 +1187,11 @@ export class WorldScene extends Phaser.Scene {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
       return;
     }
+    const heldItem = getItemDefinition(gameUiState.selectedItemId);
+    if (heldItem && heldItem.category !== "tool" && heldItem.category !== "seed") {
+      openGiftConfirmation({ npcId: npc.spawn.npcId, npcName: dialogue.speaker, itemId: heldItem.id });
+      return;
+    }
     const interaction = dispatchLocalGameCommand({ type: "talk-to-npc", npcId: npc.spawn.npcId });
     if (!interaction) return;
     const selectedDialogue = getDialogueDefinition(interaction.dialogueId, {
@@ -1020,6 +1217,7 @@ export class WorldScene extends Phaser.Scene {
     }
     setDialogue({
       dialogueId: interaction.dialogueId,
+      wateringServiceAvailable: interaction.wateringServiceAvailable,
       npcId: interaction.npcId,
       speaker: selectedDialogue.speaker,
       lines: selectedDialogue.lines,
@@ -1040,6 +1238,11 @@ export class WorldScene extends Phaser.Scene {
       openRequestBoard();
       return;
     }
+    if (entity.entityId === "lakeshore-dock" && gameUiState.selectedItemId === ITEM_ID.fishingRod) {
+      const zone = this.catalog.requireRegion(player.regionId).fishingZones[0];
+      if (zone) this.startFishing(zone.id);
+      return;
+    }
     const dialogue = getDialogueDefinition(entity.interaction.dialogueId, {
       day: state.day,
       minuteOfDay: state.minuteOfDay,
@@ -1051,19 +1254,10 @@ export class WorldScene extends Phaser.Scene {
     setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });
   }
 
-  /** Fades once around a single atomic sleep command and blocks repeat input during the transition. */
+  /** Requests the save-first overnight transaction; the day-status panel owns waiting and retry. */
   private beginSleep(bedId: string): void {
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
-    this.transitionPhase = "fading-out";
-    this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      dispatchLocalGameCommand({ type: "sleep", bedId });
-      this.transitionPhase = "fading-in";
-      this.cameras.main.fadeIn(TRANSITION_DURATION_MS, 7, 16, 13);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
-        this.transitionPhase = "idle";
-      });
-    });
+    dispatchLocalGameCommand({ type: "sleep", bedId });
   }
 
   /** Locks input, fades out, then asks GameSession to resolve one reviewed exit ID. */
@@ -1104,6 +1298,9 @@ export class WorldScene extends Phaser.Scene {
     destroyAll(this.rockViews);
     destroyAll(this.forageViews);
     destroyAll(this.farmViews);
+    destroyAll(this.fishingSpotViews);
+    this.fishingLine?.clear();
+    this.tileCursor?.clear();
     destroyAll(this.bedViews);
     destroyAll(this.inspectViews);
     destroyAll(this.exitHintViews);
@@ -1119,7 +1316,10 @@ export class WorldScene extends Phaser.Scene {
     cancelSleepConfirmation();
     this.audioDirector?.destroy();
     this.audioDirector = null;
+    this.input.off(Phaser.Input.Events.POINTER_DOWN, this.handleWorldPointer, this);
     this.stopProjection?.();
+    this.stopWorldAction?.();
+    this.stopWorldAction = undefined;
     this.stopProjection = undefined;
     if (destroyViews) this.destroyRegionViews();
     else {

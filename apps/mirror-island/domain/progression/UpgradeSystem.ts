@@ -2,6 +2,7 @@ import { ITEM_ID } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { GameState } from "../state/game-state.ts";
 import type { NpcSpawnDefinition } from "../world/regions.ts";
+import { schedulePhaseAt } from "../time/game-time.ts";
 import {
   BACKPACK_UPGRADE_DAY,
   BACKPACK_UPGRADE_GOLD,
@@ -11,6 +12,7 @@ import {
   WATERING_CAN_UPGRADE_DAY,
   WATERING_CAN_UPGRADE_GOLD,
   WATERING_CAN_UPGRADE_WOOD,
+  wateringCanCapacity,
 } from "./definitions.ts";
 
 const UPGRADE_INTERACTION_DISTANCE_PIXELS = 42;
@@ -38,7 +40,7 @@ export class UpgradeSystem {
   upgradeWateringCan(state: GameState, activeNpcs: readonly NpcSpawnDefinition[]): WateringCanUpgradeResult {
     if (state.day < WATERING_CAN_UPGRADE_DAY) return "watering-upgrade-locked";
     if (state.wateringCanLevel >= WATERING_CAN_MAX_LEVEL) return "watering-already-upgraded";
-    if (!isPlayerNearNpc(state, activeNpcs, "town-blacksmith", new Set(["town", "blacksmith"]))) {
+    if (!this.wateringServiceAvailable(state, activeNpcs)) {
       return "watering-upgrade-unavailable";
     }
     if (state.gold < WATERING_CAN_UPGRADE_GOLD) return "watering-upgrade-insufficient-gold";
@@ -54,7 +56,14 @@ export class UpgradeSystem {
       throw new Error("Validated watering-can upgrade could not consume materials atomically.");
     }
     state.wateringCanLevel = WATERING_CAN_MAX_LEVEL;
+    state.wateringCanWater = wateringCanCapacity(state.wateringCanLevel);
     return "upgraded-watering-can";
+  }
+
+  /** Reports whether the nearby blacksmith is currently on duty; rain moves service indoors, rest closes it. */
+  wateringServiceAvailable(state: GameState, activeNpcs: readonly NpcSpawnDefinition[]): boolean {
+    return state.day >= WATERING_CAN_UPGRADE_DAY
+      && isPlayerNearNpc(state, activeNpcs, "town-blacksmith", new Set(["town", "blacksmith"]));
   }
 
   /** Atomically expands the nearby Seed Keeper-serviced backpack from 24 to 32 slots. */
@@ -88,6 +97,8 @@ function isPlayerNearNpc(
   const npc = activeNpcs.find((candidate) => candidate.npcId === npcId);
   return Boolean(
     npc
+    && npc.routine !== "rest"
+    && schedulePhaseAt(state.minuteOfDay) === "day"
     && allowedRegions.has(npc.regionId)
     && npc.regionId === state.player.regionId
     && Math.hypot(state.player.x - npc.x, state.player.y - npc.y) <= UPGRADE_INTERACTION_DISTANCE_PIXELS,

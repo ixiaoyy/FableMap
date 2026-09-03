@@ -22,7 +22,17 @@ const ITEM_ICONS: Readonly<Partial<Record<ItemId, ItemIconDefinition>>> = {
   [ITEM_ID.hoe]: icon(GARDENS_SOURCE, 0, 1),
   [ITEM_ID.wateringCan]: icon(GARDENS_SOURCE, 0, 4),
   [ITEM_ID.turnipSeed]: icon(GARDENS_SOURCE, 6, 5),
-  [ITEM_ID.turnip]: icon(VECTORAITH_CROPS_SOURCE, 7, 1),
+  [ITEM_ID.turnip]: icon(VECTORAITH_CROPS_SOURCE, 11, 7),
+  [ITEM_ID.bokChoySeed]: icon(GARDENS_SOURCE, 6, 5),
+  [ITEM_ID.bokChoy]: icon(VECTORAITH_CROPS_SOURCE, 7, 3),
+  [ITEM_ID.cauliflowerSeed]: icon(GARDENS_SOURCE, 6, 5),
+  [ITEM_ID.cauliflower]: icon(VECTORAITH_CROPS_SOURCE, 7, 1),
+  [ITEM_ID.greenPeaSeed]: icon(GARDENS_SOURCE, 6, 5),
+  [ITEM_ID.greenPea]: icon(VECTORAITH_CROPS_SOURCE, 3, 3),
+  [ITEM_ID.springPotatoSeed]: icon(GARDENS_SOURCE, 6, 5),
+  [ITEM_ID.springPotato]: icon(VECTORAITH_CROPS_SOURCE, 15, 7),
+  [ITEM_ID.rapeseedSeed]: icon(GARDENS_SOURCE, 6, 5),
+  [ITEM_ID.rapeseedFlower]: icon(VECTORAITH_CROPS_SOURCE, 14, 9),
   [ITEM_ID.wood]: icon(VECTORAITH_DETAILS_SOURCE, 6, 5),
 };
 

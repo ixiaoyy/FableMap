@@ -6,6 +6,7 @@ import type { NpcRuntimeSpawn } from "../../../../domain/world/npc-motions.ts";
 import type { Facing } from "../../../../domain/world/facing.ts";
 import type {
   ExitDefinition,
+  FishingZoneDefinition,
   InspectInteractionDefinition,
   InteractionDefinition,
   ResourceSpawnDefinition,
@@ -42,7 +43,7 @@ export class TreeEntity {
   readonly container: Phaser.GameObjects.Container;
   private readonly tree: Phaser.GameObjects.Image;
   private readonly stump: Phaser.GameObjects.Image;
-  private available = true;
+  private phase: ResourceState["phase"] = "standing";
   private impactAnimating = false;
 
   /** Creates one clickable tree view from the supplied regional atlas without owning persistent availability. */
@@ -59,21 +60,24 @@ export class TreeEntity {
     this.tree.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.stump = scene.add.image(0, 0, media.tree.stumpTextureKey, media.tree.stumpFrame.name)
       .setOrigin(0.5, 1)
-      .setVisible(false);
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.stump.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.container = scene.add.container(spawn.x, spawn.y, [this.stump, this.tree]).setDepth(100 + spawn.y);
   }
 
-  /** Projects save-owned availability without calculating or mutating resource state. */
+  /** Projects the save-owned standing/stump/cleared phase without mutating resource rules. */
   project(state: ResourceState): void {
-    this.available = state.available;
+    this.phase = state.phase;
     if (!this.impactAnimating) this.applyProjection();
   }
 
   /** Commits one impact while keeping the tree visible through its shake, then projects depletion. */
   playImpact(commit: () => boolean): void {
     this.impactAnimating = true;
-    this.tree.setVisible(true);
-    this.stump.setVisible(false);
+    const target = this.phase === "standing" ? this.tree : this.stump;
+    this.tree.setVisible(this.phase === "standing");
+    this.stump.setVisible(this.phase === "stump");
     if (!commit()) {
       this.impactAnimating = false;
       this.applyProjection();
@@ -87,9 +91,9 @@ export class TreeEntity {
       yoyo: true,
       repeat: 2,
       ease: "Sine.InOut",
-      onStart: () => this.tree.setTint(0xffe3a1),
+      onStart: () => target.setTint(0xffe3a1),
       onComplete: () => {
-        this.tree.clearTint();
+        target.clearTint();
         this.impactAnimating = false;
         this.applyProjection();
       },
@@ -113,10 +117,10 @@ export class TreeEntity {
     this.container.destroy(true);
   }
 
-  /** Applies the latest save-owned availability after any impact animation releases its visual lock. */
+  /** Applies the latest save-owned resource phase after any impact animation releases its visual lock. */
   private applyProjection(): void {
-    this.tree.setVisible(this.available);
-    this.stump.setVisible(!this.available);
+    this.tree.setVisible(this.phase === "standing");
+    this.stump.setVisible(this.phase === "stump");
     this.container.setAlpha(1);
   }
 }
@@ -199,7 +203,7 @@ export class FarmPlotEntity {
       const frames = tile.cropId === "" ? null : this.cropFrames?.[tile.cropId] ?? null;
       const cropFrame = tile.phase === "mature" ? frames?.matureFrame.name
         : tile.phase === "growing" ? frames?.growingFrame.name : null;
-      this.crop.setVisible(cropFrame !== null);
+      this.crop.setVisible(Boolean(cropFrame));
       if (cropFrame && frames) {
         this.crop.setTexture(frames.textureKey);
         this.crop.setFrame(cropFrame);
@@ -327,10 +331,13 @@ export class ForageEntity {
     const visual = spawn.kind === "spring-wildflower" || spawn.kind === "bamboo-shoot"
       ? media.forage?.[spawn.kind]
       : null;
-    if (!visual) throw new Error(`Forage appearance is missing for ${spawn.kind}.`);
-    const body = scene.add.image(0, 0, visual.textureKey, visual.frame.name)
-      .setOrigin(0.5, 1)
-      .setInteractive({ useHandCursor: true });
+    if (!visual && spawn.kind !== "fallen-branch") {
+      throw new Error(`Forage appearance is missing for ${spawn.kind}.`);
+    }
+    const body = visual
+      ? scene.add.image(0, 0, visual.textureKey, visual.frame.name).setOrigin(0.5, 1)
+      : scene.add.rectangle(0, -2, 12, 4, 0x8f603a, 1).setAngle(-12);
+    body.setInteractive({ useHandCursor: true });
     body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
   }
@@ -339,11 +346,51 @@ export class ForageEntity {
   destroy(): void { this.container.destroy(true); }
 }
 
+export class FishingSpotEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+  private readonly prompt: Phaser.GameObjects.Text;
+  private hovered = false;
+  private nearby = false;
+  private locked = false;
+
+  /** Creates a small fishing marker at one Tiled zone without inventing cast rules or coordinates. */
+  constructor(scene: Phaser.Scene, readonly zone: FishingZoneDefinition, onInteract: () => void) {
+    this.entityId = zone.id;
+    const x = zone.x + zone.width / 2;
+    const y = zone.y + zone.height / 2;
+    const marker = scene.add.rectangle(0, -5, 3, 12, 0xebe3bb).setStrokeStyle(1, 0x6b5433);
+    const cap = scene.add.rectangle(0, -11, 3, 5, 0xa4513f);
+    const hit = scene.add.rectangle(0, -5, 28, 28, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+    hit.on(Phaser.Input.Events.POINTER_DOWN, onInteract);
+    hit.on(Phaser.Input.Events.POINTER_OVER, () => { this.hovered = true; this.refreshPrompt(); });
+    hit.on(Phaser.Input.Events.POINTER_OUT, () => { this.hovered = false; this.refreshPrompt(); });
+    this.prompt = scene.add.text(x, y - 25, "钓鱼", { ...textStyle("#fff0c2"), backgroundColor: "#3d4c36", padding: { x: 3, y: 2 } })
+      .setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
+    this.container = scene.add.container(x, y, [marker, cap, hit]).setDepth(105 + zone.y + zone.height);
+  }
+
+  /** Returns player-foot distance to this authored fishing marker. */
+  distanceTo(x: number, y: number): number { return Math.hypot(x - this.container.x, y - this.container.y); }
+
+  /** Shows the marker label only when discoverable and no modal owns world input. */
+  projectAffordance(nearby: boolean, locked: boolean): void {
+    this.nearby = nearby;
+    this.locked = locked;
+    this.refreshPrompt();
+  }
+
+  /** Removes the complete transient fishing marker and its listeners. */
+  destroy(): void { this.prompt.destroy(); this.container.destroy(true); }
+
+  /** Applies the current hover/proximity state without changing gameplay availability. */
+  private refreshPrompt(): void { this.prompt.setVisible(!this.locked && (this.nearby || this.hovered)); }
+}
+
 export class InspectEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
   private readonly prompt: Phaser.GameObjects.Text;
-  private readonly mirrorTeaser: MirrorTeaserView | null;
   private hovered = false;
   private nearby = false;
   private inputLocked = false;
@@ -357,7 +404,6 @@ export class InspectEntity {
     this.entityId = interaction.entityId;
     const hitArea = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0xffffff, 0.001)
       .setInteractive({ useHandCursor: true });
-    this.mirrorTeaser = createMirrorTeaser(scene, interaction);
     this.prompt = scene.add.text(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2 + inspectPromptOffsetY(interaction.height),
@@ -380,7 +426,7 @@ export class InspectEntity {
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      this.mirrorTeaser ? [this.mirrorTeaser.container, hitArea] : [hitArea],
+      [hitArea],
     ).setDepth(100 + interaction.y + interaction.height);
   }
 
@@ -396,19 +442,8 @@ export class InspectEntity {
     this.refreshPrompt();
   }
 
-  /** Projects the Day-7 visual tease from absolute day without persisting presentation state. */
-  projectRetentionDay(absoluteDay: number): void {
-    if (!this.mirrorTeaser) return;
-    const active = absoluteDay >= 7;
-    this.mirrorTeaser.container.setVisible(active);
-    this.prompt.setText(active ? "查看异光" : inspectPromptLabel(this.interaction.dialogueId));
-  }
-
   /** Destroys the complete temporary inspect hotspot and all pointer listeners. */
   destroy(): void {
-    if (this.mirrorTeaser) {
-      for (const target of this.mirrorTeaser.animatedTargets) this.container.scene.tweens.killTweensOf(target);
-    }
     this.prompt.destroy();
     this.container.destroy(true);
   }
@@ -417,52 +452,6 @@ export class InspectEntity {
   private refreshPrompt(): void {
     this.prompt.setVisible(!this.inputLocked && (this.hovered || this.nearby));
   }
-}
-
-interface MirrorTeaserView {
-  readonly container: Phaser.GameObjects.Container;
-  readonly animatedTargets: readonly Phaser.GameObjects.Rectangle[];
-}
-
-/** Creates the single code-drawn Lakeshore mirror shimmer, or null for ordinary inspect anchors. */
-function createMirrorTeaser(
-  scene: Phaser.Scene,
-  interaction: InspectInteractionDefinition,
-): MirrorTeaserView | null {
-  if (interaction.dialogueId !== "lakeshore-waystone") return null;
-  const width = Math.max(12, Math.min(18, interaction.width - 4));
-  const height = Math.max(16, Math.min(24, interaction.height - 4));
-  const frame = scene.add.graphics()
-    .fillStyle(0x352f42, 0.96)
-    .fillRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4)
-    .lineStyle(1, 0xb7e5dd, 0.9)
-    .strokeRect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2);
-  const surface = scene.add.rectangle(0, 0, width, height, 0x31546b, 0.78);
-  const shimmer = scene.add.rectangle(-width / 3, 0, 2, height - 4, 0xb9fff0, 0.64)
-    .setBlendMode(Phaser.BlendModes.ADD);
-  const glint = scene.add.rectangle(0, -height / 2 - 4, 3, 3, 0xd8fff6, 0.88)
-    .setAngle(45);
-  const container = scene.add.container(0, 0, [frame, surface, shimmer, glint]).setVisible(false);
-  scene.tweens.add({
-    targets: shimmer,
-    x: width / 3,
-    alpha: { from: 0.28, to: 0.82 },
-    duration: 1_100,
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.InOut",
-  });
-  scene.tweens.add({
-    targets: glint,
-    alpha: { from: 0.25, to: 0.95 },
-    scaleX: { from: 0.75, to: 1.25 },
-    scaleY: { from: 0.75, to: 1.25 },
-    duration: 720,
-    yoyo: true,
-    repeat: -1,
-    ease: "Quad.InOut",
-  });
-  return { container, animatedTargets: [shimmer, glint] };
 }
 
 export class ExitHintEntity {
@@ -1103,6 +1092,11 @@ export class EntityFactory {
   /** Creates one active seasonal forage entity with its empty-hand interaction callback. */
   createForage(spawn: ResourceSpawnDefinition, onInteract: (entity: ForageEntity) => void): ForageEntity {
     return new ForageEntity(this.scene, spawn, this.media, onInteract);
+  }
+
+  /** Creates one discoverable fishing marker from an authored fishing zone. */
+  createFishingSpot(zone: FishingZoneDefinition, onInteract: () => void): FishingSpotEntity {
+    return new FishingSpotEntity(this.scene, zone, onInteract);
   }
 
   /** Creates one automatic-exit proximity hint with a camera-safe prompt position. */

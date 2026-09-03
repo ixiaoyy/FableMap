@@ -20,6 +20,13 @@
 | Rick Survival | 固定提交 `ea9738c...` | 源码 MIT，素材禁用 | 首阶段不采用；后续仅参考战斗结构 |
 | 原生 IndexedDB | Browser standard | Web Platform API | 单 store SaveRepository adapter；不引入通用 ORM |
 
+## 春季 v10 增量（2026-09-03）
+
+- 天气、农田、钓鱼与送礼是项目专用 domain 规则，继续复用已有 Phaser/Vue/EasyStar/IndexedDB 边界，没有新增 npm 运行时依赖。
+- 六作物与树桩继续引用已登记 VectoRaith 原图中的固定帧；没有引入新图片、音频文件或新的 CDN 对象。像素帧经原图网格核对，青豌豆/土豆不再误用瓜类帧。
+- 天气声只用浏览器 [AudioBufferSourceNode](https://developer.mozilla.org/en-US/docs/Web/API/AudioBufferSourceNode) 与 [BiquadFilter](https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/createBiquadFilter) 产生原创、低音量的雨/风噪声；挂在现有 AudioDirector 下，服从 master/SFX、室内外与隐藏状态，无网络/存档数据访问。
+- 核对过官方 [Howler.js v2.2.4](https://github.com/goldfire/howler.js/tree/v2.2.4)：MIT、无外部依赖，官方标示约7KB gzip，兼容 Web Audio/HTML Audio。此次不采用：既有 AudioDirector 已拥有播放/音量/淡化，而合成仍需原生音频图，引入另一播放 owner 收益不足。未采用，因此不新增锁文件或宣称完成上游全量安全审计；退出仅删除 WeatherAmbience 适配，不影响存档或 domain。
+
 ## 安全与退出
 
 - Phaser/Vue 直接依赖锁定确切版本；Stardew Core 成立前不追新版本。

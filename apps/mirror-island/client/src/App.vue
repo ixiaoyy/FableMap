@@ -37,6 +37,10 @@ import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
 import RequestBoardPanel from "./ui/requests/RequestBoardPanel.vue";
 import TodayHint from "./ui/retention/TodayHint.vue";
 import PetAdoptionPanel from "./ui/pets/PetAdoptionPanel.vue";
+import FishingPanel from "./ui/fishing/FishingPanel.vue";
+import GiftConfirmationPanel from "./ui/gifts/GiftConfirmationPanel.vue";
+import DaySettlementPanel from "./ui/sleep/DaySettlementPanel.vue";
+import WeatherLayer from "./game/presentation/WeatherLayer.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -112,6 +116,15 @@ function checkpointOnPageHide(): void {
   void flushLocalGameSession().catch(() => undefined);
 }
 
+/** Preserves native Space/Enter controls and dialog keys while leaving world movement shortcuts available. */
+function isolateUiActivationKeys(event: KeyboardEvent): void {
+  if (!(event.target instanceof Element)) return;
+  const inDialog = event.target.closest('[role="dialog"], [role="alertdialog"]');
+  const nativeActivation = (event.code === "Space" || event.code === "Enter")
+    && event.target.closest("button, a, input, select, textarea");
+  if (inDialog || nativeActivation) event.stopPropagation();
+}
+
 onMounted(async () => {
   if (toolArtPreviewMode) {
     try {
@@ -181,8 +194,11 @@ onUnmounted(() => {
       :data-daylight="daylight.phase"
       :data-environment="daylight.environment"
       :style="daylightStyle"
+      @keydown="isolateUiActivationKeys"
+      @keyup="isolateUiActivationKeys"
     >
       <PhaserGame />
+      <WeatherLayer />
       <aside v-if="debugMode" class="telemetry">
         <span>运行模式</span>
         <strong>LOCAL</strong>
@@ -191,7 +207,7 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen || gameUiState.fishing.phase !== 'idle' || gameUiState.giftConfirmation !== null || gameUiState.daySettlement.phase !== 'idle'"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
@@ -218,6 +234,9 @@ onUnmounted(() => {
       <ShopPanel />
       <SleepConfirmationPanel />
       <PetAdoptionPanel />
+      <FishingPanel />
+      <GiftConfirmationPanel />
+      <DaySettlementPanel />
       <div v-if="!debugMode" class="game-hud">
         <Hotbar />
       </div>
