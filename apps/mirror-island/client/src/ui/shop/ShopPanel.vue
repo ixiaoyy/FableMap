@@ -17,6 +17,8 @@ const sellGoods = computed(() => [
   ...CROP_DEFINITIONS.map(({ cropId }) => cropId),
   ITEM_ID.springWildflower,
   ITEM_ID.bambooShoot,
+  ITEM_ID.stone,
+  ITEM_ID.fiber,
   ...Object.values(ITEM_DEFINITIONS).filter((item) => item.category === "fish").map((item) => item.id),
 ]);
 

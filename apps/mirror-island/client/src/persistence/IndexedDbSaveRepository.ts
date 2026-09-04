@@ -3,17 +3,16 @@ import {
   type SaveRepository,
   type StoredGame,
 } from "../../../domain/persistence/SaveRepository.ts";
-import {
-  indexedDbSlotKeys,
-  planIndexedDbSave,
-  v2BackupKey,
-  v9BackupKey,
-  type IndexedDbGameRecord,
-} from "./v2-migration-backup.ts";
 
 const DATABASE_NAME = "mirror-island-local";
 const DATABASE_VERSION = 1;
 const SAVE_STORE_NAME = "game-saves";
+const RETIRED_BACKUP_SUFFIXES = [":backup:v2", ":backup:v9"] as const;
+
+interface IndexedDbGameRecord {
+  readonly key: string;
+  readonly game: unknown;
+}
 
 export class IndexedDbSaveRepository implements SaveRepository {
   private databasePromise: Promise<IDBDatabase> | null = null;
@@ -56,64 +55,24 @@ export class IndexedDbSaveRepository implements SaveRepository {
     return decodeStoredGame(rawRecord.game);
   }
 
-  /** Atomically preserves first raw v2/v9 payloads before replacing the main slot with the current save. */
+  /** Atomically replaces one main slot with a validated current development save. */
   async save(ownerKey: string, slotId: string, game: StoredGame): Promise<void> {
     const validatedGame = decodeStoredGame(game);
     const mainKey = saveKey(ownerKey, slotId);
     const database = await this.openDatabase();
     const transaction = database.transaction(SAVE_STORE_NAME, "readwrite");
     const completion = transactionCompletion(transaction);
-    const store = transaction.objectStore(SAVE_STORE_NAME);
-    const mainRequest = store.get(mainKey);
-    const backupRequest = store.get(v2BackupKey(mainKey));
-    const springBackupRequest = store.get(v9BackupKey(mainKey));
-    let mainReady = false;
-    let backupReady = false;
-    let springBackupReady = false;
-    let writesQueued = false;
-    /** Queues the complete migration plan once all three transaction-owned reads have succeeded. */
-    const queueWrites = (): void => {
-      if (!mainReady || !backupReady || !springBackupReady || writesQueued) return;
-      writesQueued = true;
-      const plan = planIndexedDbSave(
-        mainKey,
-        mainRequest.result as IndexedDbGameRecord | undefined,
-        backupRequest.result as IndexedDbGameRecord | undefined,
-        validatedGame,
-      );
-      const springPlan = planIndexedDbSave(
-        mainKey,
-        mainRequest.result as IndexedDbGameRecord | undefined,
-        springBackupRequest.result as IndexedDbGameRecord | undefined,
-        validatedGame,
-        9,
-      );
-      if (plan.backup) store.put(plan.backup);
-      if (springPlan.backup) store.put(springPlan.backup);
-      store.put(plan.main);
-    };
-    mainRequest.onsuccess = () => {
-      mainReady = true;
-      queueWrites();
-    };
-    backupRequest.onsuccess = () => {
-      backupReady = true;
-      queueWrites();
-    };
-    springBackupRequest.onsuccess = () => {
-      springBackupReady = true;
-      queueWrites();
-    };
+    transaction.objectStore(SAVE_STORE_NAME).put({ key: mainKey, game: validatedGame });
     await completion;
   }
 
-  /** Deletes only the requested slot and its scoped v2/v9 raw backups. */
+  /** Deletes the requested slot plus known retired backups without enumerating other local records. */
   async delete(ownerKey: string, slotId: string): Promise<void> {
     const database = await this.openDatabase();
     const transaction = database.transaction(SAVE_STORE_NAME, "readwrite");
     const completion = transactionCompletion(transaction);
     const store = transaction.objectStore(SAVE_STORE_NAME);
-    for (const key of indexedDbSlotKeys(saveKey(ownerKey, slotId))) store.delete(key);
+    for (const key of indexedDbOwnedKeys(saveKey(ownerKey, slotId))) store.delete(key);
     await completion;
   }
 
@@ -136,6 +95,11 @@ export function removeRetiredLocalStorageSaves(storage: Storage = window.localSt
 function saveKey(ownerKey: string, slotId: string): string {
   if (!ownerKey.trim() || !slotId.trim()) throw new Error("Local save key is invalid.");
   return `${ownerKey}:${slotId}`;
+}
+
+/** Returns the exact main and retired backup keys owned by one explicit local slot deletion. */
+function indexedDbOwnedKeys(mainKey: string): readonly string[] {
+  return [mainKey, ...RETIRED_BACKUP_SUFFIXES.map((suffix) => `${mainKey}${suffix}`)];
 }
 
 /** Resolves only after an IndexedDB transaction commits and rejects aborts or storage errors. */

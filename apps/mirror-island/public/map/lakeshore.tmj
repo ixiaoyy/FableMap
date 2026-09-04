@@ -771,6 +771,106 @@
           "width": 0,
           "x": 560,
           "y": 432
+        },
+        {
+          "height": 0,
+          "id": 169,
+          "name": "Weed 1",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "lakeshore-weed-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 128,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 170,
+          "name": "Weed 2",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "lakeshore-weed-002"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 144,
+          "y": 256
+        },
+        {
+          "height": 0,
+          "id": 171,
+          "name": "Weed 3",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "lakeshore-weed-003"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 240,
+          "y": 192
+        },
+        {
+          "height": 0,
+          "id": 172,
+          "name": "Weed 4",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "lakeshore-weed-004"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 256,
+          "y": 448
         }
       ],
       "opacity": 1,
@@ -823,7 +923,7 @@
     }
   ],
   "nextlayerid": 13,
-  "nextobjectid": 169,
+  "nextobjectid": 173,
   "orientation": "orthogonal",
   "properties": [
     {

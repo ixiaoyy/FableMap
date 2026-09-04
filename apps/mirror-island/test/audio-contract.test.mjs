@@ -30,6 +30,14 @@ test("successful typed command results map to semantic cues while failures remai
     { tone: "success", code: "watered", message: "ok" },
   ), AUDIO_CUE.watering);
   assert.equal(audioCueForCommandResult(
+    { type: "use-item-on-target", itemId: ITEM_ID.pickaxe, targetId: "farm-rock-001" },
+    { tone: "success", code: "mined", message: "ok" },
+  ), AUDIO_CUE.stone);
+  assert.equal(audioCueForCommandResult(
+    { type: "use-item-on-target", itemId: ITEM_ID.scythe, targetId: "farm-weed-001", facing: "up" },
+    { tone: "success", code: "cut", message: "ok" },
+  ), AUDIO_CUE.harvest);
+  assert.equal(audioCueForCommandResult(
     { type: "transition-region", exitId: "farm-east-exit" },
     null,
   ), null);

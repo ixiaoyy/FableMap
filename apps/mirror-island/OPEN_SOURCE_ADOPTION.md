@@ -13,7 +13,7 @@
 | `jose` | `6.2.9` | MIT | Keycloak JWT/JWKS 验证和 OIDC 签名键生成 |
 | Ninja Adventure | 固定提交 `6ac78232...` | CC0-1.0 | 只使用 manifest 已登记角色/地形子集 |
 | VectoRaith Farming Sim | v1.08 ZIP SHA-256 `1957927a...` | 自定义项目使用许可 | Farm v1；只发布 used-tile compact atlases、EntityFactory frames 和 farmer sheet，不再分发原 ZIP/完整图集 |
-| IvoryRed GARDENS | 2026-08-27 原图 SHA-256 `de4dbbb...` | CC BY 4.0 | 只发布原始 160×176 图标 sheet；Hotbar 选择四个 16×16 frame，并在产品内交付署名 |
+| IvoryRed GARDENS | 2026-08-27 原图 SHA-256 `de4dbbb...` | CC BY 4.0 | 只发布原始 160×176 图标 sheet；Hotbar 选择五个 16×16 frame，并在产品内交付署名 |
 | bluecarrot16 `[LPC] Cats and Dogs` | 2026-09-02 快照；cat SHA-256 `914bae85...`、dog `77f4667a...` | CC BY 3.0（采用页面提供的可选许可） | 只发布两个原始 512×256 PNG；运行时固定选择橘猫/黄犬 32×32 四方向 walk、idle 与 rest 帧，并在产品内交付署名 |
 | Phaser Vue TS template | 固定提交 `2fe6c3e...` | MIT | 只采用 Vue/Phaser 生命周期与 Vite 结构 |
 | Cabacos | 固定提交 `79e423d...` | 仓库声明 MIT，holder 待澄清 | 仅行为级移植物品、背包、种田和 Tiled 模式 |
@@ -28,6 +28,8 @@
 - 核对过官方 [Howler.js v2.2.4](https://github.com/goldfire/howler.js/tree/v2.2.4)：MIT、无外部依赖，官方标示约7KB gzip，兼容 Web Audio/HTML Audio。此次不采用：既有 AudioDirector 已拥有播放/音量/淡化，而合成仍需原生音频图，引入另一播放 owner 收益不足。未采用，因此不新增锁文件或宣称完成上游全量安全审计；退出仅删除 WeatherAmbience 适配，不影响存档或 domain。
 
 ## 安全与退出
+
+- 地表采矿与镰刀（2026-09-04）：基础镐复用既有 GARDENS 原图 `(6,1)`；石料、基础镰刀和植物纤维图标以及世界杂草均使用源码定义的原创像素/图元配方，采石/除草分别复用已登记 stone/harvest SFX；没有新增依赖、素材对象、许可或 Git 媒体二进制。
 
 - Phaser/Vue 直接依赖锁定确切版本；Stardew Core 成立前不追新版本。
 - EasyStar.js 的 npm 最新发布仍为 CommonJS `0.4.4`，依赖面只有 `heap@0.2.6`，当前生产依赖审计没有归因到二者的公告；因上游发布节奏低，只允许 `npc-pathfinding.ts` 单点同步适配，未来不兼容时可在不改 GameSession/runtime 合同的前提下替换。

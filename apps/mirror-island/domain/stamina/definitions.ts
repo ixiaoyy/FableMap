@@ -6,6 +6,7 @@ export const STAMINA_COST = {
   hoe: 2,
   wateringPerTile: 1,
   axe: 2,
+  pickaxe: 2,
   fishingCast: 6,
 } as const;
 

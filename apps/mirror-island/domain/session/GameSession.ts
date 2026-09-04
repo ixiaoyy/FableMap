@@ -2,8 +2,10 @@ import { CraftingSystem, type CraftingResult } from "../crafting/CraftingSystem.
 import { FarmingSystem, type FarmingResult } from "../farming/FarmingSystem.ts";
 import { GatheringSystem, type GatheringResult } from "../gathering/GatheringSystem.ts";
 import { ForageSystem, type ForageResult } from "../gathering/ForageSystem.ts";
+import { WeedCuttingSystem, type WeedCuttingResult } from "../gathering/WeedCuttingSystem.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { ITEM_ID, getItemDefinition, type ItemId } from "../items/definitions.ts";
+import { MiningSystem, type MiningResult } from "../mining/MiningSystem.ts";
 import {
   DEFAULT_PLAYER_APPEARANCE_ID,
   type PlayerAppearanceId,
@@ -102,6 +104,8 @@ export class GameSession {
   private readonly inventory = new InventorySystem();
   private readonly stamina = new StaminaSystem(this.inventory);
   private readonly gathering: GatheringSystem;
+  private readonly mining: MiningSystem;
+  private readonly weedCutting: WeedCuttingSystem;
   private readonly forage: ForageSystem;
   private readonly crafting = new CraftingSystem(this.inventory);
   private readonly farming: FarmingSystem;
@@ -143,6 +147,8 @@ export class GameSession {
   ) {
     if (!ownerKey.trim() || !slotId.trim()) throw new Error("Local save identity is invalid.");
     this.gathering = new GatheringSystem(this.inventory, catalog, this.stamina);
+    this.mining = new MiningSystem(this.inventory, this.stamina, catalog);
+    this.weedCutting = new WeedCuttingSystem(this.inventory, catalog);
     this.forage = new ForageSystem(this.inventory, catalog);
     this.farming = new FarmingSystem(this.inventory, this.stamina, catalog);
     this.shop = new ShopSystem(this.inventory);
@@ -445,7 +451,7 @@ export class GameSession {
     if (itemId === undefined) return null;
     if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return null;
     const resource = this.catalog.resource(targetId);
-    if (resource && resource.kind !== "tree" && resource.kind !== "stone") {
+    if (resource && resource.kind !== "tree" && resource.kind !== "stone" && resource.kind !== "weed") {
       if (itemId !== "") return null;
       const result = this.forage.collect(state, targetId);
       if (result === "collected") this.commitCriticalChange();
@@ -455,6 +461,16 @@ export class GameSession {
       const result = this.gathering.use(state, targetId, itemId);
       if (result === "success" || result === "stump-cleared") this.commitCriticalChange();
       return gatheringFeedback(result);
+    }
+    if (resource?.kind === "stone") {
+      const result = this.mining.use(state, targetId, itemId);
+      if (result === "mined") this.commitCriticalChange();
+      return miningFeedback(result);
+    }
+    if (resource?.kind === "weed") {
+      const result = this.weedCutting.use(state, targetId, itemId, facing);
+      if (result.code === "cut") this.commitCriticalChange();
+      return weedCuttingFeedback(result);
     }
     return null;
   }
@@ -602,6 +618,8 @@ export class GameSession {
     state.day += 1;
     this.dialogue.settleDay(state);
     this.gathering.settleDay(state);
+    this.mining.settleDay(state);
+    this.weedCutting.settleDay(state);
     this.weather.settleDay(state);
     state.dailyForage = { day: state.day, collectedIds: [] };
     this.requests.settleDay(state);
@@ -780,6 +798,38 @@ function farmingFeedback(result: FarmingResult): ActionFeedback | null {
     case "missing-tile": return error("这里还没有开垦，或不在可耕区域。");
     case "insufficient-stamina": return error("体力不足，先吃点东西或休息。");
     case "empty-watering-can": return error("水壶空了，到水边补满再来。");
+  }
+}
+
+/** Maps one surface-mining result to fixed local UI feedback. */
+function miningFeedback(result: MiningResult): ActionFeedback | null {
+  switch (result) {
+    case "mined": return { tone: "success", code: result, message: "+1 石料" };
+    case "wrong-tool": return { tone: "error", code: result, message: "先选中基础镐再采石。" };
+    case "depleted": return { tone: "error", code: result, message: "这块石头已经清理了。" };
+    case "too-far": return { tone: "error", code: result, message: "离石头太远。" };
+    case "inventory-full": return { tone: "error", code: result, message: "背包已满。" };
+    case "missing-target": return { tone: "error", code: result, message: "石块不存在。" };
+    case "insufficient-stamina": return { tone: "error", code: result, message: "体力不足，先吃点东西或休息。" };
+  }
+}
+
+/** Maps one atomic weed-cutting result to a fixed local message without exposing rule ownership to the client. */
+function weedCuttingFeedback(result: WeedCuttingResult): ActionFeedback | null {
+  switch (result.code) {
+    case "cut": return {
+      tone: "success",
+      code: result.code,
+      message: result.fiberCount > 0
+        ? `割下 ${result.cutCount} 处杂草，+${result.fiberCount} 植物纤维。`
+        : `割下 ${result.cutCount} 处杂草。`,
+    };
+    case "wrong-tool": return { tone: "error", code: result.code, message: "先选中基础镰刀再除草。" };
+    case "wrong-direction": return { tone: "error", code: result.code, message: "面向杂草再挥动镰刀。" };
+    case "depleted": return { tone: "error", code: result.code, message: "这处杂草已经清理了。" };
+    case "too-far": return { tone: "error", code: result.code, message: "离杂草太远。" };
+    case "inventory-full": return { tone: "error", code: result.code, message: "背包放不下本次植物纤维。" };
+    case "missing-target": return { tone: "error", code: result.code, message: "杂草不存在。" };
   }
 }
 

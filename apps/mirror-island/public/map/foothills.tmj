@@ -911,6 +911,131 @@
           "width": 0,
           "x": 560,
           "y": 336
+        },
+        {
+          "height": 0,
+          "id": 165,
+          "name": "Weed 1",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-weed-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 304,
+          "y": 416
+        },
+        {
+          "height": 0,
+          "id": 166,
+          "name": "Weed 2",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-weed-002"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 320,
+          "y": 432
+        },
+        {
+          "height": 0,
+          "id": 167,
+          "name": "Weed 3",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-weed-003"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 544,
+          "y": 384
+        },
+        {
+          "height": 0,
+          "id": 168,
+          "name": "Weed 4",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-weed-004"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 560,
+          "y": 400
+        },
+        {
+          "height": 0,
+          "id": 169,
+          "name": "Weed 5",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "foothills-weed-005"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 272,
+          "y": 256
         }
       ],
       "opacity": 1,
@@ -932,7 +1057,7 @@
     }
   ],
   "nextlayerid": 12,
-  "nextobjectid": 165,
+  "nextobjectid": 170,
   "orientation": "orthogonal",
   "properties": [
     {

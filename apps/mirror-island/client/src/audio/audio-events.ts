@@ -33,6 +33,8 @@ export function audioCueForCommandResult(
       if (feedback?.code === "harvested") return AUDIO_CUE.harvest;
       if (feedback?.code === "collected") return AUDIO_CUE.pickup;
       if (feedback?.code === "success") return AUDIO_CUE.axe;
+      if (feedback?.code === "mined") return AUDIO_CUE.stone;
+      if (feedback?.code === "cut") return AUDIO_CUE.harvest;
       return null;
     }
     case "use-item-on-tile": {

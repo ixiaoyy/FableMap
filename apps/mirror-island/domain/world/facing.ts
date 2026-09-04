@@ -18,3 +18,13 @@ export function facingVector(facing: Facing): WorldPoint {
     case "right": return { x: 1, y: 0 };
   }
 }
+
+/** Reports whether a target lies inside the inclusive 90-degree sector in front of one world origin. */
+export function isPointInFacingSector(origin: WorldPoint, target: WorldPoint, facing: Facing): boolean {
+  const direction = facingVector(facing);
+  const x = target.x - origin.x;
+  const y = target.y - origin.y;
+  const forward = x * direction.x + y * direction.y;
+  const sideways = Math.abs(x * direction.y - y * direction.x);
+  return forward > 0 && sideways <= forward;
+}

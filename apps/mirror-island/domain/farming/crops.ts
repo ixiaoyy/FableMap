@@ -46,12 +46,14 @@ export function cropsForSeason(season: Season): readonly CropDefinition[] {
   return CROP_DEFINITIONS.filter((definition) => definition.seasons.includes(season));
 }
 
-/** Resolves the fixed sell price for crops and spring forage, or null for unsellable items. */
+/** Resolves the fixed sell price for crops, fish and gathered resources, or null for unsellable items. */
 export function sellPriceForItem(itemId: unknown): number | null {
   const crop = cropDefinition(itemId);
   if (crop) return crop.sellPrice;
   if (itemId === ITEM_ID.springWildflower) return 25;
   if (itemId === ITEM_ID.bambooShoot) return 40;
+  if (itemId === ITEM_ID.stone) return 2;
+  if (itemId === ITEM_ID.fiber) return 1;
   if (itemId === ITEM_ID.lakeCarp) return 45;
   if (itemId === ITEM_ID.silverMinnow) return 35;
   if (itemId === ITEM_ID.rainLoach) return 70;

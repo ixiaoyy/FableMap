@@ -19,6 +19,33 @@ export const ITEM_PIXEL_ART: Readonly<Partial<Record<ItemId, PixelArt>>> = {
     ],
     palette: { o: "#5a4835", l: "#dfb77a", s: "#b0834f", b: "#92704c" },
   },
+  [ITEM_ID.stone]: {
+    rows: [
+      "................", "................", "................", "......oooo......",
+      "....oohhhhoo....", "...ohhllllhho...", "..ohllllssllho..", ".ohhlllssssllho.",
+      ".ohlllsssssssho.", ".ossssssssssso..", "..osssddddsso...", "...osddddsso....",
+      "....oossssoo....", "......oooo......", "................", "................",
+    ],
+    palette: { o: "#4d5557", h: "#b9c2bd", l: "#929c99", s: "#707a78", d: "#596260" },
+  },
+  [ITEM_ID.scythe]: {
+    rows: [
+      ".........oooo...", ".......oohhho...", "......ohsssso...", "......ossooo....",
+      "......oo........", ".....obo........", "....obbo........", "...obbo.........",
+      "..obbo..........", ".obbo...........", "obbo............", ".bo.............",
+      "obo.............", "bo..............", "o...............", "................",
+    ],
+    palette: { o: "#405052", h: "#dce6df", s: "#8fa19e", b: "#a66d3f" },
+  },
+  [ITEM_ID.fiber]: {
+    rows: [
+      "................", "....l......l....", "...lgl....lgl...", "...lggl..lggl...",
+      "....gggllggg....", "..l..gggggg..l..", ".lgl..gggg..lgl.", ".lgglgggggglggl.",
+      "..lggggggggggl..", "...gggggggggg...", "....ooyyyyoo....", "....oyyyyyyo....",
+      "....oossssso....", ".....osssso.....", "......oooo......", "................",
+    ],
+    palette: { l: "#9fbd63", g: "#527b45", o: "#5b4934", y: "#d5b568", s: "#a77a46" },
+  },
   [ITEM_ID.springWildflower]: {
     rows: [
       "................", ".........pp.....", "....pp..ppyp....", "...ppyp..pp.....",

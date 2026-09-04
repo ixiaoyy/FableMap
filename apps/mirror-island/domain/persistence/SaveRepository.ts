@@ -1,19 +1,10 @@
 import {
   cloneGameState,
   decodeGameState,
-  migrateGameStateV9,
-  migrateGameStateV8,
-  migrateGameStateV7,
-  migrateGameStateV6,
-  migrateGameStateV5,
-  migrateGameStateV4,
-  migrateGameStateV3,
-  migrateGameStateV2,
-  migrateLegacyGameStateV1,
   type GameState,
 } from "../state/game-state.ts";
 
-export const SAVE_FORMAT_VERSION = 10 as const;
+export const SAVE_FORMAT_VERSION = 12 as const;
 export const MAIN_SAVE_SLOT = "main";
 
 export interface StoredGame {
@@ -43,74 +34,11 @@ export function createStoredGame(state: GameState, updatedAt: number): StoredGam
   };
 }
 
-/** Validates an unknown persistence payload and rejects corrupt or future save formats. */
+/** Validates only the current development save envelope and rejects every other version. */
 export function decodeStoredGame(value: unknown): StoredGame {
   const game = recordFrom(value);
   if (typeof game.updatedAt !== "number" || !Number.isFinite(game.updatedAt) || game.updatedAt < 0) {
     throw new Error("Save timestamp is invalid.");
-  }
-  if (game.version === 1) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateLegacyGameStateV1(game.state),
-    };
-  }
-  if (game.version === 2) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV2(game.state),
-    };
-  }
-  if (game.version === 3) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV3(game.state),
-    };
-  }
-  if (game.version === 4) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV4(game.state),
-    };
-  }
-  if (game.version === 5) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV5(game.state),
-    };
-  }
-  if (game.version === 6) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV6(game.state),
-    };
-  }
-  if (game.version === 7) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV7(game.state),
-    };
-  }
-  if (game.version === 8) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV8(game.state),
-    };
-  }
-  if (game.version === 9) {
-    return {
-      version: SAVE_FORMAT_VERSION,
-      updatedAt: game.updatedAt,
-      state: migrateGameStateV9(game.state),
-    };
   }
   if (game.version !== SAVE_FORMAT_VERSION) throw new Error("Save format is unsupported.");
   return {

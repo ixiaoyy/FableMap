@@ -130,8 +130,11 @@ export class RockEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
   private readonly body: Phaser.GameObjects.Image;
+  private readonly effects = new Set<Phaser.GameObjects.Rectangle>();
+  private phase: ResourceState["phase"] = "standing";
+  private impactAnimating = false;
 
-  /** Creates one tappable non-minable rock without adding drops, durability or persistent mining state. */
+  /** Creates one tappable rock view while the current GameState remains the phase owner. */
   constructor(
     private readonly scene: Phaser.Scene,
     readonly spawn: ResourceSpawnDefinition,
@@ -144,6 +147,12 @@ export class RockEntity {
       .setInteractive({ useHandCursor: true });
     this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.container = scene.add.container(spawn.x, spawn.y, [this.body]).setDepth(100 + spawn.y);
+  }
+
+  /** Projects the save-owned standing/cleared stone phase without deciding mining rules. */
+  project(state: ResourceState): void {
+    this.phase = state.phase;
+    if (!this.impactAnimating) this.applyProjection();
   }
 
   /** Plays one short presentation-only stone tap without mutating world or inventory state. */
@@ -159,9 +168,185 @@ export class RockEntity {
     });
   }
 
-  /** Destroys the complete temporary rock view. */
+  /** Commits one mining impact, keeps the rock visible through feedback, then projects its saved phase. */
+  playImpact(commit: () => boolean): void {
+    this.impactAnimating = true;
+    this.body.setVisible(true);
+    if (!commit()) {
+      this.impactAnimating = false;
+      this.applyProjection();
+      this.playTap();
+      return;
+    }
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      x: this.spawn.x + 3,
+      duration: 40,
+      yoyo: true,
+      repeat: 2,
+      ease: "Sine.InOut",
+      onStart: () => this.body.setTint(0xe5ece8),
+      onComplete: () => {
+        this.body.clearTint();
+        this.impactAnimating = false;
+        this.applyProjection();
+      },
+    });
+    for (let index = 0; index < 6; index += 1) {
+      const chip = this.scene.add.rectangle(this.spawn.x, this.spawn.y - 3, 2, 2, 0x899391, 1).setDepth(100 + this.spawn.y + 2);
+      this.effects.add(chip);
+      const direction = index % 2 === 0 ? -1 : 1;
+      this.scene.tweens.add({
+        targets: chip,
+        x: this.spawn.x + direction * (7 + index * 2),
+        y: this.spawn.y - 8 - (index % 3) * 3,
+        alpha: 0,
+        duration: 240,
+        onComplete: () => { this.effects.delete(chip); chip.destroy(); },
+      });
+    }
+  }
+
+  /** Destroys the rock and every owned impact effect without leaving scene-bound tweens. */
   destroy(): void {
+    this.scene.tweens.killTweensOf([this.container, ...this.effects]);
+    for (const effect of this.effects) effect.destroy();
+    this.effects.clear();
+    this.body.clearTint();
     this.container.destroy(true);
+  }
+
+  /** Applies the latest stone phase after any impact animation has finished. */
+  private applyProjection(): void {
+    this.body.setVisible(this.phase === "standing");
+    this.container.setPosition(this.spawn.x, this.spawn.y).setAlpha(1);
+  }
+}
+
+export class WeedEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Graphics;
+  private readonly effects = new Set<Phaser.GameObjects.Rectangle>();
+  private phase: ResourceState["phase"] = "standing";
+  private projected = false;
+  private cutting = false;
+
+  /** Creates one source-drawn tappable weed while GameState remains the sole availability owner. */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    readonly spawn: ResourceSpawnDefinition,
+    onInteract: (entity: WeedEntity) => void,
+  ) {
+    this.entityId = spawn.entityId;
+    this.body = scene.add.graphics();
+    this.drawBody();
+    this.body.setInteractive(new Phaser.Geom.Rectangle(-9, -17, 18, 18), Phaser.Geom.Rectangle.Contains);
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.container = scene.add.container(spawn.x, spawn.y, [this.body]).setDepth(100 + spawn.y);
+  }
+
+  /** Projects standing/cleared state and animates only a live standing-to-cleared transition. */
+  project(state: ResourceState): void {
+    const previous = this.phase;
+    this.phase = state.phase;
+    if (!this.projected) {
+      this.projected = true;
+      this.applyProjection();
+      return;
+    }
+    if (previous === "standing" && state.phase === "cleared") {
+      this.playCutTransition();
+      return;
+    }
+    if (!this.cutting) this.applyProjection();
+  }
+
+  /** Plays one presentation-only rustle for a rejected tool without changing weed state. */
+  playTap(): void {
+    if (this.phase !== "standing" || this.cutting) return;
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      angle: { from: -4, to: 4 },
+      duration: 55,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => this.container.setAngle(0),
+    });
+  }
+
+  /** Destroys the weed, its pointer listener and every owned leaf effect without leaving scene tweens. */
+  destroy(): void {
+    this.scene.tweens.killTweensOf([this.container, ...this.effects]);
+    for (const effect of this.effects) effect.destroy();
+    this.effects.clear();
+    this.container.destroy(true);
+  }
+
+  /** Draws a compact three-blade weed from source primitives so no runtime media object is required. */
+  private drawBody(): void {
+    this.body.clear();
+    this.body.lineStyle(2, 0x416b3c, 1);
+    this.body.lineBetween(0, 0, 0, -12);
+    this.body.lineBetween(-1, -5, -6, -11);
+    this.body.lineBetween(1, -4, 6, -10);
+    this.body.fillStyle(0x79a953, 1);
+    this.body.fillTriangle(-1, -7, -8, -13, -3, -3);
+    this.body.fillTriangle(1, -7, 8, -12, 3, -2);
+    this.body.fillStyle(0xa5c66c, 1);
+    this.body.fillTriangle(0, -10, -3, -16, 3, -14);
+    this.body.fillStyle(0x314f32, 1);
+    this.body.fillRect(-4, -2, 8, 2);
+  }
+
+  /** Keeps the accepted weed visible for a short cut beat, emits bounded leaves and then applies saved depletion. */
+  private playCutTransition(): void {
+    if (this.cutting) return;
+    this.cutting = true;
+    this.body.setVisible(true);
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      angle: 16,
+      y: this.spawn.y + 3,
+      alpha: 0,
+      duration: 150,
+      ease: "Quad.In",
+      onComplete: () => {
+        this.cutting = false;
+        this.applyProjection();
+      },
+    });
+    for (let index = 0; index < 4; index += 1) {
+      const leaf = this.scene.add.rectangle(
+        this.spawn.x + (index % 2 === 0 ? -2 : 2),
+        this.spawn.y - 8,
+        3,
+        2,
+        index % 2 === 0 ? 0x8fba59 : 0x527b45,
+        1,
+      ).setDepth(100 + this.spawn.y + 2).setAngle(index * 28);
+      this.effects.add(leaf);
+      const direction = index % 2 === 0 ? -1 : 1;
+      this.scene.tweens.add({
+        targets: leaf,
+        x: this.spawn.x + direction * (8 + index * 2),
+        y: this.spawn.y - 13 - (index % 2) * 4,
+        angle: leaf.angle + direction * 80,
+        alpha: 0,
+        duration: 260,
+        ease: "Quad.Out",
+        onComplete: () => { this.effects.delete(leaf); leaf.destroy(); },
+      });
+    }
+  }
+
+  /** Applies the latest saved phase and resets all presentation-only transforms after a cut or refresh. */
+  private applyProjection(): void {
+    this.body.setVisible(this.phase === "standing");
+    this.container.setPosition(this.spawn.x, this.spawn.y).setAngle(0).setAlpha(1);
   }
 }
 
@@ -1047,9 +1232,14 @@ export class EntityFactory {
     return new TreeEntity(this.scene, spawn, this.media, onInteract);
   }
 
-  /** Creates the reviewed non-minable rock entity kind with a presentation-only tap callback. */
+  /** Creates the reviewed rock entity kind with a presentation-only interaction callback. */
   createRock(spawn: ResourceSpawnDefinition, onInteract: (entity: RockEntity) => void): RockEntity {
     return new RockEntity(this.scene, spawn, this.media, onInteract);
+  }
+
+  /** Creates one source-drawn weed entity with a presentation-only interaction callback. */
+  createWeed(spawn: ResourceSpawnDefinition, onInteract: (entity: WeedEntity) => void): WeedEntity {
+    return new WeedEntity(this.scene, spawn, onInteract);
   }
 
   /** Creates one farm plot entity from an interaction definition. */

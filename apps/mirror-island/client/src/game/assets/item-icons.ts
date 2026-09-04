@@ -25,6 +25,7 @@ const VECTORAITH_CROPS_SOURCE = { url: VECTORAITH_MEDIA_URLS.crops, width: 256, 
 const ITEM_ICONS: Readonly<Partial<Record<ItemId, ItemIconDefinition>>> = {
   [ITEM_ID.axe]: icon(GARDENS_SOURCE, 0, 10),
   [ITEM_ID.hoe]: icon(GARDENS_SOURCE, 0, 2),
+  [ITEM_ID.pickaxe]: icon(GARDENS_SOURCE, 6, 1),
   [ITEM_ID.wateringCan]: icon(GARDENS_SOURCE, 0, 5),
   [ITEM_ID.turnipSeed]: icon(GARDENS_SOURCE, 6, 5),
   [ITEM_ID.turnip]: icon(VECTORAITH_CROPS_SOURCE, 11, 7),

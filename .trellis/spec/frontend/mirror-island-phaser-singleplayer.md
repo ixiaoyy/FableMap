@@ -1,5 +1,173 @@
 # Mirror Island Phaser Single-player
 
+## Active development save reset policy (2026-09-04)
+
+### 1. Scope / Trigger
+
+- Trigger：镜像岛仍处于本地玩法开发与试玩阶段，新增或重塑 `GameState` / `StoredGame` 字段时，不再为此前开发版本投入迁移、回填、隐藏备份或兼容测试成本。
+- 本节优先于下方 v1–v10 历史场景中的迁移要求；历史段落只记录当时已经实施的版本事实，不构成后续版本继续兼容的义务。
+- 本政策只适用于浏览器本地 gameplay save。它不授权删除或忽略 PostgreSQL、Keycloak、论坛、媒体对象、部署数据或其他生产数据的迁移与保护规则。
+
+### 2. Signatures
+
+```typescript
+const GAME_STATE_VERSION: number;
+const SAVE_FORMAT_VERSION: number;
+
+function createInitialGameState(catalog: WorldCatalog): GameState;
+function decodeStoredGame(value: unknown): StoredGame;
+```
+
+### 3. Contracts
+
+- 每个开发里程碑只定义一个 current `GameState` / `StoredGame` 形态；新游戏直接创建完整 current state。
+- `decodeStoredGame()` 只需完整验证 current version。旧 version 可以明确拒绝并引导清除本地试玩存档后新建，不需要迁移为 current。
+- 不新增 `migrateGameStateV*`、旧字段 alias、旧坐标映射、旧版本原始备份或“背包满时待补发”等仅为开发存档兼容存在的状态。
+- 新增开局物品时直接修改 current new-game defaults；不为旧存档设计自动插槽、替换物品、邮件、NPC 补领或隐藏队列。
+- 当前版本内的刷新、继续游戏、原子保存、损坏值校验和保存失败反馈仍是必须合同；“不兼容旧版”不等于可以静默覆盖、丢失 current save 或跳过 decoder。
+- 若用户未来明确宣布一个可对外保留的发布基线，再从该基线开始单独恢复 forward migration 评审；不得自行假定某次开发存档已经成为兼容基线。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 全新浏览器槽 | 创建完整 current state，包含本版本全部默认字段和开局物品 |
+| 合法 current save | 完整解码并继续，刷新前后 current state 保持 |
+| 旧开发版本 save | 明确报告版本不兼容；允许用户清除本地试玩存档并重新开始，不执行迁移或备份 |
+| current save 缺字段、非法 ID、越界数值或重复记录 | 解码失败且不静默覆盖原记录 |
+| IndexedDB 写入失败 | 保持已提交前状态并显示可恢复错误；不得用“开发阶段”作为忽略原子性的理由 |
+| PostgreSQL、Keycloak、论坛或部署数据变更 | 不适用本政策；继续遵守人工评审、备份和 migration 约束 |
+
+### 5. Good / Base / Bad Cases
+
+- Good：新版本增加基础镐和共建状态；新游戏直接拥有完整字段，同版本刷新可恢复，旧 v10 存档显示“不兼容，请重新开始”。
+- Base：只调整纯表现且不改变 state 时，继续使用当前 schema，不为版本号制造无意义变更。
+- Bad：为每个开发版本继续堆叠 v1→v2→…迁移链；或反过来因为不兼容旧版而跳过 current decoder、静默覆盖坏档或删除外部服务数据。
+
+### 6. Tests Required
+
+- 保留 current state / stored envelope 的创建、严格解码、round-trip、损坏值失败和 current-version 刷新恢复检查。
+- 新开局默认值直接断言当前工具、物品和持久状态；不新增或维护旧开发版本迁移、备份、回填和满背包补领测试。
+- 浏览器人工路线从清理本地试玩站点数据后的新游戏开始；若保留一个旧开发存档样本，只验证它得到明确不兼容反馈，不验证进度保留。
+- 本政策不改变最小 `typecheck`、client build、玩法路线与保存失败检查，也不允许连接数据库。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: new development content carries an ever-growing compatibility chain.
+const state = raw.version === 10 ? migrateGameStateV10(raw.state) : decodeCurrent(raw.state);
+
+// Correct: fresh games create current state and the decoder validates only that shape.
+if (raw.version !== GAME_STATE_VERSION) throw new Error("Local playtest save version is no longer supported.");
+const state = decodeCurrentGameState(raw.state);
+```
+
+## Scenario: surface resource tools current v12
+
+### 1. Scope / Trigger
+
+- Trigger：`09-04-surface-mining-v1` 先为小镇共建提供石料来源，再按用户确认补齐《星露谷物语》式开局基础镰刀；两者共用 formal Farm/Foothills/Lakeshore 地表资源链。
+- 本场景拥有基础镐/镰刀、石料/植物纤维、一次 impact、确定性掉落、有限每日恢复和 current v12；矿洞、矿石、干草、筒仓、动物、战斗、技能与工具升级不进入范围。
+
+### 2. Signatures
+
+```typescript
+type MiningResult =
+  | "mined"
+  | "missing-target"
+  | "depleted"
+  | "too-far"
+  | "wrong-tool"
+  | "inventory-full"
+  | "insufficient-stamina";
+
+interface GameState {
+  readonly version: 12;
+  lastSurfaceStoneRefreshDay: number;
+  lastSurfaceWeedRefreshDay: number;
+}
+
+class MiningSystem {
+  use(state: GameState, targetId: string, itemId: ItemId | ""): MiningResult;
+  settleDay(state: GameState): number;
+}
+
+type WeedCuttingResult =
+  | { code: "cut"; cutCount: number; fiberCount: number }
+  | { code: "missing-target" | "depleted" | "too-far" | "wrong-tool" | "wrong-direction" | "inventory-full"; cutCount: 0; fiberCount: 0 };
+
+class WeedCuttingSystem {
+  use(state: GameState, targetId: string, itemId: ItemId | "", facing?: Facing): WeedCuttingResult;
+  settleDay(state: GameState): number;
+}
+```
+
+- `ITEM_ID.pickaxe="pickaxe"`、`ITEM_ID.scythe="scythe"`、`ITEM_ID.stone="stone"`、`ITEM_ID.fiber="fiber"`；工具 stack=1，资源 stack=99，stone/fiber 售价为 2g/1g。
+- 复用现有 `{ type:"use-item-on-target", itemId, targetId, facing? }`，不增加 mining/scythe-only command kind；Facing 只作为镰刀扇区输入，不由客户端提交命中列表。
+
+### 3. Contracts
+
+- 新游戏 slots 0..4 固定为 hoe、watering-can、axe、pickaxe、scythe；默认仍为空手。v12 只创建/解码 current shape，v1–v11 一律 unsupported，不迁移或备份。
+- `MiningSystem` 是 stone phase、距离、体力和掉落的唯一规则 owner；依赖现有 InventorySystem、StaminaSystem、WorldCatalog 和 `stableHash()`。
+- 合法采石要求同 region、42px 内、stone phase=standing、背包确实持有并选中 pickaxe、至少 2 stamina 且能完整加入 1 stone。成功顺序为容量校验 → 扣 2 stamina → phase=cleared → +1 stone → 一次 critical save。
+- formal stone 数量固定为 Farm 1、Foothills 4、Lakeshore 2。Farm/Lakeshore cleared 永久保持；Foothills 是唯一可持续来源。
+- 日结增加 day 后调用 `settleDay`，只从 Foothills cleared 点按 `stableHash(worldSeed, day, "surface-stone:"+entityId)` 排序恢复最多两个；hash 同值按 ASCII stable ID。`lastSurfaceStoneRefreshDay` 使同日重复调用返回 0，已 standing 点不消耗恢复名额。
+- Tiled 继续拥有七个坐标和 stable IDs；GameState 只保存 standing/cleared。Phaser 的 RockEntity 只投影 phase、播放震动/碎屑，ActionTimeline impact 只 dispatch 一次。
+- 基础镐复用已登记 GARDENS 原图 `(6,1)`；stone 图标由 `item-pixel-art.ts` 的原创 16×16 配方生成，成功结果复用已登记 stone SFX，不增加媒体对象或 Git 图片/音频二进制。
+- IndexedDB 当前 save 只 put main record；不再创建 v2/v9 backup。显式删除仍精确清理 main 和两个已知 retired backup key，不枚举其他记录。
+- formal weed 数量固定为 Farm 6、Foothills 5、Lakeshore 4。WeedCuttingSystem 是 phase、Facing 扇区、目标上限、掉落与恢复的唯一规则 owner；weed 只允许 standing/cleared 且 `regrowOnDay=null`。
+- 合法挥割要求同 region、42px 内、目标位于当前 Facing 的前方 90° 扇区、背包持有且选中 scythe；按距离和 ASCII stable ID 最多清除三株，不调用 StaminaSystem。
+- 每株 fiber 用 `stableHash(worldSeed, day, "weed-fiber:"+entityId)%2` 固定判定 50%。先计算总量并通过 `InventorySystem.canAdd`，再统一 cleared/+fiber/一次 critical save；零掉落仍成功，背包不足时全部不变。
+- 新日按 `surface-weed:<entityId>` 分区稳定排序，Farm/Foothills/Lakeshore 最多恢复 1/2/1 株；standing 不占名额，Farm 已有 `farmTiles` 的格子跳过。`lastSurfaceWeedRefreshDay` 使同日重复结算为 0。
+- WeedEntity 使用源码图元渲染并从 saved standing→cleared transition 播放叶片；FarmingActionPresenter 只画挥割弧线。scythe/fiber 使用源码 16×16 图标，成功 `cut` 复用 harvest cue；无新增媒体对象或二进制。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| pickaxe + nearby standing stone + capacity + stamina | -2 stamina、+1 stone、phase=cleared、一次保存与 stone cue |
+| 背包满或 stamina < 2 | inventory/stamina/resource 全部不变，明确错误 |
+| wrong tool | 零 domain mutation；clicked rock 可播放轻敲但无成功 cue/碎裂 |
+| unknown、跨 region、>42px 或 cleared | 零 mutation，返回 closed result |
+| 同一 Foothills 新日首次 settle | 恢复 0..2 个 cleared 点，并写 refresh day |
+| 同日再次 settle / 保存失败重试同一 candidate | 恢复 0，不重抽、不多生石块 |
+| current stone=stump、regrowOnDay 非 null、refresh day > state.day | current decoder 失败 |
+| scythe + facing + 1–3 nearby weeds | stamina 不变，命中全部 cleared，固定 0–3 fiber、一次保存与 harvest cue |
+| wrong tool、背向、跨 region、>42px 或 cleared weed | 零 mutation；错误工具只允许轻微 rustle，无成功 cue/叶片 |
+| 本次 fiber 总量无法完整入包 | 所有候选 weed、inventory 和 stamina 全部不变 |
+| 新日 weed settle | Farm/Foothills/Lakeshore 恢复 0..1/0..2/0..1，跳过农田；同日再次为 0 |
+| current weed=stump、regrowOnDay 非 null、任一 refresh day > state.day | current decoder 失败 |
+| v11 或更早 envelope | 明确 unsupported；原 IndexedDB record 不覆盖 |
+
+### 5. Good / Base / Bad Cases
+
+- Good：Day 1 第四/第五槽为镐/镰刀；采石使体力 100→98、+1 石料，面向三株杂草挥割最多清除三株、体力保持、固定获得纤维；刷新继续仍保持。
+- Base：错误工具只提示；杂草可清除但本次 hash 为零纤维。没有矿洞、干草、战斗、作物挥割或升级承诺。
+- Bad：Phaser 自行决定 AoE/掉落、每次 render 随机重抽、背包不足仍部分清草、镰刀扣体力、同日重复恢复，或继续维护旧 migration chain。
+
+### 6. Tests Required
+
+- life-loop contract：formal stone 1/4/2、weed 6/5/4、采石与三株挥割成功、wrong tool/direction、背包满原子性、固定 fiber、current v12 round-trip、v1–v11 unsupported、两个日结 marker 与 GameSession 一次保存。
+- town/audio contract：第四/第五 Hotbar 槽可选择；`mined -> stone`、`cut -> harvest`，错误结果静音。
+- 最小自动门禁：`test:life-loop`、`test:town-population`、typecheck、client build；Git 游戏媒体二进制增量为零。
+- 浏览器从新 origin 正常新建，核对镐/镰刀图标、Farm stone/weed、采矿扣体力、镰刀零消耗、fiber 图标、刷新继续与 console error/warn；Foothills/Lakeshore 全路线和主观手感由真人确认。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation decides the area hit, drop and resource removal.
+nearbyWeeds.forEach((weed) => weed.setVisible(false));
+gameUiState.inventory.push({ itemId: "fiber", quantity: Math.random() < 0.5 ? 1 : 0 });
+
+// Correct: the existing command reaches the sole domain owner once at ActionTimeline impact.
+dispatchLocalGameCommand({
+  type: "use-item-on-target",
+  itemId: ITEM_ID.scythe,
+  targetId: weed.entityId,
+  facing,
+});
+```
+
 ## Active Spring v10 contract (human acceptance confirmed 2026-09-03)
 
 ### 1. Scope / Trigger
@@ -1617,7 +1785,7 @@ function updateAudioVolume(channel: "master" | "music" | "sfx", value: number): 
 - `AudioDirector` 是声音实例、one-shot、脚步轮换、区域 loop crossfade 和 teardown 的唯一 client owner；Vue、GameSession 与实体不得保存 `HTMLAudioElement`。
 - typed command/result 先完成 gameplay mutation，再由 `audioCueForCommandResult` 映射成功 cue；失败交易、错误工具和无 mutation 结果不得播放成功音。
 - 门声只在室内/室外边界播放，Farm↔Town、Town↔Foothills/Lakeshore 等纯室外切图不播放门声。
-- 石头保持非采矿表现：近距离点击只震动、播放 stone cue 并提示现有工具敲不开；不增加掉落、物品、耐久或 save 字段。
+- current v12 中 stone/weed 只有在 `mined`/`cut` 已完成 domain mutation 后才映射 stone/harvest cue；错误工具、背包失败和无 mutation 结果保持静音。
 - 音量设置 key 固定 `mirror-island.audio-settings.v1`，只含有限 0..1 数值；不进入 IndexedDB `GameState`，不包含身份、URL 或 secret。
 - `Music Volume` 在本阶段保存但没有音乐轨；SFX 同时控制 one-shot 和环境层。
 - 音频只从 manifest 登记的同源 `/game-media/v1` URL 读取。manifest schema v1 分别记录 `tracked_image_*` 与 `tracked_audio_*`；音频 MIME allowlist 为 `audio/ogg`、`audio/mpeg`、`audio/wav`，不得伪造 width/height。

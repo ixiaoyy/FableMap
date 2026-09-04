@@ -196,11 +196,11 @@ export class FarmingSystem {
     return "harvested";
   }
 
-  /** Reports whether one Farm tile remains occupied by a standing tree, stump or stone. */
+  /** Reports whether one Farm tile remains occupied by a standing tree, stump, stone or weed. */
   private hasStandingResource(state: GameState, column: number, row: number): boolean {
     return this.catalog.requireRegion("farm").resources.some((spawn) => {
       if (Math.floor(spawn.x / 16) !== column || Math.floor(spawn.y / 16) !== row) return false;
-      if (spawn.kind !== "tree" && spawn.kind !== "stone") return false;
+      if (spawn.kind !== "tree" && spawn.kind !== "stone" && spawn.kind !== "weed") return false;
       return state.resources[spawn.entityId]?.phase !== "cleared";
     });
   }

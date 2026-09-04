@@ -537,7 +537,7 @@ test("linear dialogue and shop share one transient world-input lock", () => {
 test("Day 2 adoption waits for the Farm yard, defers transiently and locks every world input", () => {
   clearGameState();
   const state = {
-    version: 10,
+    version: 12,
     day: 2,
     minuteOfDay: 360,
     gold: 100,
@@ -548,6 +548,8 @@ test("Day 2 adoption waits for the Farm yard, defers transiently and locks every
     wateringCanWater: 20,
     stamina: 100,
     fishingCastCount: 0,
+    lastSurfaceStoneRefreshDay: 2,
+    lastSurfaceWeedRefreshDay: 2,
     worldSeed: 0,
     lateWarningDay: 0,
     weather: { day: 2, current: "sunny", next: "rain" },
@@ -587,9 +589,11 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
   inventory[0] = { itemId: ITEM_ID.hoe, quantity: 1 };
   inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
   inventory[2] = { itemId: ITEM_ID.axe, quantity: 1 };
+  inventory[3] = { itemId: ITEM_ID.pickaxe, quantity: 1 };
+  inventory[4] = { itemId: ITEM_ID.scythe, quantity: 1 };
   inventory[10] = { itemId: ITEM_ID.rapeseedFlower, quantity: 2 };
   const state = {
-    version: 10,
+    version: 12,
     day: 1,
     minuteOfDay: 360,
     gold: 100,
@@ -624,6 +628,14 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
   assert.equal(gameUiState.selectedInventoryIndex, null);
   selectHotbarSlot(7);
   assert.equal(gameUiState.selectedItemId, "");
+
+  selectHotbarSlot(3);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.pickaxe);
+  selectHotbarSlot(3);
+
+  selectHotbarSlot(4);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.scythe);
+  selectHotbarSlot(4);
 
   selectHotbarSlot(1);
   setWorldActionBusy(true);

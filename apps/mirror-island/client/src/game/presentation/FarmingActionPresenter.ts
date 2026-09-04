@@ -5,7 +5,7 @@ import type { WorldPoint } from "../../../../domain/world/regions.ts";
 import { itemTextureFrame } from "../assets/item-textures.ts";
 import type { PlayerMediaProfile } from "../assets/visual-profile.ts";
 
-export type FarmAction = "axe" | "plow" | "plant" | "water" | "harvest";
+export type FarmAction = "axe" | "pickaxe" | "scythe" | "plow" | "plant" | "water" | "harvest";
 
 interface ToolPose {
   readonly x: number;
@@ -24,8 +24,10 @@ const TOOL_POSES: Readonly<Record<Facing, readonly [ToolPose, ToolPose]>> = {
 function itemGrip(itemId: string, facing: Facing): { x: number; y: number } {
   const grip = itemId === ITEM_ID.hoe ? { x: 0.68, y: 0.25 }
     : itemId === ITEM_ID.axe ? { x: 0.25, y: 0.75 }
-      : itemId === ITEM_ID.wateringCan ? { x: 0.4, y: 0.2 }
-        : { x: 0.5, y: 0.6 };
+      : itemId === ITEM_ID.pickaxe ? { x: 0.22, y: 0.82 }
+        : itemId === ITEM_ID.scythe ? { x: 0.18, y: 0.82 }
+          : itemId === ITEM_ID.wateringCan ? { x: 0.4, y: 0.2 }
+            : { x: 0.5, y: 0.6 };
   return { x: facing === "left" ? 1 - grip.x : grip.x, y: grip.y };
 }
 
@@ -40,6 +42,8 @@ function hoeAngle(facing: Facing, impact: boolean): number {
 /** Selects a visual action from the held item; the domain still decides whether the target accepts it. */
 export function farmActionForItem(itemId: string): FarmAction {
   if (itemId === ITEM_ID.axe) return "axe";
+  if (itemId === ITEM_ID.pickaxe) return "pickaxe";
+  if (itemId === ITEM_ID.scythe) return "scythe";
   if (itemId === ITEM_ID.hoe) return "plow";
   if (itemId === ITEM_ID.wateringCan) return "water";
   return getItemDefinition(itemId)?.category === "seed" ? "plant" : "harvest";
@@ -109,7 +113,7 @@ export class FarmingActionPresenter {
   impact(success: boolean, target: WorldPoint, harvestedItemId?: string): void {
     const direction = facingVector(this.facing);
     const pose = TOOL_POSES[this.facing][1];
-    const bending = this.action !== "axe";
+    const bending = this.action !== "axe" && this.action !== "pickaxe" && this.action !== "scythe";
     this.body.setFrame(this.media.frames.walk[this.facing][2]!);
     this.scene.tweens.add({
       targets: this.body, x: direction.x * 2, y: direction.y * 2 + (bending ? 2 : 0),
@@ -147,9 +151,25 @@ export class FarmingActionPresenter {
 
   /** Paints a bounded set of soil, water, seed or harvest marks at the supplied accepted contact point. */
   private playContact(target: WorldPoint, harvestedItemId?: string): void {
-    if (this.action === "axe") return;
+    if (this.action === "axe" || this.action === "pickaxe") return;
     const effect = this.scene.add.container(target.x, target.y).setDepth(100 + target.y + 2);
     this.effects.add(effect);
+    if (this.action === "scythe") {
+      const facingAngle: Readonly<Record<Facing, number>> = { down: 0, right: -90, up: 180, left: 90 };
+      effect.setAngle(facingAngle[this.facing]);
+      effect.add(this.scene.add.arc(0, -4, 13, 205, 335, false, 0xffffff, 0)
+        .setStrokeStyle(2, 0xd9e6c3, 0.9));
+      this.scene.tweens.add({
+        targets: effect,
+        scaleX: { from: 0.65, to: 1.15 },
+        scaleY: { from: 0.65, to: 1.15 },
+        alpha: 0,
+        duration: 220,
+        ease: "Quad.Out",
+        onComplete: () => { this.effects.delete(effect); effect.destroy(true); },
+      });
+      return;
+    }
     const color = this.action === "water" ? 0xa4e3e3 : this.action === "plant" ? 0xdec684 : 0xb9935b;
     for (let index = 0; index < 6; index += 1) {
       const x = (index % 3 - 1) * 5;

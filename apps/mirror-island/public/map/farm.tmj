@@ -859,6 +859,156 @@
           "width": 0,
           "x": 560,
           "y": 640
+        },
+        {
+          "height": 0,
+          "id": 110,
+          "name": "Weed 1",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "farm-weed-001"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 448,
+          "y": 272
+        },
+        {
+          "height": 0,
+          "id": 111,
+          "name": "Weed 2",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "farm-weed-002"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 464,
+          "y": 272
+        },
+        {
+          "height": 0,
+          "id": 112,
+          "name": "Weed 3",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "farm-weed-003"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 480,
+          "y": 272
+        },
+        {
+          "height": 0,
+          "id": 113,
+          "name": "Weed 4",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "farm-weed-004"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 464,
+          "y": 336
+        },
+        {
+          "height": 0,
+          "id": 114,
+          "name": "Weed 5",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "farm-weed-005"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 480,
+          "y": 336
+        },
+        {
+          "height": 0,
+          "id": 115,
+          "name": "Weed 6",
+          "opacity": 1,
+          "point": true,
+          "properties": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "farm-weed-006"
+            },
+            {
+              "name": "resourceKind",
+              "type": "string",
+              "value": "weed"
+            }
+          ],
+          "rotation": 0,
+          "type": "resource",
+          "visible": true,
+          "width": 0,
+          "x": 496,
+          "y": 336
         }
       ],
       "opacity": 1,
@@ -941,7 +1091,7 @@
     }
   ],
   "nextlayerid": 13,
-  "nextobjectid": 110,
+  "nextobjectid": 116,
   "orientation": "orthogonal",
   "properties": [
     {

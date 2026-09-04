@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
 import { homePetRegionAt } from "../../../../domain/pets/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
-import { facingFromVector } from "../../../../domain/world/facing.ts";
+import { facingFromVector, isPointInFacingSector } from "../../../../domain/world/facing.ts";
 import { AudioDirector } from "../../audio/AudioDirector.ts";
 import { AUDIO_CUE } from "../../audio/audio-catalog.ts";
 import { emitAudioCue } from "../../audio/audio-events.ts";
@@ -71,6 +71,7 @@ import {
   PetEntity,
   RockEntity,
   TreeEntity,
+  WeedEntity,
 } from "../entities/WorldEntities.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
@@ -82,6 +83,7 @@ const NPC_INTERACTION_DISTANCE = 42;
 const PET_INTERACTION_DISTANCE = 42;
 const BED_INTERACTION_DISTANCE = 42;
 const ROCK_INTERACTION_DISTANCE = 42;
+const WEED_INTERACTION_DISTANCE = 42;
 const INSPECT_INTERACTION_DISTANCE = 48;
 const EXIT_HINT_DISTANCE = 52;
 const WORLD_CAMERA_ZOOM = 2;
@@ -103,6 +105,7 @@ export class WorldScene extends Phaser.Scene {
   private playerView: PlayerView | null = null;
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
+  private readonly weedViews = new Map<string, WeedEntity>();
   private readonly farmViews = new Map<string, FarmPlotEntity>();
   private readonly fishingSpotViews = new Map<string, FishingSpotEntity>();
   private readonly forageViews = new Map<string, ForageEntity>();
@@ -463,8 +466,10 @@ export class WorldScene extends Phaser.Scene {
     const spawns = this.catalog.requireRegion(regionId).resources;
     const treeIds = new Set(spawns.filter((spawn) => spawn.kind === "tree").map((spawn) => spawn.entityId));
     const rockIds = new Set(spawns.filter((spawn) => spawn.kind === "stone").map((spawn) => spawn.entityId));
+    const weedIds = new Set(spawns.filter((spawn) => spawn.kind === "weed").map((spawn) => spawn.entityId));
     removeMissing(this.treeViews, treeIds);
     removeMissing(this.rockViews, rockIds);
+    removeMissing(this.weedViews, weedIds);
     for (const spawn of spawns) {
       if (spawn.kind === "tree") {
         const view = this.treeViews.get(spawn.entityId)
@@ -472,8 +477,18 @@ export class WorldScene extends Phaser.Scene {
         this.treeViews.set(spawn.entityId, view);
         const resource = state.resources[spawn.entityId];
         if (resource) view.project(resource);
-      } else if (spawn.kind === "stone" && !this.rockViews.has(spawn.entityId)) {
-        this.rockViews.set(spawn.entityId, this.entityFactory.createRock(spawn, (entity) => this.tapRock(entity)));
+      } else if (spawn.kind === "stone") {
+        const view = this.rockViews.get(spawn.entityId)
+          ?? this.entityFactory.createRock(spawn, (entity) => this.playRockAction(entity));
+        this.rockViews.set(spawn.entityId, view);
+        const resource = state.resources[spawn.entityId];
+        if (resource) view.project(resource);
+      } else if (spawn.kind === "weed") {
+        const view = this.weedViews.get(spawn.entityId)
+          ?? this.entityFactory.createWeed(spawn, (entity) => this.playWeedAction(entity));
+        this.weedViews.set(spawn.entityId, view);
+        const resource = state.resources[spawn.entityId];
+        if (resource) view.project(resource);
       }
     }
   }
@@ -684,6 +699,81 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
+  /** Runs one surface-mining sequence and mutates the stone only at the captured impact. */
+  private playRockAction(entity: RockEntity): void {
+    const player = this.latestState?.player;
+    if (!player || isWorldInputLocked() || this.transitionPhase !== "idle") return;
+    this.facePoint(entity.spawn.x, entity.spawn.y);
+    const selectedItemId = gameUiState.selectedItemId;
+    if (
+      player.regionId !== entity.spawn.regionId
+      || Math.hypot(player.x - entity.spawn.x, player.y - entity.spawn.y) > ROCK_INTERACTION_DISTANCE
+    ) {
+      dispatchLocalGameCommand({ type: "use-item-on-target", itemId: selectedItemId, targetId: entity.entityId });
+      return;
+    }
+    if (selectedItemId !== ITEM_ID.pickaxe) {
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+      });
+      entity.playTap();
+      return;
+    }
+    this.playToolAction(entity.spawn, "pickaxe", () => {
+      let succeeded = false;
+      entity.playImpact(() => {
+        succeeded = dispatchLocalGameCommand({
+          type: "use-item-on-target",
+          itemId: selectedItemId,
+          targetId: entity.entityId,
+        })?.code === "mined";
+        return succeeded;
+      });
+      return succeeded;
+    });
+  }
+
+  /** Runs one facing-aware scythe sequence while domain state selects every weed hit at impact. */
+  private playWeedAction(entity: WeedEntity, preserveFacing = false): void {
+    const player = this.latestState?.player;
+    if (!player || isWorldInputLocked() || this.transitionPhase !== "idle") return;
+    if (!preserveFacing) this.facePoint(entity.spawn.x, entity.spawn.y);
+    const selectedItemId = gameUiState.selectedItemId;
+    const facing = this.facing;
+    if (
+      player.regionId !== entity.spawn.regionId
+      || Math.hypot(player.x - entity.spawn.x, player.y - entity.spawn.y) > WEED_INTERACTION_DISTANCE
+    ) {
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+        facing,
+      });
+      return;
+    }
+    if (selectedItemId !== ITEM_ID.scythe) {
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+        facing,
+      });
+      entity.playTap();
+      return;
+    }
+    this.playToolAction(entity.spawn, "scythe", () => (
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+        facing,
+      })?.code === "cut"
+    ));
+  }
+
   /** Runs one shared tool sequence for tilling, planting, watering or harvesting. */
   private playFarmAction(entity: FarmPlotEntity): void {
     if (isWorldInputLocked()) return;
@@ -870,6 +960,27 @@ export class WorldScene extends Phaser.Scene {
       if (tree && Math.hypot(tree.spawn.x - state.player.x, tree.spawn.y - state.player.y) <= 42) this.playTreeAction(tree);
       return;
     }
+    if (itemId === ITEM_ID.pickaxe) {
+      const rock = [...this.rockViews.values()].filter((view) => state.resources[view.entityId]?.phase === "standing")
+        .sort((a, b) => Math.hypot(a.spawn.x - state.player.x, a.spawn.y - state.player.y) - Math.hypot(b.spawn.x - state.player.x, b.spawn.y - state.player.y))[0];
+      if (rock && Math.hypot(rock.spawn.x - state.player.x, rock.spawn.y - state.player.y) <= ROCK_INTERACTION_DISTANCE) {
+        this.playRockAction(rock);
+      }
+      return;
+    }
+    if (itemId === ITEM_ID.scythe) {
+      const weed = [...this.weedViews.values()]
+        .filter((view) => state.resources[view.entityId]?.phase === "standing")
+        .filter((view) => Math.hypot(view.spawn.x - state.player.x, view.spawn.y - state.player.y) <= WEED_INTERACTION_DISTANCE)
+        .filter((view) => isPointInFacingSector(state.player, view.spawn, this.facing))
+        .sort((left, right) => {
+          const leftDistance = Math.hypot(left.spawn.x - state.player.x, left.spawn.y - state.player.y);
+          const rightDistance = Math.hypot(right.spawn.x - state.player.x, right.spawn.y - state.player.y);
+          return leftDistance - rightDistance || (left.entityId < right.entityId ? -1 : left.entityId > right.entityId ? 1 : 0);
+        })[0];
+      if (weed) this.playWeedAction(weed, true);
+      return;
+    }
     if (itemId === ITEM_ID.wateringCan && this.catalog.isWaterSource(state.player.regionId, column, row)) {
       dispatchLocalGameCommand({ type: "refill-watering-can", column, row });
       return;
@@ -944,22 +1055,6 @@ export class WorldScene extends Phaser.Scene {
     view.lineStyle(1, 0xf4ecd1, .8).lineBetween(state.player.x + 3, state.player.y - 16, x, y);
     view.fillStyle(0xf4ecd1).fillRect(x - 1, y - 6, 3, 7);
     view.fillStyle(0xa4513f).fillRect(x - 1, y - 8, 3, 4);
-  }
-
-  /** Plays a nearby non-minable rock tap and clearly reports that no mining rule exists yet. */
-  private tapRock(entity: RockEntity): void {
-    const player = this.latestState?.player;
-    if (!player || isWorldInputLocked() || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
-    if (
-      player.regionId !== entity.spawn.regionId
-      || Math.hypot(player.x - entity.spawn.x, player.y - entity.spawn.y) > ROCK_INTERACTION_DISTANCE
-    ) {
-      setActionFeedback({ tone: "error", code: "rock-too-far", message: "走近一些再敲敲看。" });
-      return;
-    }
-    entity.playTap();
-    emitAudioCue(AUDIO_CUE.stone);
-    setActionFeedback({ tone: "error", code: "rock-unbreakable", message: "石头纹丝不动，现有工具还敲不开。" });
   }
 
   /** Opens the exact nearby clicked NPC's existing dialogue or shop projection. */
@@ -1095,6 +1190,7 @@ export class WorldScene extends Phaser.Scene {
     this.activeMap = null;
     destroyAll(this.treeViews);
     destroyAll(this.rockViews);
+    destroyAll(this.weedViews);
     destroyAll(this.forageViews);
     destroyAll(this.farmViews);
     destroyAll(this.fishingSpotViews);

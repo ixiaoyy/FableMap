@@ -15,6 +15,7 @@ import {
 import { createDailyRequestState } from "../domain/requests/definitions.ts";
 import { GameSession } from "../domain/session/GameSession.ts";
 import { createInitialGameState } from "../domain/state/game-state.ts";
+import { WeatherSystem } from "../domain/weather/WeatherSystem.ts";
 import { WorldCatalog } from "../domain/world/regions.ts";
 import { petAnchorsForRegion, validatePetAnchors } from "../client/src/game/pets/pet-presentation.ts";
 import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
@@ -100,28 +101,26 @@ function createPetCatalog() {
   ]);
 }
 
-/** Creates one representative released v8 envelope with no pet field. */
-function createReleasedV8(catalog) {
-  const current = createInitialGameState(catalog);
-  current.day = 2;
-  current.dailyForage = { day: 2, collectedIds: [] };
-  current.dailyRequest = createDailyRequestState(2);
-  const { pet: _pet, ...released } = structuredClone(current);
-  return {
-    version: 8,
-    updatedAt: 800,
-    state: { ...released, version: 8 },
-  };
+/** Creates one complete current Day-2 state without relying on retired save migrations. */
+function createDayTwoState(catalog) {
+  const state = createInitialGameState(catalog);
+  state.day = 2;
+  state.lastSurfaceStoneRefreshDay = 2;
+  state.lastSurfaceWeedRefreshDay = 2;
+  state.weather = new WeatherSystem().create(state.worldSeed, 2);
+  state.dailyForage = { day: 2, collectedIds: [] };
+  state.dailyRequest = createDailyRequestState(2);
+  return state;
 }
 
-test("v8 saves gain pet null and current pet corruption fails closed", () => {
+test("current pet state round-trips and corrupt pet fields fail closed", () => {
   const catalog = createPetCatalog();
-  const migrated = decodeStoredGame(createReleasedV8(catalog));
-  assert.equal(migrated.version, 10);
-  assert.equal(migrated.state.version, 10);
-  assert.equal(migrated.state.pet, null);
+  const current = decodeStoredGame(createStoredGame(createDayTwoState(catalog), 800));
+  assert.equal(current.version, 12);
+  assert.equal(current.state.version, 12);
+  assert.equal(current.state.pet, null);
 
-  const state = migrated.state;
+  const state = current.state;
   state.pet = createPetState("cat", "团子", 2);
   const stored = createStoredGame(state, 900);
   assert.deepEqual(decodeStoredGame(stored), stored);
@@ -141,6 +140,7 @@ test("v8 saves gain pet null and current pet corruption fails closed", () => {
     () => decodeStoredGame({ ...stored, state: { ...stored.state, pet: { ...stored.state.pet, lastPettedDay: 3 } } }),
     /pet state/i,
   );
+  assert.throws(() => decodeStoredGame({ ...stored, version: 10 }), /unsupported/i);
 });
 
 test("pet names count Unicode code points and adoption persists exactly once", async () => {
@@ -149,13 +149,14 @@ test("pet names count Unicode code points and adoption persists exactly once", a
   assert.equal(normalizePetName("坏\u0000名字"), null);
 
   const catalog = createPetCatalog();
-  const directState = createInitialGameState(catalog);
+  const directState = createDayTwoState(catalog);
   const directPets = new PetSystem();
+  directState.day = 1;
   assert.equal(directPets.adopt(directState, "cat", "团子"), "not-ready");
   directState.day = 2;
   assert.equal(directPets.adopt(directState, "fox", "小狐"), "invalid-species");
   const repository = new MemorySaveRepository();
-  repository.game = decodeStoredGame(createReleasedV8(catalog));
+  repository.game = createStoredGame(createDayTwoState(catalog), 800);
   const session = new GameSession(repository, "pet-owner", catalog, "main", () => 901);
   await session.continueGame();
   assert.equal(session.dispatch({ type: "adopt-pet", species: "cat", name: "坏\n名字" })?.code, "invalid-name");

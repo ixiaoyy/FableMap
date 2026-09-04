@@ -4,19 +4,20 @@ import test from "node:test";
 import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
 import { calendarAt, playableCalendarAt } from "../domain/calendar/game-calendar.ts";
 import { NpcDialogueSystem } from "../domain/dialogue/NpcDialogueSystem.ts";
-import { CROP_DEFINITIONS } from "../domain/farming/crops.ts";
+import { CROP_DEFINITIONS, sellPriceForItem } from "../domain/farming/crops.ts";
 import { FarmingSystem } from "../domain/farming/FarmingSystem.ts";
 import { FishingSystem } from "../domain/fishing/FishingSystem.ts";
 import { eligibleFish, fishingPausesClock } from "../domain/fishing/definitions.ts";
 import { ForageSystem } from "../domain/gathering/ForageSystem.ts";
 import { GatheringSystem } from "../domain/gathering/GatheringSystem.ts";
+import { WeedCuttingSystem } from "../domain/gathering/WeedCuttingSystem.ts";
 import { InventorySystem } from "../domain/inventory/InventorySystem.ts";
 import { ITEM_ID } from "../domain/items/definitions.ts";
+import { MiningSystem } from "../domain/mining/MiningSystem.ts";
 import { createStoredGame, decodeStoredGame } from "../domain/persistence/SaveRepository.ts";
-import { createPetState } from "../domain/pets/definitions.ts";
 import { UpgradeSystem } from "../domain/progression/UpgradeSystem.ts";
 import { DailyRequestSystem } from "../domain/requests/DailyRequestSystem.ts";
-import { DAILY_REQUESTS, createDailyRequestState } from "../domain/requests/definitions.ts";
+import { createDailyRequestState } from "../domain/requests/definitions.ts";
 import { FirstWeekMilestoneSystem, latestFirstWeekMilestoneAt } from "../domain/retention/FirstWeekMilestoneSystem.ts";
 import { GameSession } from "../domain/session/GameSession.ts";
 import { ShopSystem } from "../domain/shop/ShopSystem.ts";
@@ -27,7 +28,7 @@ import { StaminaSystem } from "../domain/stamina/StaminaSystem.ts";
 import { staminaAfterSleep } from "../domain/stamina/definitions.ts";
 import { createInitialGameState, createTilledFarmTile, farmTileId } from "../domain/state/game-state.ts";
 import { DAY_END_MINUTE, DAY_START_MINUTE, formatGameMinute } from "../domain/time/game-time.ts";
-import { WeatherSystem, weatherAt } from "../domain/weather/WeatherSystem.ts";
+import { WeatherSystem, stableHash, weatherAt } from "../domain/weather/WeatherSystem.ts";
 import { activeNpcById, activeNpcSpawns } from "../domain/world/npc-schedules.ts";
 import { findNpcPath } from "../domain/world/npc-pathfinding.ts";
 import { WorldCatalog } from "../domain/world/regions.ts";
@@ -71,6 +72,8 @@ function stateAt(day = 1, minuteOfDay = DAY_START_MINUTE) {
   state.day = day;
   state.minuteOfDay = minuteOfDay;
   state.weather = new WeatherSystem().create(state.worldSeed, day);
+  state.lastSurfaceStoneRefreshDay = day;
+  state.lastSurfaceWeedRefreshDay = day;
   state.dailyForage = { day, collectedIds: [] };
   state.dailyRequest = createDailyRequestState(day);
   return state;
@@ -79,7 +82,10 @@ function stateAt(day = 1, minuteOfDay = DAY_START_MINUTE) {
 /** Places test feet at an authored passable tile within interaction range of the target. */
 function placeNear(state, regionId, target) {
   const npcs = activeNpcSpawns(catalog, state.minuteOfDay, { day: state.day, weather: state.weather.current });
-  for (const [dx, dy] of [[0, 16], [16, 0], [-16, 0], [0, -16], [0, 32], [32, 0], [-32, 0], [0, -32]]) {
+  const offsets = [-32, -16, 0, 16, 32].flatMap((dy) => (
+    [-32, -16, 0, 16, 32].map((dx) => [dx, dy])
+  )).sort((left, right) => Math.hypot(...left) - Math.hypot(...right));
+  for (const [dx, dy] of offsets) {
     const x = Math.floor((target.x + dx) / 16) * 16 + 8;
     const y = Math.floor((target.y + dy) / 16) * 16 + 8;
     if (Math.hypot(x - target.x, y - target.y) <= 42
@@ -89,45 +95,6 @@ function placeNear(state, regionId, target) {
     }
   }
   throw new Error("No reachable interaction feet near " + regionId);
-}
-
-/** Constructs actual released fixed-ID/resource shapes rather than relabelling a v10 state. */
-function releasedSave(version, day = 7) {
-  const current = stateAt(day);
-  const state = {
-    version, day, minuteOfDay: 600, gold: 321, player: current.player,
-    inventory: current.inventory, inventoryCapacity: 24, wateringCanLevel: 1,
-    resources: { "farm-tree-001": { id: "farm-tree-001", kind: "tree", available: false } },
-    friendships: { "seed-keeper": { npcId: "seed-keeper", points: 250, lastTalkedDay: day } },
-    dailyForage: { day, collectedIds: [] },
-    dailyRequest: { day, requestId: DAILY_REQUESTS[(day - 2) % 8].requestId, completed: false },
-    npcDialogue: {}, seenEventIds: ["day-7-mirror-teaser"],
-    pet: createPetState("cat", "团子", 2),
-    farmTiles: {
-      "farm-plot-001": { id: "farm-plot-001", phase: "growing", cropId: ITEM_ID.turnip, growthDays: 1, watered: true },
-      "farm-plot-002": { id: "farm-plot-002", phase: "mature", cropId: ITEM_ID.turnip, growthDays: 3, watered: false },
-    },
-  };
-  if (version <= 6) {
-    for (const tile of Object.values(state.farmTiles)) {
-      tile.growthStage = tile.growthDays;
-      delete tile.growthDays;
-      if (version <= 2) {
-        tile.cropId = "alien-crop";
-        tile.growthStage = 1;
-        tile.readyAt = tile.phase === "mature" ? 0 : 99999;
-      }
-    }
-  }
-  if (version <= 2) {
-    state.inventory[3] = { itemId: "alien-seed", quantity: 2 };
-    state.inventory[4] = { itemId: "alien-crop", quantity: 1 };
-  }
-  if (version === 1) {
-    state.farmTiles = { "farm-01": { ...state.farmTiles["farm-plot-001"], id: "farm-01" } };
-    state.resources = { "tree-01": { id: "tree-01", kind: "tree", available: false } };
-  }
-  return { version, updatedAt: 123, state };
 }
 
 /** Continues a prepared fixture through the real session and save boundary. */
@@ -189,40 +156,32 @@ test("spring catalog and formal Tiled masks remain finite while Day 29 keeps spr
   assert.notEqual(findNpcPath(catalog.requireRegion("lakeshore").collision, catalog.requireSpawn("lakeshore", "town-gate"), state.player), null);
 });
 
-test("released v1–v9 migrate idempotently to v10, preserving pets, crops and the old current request", async () => {
-  for (let version = 1; version <= 9; version += 1) {
-    const migrated = decodeStoredGame(releasedSave(version));
-    assert.equal(migrated.version, 10);
-    assert.equal(migrated.state.version, 10);
-    assert.equal(migrated.state.resources["farm-tree-001"].phase, "stump");
-    assert.equal(migrated.state.farmTiles["farm:27:18"].cropId, ITEM_ID.turnip);
-    assert.equal(migrated.state.stamina, 100);
-    assert.equal(migrated.state.wateringCanWater, 20);
-    assert.equal(migrated.state.fishingCastCount, 0);
-    assert.equal(migrated.state.seenEventIds.includes("day-7-mirror-teaser"), false);
-    assert.equal(migrated.state.pet?.name ?? null, version === 9 ? "团子" : null);
-    assert.deepEqual(decodeStoredGame(migrated), migrated);
-  }
-  const migrated = decodeStoredGame(releasedSave(9, 10));
-  assert.equal(migrated.state.dailyRequest.requestId, "seed-rack-repair");
-  assert.equal(createDailyRequestState(10).requestId, "fresh-catch-supper");
+test("current v12 saves round-trip while every older development version is unsupported", async () => {
   const stored = createStoredGame(stateAt(), 123);
+  assert.equal(stored.version, 12);
+  assert.equal(stored.state.version, 12);
+  assert.deepEqual(stored.state.inventory[3], { itemId: ITEM_ID.pickaxe, quantity: 1 });
+  assert.deepEqual(stored.state.inventory[4], { itemId: ITEM_ID.scythe, quantity: 1 });
+  assert.deepEqual(decodeStoredGame(stored), stored);
   for (const fields of [
     { stamina: 101 }, { minuteOfDay: 365 }, { wateringCanWater: 21 }, { fishingCastCount: -1 },
+    { lastSurfaceStoneRefreshDay: 2 },
+    { lastSurfaceWeedRefreshDay: 2 },
     { weather: { day: 2, current: "rain", next: "sunny" } }, { seenEventIds: ["day-7-mirror-teaser"] },
   ]) assert.throws(() => decodeStoredGame({ ...stored, state: { ...stored.state, ...fields } }));
-  assert.throws(() => decodeStoredGame({ ...stored, version: 11 }), /unsupported/i);
+  for (let version = 1; version <= 11; version += 1) {
+    assert.throws(() => decodeStoredGame({ ...stored, version, state: { ...stored.state, version } }), /unsupported/i);
+  }
+  assert.throws(() => decodeStoredGame({ ...stored, version: 13 }), /unsupported/i);
   const unknownCrop = { ...createTilledFarmTile(27, 18), cropId: "unknown-crop" };
   assert.throws(() => decodeStoredGame({ ...stored, state: { ...stored.state, farmTiles: { [unknownCrop.id]: unknownCrop } } }), /farm/i);
   const repository = new MemorySaveRepository();
-  repository.game = releasedSave(9);
-  repository.failWrites = true;
-  const session = new GameSession(repository, "migration-retry", catalog, "main", () => 0);
-  await assert.rejects(session.continueGame(), /simulated/i);
-  assert.equal(repository.game.version, 9);
-  repository.failWrites = false;
+  repository.game = { ...stored, version: 11, state: { ...stored.state, version: 11 } };
+  const session = new GameSession(repository, "current-reset", catalog, "main", () => 0);
+  await assert.rejects(session.continueGame(), /unsupported/i);
   await session.newGame();
   assert.equal(session.snapshot().day, 1);
+  assert.equal(repository.game.version, 12);
 });
 
 test("free tilling, actual watered-cell costs and replenishment are atomic", () => {
@@ -330,6 +289,163 @@ test("trees leave harvestable stumps, outdoor trees regrow after seven days and 
   assert.ok(Array.from({ length: 11 }, (_, offset) => stateAt(offset + 4)).some((day) => (
     forage.activeSpawns(day, "foothills").some((spawn) => spawn.kind === "bamboo-shoot")
   )));
+});
+
+test("surface stones mine atomically and only Foothills restores at most two once per new day", async () => {
+  const state = stateAt(4);
+  const mining = new MiningSystem(inventory, stamina, catalog);
+  const stones = catalog.allRegions().flatMap((region) => region.resources.filter((resource) => resource.kind === "stone"));
+  assert.deepEqual(
+    Object.fromEntries(["farm", "foothills", "lakeshore"].map((regionId) => [
+      regionId,
+      stones.filter((stone) => stone.regionId === regionId).length,
+    ])),
+    { farm: 1, foothills: 4, lakeshore: 2 },
+  );
+
+  const first = stones[0];
+  placeNear(state, first.regionId, first);
+  const wrongTool = structuredClone(state);
+  assert.equal(mining.use(state, first.entityId, ITEM_ID.axe), "wrong-tool");
+  assert.deepEqual(state, wrongTool);
+
+  for (const stone of stones) {
+    placeNear(state, stone.regionId, stone);
+    assert.equal(mining.use(state, stone.entityId, ITEM_ID.pickaxe), "mined");
+  }
+  assert.equal(inventory.quantity(state.inventory, ITEM_ID.stone), 7);
+  assert.equal(sellPriceForItem(ITEM_ID.stone), 2);
+  assert.equal(state.stamina, 86);
+  assert.equal(stones.every((stone) => state.resources[stone.entityId].phase === "cleared"), true);
+  assert.deepEqual(decodeStoredGame(createStoredGame(state, 0)).state.resources, state.resources);
+  assert.equal(mining.settleDay(state), 0);
+
+  state.day = 5;
+  assert.equal(mining.settleDay(state), 2);
+  assert.equal(mining.settleDay(state), 0);
+  assert.equal(stones.filter((stone) => stone.regionId === "foothills" && state.resources[stone.entityId].phase === "standing").length, 2);
+  assert.equal(stones.filter((stone) => stone.regionId !== "foothills" && state.resources[stone.entityId].phase === "standing").length, 0);
+
+  const full = stateAt();
+  full.inventory = full.inventory.map((_, index) => index === 0
+    ? { itemId: ITEM_ID.pickaxe, quantity: 1 }
+    : { itemId: ITEM_ID.wood, quantity: 99 });
+  placeNear(full, first.regionId, first);
+  const fullBefore = structuredClone(full);
+  assert.equal(mining.use(full, first.entityId, ITEM_ID.pickaxe), "inventory-full");
+  assert.deepEqual(full, fullBefore);
+
+  const tired = stateAt();
+  tired.stamina = 1;
+  placeNear(tired, first.regionId, first);
+  const tiredBefore = structuredClone(tired);
+  assert.equal(mining.use(tired, first.entityId, ITEM_ID.pickaxe), "insufficient-stamina");
+  assert.deepEqual(tired, tiredBefore);
+
+  const sessionState = stateAt();
+  placeNear(sessionState, first.regionId, first);
+  const { repository, session } = await sessionFor(sessionState);
+  const savesBefore = repository.saveCalls;
+  assert.equal(session.dispatch({
+    type: "use-item-on-target",
+    itemId: ITEM_ID.pickaxe,
+    targetId: first.entityId,
+  }).code, "mined");
+  await session.flush();
+  assert.equal(repository.saveCalls, savesBefore + 1);
+  assert.equal(session.snapshot().resources[first.entityId].phase, "cleared");
+  assert.equal(inventory.quantity(session.snapshot().inventory, ITEM_ID.stone), 1);
+});
+
+test("surface weeds cut in a facing arc with fixed fiber and restore by bounded region budgets", async () => {
+  const state = stateAt(4);
+  const weedCutting = new WeedCuttingSystem(inventory, catalog);
+  const weeds = catalog.allRegions().flatMap((region) => region.resources.filter((resource) => resource.kind === "weed"));
+  assert.deepEqual(
+    Object.fromEntries(["farm", "foothills", "lakeshore"].map((regionId) => [
+      regionId,
+      weeds.filter((weed) => weed.regionId === regionId).length,
+    ])),
+    { farm: 6, foothills: 5, lakeshore: 4 },
+  );
+  assert.equal(sellPriceForItem(ITEM_ID.fiber), 1);
+
+  state.player = { ...state.player, regionId: "farm", x: 464, y: 304 };
+  const topFarmWeeds = weeds.filter((weed) => weed.regionId === "farm" && weed.y === 272);
+  const expectedFiber = topFarmWeeds.filter((weed) => (
+    stableHash(state.worldSeed, state.day, `weed-fiber:${weed.entityId}`) % 2 === 0
+  )).length;
+  const staminaBefore = state.stamina;
+  assert.deepEqual(
+    weedCutting.use(state, "farm-weed-002", ITEM_ID.scythe, "up"),
+    { code: "cut", cutCount: 3, fiberCount: expectedFiber },
+  );
+  assert.equal(state.stamina, staminaBefore);
+  assert.equal(inventory.quantity(state.inventory, ITEM_ID.fiber), expectedFiber);
+  assert.equal(topFarmWeeds.every((weed) => state.resources[weed.entityId].phase === "cleared"), true);
+  assert.equal(weeds.filter((weed) => weed.regionId === "farm" && weed.y === 336)
+    .every((weed) => state.resources[weed.entityId].phase === "standing"), true);
+
+  const wrongDirection = stateAt(4);
+  wrongDirection.player = { ...wrongDirection.player, regionId: "farm", x: 464, y: 304 };
+  const directionBefore = structuredClone(wrongDirection);
+  assert.equal(
+    weedCutting.use(wrongDirection, "farm-weed-004", ITEM_ID.scythe, "up").code,
+    "wrong-direction",
+  );
+  assert.deepEqual(wrongDirection, directionBefore);
+  assert.equal(weedCutting.use(wrongDirection, "farm-weed-002", ITEM_ID.axe, "up").code, "wrong-tool");
+  assert.deepEqual(wrongDirection, directionBefore);
+
+  const fullDay = Array.from({ length: 28 }, (_, index) => index + 1).find((day) => topFarmWeeds.some((weed) => (
+    stableHash(state.worldSeed, day, `weed-fiber:${weed.entityId}`) % 2 === 0
+  )));
+  assert.ok(fullDay);
+  const full = stateAt(fullDay);
+  full.player = { ...full.player, regionId: "farm", x: 464, y: 304 };
+  full.inventory = full.inventory.map((_, index) => index === 4
+    ? { itemId: ITEM_ID.scythe, quantity: 1 }
+    : { itemId: ITEM_ID.wood, quantity: 99 });
+  const fullBefore = structuredClone(full);
+  assert.equal(weedCutting.use(full, "farm-weed-002", ITEM_ID.scythe, "up").code, "inventory-full");
+  assert.deepEqual(full, fullBefore);
+
+  const refresh = stateAt(4);
+  for (const weed of weeds) refresh.resources[weed.entityId].phase = "cleared";
+  const covered = weeds.find((weed) => weed.entityId === "farm-weed-001");
+  const coveredTile = createTilledFarmTile(Math.floor(covered.x / 16), Math.floor(covered.y / 16));
+  refresh.farmTiles[coveredTile.id] = coveredTile;
+  refresh.day = 5;
+  assert.equal(weedCutting.settleDay(refresh), 4);
+  assert.equal(weedCutting.settleDay(refresh), 0);
+  assert.deepEqual(
+    Object.fromEntries(["farm", "foothills", "lakeshore"].map((regionId) => [
+      regionId,
+      weeds.filter((weed) => weed.regionId === regionId && refresh.resources[weed.entityId].phase === "standing").length,
+    ])),
+    { farm: 1, foothills: 2, lakeshore: 1 },
+  );
+  assert.equal(refresh.resources[covered.entityId].phase, "cleared");
+  const invalid = stateAt(4);
+  const invalidWeed = { ...invalid.resources[covered.entityId], phase: "stump" };
+  assert.throws(() => decodeStoredGame(createStoredGame({
+    ...invalid,
+    resources: { ...invalid.resources, [covered.entityId]: invalidWeed },
+  }, 0)), /resource state/i);
+
+  const sessionState = stateAt(4);
+  sessionState.player = { ...sessionState.player, regionId: "farm", x: 464, y: 304 };
+  const { repository, session } = await sessionFor(sessionState);
+  const savesBefore = repository.saveCalls;
+  assert.equal(session.dispatch({
+    type: "use-item-on-target",
+    itemId: ITEM_ID.scythe,
+    targetId: "farm-weed-002",
+    facing: "up",
+  }).code, "cut");
+  await session.flush();
+  assert.equal(repository.saveCalls, savesBefore + 1);
+  assert.equal(topFarmWeeds.every((weed) => session.snapshot().resources[weed.entityId].phase === "cleared"), true);
 });
 
 test("midnight warns once, hidden time is discarded and 02:00 settlement retries the same candidate", async () => {
