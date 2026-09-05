@@ -11,10 +11,11 @@
 | Prisma/@prisma/client/@prisma/adapter-pg | `7.9.1` | Apache-2.0 | PostgreSQL schema、migration、transaction/OCC、生成 client |
 | `pg` | `8.23.0` | MIT | Prisma 7 PostgreSQL driver adapter |
 | `jose` | `6.2.9` | MIT | Keycloak JWT/JWKS 验证和 OIDC 签名键生成 |
-| Ninja Adventure | 固定提交 `6ac78232...` | CC0-1.0 | 只使用 manifest 已登记角色/地形子集 |
+| Ninja Adventure | 固定提交 `6ac78232...` | CC0-1.0 | 已登记的历史/开发占位子集；当前角色创建与室外正式世界不使用 Ninja/Samurai |
 | VectoRaith Farming Sim | v1.08 ZIP SHA-256 `1957927a...` | 自定义项目使用许可 | Farm v1；只发布 used-tile compact atlases、EntityFactory frames 和 farmer sheet，不再分发原 ZIP/完整图集 |
 | IvoryRed GARDENS | 2026-08-27 原图 SHA-256 `de4dbbb...` | CC BY 4.0 | 只发布原始 160×176 图标 sheet；Hotbar 选择五个 16×16 frame，并在产品内交付署名 |
 | bluecarrot16 `[LPC] Cats and Dogs` | 2026-09-02 快照；cat SHA-256 `914bae85...`、dog `77f4667a...` | CC BY 3.0（采用页面提供的可选许可） | 只发布两个原始 512×256 PNG；运行时固定选择橘猫/黄犬 32×32 四方向 walk、idle 与 rest 帧，并在产品内交付署名 |
+| Mirror Island Audio MVP | Kenney RPG Audio archive `6dbeaf85...`、rubberduck 100 CC0 SFX #2 archive `0fc61b44...`、5 个固定 CC0 环境录音 sound/file ID | CC0-1.0 | 只发布 14 个交互 one-shot 与 Farm/Town/Lakeshore/室内 5 个环境文件；Music 本阶段无音轨，浏览器只读不可变 `/game-media/v1` 对象 |
 | Phaser Vue TS template | 固定提交 `2fe6c3e...` | MIT | 只采用 Vue/Phaser 生命周期与 Vite 结构 |
 | Cabacos | 固定提交 `79e423d...` | 仓库声明 MIT，holder 待澄清 | 仅行为级移植物品、背包、种田和 Tiled 模式 |
 | Rick Survival | 固定提交 `ea9738c...` | 源码 MIT，素材禁用 | 首阶段不采用；后续仅参考战斗结构 |
@@ -28,6 +29,10 @@
 - 核对过官方 [Howler.js v2.2.4](https://github.com/goldfire/howler.js/tree/v2.2.4)：MIT、无外部依赖，官方标示约7KB gzip，兼容 Web Audio/HTML Audio。此次不采用：既有 AudioDirector 已拥有播放/音量/淡化，而合成仍需原生音频图，引入另一播放 owner 收益不足。未采用，因此不新增锁文件或宣称完成上游全量安全审计；退出仅删除 WeatherAmbience 适配，不影响存档或 domain。
 
 ## 安全与退出
+
+- 第二批室内精修（2026-09-03）：Seed Shop/Blacksmith 复用小屋原有色板和源码配方，新增陈设属于运行时原创像素图形，没有新增第三方或静态媒体。采用边界见 `docs/assets/shop-interiors-polish-2026-09-03.md`。
+
+- 春季美术精修（2026-09-03）：复用已有 Phaser、Vue、VectoRaith 与 GARDENS。有限小屋木作及缺失小图标采用源码定义的运行时原创像素图形，详见 `docs/assets/spring-art-polish-2026-09-03.md`；没有新增素材采购、第三方运行时、静态媒体或存档字段。
 
 - 地表采矿与镰刀（2026-09-04）：基础镐复用既有 GARDENS 原图 `(6,1)`；石料、基础镰刀和植物纤维图标以及世界杂草均使用源码定义的原创像素/图元配方，采石/除草分别复用已登记 stone/harvest SFX；没有新增依赖、素材对象、许可或 Git 媒体二进制。
 

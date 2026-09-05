@@ -1,5 +1,7 @@
 # Life Loop v1 Checkpoint
 
+> 历史基线：本 checkpoint 保留发布时的账号与 v2/v3 存档验收证据。当前公开入口为无账号本地试玩，当前 save schema 为 v7；判断现状请先读取 `docs/CURRENT_STATE.md`。
+
 ## Status
 
 - 名称：`Life Loop v1 Checkpoint`

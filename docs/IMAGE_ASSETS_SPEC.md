@@ -17,9 +17,9 @@ assets/vendor/<package>/<source-version>/<purpose>.<ext>
 assets/original/<asset-version>/<purpose>.<ext>
 ```
 
-## Ninja Adventure
+## Ninja Adventure（历史登记/开发占位）
 
-- 当前首批采用 Pixel-Boy 官方 `Ninja Adventure - Asset Pack`，正式来源为 `https://pixel-boy.itch.io/ninja-adventure-asset-pack`；它是已登记来源，不再是唯一允许来源。
+- Pixel-Boy 官方 `Ninja Adventure - Asset Pack` 是早期已登记来源，正式来源为 `https://pixel-boy.itch.io/ninja-adventure-asset-pack`；当前角色创建和室外正式世界不再使用 Ninja/Samurai，相关对象只保留为已登记的历史/开发占位资源。
 - 采用项必须来自官方 itch 包或作者官方 GitHub 仓库的固定提交；禁止引用浮动 `main`、镜像、二次打包和预览截图裁切。
 - 授权记录为 CC0-1.0；第三方 CC0 素材不需要 prompt sidecar，但必须有文本来源记录。
 - 来源记录至少保存作者、官方 URL、固定提交或归档日期、原始相对路径、原始/归档 SHA-256、裁切/合图/转码说明和最终对象映射。
@@ -29,7 +29,7 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 ## VectoRaith Farming Sim Farm/Town v1
 
-- VectoRaith Farming Sim v1.08 已作为 Farm v1 与 Town Gate A 正式美术底座；室内仍是技术占位。
+- VectoRaith Farming Sim v1.08 已作为 Farm v1 与 Town Gate A 正式美术底座；Cottage、Seed Shop 和 Blacksmith 已在工作区采用源码定义的原创像素室内，其余住宅仍是技术占位。
 - 官方页面允许免费/商业项目使用与修改，并禁止素材包式原样再分发。用户于 2026-08-25 最新明确要求 Web runtime 直接使用完整官方 PNG，并批准浏览器公开下载这些完整 sheet；作者书面确认继续 pending。
 - 原始 ZIP、截图和未采用目录只位于 Git ignored 本地目录。正式 CDN 只保存 6 张被运行时直接引用的官方 Original/16×16 PNG，不上传 ZIP 或创建素材浏览/下载入口。
 - CDN 对象必须与官方归档内文件 bytes/SHA-256 完全一致，`transformation` 记录为 none；禁止收集 used tiles、重排 atlas、合并 entity sheet、重编码或放大。
@@ -54,8 +54,12 @@ assets/original/<asset-version>/<purpose>.<ext>
 
 ## Runtime loading
 
+- 春季美术精修的小屋木作和缺失小图标由客户端固定像素配方在 Canvas/SVG 中绘制，属于运行时原创图形；不增加静态媒体对象。具体来源、GARDENS 坐标校正和 Tiled 缓存说明见 [采用记录](assets/spring-art-polish-2026-09-03.md)。
+- 种子店与铁匠铺复用小屋配方，并扩充为 256×256 的 `shop-interiors` 运行时图集；Tiled 缓存不进入发布资源。详情见 [第二批采用记录](assets/shop-interiors-polish-2026-09-03.md)。
+- 地表采矿与镰刀扩展中，基础镐直接使用已登记 GARDENS 原图 `(6,1)`；石料、基础镰刀和植物纤维使用 `item-pixel-art.ts` 的原创 16×16 配方，世界杂草由 Phaser 源码图元绘制；不新增静态媒体、CDN 对象或 prompt sidecar。
+
 - 资源 URL 由 `deploy/cdn/game-media-manifest.json` 和 `apps/mirror-island/scripts/prepare-media.mjs` 集中管理；场景不得散落硬编码 CDN 地址。
-- 男角色使用已登记的 `ninja_blue/sprite.png`；女角色使用同一固定提交的 `samurai_green/samurai_green.png`。两者都按 16×16 frame 加载并只表示外观。
+- 当前玩家使用 VectoRaith farmer 与同风格 NPC demo 的九个稳定外观预设；角色创建不再回退旧 Ninja/Samurai。外观 ID 属于 domain/save，具体 texture/frame 只属于 client visual profile。
 - Phaser 加载前，上游资源必须可通过 HTTPS 读取。默认同源代理必须能完整回读对象；只有改为浏览器跨域直连时，才额外要求 CDN 返回 Canvas/WebGL 所需的 CORS 头。
 - 使用像素素材时开启 nearest-neighbor/pixelArt；不得通过模糊缩放掩盖尺寸不匹配。
 - 资源加载失败必须进入可重试状态，不得显示空白 canvas 或静默换成来源不明的占位图。
@@ -69,7 +73,7 @@ assets/original/<asset-version>/<purpose>.<ext>
 5. 更新 `game-media-manifest.json` 和来源记录，运行时基址只映射 manifest 对应对象。
    需要署名时同时更新随产品交付的 `THIRD_PARTY_NOTICES`/Credits，并验证生产 URL 可访问。
 6. 从 CDN 重新读取并核对 SHA-256 与缓存头；使用同源代理时再从代理路径回读，使用跨域直连时核对 CORS。
-7. 确认 Git 跟踪图片二进制为零，再运行前端 build。
+7. 确认 Git 跟踪游戏图片/音频二进制为零，再运行前端 build。
 
 对象存储发布不需要数据库，也不得借发布资源连接数据库。游戏 PNG 只通过 `publish-game-media` 的精确 allowlist 发布；事件 payload 的对象 key、官方固定来源、MIME、bytes 与 SHA-256 必须全部匹配，最终仍须满足上述不可变、哈希和 CDN 回读合同。
 
@@ -82,5 +86,5 @@ assets/original/<asset-version>/<purpose>.<ext>
 - [ ] manifest 的 URL、bytes、MIME 和 SHA-256 与 CDN 实际内容一致。
 - [ ] 来源记录覆盖原始路径、固定版本和任何处理步骤。
 - [ ] Phaser 场景只通过已登记和构建前核验的资源加载采用项。
-- [ ] Git 跟踪图片二进制为零。
+- [ ] Git 跟踪游戏图片/音频二进制为零。
 - [ ] 前端 typecheck、build 与浏览器资源加载验收使用本轮新鲜结果。

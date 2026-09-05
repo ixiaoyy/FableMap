@@ -1860,3 +1860,73 @@ Published the reviewed CC-BY GARDENS icon sheet to immutable media, promoted Hot
 ### Next Steps
 
 - None - task complete
+
+
+## Session 56: 清理项目记忆与活跃任务基线
+
+**Date**: 2026-08-31
+**Task**: 清理项目记忆与活跃任务基线
+**Branch**: `codex/tool-interaction-mvp`
+
+### Summary
+
+对账当前代码、权威文档、Trellis任务和历史会话；删除两个无效规划任务与孤儿缓存，归档十个已落地任务，将活跃队列收敛为精细化总门禁及Forum SSO人工验收，并建立CURRENT_STATE权威状态页。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 57: Day 1-7 留存纵向切片
+
+**Date**: 2026-09-01
+**Task**: Day 1-7 留存纵向切片
+
+### Summary
+
+完成真实声音与环境声、v8 存档和经济目标、每日委托、关系对话与事件、Day N 首周节奏、Day7 镜门预告；最终静态门禁全绿，真人浏览器/听音/视觉验收清单保持 pending。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bea15436` | (see git log) |
+| `5ba02128` | (see git log) |
+| `2c660141` | (see git log) |
+| `d5498bdf` | (see git log) |
+| `85b7b629` | (see git log) |
+| `41b78830` | (see git log) |
+| `ce39afea` | (see git log) |
+
+### Testing
+
+- `test:life-loop` 15/15、`test:town-population` 10/10、typecheck 与 client build 通过；Vite 仅保留既有 >500 kB 提示。
+- 真人浏览器、听音、视觉、手机、200% zoom 与 Day1–7/Day29 路线未由 Agent 执行，清单保持 pending。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 真人按 `docs/checkpoints/day-1-7-retention-v1/human-acceptance.md` 执行并回填结果；P0/P1 提供最短复现后再做窄修。

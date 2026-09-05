@@ -1,5 +1,7 @@
 # Ninja Adventure 首片素材记录
 
+> 历史记录：这些对象曾用于早期角色和场景验证。当前正式角色创建使用 VectoRaith 同风格预设，Ninja/Samurai 不再是现行玩家外观；本文件保留来源、许可和已发布对象证据。
+
 ## Source and license
 
 - 作者：Pixel-Boy 与 AAA
@@ -11,7 +13,7 @@
 
 官方 itch.io 页面明确允许将包内素材用于个人与商业游戏，署名非强制但受欢迎。本项目仍在 README 与本记录中保留来源。
 
-## Adopted files
+## Historical adopted files
 
 | 用途 | 官方仓库路径 | 原始尺寸 | 处理 | 最终对象 key |
 |---|---|---:|---|---|
@@ -24,7 +26,7 @@
 
 精确 bytes、SHA-256、MIME 与 CDN URL 以 `deploy/cdn/game-media-manifest.json` 为准。
 
-角色创建将上述两套图集分别作为“男角色 / 女角色”外观。两者只改变可见外观，不附带职业、属性或玩法差异；用户标签是本项目界面分类，不主张官方素材角色的剧情身份。
+早期角色创建曾将上述两套图集分别标记为“男角色 / 女角色”外观；该入口已经退役。当前客户端不得据此恢复旧 Ninja/Samurai 角色选择。
 
 ## Project-original runtime art
 

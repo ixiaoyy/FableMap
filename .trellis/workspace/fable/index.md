@@ -2,14 +2,16 @@
 
 > Journal tracking for AI development sessions.
 
+> Memory boundary: sessions are historical evidence. The current Mirror Island state and active task boundary are maintained in `docs/CURRENT_STATE.md`; retired StoryWorld/FableSpace sessions must not be treated as current requirements.
+
 ---
 
 ## Current Status
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 55
-- **Last Active**: 2026-08-31
+- **Total Sessions**: 57
+- **Last Active**: 2026-09-01
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +21,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1862 | Active |
+| `journal-1.md` | ~1931 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +31,8 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 57 | 2026-09-01 | Day 1-7 留存纵向切片 | `bea15436`, `5ba02128`, `2c660141`, `d5498bdf`, `85b7b629`, `41b78830`, `ce39afea` | `-` |
+| 56 | 2026-08-31 | 清理项目记忆与活跃任务基线 | - | `codex/tool-interaction-mvp` |
 | 55 | 2026-08-31 | 建立春季玩法与四季日历底座 | `fb29d7eb`, `0e3d6049`, `1eae00f6` | `codex/tool-interaction-mvp` |
 | 54 | 2026-08-31 | 补齐 NPC 四时段生活动作 | `4588711d`, `984df824`, `e255fbdf` | `codex/tool-interaction-mvp` |
 | 53 | 2026-08-31 | 深化镜像岛日常生活与角色创建 | `002d2175`, `de3a033f`, `991afea8` | `codex/tool-interaction-mvp` |

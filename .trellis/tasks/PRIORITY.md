@@ -1,8 +1,14 @@
 # 镜像岛活跃任务
 
-1. `08-17-async-shared-farm-world`（P0）
-   - 持久化、论坛 SSO、Keycloak 像素主题、根入口接管和旧系统永久清退。
-2. `08-17-minimal-farming-loop`（P2）
-   - 在 P0 身份/持久化/部署边界稳定后，完成无主共享耕作最小闭环。
+最后对账：2026-09-04。当前状态以 `docs/CURRENT_STATE.md` 为准。
 
-旧 FableSpace、StoryWorld、React/Phaser 任务不再出现在活跃队列；已归档历史只作过程记录，不是当前合同。
+1. `09-04-town-community-ledger-v1`（P1，当前玩法主线，planning）
+   - 参考星露谷式社区进度，规划三个并行共建项目、永久设施回报和一次性全镇完成仪式。
+   - 子任务：`09-04-surface-mining-v1`（P1，in_progress），已在工作区实现开局基础镐、石料和现有室外石块；完整真人手感待反馈。
+   - 父任务仍未批准实施；地表采矿完成验收后，再决定是否启动共建簿。
+2. `09-03-spring-art-polish-v1`、`09-03-shop-interiors-polish-v1`（P2）
+   - 工作区实现与最小检查已完成，保留真人美术/观感反馈和后续发布决定。
+3. `08-21-forum-sso-compose-network`（P2，独立运维缺口）
+   - 自动合同已通过，只保留生产论坛首次登录和再次登录人工验收。
+
+镜门远征提案已被用户否决，不是后置候选；历史 PRD 不得重新进入队列。
