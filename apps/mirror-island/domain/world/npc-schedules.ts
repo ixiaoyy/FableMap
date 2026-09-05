@@ -6,6 +6,30 @@ import type {
   NpcSpawnDefinition,
   WorldCatalog,
 } from "./regions.ts";
+import { playableCalendarAt, type Weekday } from "../calendar/game-calendar.ts";
+import type { WeatherKind } from "../weather/definitions.ts";
+
+export interface NpcDayContext {
+  readonly day: number;
+  readonly weather: WeatherKind;
+}
+
+const DEFAULT_DAY_CONTEXT: NpcDayContext = { day: 2, weather: "sunny" };
+const REST_DAYS: Readonly<Record<string, Weekday>> = {
+  "seed-keeper": "wednesday",
+  "town-blacksmith": "sunday",
+  "town-resident-01": "sunday",
+  "town-resident-mozi": "sunday",
+  "town-resident-haonan": "friday",
+  "town-resident-alan": "monday",
+  "town-resident-haomeili": "sunday",
+  "town-resident-xiangzi": "monday",
+};
+
+/** Returns a known resident's weekly rest day for schedule and social-panel projections. */
+export function npcRestDay(npcId: string): Weekday | null {
+  return REST_DAYS[npcId] ?? null;
+}
 
 type NpcInteractionType = NpcSpawnDefinition["interactionType"];
 
@@ -121,9 +145,13 @@ export function validateNpcSchedules(catalog: WorldCatalog): void {
 }
 
 /** Projects every unique base NPC into the anchor active at one game minute. */
-export function activeNpcSpawns(catalog: WorldCatalog, minuteOfDay: number): readonly NpcSpawnDefinition[] {
+export function activeNpcSpawns(
+  catalog: WorldCatalog,
+  minuteOfDay: number,
+  context: NpcDayContext = DEFAULT_DAY_CONTEXT,
+): readonly NpcSpawnDefinition[] {
   const phase = schedulePhaseAt(minuteOfDay);
-  return baseNpcs(catalog).map((npc) => projectNpcAtPhase(catalog, npc, phase));
+  return baseNpcs(catalog).map((npc) => projectNpcAtPhase(catalog, npc, phase, context));
 }
 
 /** Returns active NPC projections belonging to one region at one game minute. */
@@ -131,8 +159,9 @@ export function activeNpcSpawnsInRegion(
   catalog: WorldCatalog,
   regionId: string,
   minuteOfDay: number,
+  context: NpcDayContext = DEFAULT_DAY_CONTEXT,
 ): readonly NpcSpawnDefinition[] {
-  return activeNpcSpawns(catalog, minuteOfDay).filter((npc) => npc.regionId === regionId);
+  return activeNpcSpawns(catalog, minuteOfDay, context).filter((npc) => npc.regionId === regionId);
 }
 
 /** Returns one active NPC identity or null when the npcId is unknown. */
@@ -140,8 +169,9 @@ export function activeNpcById(
   catalog: WorldCatalog,
   npcId: string,
   minuteOfDay: number,
+  context: NpcDayContext = DEFAULT_DAY_CONTEXT,
 ): NpcSpawnDefinition | null {
-  return activeNpcSpawns(catalog, minuteOfDay).find((npc) => npc.npcId === npcId) ?? null;
+  return activeNpcSpawns(catalog, minuteOfDay, context).find((npc) => npc.npcId === npcId) ?? null;
 }
 
 /** Replaces only schedule-owned position/type fields while preserving stable NPC identity and dialogue. */
@@ -149,9 +179,24 @@ function projectNpcAtPhase(
   catalog: WorldCatalog,
   npc: NpcSpawnDefinition,
   phase: NpcSchedulePhase,
+  context: NpcDayContext = DEFAULT_DAY_CONTEXT,
 ): NpcSpawnDefinition {
-  const scheduled = NPC_SCHEDULES[npc.npcId]?.[phase];
+  const schedule = NPC_SCHEDULES[npc.npcId];
+  let scheduled = schedule?.[phase];
   if (!scheduled) return npc;
+  let routine: NonNullable<NpcSpawnDefinition["routine"]> = "regular";
+  const weekday = playableCalendarAt(context.day).weekday;
+  if (phase === "day" || phase === "evening") {
+    if (REST_DAYS[npc.npcId] === weekday) {
+      scheduled = schedule!.morning;
+      routine = "rest";
+    } else if (context.weather === "rain" && npc.npcId !== "seed-keeper" && npc.npcId !== "town-resident-haomeili") {
+      scheduled = npc.npcId === "town-blacksmith"
+        ? anchor("blacksmith", "npc-haotian-evening")
+        : schedule!.morning;
+      routine = "rain";
+    }
+  }
   const regionId = scheduled.regionId ?? npc.regionId;
   const point = catalog.requireSpawn(regionId, scheduled.spawnId);
   return {
@@ -159,6 +204,7 @@ function projectNpcAtPhase(
     regionId,
     x: point.x,
     y: point.y,
-    interactionType: scheduled.interactionType ?? npc.interactionType,
+    interactionType: routine === "rest" ? "dialogue" : scheduled.interactionType ?? npc.interactionType,
+    routine,
   };
 }

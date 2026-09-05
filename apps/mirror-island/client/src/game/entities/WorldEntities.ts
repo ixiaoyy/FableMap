@@ -1,13 +1,19 @@
 import Phaser from "phaser";
+import { COTTAGE_BED_FRAME, COTTAGE_TEXTURE_KEY } from "../presentation/cottage-art.ts";
 import type { FarmTileState, ResourceState } from "../../../../domain/state/game-state.ts";
+import type { PetState } from "../../../../domain/pets/definitions.ts";
 import { cropDefinition } from "../../../../domain/farming/crops.ts";
 import type { NpcRuntimeSpawn } from "../../../../domain/world/npc-motions.ts";
+import type { Facing } from "../../../../domain/world/facing.ts";
 import type {
   ExitDefinition,
+  FishingZoneDefinition,
   InspectInteractionDefinition,
   InteractionDefinition,
   ResourceSpawnDefinition,
+  WorldPoint,
 } from "../../../../domain/world/regions.ts";
+import type { PetMediaProfile } from "../assets/pet-media.ts";
 import type { EntityMediaProfile } from "../assets/visual-profile.ts";
 
 const INTERACTION_PROMPT_DEPTH = 10_100;
@@ -38,7 +44,7 @@ export class TreeEntity {
   readonly container: Phaser.GameObjects.Container;
   private readonly tree: Phaser.GameObjects.Image;
   private readonly stump: Phaser.GameObjects.Image;
-  private available = true;
+  private phase: ResourceState["phase"] = "standing";
   private impactAnimating = false;
 
   /** Creates one clickable tree view from the supplied regional atlas without owning persistent availability. */
@@ -55,21 +61,24 @@ export class TreeEntity {
     this.tree.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.stump = scene.add.image(0, 0, media.tree.stumpTextureKey, media.tree.stumpFrame.name)
       .setOrigin(0.5, 1)
-      .setVisible(false);
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.stump.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.container = scene.add.container(spawn.x, spawn.y, [this.stump, this.tree]).setDepth(100 + spawn.y);
   }
 
-  /** Projects save-owned availability without calculating or mutating resource state. */
+  /** Projects the save-owned standing/stump/cleared phase without mutating resource rules. */
   project(state: ResourceState): void {
-    this.available = state.available;
+    this.phase = state.phase;
     if (!this.impactAnimating) this.applyProjection();
   }
 
   /** Commits one impact while keeping the tree visible through its shake, then projects depletion. */
   playImpact(commit: () => boolean): void {
     this.impactAnimating = true;
-    this.tree.setVisible(true);
-    this.stump.setVisible(false);
+    const target = this.phase === "standing" ? this.tree : this.stump;
+    this.tree.setVisible(this.phase === "standing");
+    this.stump.setVisible(this.phase === "stump");
     if (!commit()) {
       this.impactAnimating = false;
       this.applyProjection();
@@ -83,9 +92,9 @@ export class TreeEntity {
       yoyo: true,
       repeat: 2,
       ease: "Sine.InOut",
-      onStart: () => this.tree.setTint(0xffe3a1),
+      onStart: () => target.setTint(0xffe3a1),
       onComplete: () => {
-        this.tree.clearTint();
+        target.clearTint();
         this.impactAnimating = false;
         this.applyProjection();
       },
@@ -109,10 +118,10 @@ export class TreeEntity {
     this.container.destroy(true);
   }
 
-  /** Applies the latest save-owned availability after any impact animation releases its visual lock. */
+  /** Applies the latest save-owned resource phase after any impact animation releases its visual lock. */
   private applyProjection(): void {
-    this.tree.setVisible(this.available);
-    this.stump.setVisible(!this.available);
+    this.tree.setVisible(this.phase === "standing");
+    this.stump.setVisible(this.phase === "stump");
     this.container.setAlpha(1);
   }
 }
@@ -120,17 +129,224 @@ export class TreeEntity {
 export class RockEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Image;
+  private readonly effects = new Set<Phaser.GameObjects.Rectangle>();
+  private phase: ResourceState["phase"] = "standing";
+  private impactAnimating = false;
 
-  /** Creates one non-minable rock from the supplied regional atlas without adding mining behavior. */
-  constructor(scene: Phaser.Scene, readonly spawn: ResourceSpawnDefinition, media: EntityMediaProfile) {
+  /** Creates one tappable rock view while the current GameState remains the phase owner. */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    readonly spawn: ResourceSpawnDefinition,
+    media: EntityMediaProfile,
+    onInteract: (entity: RockEntity) => void,
+  ) {
     this.entityId = spawn.entityId;
-    const body = scene.add.image(0, 0, media.rock.textureKey, media.rock.frame.name).setOrigin(0.5, 1);
-    this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
+    this.body = scene.add.image(0, 0, media.rock.textureKey, media.rock.frame.name)
+      .setOrigin(0.5, 1)
+      .setInteractive({ useHandCursor: true });
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.container = scene.add.container(spawn.x, spawn.y, [this.body]).setDepth(100 + spawn.y);
   }
 
-  /** Destroys the complete temporary rock view. */
+  /** Projects the save-owned standing/cleared stone phase without deciding mining rules. */
+  project(state: ResourceState): void {
+    this.phase = state.phase;
+    if (!this.impactAnimating) this.applyProjection();
+  }
+
+  /** Plays one short presentation-only stone tap without mutating world or inventory state. */
+  playTap(): void {
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      x: { from: this.spawn.x - 1, to: this.spawn.x + 1 },
+      duration: 45,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => this.container.setPosition(this.spawn.x, this.spawn.y),
+    });
+  }
+
+  /** Commits one mining impact, keeps the rock visible through feedback, then projects its saved phase. */
+  playImpact(commit: () => boolean): void {
+    this.impactAnimating = true;
+    this.body.setVisible(true);
+    if (!commit()) {
+      this.impactAnimating = false;
+      this.applyProjection();
+      this.playTap();
+      return;
+    }
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      x: this.spawn.x + 3,
+      duration: 40,
+      yoyo: true,
+      repeat: 2,
+      ease: "Sine.InOut",
+      onStart: () => this.body.setTint(0xe5ece8),
+      onComplete: () => {
+        this.body.clearTint();
+        this.impactAnimating = false;
+        this.applyProjection();
+      },
+    });
+    for (let index = 0; index < 6; index += 1) {
+      const chip = this.scene.add.rectangle(this.spawn.x, this.spawn.y - 3, 2, 2, 0x899391, 1).setDepth(100 + this.spawn.y + 2);
+      this.effects.add(chip);
+      const direction = index % 2 === 0 ? -1 : 1;
+      this.scene.tweens.add({
+        targets: chip,
+        x: this.spawn.x + direction * (7 + index * 2),
+        y: this.spawn.y - 8 - (index % 3) * 3,
+        alpha: 0,
+        duration: 240,
+        onComplete: () => { this.effects.delete(chip); chip.destroy(); },
+      });
+    }
+  }
+
+  /** Destroys the rock and every owned impact effect without leaving scene-bound tweens. */
   destroy(): void {
+    this.scene.tweens.killTweensOf([this.container, ...this.effects]);
+    for (const effect of this.effects) effect.destroy();
+    this.effects.clear();
+    this.body.clearTint();
     this.container.destroy(true);
+  }
+
+  /** Applies the latest stone phase after any impact animation has finished. */
+  private applyProjection(): void {
+    this.body.setVisible(this.phase === "standing");
+    this.container.setPosition(this.spawn.x, this.spawn.y).setAlpha(1);
+  }
+}
+
+export class WeedEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Graphics;
+  private readonly effects = new Set<Phaser.GameObjects.Rectangle>();
+  private phase: ResourceState["phase"] = "standing";
+  private projected = false;
+  private cutting = false;
+
+  /** Creates one source-drawn tappable weed while GameState remains the sole availability owner. */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    readonly spawn: ResourceSpawnDefinition,
+    onInteract: (entity: WeedEntity) => void,
+  ) {
+    this.entityId = spawn.entityId;
+    this.body = scene.add.graphics();
+    this.drawBody();
+    this.body.setInteractive(new Phaser.Geom.Rectangle(-9, -17, 18, 18), Phaser.Geom.Rectangle.Contains);
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.container = scene.add.container(spawn.x, spawn.y, [this.body]).setDepth(100 + spawn.y);
+  }
+
+  /** Projects standing/cleared state and animates only a live standing-to-cleared transition. */
+  project(state: ResourceState): void {
+    const previous = this.phase;
+    this.phase = state.phase;
+    if (!this.projected) {
+      this.projected = true;
+      this.applyProjection();
+      return;
+    }
+    if (previous === "standing" && state.phase === "cleared") {
+      this.playCutTransition();
+      return;
+    }
+    if (!this.cutting) this.applyProjection();
+  }
+
+  /** Plays one presentation-only rustle for a rejected tool without changing weed state. */
+  playTap(): void {
+    if (this.phase !== "standing" || this.cutting) return;
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      angle: { from: -4, to: 4 },
+      duration: 55,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => this.container.setAngle(0),
+    });
+  }
+
+  /** Destroys the weed, its pointer listener and every owned leaf effect without leaving scene tweens. */
+  destroy(): void {
+    this.scene.tweens.killTweensOf([this.container, ...this.effects]);
+    for (const effect of this.effects) effect.destroy();
+    this.effects.clear();
+    this.container.destroy(true);
+  }
+
+  /** Draws a compact three-blade weed from source primitives so no runtime media object is required. */
+  private drawBody(): void {
+    this.body.clear();
+    this.body.lineStyle(2, 0x416b3c, 1);
+    this.body.lineBetween(0, 0, 0, -12);
+    this.body.lineBetween(-1, -5, -6, -11);
+    this.body.lineBetween(1, -4, 6, -10);
+    this.body.fillStyle(0x79a953, 1);
+    this.body.fillTriangle(-1, -7, -8, -13, -3, -3);
+    this.body.fillTriangle(1, -7, 8, -12, 3, -2);
+    this.body.fillStyle(0xa5c66c, 1);
+    this.body.fillTriangle(0, -10, -3, -16, 3, -14);
+    this.body.fillStyle(0x314f32, 1);
+    this.body.fillRect(-4, -2, 8, 2);
+  }
+
+  /** Keeps the accepted weed visible for a short cut beat, emits bounded leaves and then applies saved depletion. */
+  private playCutTransition(): void {
+    if (this.cutting) return;
+    this.cutting = true;
+    this.body.setVisible(true);
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container,
+      angle: 16,
+      y: this.spawn.y + 3,
+      alpha: 0,
+      duration: 150,
+      ease: "Quad.In",
+      onComplete: () => {
+        this.cutting = false;
+        this.applyProjection();
+      },
+    });
+    for (let index = 0; index < 4; index += 1) {
+      const leaf = this.scene.add.rectangle(
+        this.spawn.x + (index % 2 === 0 ? -2 : 2),
+        this.spawn.y - 8,
+        3,
+        2,
+        index % 2 === 0 ? 0x8fba59 : 0x527b45,
+        1,
+      ).setDepth(100 + this.spawn.y + 2).setAngle(index * 28);
+      this.effects.add(leaf);
+      const direction = index % 2 === 0 ? -1 : 1;
+      this.scene.tweens.add({
+        targets: leaf,
+        x: this.spawn.x + direction * (8 + index * 2),
+        y: this.spawn.y - 13 - (index % 2) * 4,
+        angle: leaf.angle + direction * 80,
+        alpha: 0,
+        duration: 260,
+        ease: "Quad.Out",
+        onComplete: () => { this.effects.delete(leaf); leaf.destroy(); },
+      });
+    }
+  }
+
+  /** Applies the latest saved phase and resets all presentation-only transforms after a cut or refresh. */
+  private applyProjection(): void {
+    this.body.setVisible(this.phase === "standing");
+    this.container.setPosition(this.spawn.x, this.spawn.y).setAngle(0).setAlpha(1);
   }
 }
 
@@ -173,7 +389,7 @@ export class FarmPlotEntity {
       const frames = tile.cropId === "" ? null : this.cropFrames?.[tile.cropId] ?? null;
       const cropFrame = tile.phase === "mature" ? frames?.matureFrame.name
         : tile.phase === "growing" ? frames?.growingFrame.name : null;
-      this.crop.setVisible(cropFrame !== null);
+      this.crop.setVisible(Boolean(cropFrame));
       if (cropFrame && frames) {
         this.crop.setTexture(frames.textureKey);
         this.crop.setFrame(cropFrame);
@@ -217,8 +433,7 @@ export class BedEntity {
     onInteract: (entity: BedEntity) => void,
   ) {
     this.entityId = interaction.entityId;
-    const frame = scene.add.rectangle(0, 0, interaction.width, interaction.height, 0x81502f, 1)
-      .setStrokeStyle(2, 0x4d311f, 1)
+    const frame = scene.add.image(0, 0, COTTAGE_TEXTURE_KEY, COTTAGE_BED_FRAME)
       .setInteractive({ useHandCursor: true });
     frame.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     frame.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -229,22 +444,6 @@ export class BedEntity {
       this.hovered = false;
       this.refreshPrompt();
     });
-    const blanket = scene.add.rectangle(
-      0,
-      interaction.height * 0.13,
-      Math.max(8, interaction.width - 6),
-      interaction.height * 0.54,
-      0x78945e,
-      1,
-    ).setStrokeStyle(1, 0x506a45, 1);
-    const pillow = scene.add.rectangle(
-      0,
-      -interaction.height * 0.31,
-      Math.max(8, interaction.width - 8),
-      Math.max(6, interaction.height * 0.18),
-      0xead9ae,
-      1,
-    );
     this.prompt = scene.add.text(
       interaction.x + interaction.width / 2,
       interaction.y - 6,
@@ -258,7 +457,7 @@ export class BedEntity {
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      [frame, blanket, pillow],
+      [frame],
     ).setDepth(100 + interaction.y + interaction.height);
   }
 
@@ -301,16 +500,60 @@ export class ForageEntity {
     const visual = spawn.kind === "spring-wildflower" || spawn.kind === "bamboo-shoot"
       ? media.forage?.[spawn.kind]
       : null;
-    if (!visual) throw new Error(`Forage appearance is missing for ${spawn.kind}.`);
-    const body = scene.add.image(0, 0, visual.textureKey, visual.frame.name)
-      .setOrigin(0.5, 1)
-      .setInteractive({ useHandCursor: true });
+    if (!visual && spawn.kind !== "fallen-branch") {
+      throw new Error(`Forage appearance is missing for ${spawn.kind}.`);
+    }
+    const body = visual
+      ? scene.add.image(0, 0, visual.textureKey, visual.frame.name).setOrigin(0.5, 1)
+      : scene.add.rectangle(0, -2, 12, 4, 0x8f603a, 1).setAngle(-12);
+    body.setInteractive({ useHandCursor: true });
     body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
     this.container = scene.add.container(spawn.x, spawn.y, [body]).setDepth(100 + spawn.y);
   }
 
   /** Destroys the temporary forage view and pointer listener. */
   destroy(): void { this.container.destroy(true); }
+}
+
+export class FishingSpotEntity {
+  readonly entityId: string;
+  readonly container: Phaser.GameObjects.Container;
+  private readonly prompt: Phaser.GameObjects.Text;
+  private hovered = false;
+  private nearby = false;
+  private locked = false;
+
+  /** Creates a small fishing marker at one Tiled zone without inventing cast rules or coordinates. */
+  constructor(scene: Phaser.Scene, readonly zone: FishingZoneDefinition, onInteract: () => void) {
+    this.entityId = zone.id;
+    const x = zone.x + zone.width / 2;
+    const y = zone.y + zone.height / 2;
+    const marker = scene.add.rectangle(0, -5, 3, 12, 0xebe3bb).setStrokeStyle(1, 0x6b5433);
+    const cap = scene.add.rectangle(0, -11, 3, 5, 0xa4513f);
+    const hit = scene.add.rectangle(0, -5, 28, 28, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+    hit.on(Phaser.Input.Events.POINTER_DOWN, onInteract);
+    hit.on(Phaser.Input.Events.POINTER_OVER, () => { this.hovered = true; this.refreshPrompt(); });
+    hit.on(Phaser.Input.Events.POINTER_OUT, () => { this.hovered = false; this.refreshPrompt(); });
+    this.prompt = scene.add.text(x, y - 25, "钓鱼", { ...textStyle("#fff0c2"), backgroundColor: "#3d4c36", padding: { x: 3, y: 2 } })
+      .setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
+    this.container = scene.add.container(x, y, [marker, cap, hit]).setDepth(105 + zone.y + zone.height);
+  }
+
+  /** Returns player-foot distance to this authored fishing marker. */
+  distanceTo(x: number, y: number): number { return Math.hypot(x - this.container.x, y - this.container.y); }
+
+  /** Shows the marker label only when discoverable and no modal owns world input. */
+  projectAffordance(nearby: boolean, locked: boolean): void {
+    this.nearby = nearby;
+    this.locked = locked;
+    this.refreshPrompt();
+  }
+
+  /** Removes the complete transient fishing marker and its listeners. */
+  destroy(): void { this.prompt.destroy(); this.container.destroy(true); }
+
+  /** Applies the current hover/proximity state without changing gameplay availability. */
+  private refreshPrompt(): void { this.prompt.setVisible(!this.locked && (this.nearby || this.hovered)); }
 }
 
 export class InspectEntity {
@@ -585,6 +828,282 @@ export class NpcEntity {
   }
 }
 
+type PetMotionKind = "idle" | "walking" | "resting";
+
+const PET_WALK_SPEED_PIXELS_PER_SECOND = 18;
+const PET_IDLE_DURATION_MS = 1_400;
+const PET_REST_DURATION_MS = 2_600;
+
+export class PetEntity {
+  readonly container: Phaser.GameObjects.Container;
+  private readonly body: Phaser.GameObjects.Sprite;
+  private readonly prompt: Phaser.GameObjects.Text;
+  private readonly heart: Phaser.GameObjects.Text;
+  private readonly usesFormalTexture: boolean;
+  private currentPet: PetState;
+  private anchors: readonly WorldPoint[];
+  private currentDay: number;
+  private anchorIndex: number;
+  private motion: PetMotionKind = "idle";
+  private pauseRemainingMs = PET_IDLE_DURATION_MS;
+  private facing: Facing = "down";
+  private hovered = false;
+  private nearby = false;
+  private inputLocked = false;
+  private animationPaused = false;
+
+  /** Creates one non-colliding client pet over a reviewed home-anchor loop. */
+  constructor(
+    scene: Phaser.Scene,
+    pet: PetState,
+    day: number,
+    anchors: readonly WorldPoint[],
+    private readonly media: PetMediaProfile,
+    onInteract: (entity: PetEntity) => void,
+  ) {
+    if (anchors.length < 2) throw new Error("Pet presentation requires at least two anchors.");
+    if (pet.species !== media.species) throw new Error("Pet media species does not match durable state.");
+    this.currentPet = { ...pet };
+    this.currentDay = day;
+    this.anchors = [...anchors];
+    this.anchorIndex = petAnchorIndex(pet, day, anchors.length);
+    const start = this.anchors[this.anchorIndex]!;
+    this.usesFormalTexture = scene.textures.exists(media.textureKey);
+    const textureKey = this.usesFormalTexture
+      ? media.textureKey
+      : createPetFallbackTexture(scene, media);
+    if (this.usesFormalTexture) registerPetWalkAnimations(scene, media);
+    this.body = scene.add.sprite(0, 0, textureKey, this.usesFormalTexture ? media.idle.down : 0)
+      .setOrigin(0.5, 0.76)
+      .setDisplaySize(this.usesFormalTexture ? 32 : 18, this.usesFormalTexture ? 32 : 18)
+      .setInteractive({ useHandCursor: true });
+    this.body.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    this.body.on(Phaser.Input.Events.POINTER_OVER, () => {
+      this.hovered = true;
+      this.refreshPrompt();
+    });
+    this.body.on(Phaser.Input.Events.POINTER_OUT, () => {
+      this.hovered = false;
+      this.refreshPrompt();
+    });
+    this.prompt = scene.add.text(start.x, start.y - 23, `${pet.name} · 抚摸`, {
+      ...textStyle("#fff0c6"),
+      backgroundColor: "#4a321f",
+      padding: { x: 3, y: 1 },
+    }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
+    this.heart = scene.add.text(start.x, start.y - 25, "♥", {
+      ...textStyle("#ff8d86"),
+      fontSize: "12px",
+      stroke: "#663433",
+      strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH + 1).setVisible(false);
+    this.container = scene.add.container(start.x, start.y, [this.body]).setDepth(100 + start.y);
+    this.refreshVisual();
+  }
+
+  /** Returns Euclidean distance from the pet's presentation position to one player point. */
+  distanceTo(x: number, y: number): number {
+    return Math.hypot(x - this.container.x, y - this.container.y);
+  }
+
+  /** Projects durable identity changes while preserving unsaved movement within the same day and region. */
+  project(pet: PetState, day: number, anchors: readonly WorldPoint[]): void {
+    if (pet.species !== this.currentPet.species) throw new Error("Adopted pet species cannot change.");
+    this.currentPet = { ...pet };
+    this.prompt.setText(`${pet.name} · 抚摸`);
+    if (day === this.currentDay) return;
+    this.currentDay = day;
+    this.anchors = [...anchors];
+    this.anchorIndex = petAnchorIndex(pet, day, anchors.length);
+    const start = this.anchors[this.anchorIndex]!;
+    this.container.setPosition(start.x, start.y).setDepth(100 + start.y);
+    this.motion = "idle";
+    this.pauseRemainingMs = PET_IDLE_DURATION_MS;
+    this.refreshVisual();
+    this.refreshDetachedObjects();
+  }
+
+  /** Advances deterministic short-path idle, walk and rest presentation without touching GameState. */
+  advance(deltaMs: number, paused: boolean): void {
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
+    if (paused) {
+      this.pauseAnimation();
+      return;
+    }
+    this.resumeAnimation();
+    const elapsed = Math.min(deltaMs, 100);
+    if (this.motion !== "walking") {
+      this.pauseRemainingMs -= elapsed;
+      if (this.pauseRemainingMs <= 0) this.startWalking();
+      return;
+    }
+    this.advanceWalking(elapsed);
+  }
+
+  /** Projects proximity and modal ownership into one touch-safe pet affordance. */
+  projectAffordance(nearby: boolean, inputLocked: boolean): void {
+    this.nearby = nearby;
+    this.inputLocked = inputLocked;
+    this.refreshPrompt();
+  }
+
+  /** Plays the once-per-day heart response and briefly settles the pet into a resting pose. */
+  playHeartPulse(): void {
+    this.motion = "resting";
+    this.pauseRemainingMs = 1_800;
+    this.refreshVisual();
+    this.container.scene.tweens.killTweensOf(this.heart);
+    this.heart
+      .setVisible(true)
+      .setAlpha(1)
+      .setPosition(this.container.x, this.container.y - 25)
+      .setScale(0.75);
+    this.container.scene.tweens.add({
+      targets: this.heart,
+      y: this.container.y - 39,
+      alpha: 0,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 760,
+      ease: "Quad.Out",
+      onComplete: () => this.heart.setVisible(false),
+    });
+  }
+
+  /** Destroys the complete transient pet view and any detached feedback objects. */
+  destroy(): void {
+    this.container.scene.tweens.killTweensOf(this.heart);
+    this.prompt.destroy();
+    this.heart.destroy();
+    this.container.destroy(true);
+  }
+
+  /** Starts the next direct anchor leg and chooses a four-direction walk animation. */
+  private startWalking(): void {
+    const target = this.anchors[(this.anchorIndex + 1) % this.anchors.length]!;
+    this.facing = petFacingForDelta(target.x - this.container.x, target.y - this.container.y);
+    this.motion = "walking";
+    this.refreshVisual();
+  }
+
+  /** Consumes one bounded walking slice and settles exactly on the reviewed target anchor. */
+  private advanceWalking(deltaMs: number): void {
+    const targetIndex = (this.anchorIndex + 1) % this.anchors.length;
+    const target = this.anchors[targetIndex]!;
+    const deltaX = target.x - this.container.x;
+    const deltaY = target.y - this.container.y;
+    const distance = Math.hypot(deltaX, deltaY);
+    const step = PET_WALK_SPEED_PIXELS_PER_SECOND * deltaMs / 1_000;
+    if (distance <= step || distance === 0) {
+      this.container.setPosition(target.x, target.y);
+      this.anchorIndex = targetIndex;
+      this.motion = (this.currentDay + targetIndex + (this.currentPet.species === "dog" ? 1 : 0)) % 3 === 0
+        ? "resting"
+        : "idle";
+      this.pauseRemainingMs = this.motion === "resting" ? PET_REST_DURATION_MS : PET_IDLE_DURATION_MS;
+      this.refreshVisual();
+    } else {
+      this.container.setPosition(
+        this.container.x + deltaX / distance * step,
+        this.container.y + deltaY / distance * step,
+      );
+    }
+    this.container.setDepth(100 + Math.floor(this.container.y));
+    this.refreshDetachedObjects();
+  }
+
+  /** Applies one formal frame/animation or leaves the code-drawn fallback stable and readable. */
+  private refreshVisual(): void {
+    if (!this.usesFormalTexture) return;
+    if (this.motion === "walking") {
+      this.body.play(petWalkAnimationKey(this.media, this.facing), true);
+      return;
+    }
+    this.body.stop();
+    if (this.motion === "resting") {
+      this.body.setFrame(this.media.rest[this.facing === "left" ? "left" : "right"]);
+    } else {
+      this.body.setFrame(this.media.idle[this.facing]);
+    }
+  }
+
+  /** Keeps prompt and hidden heart origins synchronized with the moving container. */
+  private refreshDetachedObjects(): void {
+    this.prompt.setPosition(this.container.x, this.container.y - 23);
+    if (!this.heart.visible) this.heart.setPosition(this.container.x, this.container.y - 25);
+  }
+
+  /** Shows the pet verb only while hover or nearest-player proximity makes it actionable. */
+  private refreshPrompt(): void {
+    this.prompt.setVisible(!this.inputLocked && (this.hovered || this.nearby));
+  }
+
+  /** Pauses an in-flight walk animation while modal or transition ownership freezes the world. */
+  private pauseAnimation(): void {
+    if (!this.usesFormalTexture || this.animationPaused || !this.body.anims.isPlaying) return;
+    this.body.anims.pause();
+    this.animationPaused = true;
+  }
+
+  /** Resumes only the walk animation paused by the pet's own presentation owner. */
+  private resumeAnimation(): void {
+    if (!this.animationPaused) return;
+    this.body.anims.resume();
+    this.animationPaused = false;
+  }
+}
+
+/** Creates a stable starting anchor from durable identity and the current absolute day. */
+function petAnchorIndex(pet: PetState, day: number, anchorCount: number): number {
+  if (!Number.isInteger(anchorCount) || anchorCount < 1) throw new Error("Pet anchor count is invalid.");
+  return (pet.adoptedDay + day + (pet.species === "dog" ? 1 : 0)) % anchorCount;
+}
+
+/** Chooses the dominant four-direction facing for one short client-only route leg. */
+function petFacingForDelta(deltaX: number, deltaY: number): Facing {
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) return deltaX < 0 ? "left" : "right";
+  return deltaY < 0 ? "up" : "down";
+}
+
+/** Returns one globally stable Phaser animation key for a species and facing. */
+function petWalkAnimationKey(media: PetMediaProfile, facing: Facing): string {
+  return `${media.textureKey}-walk-${facing}`;
+}
+
+/** Registers four non-duplicated walk loops over one reviewed LPC sprite sheet. */
+function registerPetWalkAnimations(scene: Phaser.Scene, media: PetMediaProfile): void {
+  for (const facing of ["down", "left", "right", "up"] as const) {
+    const key = petWalkAnimationKey(media, facing);
+    if (scene.anims.exists(key)) continue;
+    scene.anims.create({
+      key,
+      frames: scene.anims.generateFrameNumbers(media.textureKey, { frames: [...media.walk[facing]] }),
+      frameRate: 6,
+      repeat: -1,
+    });
+  }
+}
+
+/** Generates a small species-colored texture only when reviewed CDN media is unavailable. */
+function createPetFallbackTexture(scene: Phaser.Scene, media: PetMediaProfile): string {
+  const key = `${media.textureKey}-fallback`;
+  if (scene.textures.exists(key)) return key;
+  const graphics = scene.add.graphics().setVisible(false);
+  graphics.fillStyle(media.fallbackAccent, 1);
+  graphics.fillRect(4, 3, 3, 3);
+  graphics.fillRect(9, 3, 3, 3);
+  graphics.fillRect(3, 6, 10, 7);
+  graphics.fillStyle(media.fallbackColor, 1);
+  graphics.fillRect(4, 5, 8, 7);
+  graphics.fillRect(2, 8, 3, 3);
+  graphics.fillStyle(0x241b16, 1);
+  graphics.fillRect(6, 7, 1, 1);
+  graphics.fillRect(9, 7, 1, 1);
+  graphics.generateTexture(key, 16, 16);
+  graphics.destroy();
+  return key;
+}
+
 interface NpcActivityVisual {
   readonly label: string;
   readonly bodyX: number;
@@ -713,9 +1232,14 @@ export class EntityFactory {
     return new TreeEntity(this.scene, spawn, this.media, onInteract);
   }
 
-  /** Creates the reviewed non-minable rock entity kind. */
-  createRock(spawn: ResourceSpawnDefinition): RockEntity {
-    return new RockEntity(this.scene, spawn, this.media);
+  /** Creates the reviewed rock entity kind with a presentation-only interaction callback. */
+  createRock(spawn: ResourceSpawnDefinition, onInteract: (entity: RockEntity) => void): RockEntity {
+    return new RockEntity(this.scene, spawn, this.media, onInteract);
+  }
+
+  /** Creates one source-drawn weed entity with a presentation-only interaction callback. */
+  createWeed(spawn: ResourceSpawnDefinition, onInteract: (entity: WeedEntity) => void): WeedEntity {
+    return new WeedEntity(this.scene, spawn, onInteract);
   }
 
   /** Creates one farm plot entity from an interaction definition. */
@@ -744,6 +1268,11 @@ export class EntityFactory {
     return new ForageEntity(this.scene, spawn, this.media, onInteract);
   }
 
+  /** Creates one discoverable fishing marker from an authored fishing zone. */
+  createFishingSpot(zone: FishingZoneDefinition, onInteract: () => void): FishingSpotEntity {
+    return new FishingSpotEntity(this.scene, zone, onInteract);
+  }
+
   /** Creates one automatic-exit proximity hint with a camera-safe prompt position. */
   createExitHint(
     exit: ExitDefinition,
@@ -756,6 +1285,17 @@ export class EntityFactory {
   /** Creates one runtime-projected NPC entity from catalog identity and transient motion metadata. */
   createNpc(spawn: NpcRuntimeSpawn, onInteract: (entity: NpcEntity) => void): NpcEntity {
     return new NpcEntity(this.scene, spawn, this.media, onInteract);
+  }
+
+  /** Creates one presentation-only home pet without adding it to NPC or collision collections. */
+  createPet(
+    pet: PetState,
+    day: number,
+    anchors: readonly WorldPoint[],
+    media: PetMediaProfile,
+    onInteract: (entity: PetEntity) => void,
+  ): PetEntity {
+    return new PetEntity(this.scene, pet, day, anchors, media, onInteract);
   }
 }
 

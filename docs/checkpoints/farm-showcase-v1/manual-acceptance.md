@@ -1,5 +1,7 @@
 # Farm Showcase 真实人工验收
 
+> 历史基线：本文件记录 2026-08-25 当时的账号环境与验收步骤。当前公开入口已改为无账号本地试玩；判断现状请先读取 `docs/CURRENT_STATE.md`，不要照搬本文件的 Keycloak 步骤。
+
 ## Why manual
 
 decoder、build 和 GameSession route replay 不能证明实际键盘手感、镜头、遮挡和碰撞体验。Codex 内置浏览器在 Keycloak `localhost:8081` 跳转处被 Browser URL policy 阻止；禁止用代理、绕过登录或替代浏览器规避该限制。

@@ -11,6 +11,7 @@ import {
 import {
   FRIENDSHIP_MAX_POINTS,
   createFriendshipState,
+  giftWeekIndex as giftWeekForDay,
   type FriendshipState,
 } from "../social/definitions.ts";
 import {
@@ -27,14 +28,42 @@ import {
   DAY_START_MINUTE,
   decodeGameMinute,
 } from "../time/game-time.ts";
+import {
+  BASE_INVENTORY_CAPACITY,
+  decodeInventoryCapacity,
+  decodeWateringCanWater,
+  decodeWateringCanLevel,
+  wateringCanCapacity,
+  type InventoryCapacity,
+  type WateringCanLevel,
+} from "../progression/definitions.ts";
+import {
+  createDailyRequestState,
+  dailyRequestForDay,
+  dailyRequestMatchesDay,
+  getDailyRequest,
+  type DailyRequestState,
+} from "../requests/definitions.ts";
+import {
+  createNpcDialogueState,
+  isKnownDialogueSelectionId,
+  isRetentionEventId,
+  type NpcDialogueState,
+  type RetentionEventId,
+} from "../dialogue/definitions.ts";
+import { decodeRelationshipStage } from "../social/relationship-stage.ts";
+import {
+  decodePetState,
+  type PetState,
+} from "../pets/definitions.ts";
+import { MAX_STAMINA, decodeStamina } from "../stamina/definitions.ts";
+import { WeatherSystem } from "../weather/WeatherSystem.ts";
+import { decodeWeatherState, type WeatherState } from "../weather/definitions.ts";
 
-export const GAME_STATE_VERSION = 7 as const;
+export const GAME_STATE_VERSION = 12 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
-const LEGACY_TREE_ID = "tree-01";
-const LEGACY_FARM_TILE_ID = "farm-01";
-const LEGACY_ALIEN_SEED_ID = "alien-seed";
-const LEGACY_ALIEN_CROP_ID = "alien-crop";
+const DEFAULT_WORLD_SEED = 0x4d495252;
 
 export interface InventorySlot {
   itemId: ItemId | "";
@@ -50,17 +79,22 @@ export interface PlayerState {
 
 export interface ResourceState {
   readonly id: string;
-  readonly kind: "tree" | "stone";
-  available: boolean;
+  readonly kind: "tree" | "stone" | "weed";
+  phase: "standing" | "stump" | "cleared";
+  regrowOnDay: number | null;
 }
 
 export type FarmPhase = "untilled" | "tilled" | "growing" | "mature";
 export interface FarmTileState {
   readonly id: string;
+  readonly column: number;
+  readonly row: number;
   phase: FarmPhase;
   cropId: CropId | "";
   growthDays: number;
   watered: boolean;
+  plantedDay: number;
+  harvestCount: number;
 }
 
 export interface DailyForageState {
@@ -72,19 +106,34 @@ export interface GameState {
   readonly version: typeof GAME_STATE_VERSION;
   day: number;
   minuteOfDay: number;
+  worldSeed: number;
+  lateWarningDay: number;
+  stamina: number;
+  fishingCastCount: number;
+  lastSurfaceStoneRefreshDay: number;
+  lastSurfaceWeedRefreshDay: number;
   gold: number;
   player: PlayerState;
   inventory: InventorySlot[];
+  inventoryCapacity: InventoryCapacity;
+  wateringCanLevel: WateringCanLevel;
+  wateringCanWater: number;
+  weather: WeatherState;
   resources: Record<string, ResourceState>;
   farmTiles: Record<string, FarmTileState>;
   friendships: Record<string, FriendshipState>;
   dailyForage: DailyForageState;
+  dailyRequest: DailyRequestState | null;
+  npcDialogue: Record<string, NpcDialogueState>;
+  seenEventIds: RetentionEventId[];
+  pet: PetState | null;
 }
 
-/** Creates a deterministic v6 game state for one validated appearance and Tiled-derived catalog. */
+/** Creates a deterministic current game state for one validated appearance, seed and Tiled-derived catalog. */
 export function createInitialGameState(
   catalog: WorldCatalog,
   appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
+  worldSeed: number = DEFAULT_WORLD_SEED,
 ): GameState {
   const inventory: InventorySlot[] = Array.from(
     { length: INVENTORY_SLOT_COUNT },
@@ -93,11 +142,14 @@ export function createInitialGameState(
   inventory[0] = { itemId: ITEM_ID.hoe, quantity: 1 };
   inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
   inventory[2] = { itemId: ITEM_ID.axe, quantity: 1 };
+  inventory[3] = { itemId: ITEM_ID.pickaxe, quantity: 1 };
+  inventory[4] = { itemId: ITEM_ID.scythe, quantity: 1 };
   const start = catalog.requireDefaultSpawn(catalog.startRegionId);
   const state: GameState = {
     version: GAME_STATE_VERSION,
     day: 1,
     minuteOfDay: DAY_START_MINUTE,
+    ...springGameplayDefaults(1, 1, worldSeed),
     gold: 100,
     player: {
       regionId: catalog.startRegionId,
@@ -105,6 +157,7 @@ export function createInitialGameState(
       appearanceId: decodePlayerAppearanceId(appearanceId),
     },
     inventory,
+    ...retentionDefaults(1),
     resources: {},
     farmTiles: {},
     friendships: {},
@@ -118,7 +171,9 @@ export function createInitialGameState(
 export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCatalog): boolean {
   catalog.requireRegion(state.player.regionId);
   let changed = false;
-  const activeNpcs = activeNpcSpawnsInRegion(catalog, state.player.regionId, state.minuteOfDay);
+  const activeNpcs = activeNpcSpawnsInRegion(catalog, state.player.regionId, state.minuteOfDay, {
+    day: state.day, weather: state.weather.current,
+  });
   if (catalog.isBlocked(state.player.regionId, state.player.x, state.player.y, 5, 4, activeNpcs)) {
     const safeSpawn = catalog.requireDefaultSpawn(state.player.regionId);
     state.player.x = safeSpawn.x;
@@ -126,7 +181,6 @@ export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCa
     changed = true;
   }
   const knownResourceIds = new Set<string>();
-  const knownFarmIds = new Set<string>();
   const knownNpcIds = new Set<string>();
   for (const region of catalog.allRegions()) {
     for (const npc of region.npcs) {
@@ -139,35 +193,41 @@ export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCa
       } else if (saved.npcId !== npc.npcId) {
         throw new Error(`Saved friendship identity does not match catalog NPC ${npc.npcId}.`);
       }
+      if (!state.npcDialogue[npc.npcId]) {
+        state.npcDialogue[npc.npcId] = createNpcDialogueState();
+        changed = true;
+      }
     }
     for (const spawn of region.resources) {
-      if (spawn.kind !== "tree" && spawn.kind !== "stone") continue;
+      if (spawn.kind !== "tree" && spawn.kind !== "stone" && spawn.kind !== "weed") continue;
       knownResourceIds.add(spawn.entityId);
       const saved = state.resources[spawn.entityId];
       if (!saved) {
-        state.resources[spawn.entityId] = { id: spawn.entityId, kind: spawn.kind, available: true };
+        state.resources[spawn.entityId] = {
+          id: spawn.entityId,
+          kind: spawn.kind,
+          phase: "standing",
+          regrowOnDay: null,
+        };
         changed = true;
       } else if (saved.kind !== spawn.kind) {
         throw new Error(`Saved resource kind does not match catalog entity ${spawn.entityId}.`);
-      }
-    }
-    for (const interaction of region.interactions) {
-      if (interaction.kind !== "farm-plot") continue;
-      knownFarmIds.add(interaction.entityId);
-      if (!state.farmTiles[interaction.entityId]) {
-        state.farmTiles[interaction.entityId] = createUntilledFarmTile(interaction.entityId);
-        changed = true;
       }
     }
   }
   if (Object.keys(state.resources).some((id) => !knownResourceIds.has(id))) {
     throw new Error("Save references an unknown resource entity.");
   }
-  if (Object.keys(state.farmTiles).some((id) => !knownFarmIds.has(id))) {
-    throw new Error("Save references an unknown farm entity.");
+  for (const tile of Object.values(state.farmTiles)) {
+    if (tile.id !== farmTileId(tile.column, tile.row) || !catalog.isTillable("farm", tile.column, tile.row)) {
+      throw new Error("Save references an unknown farm tile.");
+    }
   }
   if (Object.keys(state.friendships).some((npcId) => !knownNpcIds.has(npcId))) {
     throw new Error("Save references an unknown NPC friendship.");
+  }
+  if (Object.keys(state.npcDialogue).some((npcId) => !knownNpcIds.has(npcId))) {
+    throw new Error("Save references an unknown NPC dialogue identity.");
   }
   return changed;
 }
@@ -178,9 +238,19 @@ export function cloneGameState(state: GameState): GameState {
     version: GAME_STATE_VERSION,
     day: state.day,
     minuteOfDay: state.minuteOfDay,
+    worldSeed: state.worldSeed,
+    lateWarningDay: state.lateWarningDay,
+    stamina: state.stamina,
+    fishingCastCount: state.fishingCastCount,
+    lastSurfaceStoneRefreshDay: state.lastSurfaceStoneRefreshDay,
+    lastSurfaceWeedRefreshDay: state.lastSurfaceWeedRefreshDay,
     gold: state.gold,
     player: { ...state.player },
     inventory: state.inventory.map((slot) => ({ ...slot })),
+    inventoryCapacity: state.inventoryCapacity,
+    wateringCanLevel: state.wateringCanLevel,
+    wateringCanWater: state.wateringCanWater,
+    weather: { ...state.weather },
     resources: Object.fromEntries(
       Object.entries(state.resources).map(([id, resource]) => [id, { ...resource }]),
     ),
@@ -191,160 +261,56 @@ export function cloneGameState(state: GameState): GameState {
       Object.entries(state.friendships).map(([npcId, friendship]) => [npcId, { ...friendship }]),
     ),
     dailyForage: { day: state.dailyForage.day, collectedIds: [...state.dailyForage.collectedIds] },
+    dailyRequest: state.dailyRequest ? { ...state.dailyRequest } : null,
+    npcDialogue: Object.fromEntries(Object.entries(state.npcDialogue).map(([npcId, memory]) => [npcId, {
+      recent: memory.recent.map((entry) => ({ ...entry })),
+      acknowledgedStage: memory.acknowledgedStage,
+    }])),
+    seenEventIds: [...state.seenEventIds],
+    pet: state.pet ? { ...state.pet } : null,
   };
 }
 
-/** Validates one unknown value as a complete version-7 game state and returns a defensive clone. */
+/** Validates one unknown value as a complete current game state and returns a defensive clone. */
 export function decodeGameState(value: unknown): GameState {
   const state = recordFrom(value, "Game state is invalid.");
   if (state.version !== GAME_STATE_VERSION) throw new Error("Game state version is unsupported.");
   const day = positiveSafeInteger(state.day, "Game day is invalid.");
+  const inventoryCapacity = decodeInventoryCapacity(state.inventoryCapacity);
+  const wateringCanLevel = decodeWateringCanLevel(state.wateringCanLevel);
   return {
     version: GAME_STATE_VERSION,
     day,
     minuteOfDay: decodeGameMinute(state.minuteOfDay),
+    worldSeed: uint32From(state.worldSeed, "World seed is invalid."),
+    lateWarningDay: boundedPastDay(state.lateWarningDay, day, "Late-warning day is invalid."),
+    stamina: decodeStamina(state.stamina),
+    fishingCastCount: nonNegativeSafeInteger(state.fishingCastCount, "Fishing cast count is invalid."),
+    lastSurfaceStoneRefreshDay: decodeSurfaceRefreshDay(state.lastSurfaceStoneRefreshDay, day, "stone"),
+    lastSurfaceWeedRefreshDay: decodeSurfaceRefreshDay(state.lastSurfaceWeedRefreshDay, day, "weed"),
     gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
     player: decodePlayerState(state.player),
-    inventory: decodeInventory(state.inventory, false),
-    resources: decodeResources(state.resources),
-    farmTiles: decodeFarmTilesV7(state.farmTiles),
+    inventory: decodeInventory(state.inventory, inventoryCapacity),
+    inventoryCapacity,
+    wateringCanLevel,
+    wateringCanWater: decodeWateringCanWater(state.wateringCanWater, wateringCanLevel),
+    weather: decodeWeatherState(state.weather, day),
+    resources: decodeResources(state.resources, day),
+    farmTiles: decodeFarmTiles(state.farmTiles, day),
     friendships: decodeFriendships(state.friendships, day),
     dailyForage: decodeDailyForage(state.dailyForage, day),
-  };
-}
-
-/** Explicitly migrates a released v6 state into generic crop progress and daily forage state. */
-export function migrateGameStateV6(value: unknown): GameState {
-  const state = recordFrom(value, "Version-6 game state is invalid.");
-  if (state.version !== 6) throw new Error("Version-6 game state is unsupported.");
-  const day = positiveSafeInteger(state.day, "Game day is invalid.");
-  return {
-    version: GAME_STATE_VERSION,
-    day,
-    minuteOfDay: decodeGameMinute(state.minuteOfDay),
-    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
-    player: decodePlayerState(state.player),
-    inventory: decodeInventory(state.inventory, false),
-    resources: decodeResources(state.resources),
-    farmTiles: decodeFarmTilesV6(state.farmTiles),
-    friendships: decodeFriendships(state.friendships, day),
-    dailyForage: { day, collectedIds: [] },
-  };
-}
-
-/** Explicitly migrates a released v5 state into the v6 player-appearance contract. */
-export function migrateGameStateV5(value: unknown): GameState {
-  const state = recordFrom(value, "Version-5 game state is invalid.");
-  if (state.version !== 5) throw new Error("Version-5 game state is unsupported.");
-  const day = positiveSafeInteger(state.day, "Game day is invalid.");
-  return {
-    version: GAME_STATE_VERSION,
-    day,
-    minuteOfDay: decodeGameMinute(state.minuteOfDay),
-    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
-    player: migratePlayerState(state.player),
-    inventory: decodeInventory(state.inventory, false),
-    resources: decodeResources(state.resources),
-    farmTiles: decodeFarmTilesV6(state.farmTiles),
-    friendships: decodeFriendships(state.friendships, day),
-    dailyForage: { day, collectedIds: [] },
-  };
-}
-
-/** Explicitly migrates a released v4 state into the v5 friendship contract with catalog-filled defaults. */
-export function migrateGameStateV4(value: unknown): GameState {
-  const state = recordFrom(value, "Version-4 game state is invalid.");
-  if (state.version !== 4) throw new Error("Version-4 game state is unsupported.");
-  return {
-    version: GAME_STATE_VERSION,
-    day: positiveSafeInteger(state.day, "Game day is invalid."),
-    minuteOfDay: decodeGameMinute(state.minuteOfDay),
-    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
-    player: migratePlayerState(state.player),
-    inventory: decodeInventory(state.inventory, false),
-    resources: decodeResources(state.resources),
-    farmTiles: decodeFarmTilesV6(state.farmTiles),
-    friendships: {},
-    dailyForage: { day: positiveSafeInteger(state.day, "Game day is invalid."), collectedIds: [] },
-  };
-}
-
-/** Explicitly migrates a released v3 state into the v5 clock/friendship contract at 06:00. */
-export function migrateGameStateV3(value: unknown): GameState {
-  const state = recordFrom(value, "Version-3 game state is invalid.");
-  if (state.version !== 3) throw new Error("Version-3 game state is unsupported.");
-  return {
-    version: GAME_STATE_VERSION,
-    day: positiveSafeInteger(state.day, "Game day is invalid."),
-    minuteOfDay: DAY_START_MINUTE,
-    gold: nonNegativeSafeInteger(state.gold, "Game gold is invalid."),
-    player: migratePlayerState(state.player),
-    inventory: decodeInventory(state.inventory, false),
-    resources: decodeResources(state.resources),
-    farmTiles: decodeFarmTilesV6(state.farmTiles),
-    friendships: {},
-    dailyForage: { day: positiveSafeInteger(state.day, "Game day is invalid."), collectedIds: [] },
-  };
-}
-
-/** Explicitly migrates a released v2 state into the day-based v5 life-loop contract. */
-export function migrateGameStateV2(value: unknown): GameState {
-  const state = recordFrom(value, "Version-2 game state is invalid.");
-  if (state.version !== 2) throw new Error("Version-2 game state is unsupported.");
-  return {
-    version: GAME_STATE_VERSION,
-    day: 1,
-    minuteOfDay: DAY_START_MINUTE,
-    gold: 100,
-    player: migratePlayerState(state.player),
-    inventory: decodeInventory(state.inventory, true),
-    resources: decodeResources(state.resources),
-    farmTiles: decodeFarmTilesV2(state.farmTiles, true),
-    friendships: {},
-    dailyForage: { day: 1, collectedIds: [] },
-  };
-}
-
-/** Explicitly decodes and migrates the only released v1 LOCAL/grid save into v5 world IDs. */
-export function migrateLegacyGameStateV1(value: unknown): GameState {
-  const state = recordFrom(value, "Legacy game state is invalid.");
-  if (state.version !== 1) throw new Error("Legacy game state version is unsupported.");
-  const player = recordFrom(state.player, "Legacy player state is invalid.");
-  const legacyResources = recordFrom(state.resources, "Legacy resource state is invalid.");
-  const legacyFarmTiles = recordFrom(state.farmTiles, "Legacy farm state is invalid.");
-  const resources: Record<string, ResourceState> = {};
-  for (const [id, rawResource] of Object.entries(legacyResources)) {
-    const resource = decodeResource(rawResource, id);
-    const migratedId = id === LEGACY_TREE_ID ? TREE_ID : id;
-    assertStableId(migratedId, "Migrated resource ID");
-    resources[migratedId] = { ...resource, id: migratedId };
-  }
-  const farmTiles: Record<string, FarmTileState> = {};
-  for (const [id, rawTile] of Object.entries(legacyFarmTiles)) {
-    const migratedId = id === LEGACY_FARM_TILE_ID ? FARM_TILE_ID : id;
-    farmTiles[migratedId] = decodeFarmTileV2(rawTile, migratedId, false);
-  }
-  return {
-    version: GAME_STATE_VERSION,
-    day: 1,
-    minuteOfDay: DAY_START_MINUTE,
-    gold: 100,
-    player: {
-      regionId: "farm",
-      x: finiteNumber(player.x, "Legacy player X is invalid."),
-      y: finiteNumber(player.y, "Legacy player Y is invalid."),
-      appearanceId: DEFAULT_PLAYER_APPEARANCE_ID,
-    },
-    inventory: decodeInventory(state.inventory, true),
-    resources,
-    farmTiles,
-    friendships: {},
-    dailyForage: { day: 1, collectedIds: [] },
+    dailyRequest: decodeDailyRequest(state.dailyRequest, day),
+    npcDialogue: decodeNpcDialogue(state.npcDialogue, day),
+    seenEventIds: decodeSeenEventIds(state.seenEventIds),
+    pet: decodePetState(state.pet, day),
   };
 }
 
 /** Validates sparse friendship state while preserving catalog reconciliation as the identity owner. */
-function decodeFriendships(value: unknown, currentDay: number): Record<string, FriendshipState> {
+function decodeFriendships(
+  value: unknown,
+  currentDay: number,
+): Record<string, FriendshipState> {
   const source = recordFrom(value, "Friendship state is invalid.");
   const result: Record<string, FriendshipState> = {};
   for (const [npcId, rawFriendship] of Object.entries(source)) {
@@ -355,21 +321,154 @@ function decodeFriendships(value: unknown, currentDay: number): Record<string, F
       friendship.lastTalkedDay,
       "Friendship last-talked day is invalid.",
     );
+    const lastGiftDay = nonNegativeSafeInteger(friendship.lastGiftDay, "Friendship last-gift day is invalid.");
+    const giftWeekIndex = nonNegativeSafeInteger(friendship.giftWeekIndex, "Friendship gift week is invalid.");
+    const giftsThisWeek = nonNegativeSafeInteger(friendship.giftsThisWeek, "Friendship weekly gifts are invalid.");
     if (
       friendship.npcId !== npcId
       || points > FRIENDSHIP_MAX_POINTS
       || lastTalkedDay > currentDay
+      || lastGiftDay > currentDay
+      || giftsThisWeek > 2
+      || giftWeekIndex > giftWeekForDay(currentDay)
+      || (lastGiftDay === 0 && (giftsThisWeek !== 0 || giftWeekIndex !== 0))
+      || (lastGiftDay > 0 && (giftsThisWeek < 1 || giftWeekIndex !== giftWeekForDay(lastGiftDay)))
     ) {
       throw new Error("Friendship state is inconsistent.");
     }
-    result[npcId] = { npcId, points, lastTalkedDay };
+    result[npcId] = {
+      npcId,
+      points,
+      lastTalkedDay,
+      lastGiftDay,
+      giftWeekIndex,
+      giftsThisWeek,
+    };
   }
   return result;
 }
 
-/** Creates the reviewed default state for one catalog-owned farm plot. */
-function createUntilledFarmTile(id: string): FarmTileState {
-  return { id, phase: "untilled", cropId: "", growthDays: 0, watered: false };
+/** Validates the current deterministic request state and rejects rerolled request IDs. */
+function decodeDailyRequest(value: unknown, currentDay: number): DailyRequestState | null {
+  const expected = dailyRequestForDay(currentDay);
+  if (!expected) {
+    if (value !== null) throw new Error("Daily request state is invalid before Day 2.");
+    return null;
+  }
+  const request = recordFrom(value, "Daily request state is invalid.");
+  const definition = getDailyRequest(request.requestId);
+  if (
+    request.day !== currentDay
+    || !dailyRequestMatchesDay(request.requestId, currentDay)
+    || !definition
+    || typeof request.completed !== "boolean"
+  ) {
+    throw new Error("Daily request state is inconsistent.");
+  }
+  return { day: currentDay, requestId: definition.requestId, completed: request.completed };
+}
+
+/** Validates sparse NPC dialogue memory while catalog reconciliation owns the complete identity set. */
+function decodeNpcDialogue(value: unknown, currentDay: number): Record<string, NpcDialogueState> {
+  const source = recordFrom(value, "NPC dialogue state is invalid.");
+  const result: Record<string, NpcDialogueState> = {};
+  for (const [npcId, rawMemory] of Object.entries(source)) {
+    assertStableId(npcId, "Dialogue NPC ID");
+    const memory = recordFrom(rawMemory, "NPC dialogue state is invalid.");
+    if (!Array.isArray(memory.recent) || memory.recent.length > 12) {
+      throw new Error("NPC dialogue history is invalid.");
+    }
+    const recent = memory.recent.map((rawEntry) => {
+      const entry = recordFrom(rawEntry, "NPC dialogue history entry is invalid.");
+      const day = positiveSafeInteger(entry.day, "NPC dialogue history day is invalid.");
+      if (
+        day > currentDay
+        || day < currentDay - 3
+        || !isKnownDialogueSelectionId(entry.dialogueId)
+      ) {
+        throw new Error("NPC dialogue history entry is inconsistent.");
+      }
+      return { dialogueId: String(entry.dialogueId), day };
+    });
+    if (new Set(recent.map(({ dialogueId }) => dialogueId)).size !== recent.length) {
+      throw new Error("NPC dialogue history repeats a recent dialogue ID.");
+    }
+    result[npcId] = {
+      recent,
+      acknowledgedStage: decodeRelationshipStage(memory.acknowledgedStage),
+    };
+  }
+  return result;
+}
+
+/** Validates unique once-only event IDs against the closed retention event catalog. */
+function decodeSeenEventIds(value: unknown): RetentionEventId[] {
+  if (!Array.isArray(value)) throw new Error("Seen event state is invalid.");
+  const eventIds = value.map((eventId) => {
+    if (!isRetentionEventId(eventId)) throw new Error("Seen event state references an unknown event.");
+    return eventId;
+  });
+  if (new Set(eventIds).size !== eventIds.length) throw new Error("Seen event state contains duplicates.");
+  return eventIds;
+}
+
+/** Creates current gameplay defaults for one new game or inactive historical decoder. */
+function springGameplayDefaults(
+  day: number,
+  wateringCanLevel: WateringCanLevel,
+  worldSeed: number,
+): Pick<GameState, "worldSeed" | "lateWarningDay" | "stamina" | "fishingCastCount" | "lastSurfaceStoneRefreshDay" | "lastSurfaceWeedRefreshDay" | "wateringCanWater" | "weather"> {
+  const seed = uint32From(worldSeed, "World seed is invalid.");
+  return {
+    worldSeed: seed,
+    lateWarningDay: 0,
+    stamina: MAX_STAMINA,
+    fishingCastCount: 0,
+    lastSurfaceStoneRefreshDay: day,
+    lastSurfaceWeedRefreshDay: day,
+    wateringCanWater: wateringCanCapacity(wateringCanLevel),
+    weather: new WeatherSystem().create(seed, day),
+  };
+}
+
+/** Creates current retention and pet defaults for a fresh local game. */
+function retentionDefaults(
+  day: number,
+): Pick<
+  GameState,
+  "inventoryCapacity" | "wateringCanLevel" | "dailyRequest" | "npcDialogue" | "seenEventIds" | "pet"
+> {
+  return {
+    inventoryCapacity: BASE_INVENTORY_CAPACITY,
+    wateringCanLevel: 1,
+    dailyRequest: createDailyRequestState(day),
+    npcDialogue: {},
+    seenEventIds: [],
+    pet: null,
+  };
+}
+
+/** Builds the stable sparse farm-state key for one validated tile coordinate. */
+export function farmTileId(column: number, row: number): string {
+  if (!Number.isSafeInteger(column) || !Number.isSafeInteger(row) || column < 0 || row < 0) {
+    throw new Error("Farm tile coordinate is invalid.");
+  }
+  return `farm:${column}:${row}`;
+}
+
+/** Creates one newly tilled sparse farm tile at an already validated Farm coordinate. */
+export function createTilledFarmTile(column: number, row: number): FarmTileState {
+  return {
+    id: farmTileId(column, row),
+    column,
+    row,
+    phase: "tilled",
+    cropId: "",
+    growthDays: 0,
+    watered: false,
+    plantedDay: 0,
+    harvestCount: 0,
+  };
 }
 
 /** Validates one player position and stable region identifier. */
@@ -385,32 +484,21 @@ function decodePlayerState(value: unknown): PlayerState {
   };
 }
 
-/** Migrates a pre-v6 player position while preserving the released farmer as its appearance. */
-function migratePlayerState(value: unknown): PlayerState {
-  const player = recordFrom(value, "Player state is invalid.");
-  const regionId = stringFrom(player.regionId, "Player region is invalid.");
-  assertStableId(regionId, "Player region ID");
-  return {
-    regionId,
-    x: finiteNumber(player.x, "Player X is invalid."),
-    y: finiteNumber(player.y, "Player Y is invalid."),
-    appearanceId: DEFAULT_PLAYER_APPEARANCE_ID,
-  };
-}
-
-/** Validates the fixed-length inventory and optionally maps the two released placeholder item IDs. */
-function decodeInventory(value: unknown, migrateLegacyItems: boolean): InventorySlot[] {
+/** Validates one capacity-owned current inventory without accepting retired item aliases. */
+function decodeInventory(
+  value: unknown,
+  expectedCapacity: InventoryCapacity = BASE_INVENTORY_CAPACITY,
+): InventorySlot[] {
   const inventory = Array.isArray(value) ? value : null;
-  if (!inventory || inventory.length !== INVENTORY_SLOT_COUNT) throw new Error("Inventory state is invalid.");
-  return inventory.map((rawSlot) => decodeInventorySlot(rawSlot, migrateLegacyItems));
+  if (!inventory || inventory.length !== expectedCapacity) throw new Error("Inventory state is invalid.");
+  return inventory.map((rawSlot) => decodeInventorySlot(rawSlot));
 }
 
-/** Validates one inventory slot after applying only the explicit v1/v2 item aliases. */
-function decodeInventorySlot(value: unknown, migrateLegacyItems: boolean): InventorySlot {
+/** Validates one current inventory slot against the closed item catalog and stack limit. */
+function decodeInventorySlot(value: unknown): InventorySlot {
   const slot = recordFrom(value, "Inventory slot is invalid.");
   if (slot.itemId === "" && slot.quantity === 0) return { itemId: "", quantity: 0 };
-  const itemId = migrateLegacyItems ? migrateLegacyItemId(slot.itemId) : slot.itemId;
-  const definition = getItemDefinition(itemId);
+  const definition = getItemDefinition(slot.itemId);
   if (
     !definition
     || !Number.isInteger(slot.quantity)
@@ -422,19 +510,12 @@ function decodeInventorySlot(value: unknown, migrateLegacyItems: boolean): Inven
   return { itemId: definition.id, quantity: Number(slot.quantity) };
 }
 
-/** Maps only the two retired farming placeholders without accepting other unknown item IDs. */
-function migrateLegacyItemId(value: unknown): unknown {
-  if (value === LEGACY_ALIEN_SEED_ID) return ITEM_ID.turnipSeed;
-  if (value === LEGACY_ALIEN_CROP_ID) return ITEM_ID.turnip;
-  return value;
-}
-
 /** Validates sparse resource state without duplicating catalog-owned positions. */
-function decodeResources(value: unknown): Record<string, ResourceState> {
+function decodeResources(value: unknown, currentDay: number): Record<string, ResourceState> {
   const source = recordFrom(value, "Resource state is invalid.");
   const result: Record<string, ResourceState> = {};
   for (const [id, rawResource] of Object.entries(source)) {
-    const resource = decodeResource(rawResource, id);
+    const resource = decodeResource(rawResource, id, currentDay);
     assertStableId(id, "Saved resource ID");
     result[id] = resource;
   }
@@ -442,97 +523,23 @@ function decodeResources(value: unknown): Record<string, ResourceState> {
 }
 
 /** Validates one resource entry against its record key and closed resource kinds. */
-function decodeResource(value: unknown, id: string): ResourceState {
+function decodeResource(value: unknown, id: string, currentDay: number): ResourceState {
   const resource = recordFrom(value, "Resource state is invalid.");
+  const phase = resource.phase;
+  const regrowOnDay = resource.regrowOnDay === null
+    ? null
+    : positiveSafeInteger(resource.regrowOnDay, "Resource regrow day is invalid.");
   if (
     resource.id !== id
-    || (resource.kind !== "tree" && resource.kind !== "stone")
-    || typeof resource.available !== "boolean"
+    || (resource.kind !== "tree" && resource.kind !== "stone" && resource.kind !== "weed")
+    || (phase !== "standing" && phase !== "stump" && phase !== "cleared")
+    || (resource.kind !== "tree" && (phase === "stump" || regrowOnDay !== null))
+    || (phase !== "cleared" && regrowOnDay !== null)
+    || (regrowOnDay !== null && regrowOnDay <= currentDay)
   ) {
     throw new Error("Resource state is invalid.");
   }
-  return { id, kind: resource.kind, available: resource.available };
-}
-
-/** Migrates sparse v3-v6 farm state with fixed turnip growth stages. */
-function decodeFarmTilesV6(value: unknown): Record<string, FarmTileState> {
-  const source = recordFrom(value, "Farm state is invalid.");
-  return Object.fromEntries(
-    Object.entries(source).map(([id, rawTile]) => [id, decodeFarmTileV6(rawTile, id)]),
-  );
-}
-
-/** Migrates one fixed-turnip farm tile into generic watered-day progress. */
-function decodeFarmTileV6(value: unknown, id: string): FarmTileState {
-  const tile = recordFrom(value, "Farm state is invalid.");
-  if (tile.id !== id || !isFarmPhase(tile.phase) || typeof tile.watered !== "boolean") {
-    throw new Error("Farm state is invalid.");
-  }
-  assertStableId(id, "Saved farm ID");
-  const growthDays = legacyCropGrowthStage(tile.growthStage, "Farm growth stage is invalid.");
-  const hasCrop = tile.cropId === ITEM_ID.turnip;
-  const shouldHaveCrop = tile.phase === "growing" || tile.phase === "mature";
-  if (
-    (tile.cropId !== "" && !hasCrop)
-    || hasCrop !== shouldHaveCrop
-    || ((tile.phase === "untilled" || tile.phase === "tilled") && growthDays !== 0)
-    || (tile.phase === "growing" && growthDays === 3)
-    || (tile.phase === "mature" && growthDays !== 3)
-  ) {
-    throw new Error("Farm state is inconsistent.");
-  }
-  return {
-    id,
-    phase: tile.phase,
-    cropId: hasCrop ? ITEM_ID.turnip : "",
-    growthDays,
-    watered: tile.watered,
-  };
-}
-
-/** Migrates sparse v1/v2 farm state while validating the retired timer contract. */
-function decodeFarmTilesV2(value: unknown, requireMatchingId: boolean): Record<string, FarmTileState> {
-  const source = recordFrom(value, "Version-2 farm state is invalid.");
-  return Object.fromEntries(
-    Object.entries(source).map(([id, rawTile]) => [
-      id,
-      decodeFarmTileV2(rawTile, id, requireMatchingId),
-    ]),
-  );
-}
-
-/** Converts one valid timer-based farm tile into the equivalent day-growth v3 state. */
-function decodeFarmTileV2(value: unknown, id: string, requireMatchingId: boolean): FarmTileState {
-  const tile = recordFrom(value, "Version-2 farm state is invalid.");
-  if (
-    (requireMatchingId && tile.id !== id)
-    || !isFarmPhase(tile.phase)
-    || (tile.cropId !== "" && tile.cropId !== LEGACY_ALIEN_CROP_ID)
-    || typeof tile.watered !== "boolean"
-  ) {
-    throw new Error("Version-2 farm state is invalid.");
-  }
-  assertStableId(id, "Saved farm ID");
-  const legacyGrowthStage = finiteSafeInteger(tile.growthStage, "Farm growth stage is invalid.");
-  const readyAt = finiteNumber(tile.readyAt, "Farm ready time is invalid.");
-  if (legacyGrowthStage < 0 || legacyGrowthStage > 1 || readyAt < 0) {
-    throw new Error("Version-2 farm state is invalid.");
-  }
-  const hasCrop = tile.cropId === LEGACY_ALIEN_CROP_ID;
-  if ((tile.phase === "growing" || tile.phase === "mature") !== hasCrop) {
-    throw new Error("Version-2 farm state is inconsistent.");
-  }
-  return {
-    id,
-    phase: tile.phase,
-    cropId: hasCrop ? ITEM_ID.turnip : "",
-    growthDays: tile.phase === "mature"
-      ? 3
-      : tile.phase === "growing"
-        ? legacyGrowthStage as 0 | 1
-        : 0,
-    watered: tile.watered,
-  };
+  return { id, kind: resource.kind, phase, regrowOnDay };
 }
 
 /** Narrows one unknown phase to the complete local farming state machine. */
@@ -579,40 +586,82 @@ function nonNegativeSafeInteger(value: unknown, message: string): number {
   return number;
 }
 
-/** Narrows one decoded integer to the four released turnip growth stages. */
-function legacyCropGrowthStage(value: unknown, message: string): 0 | 1 | 2 | 3 {
-  const stage = finiteSafeInteger(value, message);
-  if (stage < 0 || stage > 3) throw new Error(message);
-  return stage as 0 | 1 | 2 | 3;
+/** Requires one unsigned 32-bit integer used by deterministic Spring content. */
+function uint32From(value: unknown, message: string): number {
+  const number = nonNegativeSafeInteger(value, message);
+  if (number > 0xffffffff) throw new Error(message);
+  return number;
 }
 
-/** Validates sparse v7 farm state against the single crop catalog. */
-function decodeFarmTilesV7(value: unknown): Record<string, FarmTileState> {
+/** Requires one non-negative day marker that cannot point beyond the current day. */
+function boundedPastDay(value: unknown, currentDay: number, message: string): number {
+  const day = nonNegativeSafeInteger(value, message);
+  if (day > currentDay) throw new Error(message);
+  return day;
+}
+
+/** Validates one positive current-or-past marker used by a deterministic surface-resource refresh. */
+function decodeSurfaceRefreshDay(value: unknown, currentDay: number, resource: "stone" | "weed"): number {
+  const message = `Surface-${resource} refresh day is invalid.`;
+  const day = positiveSafeInteger(value, message);
+  if (day > currentDay) throw new Error(message);
+  return day;
+}
+
+/** Validates current sparse coordinate-keyed farm state and crop invariants. */
+function decodeFarmTiles(value: unknown, currentDay: number): Record<string, FarmTileState> {
   const source = recordFrom(value, "Farm state is invalid.");
   return Object.fromEntries(Object.entries(source).map(([id, rawTile]) => {
     const tile = recordFrom(rawTile, "Farm state is invalid.");
-    if (tile.id !== id || !isFarmPhase(tile.phase) || typeof tile.watered !== "boolean") {
-      throw new Error("Farm state is invalid.");
-    }
-    assertStableId(id, "Saved farm ID");
+    const coordinates = farmCoordinatesFromId(id);
+    const column = nonNegativeSafeInteger(tile.column, "Farm column is invalid.");
+    const row = nonNegativeSafeInteger(tile.row, "Farm row is invalid.");
+    const phase = tile.phase;
+    if (
+      tile.id !== id
+      || coordinates[0] !== column
+      || coordinates[1] !== row
+      || (phase !== "tilled" && phase !== "growing" && phase !== "mature")
+      || typeof tile.watered !== "boolean"
+    ) throw new Error("Farm state is invalid.");
     const growthDays = nonNegativeSafeInteger(tile.growthDays, "Farm growth days are invalid.");
+    const plantedDay = nonNegativeSafeInteger(tile.plantedDay, "Farm planted day is invalid.");
+    const harvestCount = nonNegativeSafeInteger(tile.harvestCount, "Farm harvest count is invalid.");
     const crop = tile.cropId === "" ? null : cropDefinition(tile.cropId);
-    const shouldHaveCrop = tile.phase === "growing" || tile.phase === "mature";
+    const shouldHaveCrop = phase === "growing" || phase === "mature";
     if (
       Boolean(crop) !== shouldHaveCrop
-      || (!shouldHaveCrop && growthDays !== 0)
+      || (tile.cropId !== "" && !crop)
+      || (!shouldHaveCrop && (growthDays !== 0 || plantedDay !== 0 || harvestCount !== 0))
+      || (shouldHaveCrop && (plantedDay < 1 || plantedDay > currentDay))
       || (crop && growthDays > crop.growthDays)
-      || (tile.phase === "growing" && crop && growthDays >= crop.growthDays)
-      || (tile.phase === "mature" && crop && growthDays !== crop.growthDays)
+      || (crop && !crop.regrowDays && harvestCount !== 0)
+      || (phase === "growing" && crop && growthDays >= crop.growthDays)
+      || (phase === "mature" && crop && growthDays !== crop.growthDays)
     ) throw new Error("Farm state is inconsistent.");
     return [id, {
       id,
-      phase: tile.phase,
+      column,
+      row,
+      phase,
       cropId: crop?.cropId ?? "",
       growthDays,
       watered: tile.watered,
+      plantedDay,
+      harvestCount,
     }];
   }));
+}
+
+/** Parses one current farm:column:row key without accepting legacy entity IDs. */
+function farmCoordinatesFromId(id: string): readonly [number, number] {
+  const match = /^farm:(\d+):(\d+)$/u.exec(id);
+  if (!match) throw new Error("Farm tile ID is invalid.");
+  const column = Number(match[1]);
+  const row = Number(match[2]);
+  if (!Number.isSafeInteger(column) || !Number.isSafeInteger(row)) throw new Error("Farm tile ID is invalid.");
+  if (id !== farmTileId(column, row)) throw new Error("Farm tile ID is not canonical.");
+  return [column, row];
 }
 
 /** Validates one current-day collected-forage set with unique stable point IDs. */

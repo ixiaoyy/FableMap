@@ -11,6 +11,8 @@ import {
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { ITEM_ID } from "../../../../domain/items/definitions.ts";
 import type { CropId } from "../../../../domain/farming/crops.ts";
+import { COTTAGE_TEXTURE_KEY, COTTAGE_VIEW_SPAWN } from "../presentation/cottage-art.ts";
+import { SHOP_INTERIOR_TEXTURE_KEY } from "../presentation/shop-interiors-art.ts";
 
 const VECTORAITH_MEDIA_BASE = "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16";
 
@@ -139,13 +141,16 @@ const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
     frame: { name: "vectoraith-soil", x: 1 * 16, y: 3 * 16, width: 16, height: 16 },
   },
   farmCrops: {
-    [ITEM_ID.turnip]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-turnip-growing", x: 13 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-turnip-mature", x: 14 * 16, y: 7 * 16, width: 16, height: 16 } },
+    [ITEM_ID.turnip]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-turnip-growing", x: 9 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-turnip-mature", x: 11 * 16, y: 7 * 16, width: 16, height: 16 } },
     [ITEM_ID.bokChoy]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-bok-choy-growing", x: 5 * 16, y: 3 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-bok-choy-mature", x: 7 * 16, y: 3 * 16, width: 16, height: 16 } },
     [ITEM_ID.cauliflower]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-cauliflower-growing", x: 5 * 16, y: 1 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-cauliflower-mature", x: 7 * 16, y: 1 * 16, width: 16, height: 16 } },
+    [ITEM_ID.greenPea]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-green-pea-growing", x: 1 * 16, y: 3 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-green-pea-mature", x: 3 * 16, y: 3 * 16, width: 16, height: 16 } },
+    [ITEM_ID.springPotato]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-spring-potato-growing", x: 13 * 16, y: 7 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-spring-potato-mature", x: 15 * 16, y: 7 * 16, width: 16, height: 16 } },
+    [ITEM_ID.rapeseedFlower]: { textureKey: VECTORAITH_MEDIA_KEYS.crops, growingFrame: { name: "vectoraith-rapeseed-growing", x: 13 * 16, y: 9 * 16, width: 16, height: 16 }, matureFrame: { name: "vectoraith-rapeseed-mature", x: 14 * 16, y: 9 * 16, width: 16, height: 16 } },
   },
   forage: {
-    "spring-wildflower": { textureKey: VECTORAITH_MEDIA_KEYS.crops, frame: { name: "vectoraith-spring-wildflower", x: 2 * 16, y: 9 * 16, width: 16, height: 16 } },
-    "bamboo-shoot": { textureKey: VECTORAITH_MEDIA_KEYS.crops, frame: { name: "vectoraith-bamboo-shoot", x: 2 * 16, y: 15 * 16, width: 16, height: 16 } },
+    "spring-wildflower": { textureKey: `item-original-${ITEM_ID.springWildflower}`, frame: { name: "spring-wildflower", x: 0, y: 0, width: 16, height: 16 } },
+    "bamboo-shoot": { textureKey: `item-original-${ITEM_ID.bambooShoot}`, frame: { name: "bamboo-shoot", x: 0, y: 0, width: 16, height: 16 } },
   },
   npc: { textureKey: VECTORAITH_MEDIA_KEYS.npcs, frames: VECTORAITH_NPC_FRAMES },
 };
@@ -285,7 +290,6 @@ const MIXED_INTERIOR_TILESET_BINDINGS: readonly TilesetBinding[] = [
 ];
 
 const MIXED_INTERIOR_REGION_IDS = new Set([
-  "blacksmith",
   "town-house-west",
   "town-house-north",
   "town-house",
@@ -293,13 +297,28 @@ const MIXED_INTERIOR_REGION_IDS = new Set([
   "town-house-east",
 ]);
 
+const FIXED_INTERIOR_VIEW_ANCHORS: Readonly<Record<string, string>> = {
+  cottage: COTTAGE_VIEW_SPAWN,
+  "seed-shop": "seed-shop-room-view",
+  blacksmith: "blacksmith-room-view",
+};
+
+/** Returns a refined interior's Tiled-owned camera anchor, or null for regions that follow the player. */
+export function fixedInteriorViewAnchorForRegion(regionId: string): string | null {
+  return FIXED_INTERIOR_VIEW_ANCHORS[regionId] ?? null;
+}
+
 /** Reports whether one fixed indoor region mixes Ninja floors with VectoRaith props. */
 function usesMixedInteriorProfile(regionId: string): boolean {
   return MIXED_INTERIOR_REGION_IDS.has(regionId);
 }
 
-/** Resolves direct Original/16×16 VectoRaith tilemap bindings for formal outdoor regions. */
+/** Resolves the region's approved original or source-authored atlas without changing gameplay state. */
 export function tilesetBindingsForRegion(regionId: string): readonly TilesetBinding[] {
+  if (regionId === "cottage") return [{ tiledName: "cottage-woodwork", textureKey: COTTAGE_TEXTURE_KEY }];
+  if (regionId === "seed-shop" || regionId === "blacksmith") {
+    return [{ tiledName: "shop-interiors", textureKey: SHOP_INTERIOR_TEXTURE_KEY }];
+  }
   if (usesMixedInteriorProfile(regionId)) return MIXED_INTERIOR_TILESET_BINDINGS;
   return isOutdoorRegion(regionId)
     ? VECTORAITH_TILESET_BINDINGS

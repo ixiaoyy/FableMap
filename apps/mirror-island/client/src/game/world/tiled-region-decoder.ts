@@ -3,6 +3,7 @@ import {
   assertStableId,
   type CollisionGrid,
   type ExitDefinition,
+  type FishingZoneDefinition,
   type InteractionDefinition,
   type NpcSpawnDefinition,
   type RegionDefinition,
@@ -26,6 +27,8 @@ const REQUIRED_OBJECT_LAYERS = [
   "ResourceSpawns",
   "NpcSpawns",
 ] as const;
+const OPTIONAL_OBJECT_LAYERS = ["FishingZones"] as const;
+const OPTIONAL_TILE_LAYERS = ["Tillable"] as const;
 
 /** Decodes one raw Tiled JSON map into the only plain region contract consumed by the app. */
 export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinition {
@@ -57,11 +60,20 @@ export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinit
   const objectLayers = new Map(REQUIRED_OBJECT_LAYERS.map((name) => [name, requireLayer(layers, name, "objectgroup")]));
   for (const layer of tileLayers.values()) validateTileLayerData(layer, width, height);
   const collision = decodeCollision(tileLayers.get("Collision")!, width, height);
+  const waterTiles = decodeTilePresence(tileLayers.get("Water")!, width, height);
+  const tillableLayer = layers.find((layer) => layer.name === "Tillable");
+  if (tillableLayer && (tillableLayer.type !== "tilelayer" || regionId !== "farm")) {
+    throw new Error("Tillable must be a Farm tile layer.");
+  }
+  const tillableTiles = tillableLayer
+    ? decodeTilePresence(tillableLayer, width, height)
+    : Array.from({ length: width * height }, () => false);
   const spawns = decodeSpawns(objectLayers.get("SpawnPoints")!);
   const exits = decodeExits(objectLayers.get("Exits")!);
   const resources = decodeResources(objectLayers.get("ResourceSpawns")!, regionId);
   const interactions = decodeInteractions(objectLayers.get("Interactions")!, regionId);
   const npcs = decodeNpcs(objectLayers.get("NpcSpawns")!, regionId);
+  const fishingZones = decodeFishingZones(optionalLayer(layers, "FishingZones"), regionId);
 
   return {
     id: regionId,
@@ -72,11 +84,14 @@ export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinit
     widthPixels: width * TILE_SIZE,
     heightPixels: height * TILE_SIZE,
     collision,
+    waterTiles,
+    tillableTiles,
     spawns,
     exits,
     resources,
     interactions,
     npcs,
+    fishingZones,
   };
 }
 
@@ -105,15 +120,27 @@ function validateEmbeddedTilesets(value: unknown): void {
 
 /** Requires the complete fixed layer set with no duplicates or unreviewed extra behavior layers. */
 function validateLayerNames(layers: readonly Record<string, unknown>[]): void {
-  const expected = new Set<string>([...REQUIRED_TILE_LAYERS, ...REQUIRED_OBJECT_LAYERS]);
+  const required = new Set<string>([...REQUIRED_TILE_LAYERS, ...REQUIRED_OBJECT_LAYERS]);
+  const allowed = new Set<string>([...required, ...OPTIONAL_OBJECT_LAYERS, ...OPTIONAL_TILE_LAYERS]);
   const actual = new Set<string>();
   for (const layer of layers) {
     if (typeof layer.name !== "string" || actual.has(layer.name)) throw new Error("Tiled layer names are invalid.");
     actual.add(layer.name);
   }
-  if (actual.size !== expected.size || [...actual].some((name) => !expected.has(name))) {
+  if ([...required].some((name) => !actual.has(name)) || [...actual].some((name) => !allowed.has(name))) {
     throw new Error("Tiled map does not match the fixed layer contract.");
   }
+}
+
+/** Returns one optional behavior object layer while rejecting a mismatched Tiled type. */
+function optionalLayer(
+  layers: readonly Record<string, unknown>[],
+  name: typeof OPTIONAL_OBJECT_LAYERS[number],
+): Record<string, unknown> | null {
+  const layer = layers.find((candidate) => candidate.name === name);
+  if (!layer) return null;
+  if (layer.type !== "objectgroup") throw new Error(`Tiled layer ${name} has the wrong type.`);
+  return layer;
 }
 
 /** Returns one required layer with its exact Tiled type. */
@@ -140,6 +167,12 @@ function decodeCollision(layer: Record<string, unknown>, columns: number, rows: 
       return Number(entry) !== 0;
     }),
   };
+}
+
+/** Converts one validated tile layer into a same-size non-zero occupancy mask. */
+function decodeTilePresence(layer: Record<string, unknown>, columns: number, rows: number): readonly boolean[] {
+  validateTileLayerData(layer, columns, rows);
+  return arrayFrom(layer.data, "Tiled tile layer data is invalid.").map((entry) => Number(entry) !== 0);
 }
 
 /** Validates one finite tile layer's dimensions and non-negative integer GIDs. */
@@ -190,10 +223,28 @@ function decodeResources(layer: Record<string, unknown>, regionId: string): read
     const entityId = requiredString(properties, "entityId");
     const kind = requiredString(properties, "resourceKind");
     assertStableId(entityId, "Resource entity ID");
-    if (!["tree", "stone", "spring-wildflower", "bamboo-shoot"].includes(kind)) {
+    if (!["tree", "stone", "weed", "spring-wildflower", "bamboo-shoot", "fallen-branch"].includes(kind)) {
       throw new Error("Resource kind is invalid.");
     }
     return { entityId, regionId, kind: kind as ResourceSpawnDefinition["kind"], ...pointFrom(object) };
+  });
+}
+
+/** Decodes optional authored rectangles from which the player may cast into Lakeshore water. */
+function decodeFishingZones(
+  layer: Record<string, unknown> | null,
+  regionId: string,
+): readonly FishingZoneDefinition[] {
+  if (!layer) return [];
+  if (regionId !== "lakeshore") throw new Error("Fishing zones must belong to Lakeshore.");
+  const seen = new Set<string>();
+  return objectRecords(layer).map((object) => {
+    if (object.type !== "fishing-zone") throw new Error("FishingZones contains an invalid object.");
+    const id = requiredString(propertyRecord(object.properties), "fishingZoneId");
+    assertStableId(id, "Behavior zone ID");
+    if (seen.has(id)) throw new Error(`Duplicate behavior zone ID: ${id}.`);
+    seen.add(id);
+    return { id, regionId, ...rectFrom(object) };
   });
 }
 

@@ -1,4 +1,4 @@
-import { calendarAt } from "../calendar/game-calendar.ts";
+import { DAYS_PER_SEASON, playableCalendarAt } from "../calendar/game-calendar.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 import type { GameState } from "../state/game-state.ts";
@@ -14,11 +14,20 @@ export class ForageSystem {
 
   /** Returns active uncollected spring forage candidates for one region and game day. */
   activeSpawns(state: GameState, regionId: string): readonly ResourceSpawnDefinition[] {
-    if (calendarAt(state.day).season !== "spring") return [];
+    if (playableCalendarAt(state.day).season !== "spring") return [];
+    const dayOfCycle = (state.day - 1) % DAYS_PER_SEASON + 1;
     const collected = new Set(state.dailyForage.day === state.day ? state.dailyForage.collectedIds : []);
-    return this.catalog.requireRegion(regionId).resources.filter((spawn) => (
-      forageItemId(spawn.kind) !== null && forageAppearsOnDay(spawn.entityId, state.day) && !collected.has(spawn.entityId)
-    ));
+    return this.catalog.requireRegion(regionId).resources.filter((spawn) => {
+      if (spawn.kind === "bamboo-shoot" && regionId === "foothills" && (dayOfCycle < 4 || dayOfCycle > 14)) return false;
+      const farmTile = regionId === "farm"
+        ? state.farmTiles[`farm:${Math.floor(spawn.x / 16)}:${Math.floor(spawn.y / 16)}`]
+        : null;
+      if (farmTile) return false;
+      const appears = spawn.kind === "fallen-branch"
+        ? state.weather.current === "wind" || forageAppearsOnDay(`${spawn.entityId}:branch`, state.day)
+        : forageAppearsOnDay(spawn.entityId, state.day);
+      return forageItemId(spawn.kind) !== null && appears && !collected.has(spawn.entityId);
+    });
   }
 
   /** Atomically collects one active nearby forage point into inventory and marks it for this day. */
@@ -39,6 +48,7 @@ export class ForageSystem {
 export function forageItemId(kind: ResourceSpawnDefinition["kind"]): ItemId | null {
   if (kind === "spring-wildflower") return ITEM_ID.springWildflower;
   if (kind === "bamboo-shoot") return ITEM_ID.bambooShoot;
+  if (kind === "fallen-branch") return ITEM_ID.wood;
   return null;
 }
 

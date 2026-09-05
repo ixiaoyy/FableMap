@@ -7,9 +7,25 @@ export interface FriendshipState {
   readonly npcId: string;
   points: number;
   lastTalkedDay: number;
+  lastGiftDay: number;
+  giftWeekIndex: number;
+  giftsThisWeek: number;
 }
 
 /** Creates one zero-point friendship record for a catalog-owned NPC identity. */
 export function createFriendshipState(npcId: string): FriendshipState {
-  return { npcId, points: 0, lastTalkedDay: 0 };
+  return {
+    npcId,
+    points: 0,
+    lastTalkedDay: 0,
+    lastGiftDay: 0,
+    giftWeekIndex: 0,
+    giftsThisWeek: 0,
+  };
+}
+
+/** Returns the Sunday-based gift week for the island's Monday-start absolute calendar. */
+export function giftWeekIndex(day: number): number {
+  if (!Number.isSafeInteger(day) || day < 1) throw new Error("Gift day is invalid.");
+  return Math.floor(day / 7);
 }

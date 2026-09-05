@@ -8,6 +8,8 @@
 
 This directory tracks records for all developers working with AI Agents on this project.
 
+Workspace journals are historical records, not the current product contract. Read `docs/CURRENT_STATE.md` before using old sessions to make product or task decisions.
+
 ### File Structure
 
 ```
@@ -27,7 +29,7 @@ workspace/
 
 | Developer | Last Active | Sessions | Active File |
 |-----------|-------------|----------|-------------|
-| (none yet) | - | - | - |
+| fable | 2026-08-31 | 55 | `fable/journal-1.md` |
 
 ---
 
@@ -122,4 +124,4 @@ Use this template when recording sessions:
 
 ---
 
-**Language**: All documentation must be written in **English**.
+**Language**: Follow the project convention; current Mirror Island product and task documents are primarily Chinese.

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { PlayerAppearanceId } from "../../domain/player/appearance.ts";
 import PhaserGame from "./PhaserGame.vue";
+import { HOME_HERO_URL } from "./game/assets/media-catalog.ts";
 import { isToolArtPreviewEnabled } from "./game/assets/tool-art-candidate.ts";
 import { daylightVisualAt } from "./game/presentation/daylight.ts";
 import { loadWorldCatalog } from "./game/world/world-catalog.ts";
@@ -17,6 +18,7 @@ import {
 } from "./session/local-game-session.ts";
 import {
   gameUiState,
+  openPetAdoption,
   setGamePhase,
   setSaveAvailable,
 } from "./stores/game-store.ts";
@@ -30,6 +32,15 @@ import SocialPanel from "./ui/social/SocialPanel.vue";
 import TouchControls from "./ui/controls/TouchControls.vue";
 import CalendarPanel from "./ui/calendar/CalendarPanel.vue";
 import CharacterCreator from "./ui/character/CharacterCreator.vue";
+import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
+import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
+import RequestBoardPanel from "./ui/requests/RequestBoardPanel.vue";
+import TodayHint from "./ui/retention/TodayHint.vue";
+import PetAdoptionPanel from "./ui/pets/PetAdoptionPanel.vue";
+import FishingPanel from "./ui/fishing/FishingPanel.vue";
+import GiftConfirmationPanel from "./ui/gifts/GiftConfirmationPanel.vue";
+import DaySettlementPanel from "./ui/sleep/DaySettlementPanel.vue";
+import WeatherLayer from "./game/presentation/WeatherLayer.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
@@ -41,6 +52,13 @@ const daylightStyle = computed(() => ({
   "--daylight-color": daylight.value.color,
   "--daylight-opacity": daylight.value.opacity.toFixed(3),
 }));
+const homeHeroStyle = {
+  "--home-hero-image": `url("${HOME_HERO_URL}")`,
+};
+const petAdoptionPending = computed(() => (
+  gameUiState.day >= 2
+  && gameUiState.pet === null
+));
 
 const phaseLabel = computed(() => ({
   initializing: "正在准备本地世界",
@@ -98,6 +116,15 @@ function checkpointOnPageHide(): void {
   void flushLocalGameSession().catch(() => undefined);
 }
 
+/** Preserves native Space/Enter controls and dialog keys while leaving world movement shortcuts available. */
+function isolateUiActivationKeys(event: KeyboardEvent): void {
+  if (!(event.target instanceof Element)) return;
+  const inDialog = event.target.closest('[role="dialog"], [role="alertdialog"]');
+  const nativeActivation = (event.code === "Space" || event.code === "Enter")
+    && event.target.closest("button, a, input, select, textarea");
+  if (inDialog || nativeActivation) event.stopPropagation();
+}
+
 onMounted(async () => {
   if (toolArtPreviewMode) {
     try {
@@ -144,9 +171,12 @@ onUnmounted(() => {
 <template>
   <main
     class="island-shell"
-    :class="{ 'island-shell--game': gameUiState.phase === 'playing' && !debugMode }"
+    :class="{
+      'island-shell--game': gameUiState.phase === 'playing' && !debugMode,
+      'island-shell--home': gameUiState.phase !== 'playing',
+    }"
   >
-    <header v-if="gameUiState.phase !== 'playing' || debugMode" class="field-header">
+    <header v-if="gameUiState.phase === 'playing' && debugMode" class="field-header">
       <div>
         <p class="eyebrow">MIRROR ISLAND / LOCAL FIELD 01</p>
         <h1>镜像岛</h1>
@@ -164,8 +194,11 @@ onUnmounted(() => {
       :data-daylight="daylight.phase"
       :data-environment="daylight.environment"
       :style="daylightStyle"
+      @keydown="isolateUiActivationKeys"
+      @keyup="isolateUiActivationKeys"
     >
       <PhaserGame />
+      <WeatherLayer />
       <aside v-if="debugMode" class="telemetry">
         <span>运行模式</span>
         <strong>LOCAL</strong>
@@ -174,18 +207,36 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen || gameUiState.fishing.phase !== 'idle' || gameUiState.giftConfirmation !== null || gameUiState.daySettlement.phase !== 'idle'"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
       </p>
       <LifeHud />
+      <TodayHint />
       <SocialPanel />
+      <AudioSettingsPanel />
+      <BackpackPanel />
+      <RequestBoardPanel />
       <CalendarPanel />
+      <button
+        v-if="petAdoptionPending && !gameUiState.petAdoptionOpen && gameUiState.regionId === 'farm'"
+        type="button"
+        class="pet-adoption-invite"
+        @click="openPetAdoption"
+      >
+        <span aria-hidden="true">◇</span>
+        <strong>院门边的竹篮</strong>
+        <small>选择家园伙伴</small>
+      </button>
       <TouchControls v-if="!debugMode" />
       <DialoguePanel />
       <ShopPanel />
       <SleepConfirmationPanel />
+      <PetAdoptionPanel />
+      <FishingPanel />
+      <GiftConfirmationPanel />
+      <DaySettlementPanel />
       <div v-if="!debugMode" class="game-hud">
         <Hotbar />
       </div>
@@ -194,59 +245,102 @@ onUnmounted(() => {
     <section
       v-else
       class="start-panel"
-      :class="{ 'start-panel--character': gameUiState.phase === 'character-creation' }"
+      :class="{
+        'start-panel--character': gameUiState.phase === 'character-creation',
+        'start-panel--welcome': gameUiState.phase !== 'character-creation',
+      }"
+      :style="gameUiState.phase === 'character-creation' ? undefined : homeHeroStyle"
       aria-live="polite"
     >
-      <div v-if="gameUiState.phase === 'initializing' || gameUiState.phase === 'loading'">
-        <p class="start-panel__kicker">PERSONAL WORLD</p>
-        <h2>{{ gameUiState.phase === 'initializing' ? '正在准备本地世界' : '正在打开本地世界' }}</h2>
-        <p>世界状态只在这台浏览器的 IndexedDB 中读取和保存。</p>
-      </div>
-
-      <div v-else-if="gameUiState.phase === 'menu'">
-        <p class="start-panel__kicker">PERSONAL WORLD</p>
-        <h2>从自己的农场开始</h2>
-        <p>这一版不连接多人房间。采集、制作、种田与存档都由本地 GameSession 负责。</p>
-        <div class="start-actions">
-          <button type="button" class="primary-action" @click="startNewGame">新游戏</button>
-          <button
-            type="button"
-            class="secondary-action"
-            :disabled="!gameUiState.saveAvailable"
-            @click="continueGame"
-          >
-            继续游戏
-          </button>
-        </div>
-        <small>
-          {{ gameUiState.saveAvailable ? '检测到这台浏览器的本地存档。' : '这台浏览器还没有本地存档。' }}
-          清除站点数据会丢失进度，存档不会同步到其他设备。
-        </small>
-      </div>
-
       <CharacterCreator
-        v-else-if="gameUiState.phase === 'character-creation'"
+        v-if="gameUiState.phase === 'character-creation'"
         :overwriting="gameUiState.saveAvailable"
         @confirm="confirmCharacterCreation"
         @cancel="cancelCharacterCreation"
       />
 
-      <div v-else role="alert">
-        <p class="start-panel__kicker">LOCAL WORLD ERROR</p>
-        <h2>暂时无法进入</h2>
-        <p>{{ failureMessage }}</p>
-        <div class="start-actions">
-          <button
-            v-if="localSessionReady"
-            type="button"
-            class="primary-action"
-            @click="startNewGame"
-          >
-            覆盖为新游戏
-          </button>
-          <button type="button" class="secondary-action" @click="reloadPage">刷新重试</button>
-        </div>
-      </div>
+      <template v-else>
+        <div class="home-mist" aria-hidden="true" />
+        <aside class="home-save-status" :data-phase="gameUiState.phase" role="status">
+          <span class="home-save-status__mark" aria-hidden="true">⌂</span>
+          <span>{{ phaseLabel }}</span>
+        </aside>
+
+        <article class="home-scroll" :data-phase="gameUiState.phase">
+          <div class="home-scroll__hanger" aria-hidden="true" />
+          <div class="home-scroll__paper">
+            <header class="home-brand">
+              <span class="home-brand__sprig" aria-hidden="true">⌇</span>
+              <h1>镜像岛</h1>
+              <span class="home-brand__seal" aria-hidden="true">归园</span>
+              <p>MIRROR ISLAND</p>
+              <div class="home-brand__rule" aria-hidden="true">
+                <span />
+                <i>东方田园 · 单人本地世界</i>
+                <span />
+              </div>
+            </header>
+
+            <div
+              v-if="gameUiState.phase === 'initializing' || gameUiState.phase === 'loading'"
+              class="home-scroll__content home-scroll__content--status"
+            >
+              <p class="start-panel__kicker">归园途中</p>
+              <h2>{{ gameUiState.phase === 'initializing' ? '正在备好小院' : '正在推开院门' }}</h2>
+              <p>世界状态正在从这台浏览器的本地存档中读取，请稍候片刻。</p>
+              <span class="home-loading" aria-hidden="true"><i /><i /><i /></span>
+            </div>
+
+            <div v-else-if="gameUiState.phase === 'menu'" class="home-scroll__content">
+              <p class="start-panel__kicker">从一方小院开始</p>
+              <h2>归园启程</h2>
+              <p>播种、收获，自由采集。慢慢经营属于自己的岛上生活。</p>
+              <div class="start-actions">
+                <button type="button" class="primary-action" @click="startNewGame">
+                  <span>开始新旅</span>
+                  <i aria-hidden="true">❧</i>
+                </button>
+                <button
+                  type="button"
+                  class="secondary-action"
+                  :disabled="!gameUiState.saveAvailable"
+                  @click="continueGame"
+                >
+                  继续上次
+                </button>
+              </div>
+              <small>
+                {{ gameUiState.saveAvailable ? '已找到这台浏览器里的小院。' : '这台浏览器还没有本地存档。' }}
+                清除站点数据会丢失进度，存档不会同步到其他设备。
+              </small>
+            </div>
+
+            <div v-else class="home-scroll__content home-scroll__content--error" role="alert">
+              <p class="start-panel__kicker">归途暂阻</p>
+              <h2>暂时无法进入</h2>
+              <p>{{ failureMessage }}</p>
+              <div class="start-actions">
+                <button
+                  v-if="localSessionReady"
+                  type="button"
+                  class="primary-action"
+                  @click="startNewGame"
+                >
+                  覆盖为新游戏
+                </button>
+                <button type="button" class="secondary-action" @click="reloadPage">刷新重试</button>
+              </div>
+            </div>
+          </div>
+          <div class="home-scroll__foot" aria-hidden="true" />
+        </article>
+
+        <footer class="home-ribbon">
+          <span><i aria-hidden="true">❧</i> 轻松种田 · 自由采集 · 本地保存</span>
+          <a href="/THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener noreferrer">素材鸣谢</a>
+          <span>镜像岛开发中 <i aria-hidden="true">印</i></span>
+        </footer>
+      </template>
     </section>
 
     <div v-if="gameUiState.phase === 'playing' && debugMode" class="debug-dock">
@@ -254,8 +348,8 @@ onUnmounted(() => {
       <Hotbar />
     </div>
 
-    <footer v-if="gameUiState.phase !== 'playing' || debugMode" class="field-footer">
-      <span>{{ gameUiState.phase === 'playing' ? '移动靠近目标 · 点击树木或农田' : '单人世界 · 本地存档' }}</span>
+    <footer v-if="gameUiState.phase === 'playing' && debugMode" class="field-footer">
+      <span>移动靠近目标 · 点击树木或农田</span>
       <a href="/THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener noreferrer">素材鸣谢</a>
     </footer>
   </main>

@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import {
-  FRIENDSHIP_MAX_POINTS,
   FRIENDSHIP_POINTS_PER_HEART,
+  giftWeekIndex,
 } from "../../../../domain/social/definitions.ts";
+import {
+  relationshipStageAt,
+  type RelationshipStage,
+} from "../../../../domain/social/relationship-stage.ts";
 import { getDialogueDefinition } from "../../game/dialogue/definitions.ts";
 import { getWorldCatalog } from "../../game/world/world-catalog.ts";
+import { npcRestDay } from "../../../../domain/world/npc-schedules.ts";
+import { trapDialogTab } from "../focus/dialog-focus.ts";
 import {
   closeSocial,
   gameUiState,
   openSocial,
+  isWorldInputLocked,
 } from "../../stores/game-store.ts";
 
 interface SocialEntry {
@@ -20,34 +27,39 @@ interface SocialEntry {
   readonly relationship: string;
   readonly talkedToday: boolean;
   readonly progressPercent: number;
+  readonly giftStatus: string;
+  readonly restDay: string;
 }
 
 const trigger = ref<HTMLButtonElement | null>(null);
 const panel = ref<HTMLElement | null>(null);
 const catalogNpcs = uniqueCatalogNpcs();
 
-const unavailable = computed(() => (
-  gameUiState.worldActionBusy
-  || gameUiState.shopOpen
-  || gameUiState.dialogue !== null
-  || gameUiState.sleepConfirmationOpen
-));
+const unavailable = computed(() => isWorldInputLocked());
+const weekdayLabels = { monday: "周一", tuesday: "周二", wednesday: "周三", thursday: "周四", friday: "周五", saturday: "周六", sunday: "周日" } as const;
 
 const residents = computed<readonly SocialEntry[]>(() => catalogNpcs.map((npc) => {
   const friendship = gameUiState.friendships[npc.npcId] ?? {
     npcId: npc.npcId,
     points: 0,
     lastTalkedDay: 0,
+    lastGiftDay: 0,
+    giftWeekIndex: 0,
+    giftsThisWeek: 0,
   };
-  const heartValue = friendship.points / FRIENDSHIP_POINTS_PER_HEART;
+  const stage = relationshipStageAt(friendship.points);
+  const hearts = stage === "friendly" ? 2 : stage === "familiar" ? 1 : 0;
   return {
     npcId: npc.npcId,
     name: getDialogueDefinition(npc.dialogueId)?.speaker ?? "未登记居民",
-    hearts: Math.floor(heartValue),
-    heartLabel: `${heartValue.toFixed(1)} / 10 心`,
-    relationship: relationshipLabel(heartValue),
+    hearts,
+    heartLabel: `${relationshipLabel(stage)} · 已解锁 ${hearts} / 2 颗内容心`,
+    relationship: relationshipLabel(stage),
     talkedToday: friendship.lastTalkedDay === gameUiState.day,
-    progressPercent: friendship.points / FRIENDSHIP_MAX_POINTS * 100,
+    progressPercent: Math.min(100, friendship.points / (FRIENDSHIP_POINTS_PER_HEART * 2) * 100),
+    giftStatus: (friendship.lastGiftDay === gameUiState.day ? "今日已送" : "今日未送")
+      + ` · 本周 ${friendship.giftWeekIndex === giftWeekIndex(Math.max(1, gameUiState.day)) ? friendship.giftsThisWeek : 0}/2`,
+    restDay: weekdayLabels[npcRestDay(npc.npcId) ?? "sunday"],
   };
 }));
 
@@ -65,14 +77,11 @@ function uniqueCatalogNpcs(): readonly { readonly npcId: string; readonly dialog
   return result;
 }
 
-/** Maps a zero-to-ten heart value to one restrained relationship label. */
-function relationshipLabel(hearts: number): string {
-  if (hearts >= 10) return "挚友";
-  if (hearts >= 8) return "知心";
-  if (hearts >= 6) return "信赖";
-  if (hearts >= 4) return "亲近";
-  if (hearts >= 2) return "熟面";
-  return "初识";
+/** Maps one content-backed domain stage to its restrained Social label. */
+function relationshipLabel(stage: RelationshipStage): string {
+  if (stage === "friendly") return "友好";
+  if (stage === "familiar") return "熟悉";
+  return "陌生";
 }
 
 /** Requests the world-locking Social ledger and focuses its titled surface. */
@@ -119,6 +128,7 @@ watch(() => gameUiState.socialOpen, (open) => {
       aria-labelledby="social-ledger-title"
       tabindex="-1"
       @keydown.esc.stop="closeLedger"
+      @keydown="trapDialogTab($event, panel)"
     >
       <header class="social-ledger__header">
         <div>
@@ -136,7 +146,7 @@ watch(() => gameUiState.socialOpen, (open) => {
           </div>
           <div class="social-ledger__hearts" :aria-label="`${entry.name}，${entry.heartLabel}`">
             <span
-              v-for="index in 10"
+              v-for="index in 2"
               :key="index"
               aria-hidden="true"
               :data-filled="index <= entry.hearts"
@@ -149,6 +159,7 @@ watch(() => gameUiState.socialOpen, (open) => {
           <span class="social-ledger__daily" :data-complete="entry.talkedToday">
             {{ entry.talkedToday ? "今日已聊" : "今日未聊" }}
           </span>
+          <span class="social-ledger__gift-status">{{ entry.giftStatus }} · {{ entry.restDay }}休息</span>
         </li>
       </ol>
     </section>

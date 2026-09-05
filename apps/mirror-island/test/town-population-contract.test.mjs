@@ -7,21 +7,33 @@ import { daylightVisualAt } from "../client/src/game/presentation/daylight.ts";
 import {
   advanceDialogue,
   applyGameState,
+  applyFishingState,
+  applyDaySettlement,
   cancelSleepConfirmation,
   clearGameState,
+  closeBackpack,
+  closeRequestBoard,
   closeShop,
   closeSocial,
   confirmSleep,
+  deferPetAdoption,
   gameUiState,
   isWorldInputLocked,
+  isGameClockPaused,
   openShop,
+  openBackpack,
+  openPetAdoption,
+  openRequestBoard,
   openSocial,
   openSleepConfirmation,
   selectHotbarSlot,
+  selectInventorySlot,
   setDialogue,
   setWorldActionBusy,
 } from "../client/src/stores/game-store.ts";
 import { ITEM_ID } from "../domain/items/definitions.ts";
+import { IDLE_FISHING_SNAPSHOT } from "../domain/fishing/definitions.ts";
+import { IDLE_DAY_SETTLEMENT } from "../domain/session/day-settlement.ts";
 import { createInitialGameState } from "../domain/state/game-state.ts";
 import { validateNpcActivities } from "../domain/world/npc-activities.ts";
 import {
@@ -119,6 +131,15 @@ test("daylight projection keeps outdoor phases distinct and indoor night readabl
   assert.deepEqual([indoorMidnight.environment, indoorMidnight.opacity], ["indoor", 0.12]);
   assert.ok(indoorMidnight.opacity < midnight.opacity);
   assert.throws(() => daylightVisualAt(365, "farm"), /time is invalid/i);
+});
+
+test("seed shop return landing clears the entrance trigger before controls resume", async () => {
+  const town = decodeTiledRegion(await loadMap("town"), "test-town-return");
+  const landing = town.spawns["seed-shop-door"];
+  const entrance = town.exits.find((exit) => exit.id === "town-seed-shop-entry");
+  assert.ok(landing && entrance);
+  assert.ok(landing.y - PLAYER_FEET_HALF_HEIGHT > entrance.y + entrance.height,
+    "The return landing must clear the inclusive entrance boundary to avoid immediately entering again.");
 });
 
 test("formal world maps decode NPCs, expansion exits and inspect hotspots through one catalog", async () => {
@@ -483,6 +504,14 @@ test("formal world maps decode NPCs, expansion exits and inspect hotspots throug
 
 test("linear dialogue and shop share one transient world-input lock", () => {
   clearGameState();
+  assert.equal(getDialogueDefinition("personality:town-resident-alan:1")?.speaker, "阿澜");
+  assert.equal(getDialogueDefinition("relationship:seed-keeper:familiar")?.lines.length, 1);
+  assert.equal(getDialogueDefinition("event:blacksmith-two-heart")?.lines.length, 3);
+  assert.equal(getDialogueDefinition("request:seed-rack-repair:thanks")?.speaker, "华强");
+  assert.equal(getDialogueDefinition("lakeshore-waystone", { day: 6, minuteOfDay: 720 })?.lines.length, 1);
+  const waystone = getDialogueDefinition("lakeshore-waystone", { day: 7, minuteOfDay: 720 });
+  assert.equal(waystone?.lines.length, 1);
+  assert.deepEqual(waystone, getDialogueDefinition("lakeshore-waystone", { day: 6, minuteOfDay: 720 }));
   const dialogue = getDialogueDefinition("blacksmith-intro");
   assert.ok(dialogue);
   setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });
@@ -505,37 +534,108 @@ test("linear dialogue and shop share one transient world-input lock", () => {
   assert.equal(isWorldInputLocked(), false);
 });
 
+test("Day 2 adoption waits for the Farm yard, defers transiently and locks every world input", () => {
+  clearGameState();
+  const state = {
+    version: 12,
+    day: 2,
+    minuteOfDay: 360,
+    gold: 100,
+    player: { regionId: "cottage", x: 320, y: 416, appearanceId: "farmer-original" },
+    inventory: [],
+    inventoryCapacity: 24,
+    wateringCanLevel: 1,
+    wateringCanWater: 20,
+    stamina: 100,
+    fishingCastCount: 0,
+    lastSurfaceStoneRefreshDay: 2,
+    lastSurfaceWeedRefreshDay: 2,
+    worldSeed: 0,
+    lateWarningDay: 0,
+    weather: { day: 2, current: "sunny", next: "rain" },
+    resources: {},
+    farmTiles: {},
+    friendships: {},
+    dailyRequest: null,
+    seenEventIds: [],
+    pet: null,
+  };
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, false);
+  assert.equal(openPetAdoption(), false);
+
+  state.player.regionId = "farm";
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  deferPetAdoption();
+  assert.equal(gameUiState.petAdoptionOpen, false);
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, false);
+
+  clearGameState();
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, true);
+  state.pet = { species: "cat", name: "团子", adoptedDay: 2, bond: 0, lastPettedDay: 0 };
+  applyGameState(state);
+  assert.equal(gameUiState.petAdoptionOpen, false);
+  assert.equal(isWorldInputLocked(), false);
+  clearGameState();
+});
+
 test("Hotbar selection is transient, toggleable and modal-safe", () => {
   clearGameState();
   const inventory = Array.from({ length: 24 }, () => ({ itemId: "", quantity: 0 }));
   inventory[0] = { itemId: ITEM_ID.hoe, quantity: 1 };
   inventory[1] = { itemId: ITEM_ID.wateringCan, quantity: 1 };
   inventory[2] = { itemId: ITEM_ID.axe, quantity: 1 };
+  inventory[3] = { itemId: ITEM_ID.pickaxe, quantity: 1 };
+  inventory[4] = { itemId: ITEM_ID.scythe, quantity: 1 };
+  inventory[10] = { itemId: ITEM_ID.rapeseedFlower, quantity: 2 };
   const state = {
-    version: 5,
+    version: 12,
     day: 1,
     minuteOfDay: 360,
     gold: 100,
     player: { regionId: "farm", x: 0, y: 0 },
     inventory,
+    inventoryCapacity: 24,
+    wateringCanLevel: 1,
+    wateringCanWater: 20,
+    stamina: 100,
+    weather: { day: 1, current: "sunny", next: "rain" },
     resources: {},
     farmTiles: {},
     friendships: {
       "seed-keeper": { npcId: "seed-keeper", points: 20, lastTalkedDay: 1 },
     },
+    dailyRequest: null,
+    seenEventIds: [],
   };
   applyGameState(state);
-  assert.equal(gameUiState.selectedHotbarIndex, null);
+  assert.equal(gameUiState.selectedInventoryIndex, null);
   assert.equal(gameUiState.selectedItemId, "");
   assert.equal(gameUiState.friendships["seed-keeper"].points, 20);
+  selectInventorySlot(10);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.rapeseedFlower);
+  selectInventorySlot(10);
+  assert.equal(gameUiState.selectedItemId, "");
 
   selectHotbarSlot(0);
-  assert.equal(gameUiState.selectedHotbarIndex, 0);
+  assert.equal(gameUiState.selectedInventoryIndex, 0);
   assert.equal(gameUiState.selectedItemId, ITEM_ID.hoe);
   selectHotbarSlot(0);
-  assert.equal(gameUiState.selectedHotbarIndex, null);
+  assert.equal(gameUiState.selectedInventoryIndex, null);
   selectHotbarSlot(7);
   assert.equal(gameUiState.selectedItemId, "");
+
+  selectHotbarSlot(3);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.pickaxe);
+  selectHotbarSlot(3);
+
+  selectHotbarSlot(4);
+  assert.equal(gameUiState.selectedItemId, ITEM_ID.scythe);
+  selectHotbarSlot(4);
 
   selectHotbarSlot(1);
   setWorldActionBusy(true);
@@ -556,8 +656,25 @@ test("Hotbar selection is transient, toggleable and modal-safe", () => {
   const consumed = structuredClone(state);
   consumed.inventory[1] = { itemId: "", quantity: 0 };
   applyGameState(consumed);
-  assert.equal(gameUiState.selectedHotbarIndex, null);
+  assert.equal(gameUiState.selectedInventoryIndex, null);
   assert.equal(gameUiState.selectedItemId, "");
+  clearGameState();
+});
+
+test("Spring fishing and save-first day settlement share input locks without pausing casting time", () => {
+  clearGameState();
+  applyFishingState({ ...IDLE_FISHING_SNAPSHOT, phase: "casting", zoneId: "test-zone" });
+  assert.equal(isWorldInputLocked(), true);
+  assert.equal(isGameClockPaused(), false);
+  assert.equal(openBackpack(), false);
+  applyFishingState({ ...IDLE_FISHING_SNAPSHOT, phase: "reeling" });
+  assert.equal(isGameClockPaused(), true);
+  applyFishingState(IDLE_FISHING_SNAPSHOT);
+  applyDaySettlement({ phase: "failed", reason: "passed-out", goldLost: 10, nextStamina: 50 });
+  assert.equal(isGameClockPaused(), true);
+  assert.equal(openSocial(), false);
+  applyDaySettlement(IDLE_DAY_SETTLEMENT);
+  assert.equal(isWorldInputLocked(), false);
   clearGameState();
 });
 
@@ -582,6 +699,20 @@ test("sleep confirmation locks world input and resolves yes or no exactly once",
   assert.equal(isWorldInputLocked(), false);
   assert.equal(sleepRequests, 1);
   clearGameState();
+});
+
+test("backpack and request board join the shared modal input lock", () => {
+  clearGameState();
+  assert.equal(openBackpack(), true);
+  assert.equal(gameUiState.backpackOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  assert.equal(openRequestBoard(), false);
+  closeBackpack();
+  assert.equal(openRequestBoard(), true);
+  assert.equal(gameUiState.requestBoardOpen, true);
+  assert.equal(isWorldInputLocked(), true);
+  closeRequestBoard();
+  assert.equal(isWorldInputLocked(), false);
 });
 
 test("punch targeting selects only the deterministic nearest NPC in the facing corridor", () => {

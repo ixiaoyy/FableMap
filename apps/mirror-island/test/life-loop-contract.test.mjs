@@ -1,465 +1,688 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
+import { calendarAt, playableCalendarAt } from "../domain/calendar/game-calendar.ts";
+import { NpcDialogueSystem } from "../domain/dialogue/NpcDialogueSystem.ts";
+import { CROP_DEFINITIONS, sellPriceForItem } from "../domain/farming/crops.ts";
+import { FarmingSystem } from "../domain/farming/FarmingSystem.ts";
+import { FishingSystem } from "../domain/fishing/FishingSystem.ts";
+import { eligibleFish, fishingPausesClock } from "../domain/fishing/definitions.ts";
+import { ForageSystem } from "../domain/gathering/ForageSystem.ts";
+import { GatheringSystem } from "../domain/gathering/GatheringSystem.ts";
+import { WeedCuttingSystem } from "../domain/gathering/WeedCuttingSystem.ts";
 import { InventorySystem } from "../domain/inventory/InventorySystem.ts";
 import { ITEM_ID } from "../domain/items/definitions.ts";
-import { decodeStoredGame } from "../domain/persistence/SaveRepository.ts";
+import { MiningSystem } from "../domain/mining/MiningSystem.ts";
+import { createStoredGame, decodeStoredGame } from "../domain/persistence/SaveRepository.ts";
+import { UpgradeSystem } from "../domain/progression/UpgradeSystem.ts";
+import { DailyRequestSystem } from "../domain/requests/DailyRequestSystem.ts";
+import { createDailyRequestState } from "../domain/requests/definitions.ts";
+import { FirstWeekMilestoneSystem, latestFirstWeekMilestoneAt } from "../domain/retention/FirstWeekMilestoneSystem.ts";
 import { GameSession } from "../domain/session/GameSession.ts";
 import { ShopSystem } from "../domain/shop/ShopSystem.ts";
 import { FriendshipSystem } from "../domain/social/FriendshipSystem.ts";
-import { FRIENDSHIP_MAX_POINTS } from "../domain/social/definitions.ts";
-import { createInitialGameState } from "../domain/state/game-state.ts";
-import {
-  DAY_END_MINUTE,
-  DAY_START_MINUTE,
-  REAL_MILLISECONDS_PER_TIME_STEP,
-} from "../domain/time/game-time.ts";
-import { activeNpcSpawns } from "../domain/world/npc-schedules.ts";
+import { GiftSystem } from "../domain/social/GiftSystem.ts";
+import { giftWeekIndex } from "../domain/social/definitions.ts";
+import { StaminaSystem } from "../domain/stamina/StaminaSystem.ts";
+import { staminaAfterSleep } from "../domain/stamina/definitions.ts";
+import { createInitialGameState, createTilledFarmTile, farmTileId } from "../domain/state/game-state.ts";
+import { DAY_END_MINUTE, DAY_START_MINUTE, formatGameMinute } from "../domain/time/game-time.ts";
+import { WeatherSystem, stableHash, weatherAt } from "../domain/weather/WeatherSystem.ts";
+import { activeNpcById, activeNpcSpawns } from "../domain/world/npc-schedules.ts";
+import { findNpcPath } from "../domain/world/npc-pathfinding.ts";
 import { WorldCatalog } from "../domain/world/regions.ts";
-import { decodeTiledRegion } from "../client/src/game/world/tiled-region-decoder.ts";
-import { calendarAt } from "../domain/calendar/game-calendar.ts";
-import { CROP_DEFINITIONS } from "../domain/farming/crops.ts";
-import { ForageSystem, forageAppearsOnDay } from "../domain/gathering/ForageSystem.ts";
 
-const FARM_PLOT_ID = "farm-plot-001";
-const BED_ID = "cottage-bed";
-const TREE_ID = "test-tree-001";
-const FORAGE_ID = "test-forage-flower-001";
+const MAP_NAMES = [
+  "farm", "town", "cottage", "seed-shop", "blacksmith", "town-house-west",
+  "town-house-north", "town-house", "town-house-southwest", "town-house-east", "foothills", "lakeshore",
+];
+const catalog = new WorldCatalog(await Promise.all(MAP_NAMES.map(async (name) => decodeTiledRegion(
+  JSON.parse(await readFile(new URL("../public/map/" + name + ".tmj", import.meta.url), "utf8")), name,
+))));
+const inventory = new InventorySystem();
+const stamina = new StaminaSystem(inventory);
+const farming = new FarmingSystem(inventory, stamina, catalog);
 
 class MemorySaveRepository {
   game = null;
+  failWrites = false;
   saveCalls = 0;
 
-  /** Reports whether the isolated test slot currently contains a snapshot. */
-  async has() {
-    return this.game !== null;
-  }
+  /** Reports whether the isolated slot exists without opening any database. */
+  async has() { return this.game !== null; }
 
-  /** Returns the isolated test snapshot without touching browser storage. */
-  async load() {
-    return this.game;
-  }
+  /** Uses the real version decoder and returns a defensive in-memory save. */
+  async load() { return this.game ? decodeStoredGame(this.game) : null; }
 
-  /** Captures one already-defensive StoredGame snapshot and counts queue commits. */
-  async save(_ownerKey, _slotId, game) {
-    this.game = game;
+  /** Validates and stores one snapshot, or simulates an atomic storage rejection. */
+  async save(_owner, _slot, game) {
     this.saveCalls += 1;
+    if (this.failWrites) throw new Error("Simulated storage failure");
+    this.game = decodeStoredGame(game);
   }
 
-  /** Deletes only the isolated in-memory slot. */
-  async delete() {
-    this.game = null;
+  /** Deletes only this isolated in-memory fixture. */
+  async delete() { this.game = null; }
+}
+
+/** Creates a consistent fixture at the requested day and time using the formal world. */
+function stateAt(day = 1, minuteOfDay = DAY_START_MINUTE) {
+  const state = createInitialGameState(catalog);
+  state.day = day;
+  state.minuteOfDay = minuteOfDay;
+  state.weather = new WeatherSystem().create(state.worldSeed, day);
+  state.lastSurfaceStoneRefreshDay = day;
+  state.lastSurfaceWeedRefreshDay = day;
+  state.dailyForage = { day, collectedIds: [] };
+  state.dailyRequest = createDailyRequestState(day);
+  return state;
+}
+
+/** Places test feet at an authored passable tile within interaction range of the target. */
+function placeNear(state, regionId, target) {
+  const npcs = activeNpcSpawns(catalog, state.minuteOfDay, { day: state.day, weather: state.weather.current });
+  const offsets = [-32, -16, 0, 16, 32].flatMap((dy) => (
+    [-32, -16, 0, 16, 32].map((dx) => [dx, dy])
+  )).sort((left, right) => Math.hypot(...left) - Math.hypot(...right));
+  for (const [dx, dy] of offsets) {
+    const x = Math.floor((target.x + dx) / 16) * 16 + 8;
+    const y = Math.floor((target.y + dy) / 16) * 16 + 8;
+    if (Math.hypot(x - target.x, y - target.y) <= 42
+      && !catalog.isBlocked(regionId, x, y, 5, 4, npcs.filter((npc) => npc.regionId === regionId))) {
+      state.player = { ...state.player, regionId, x, y };
+      return;
+    }
   }
+  throw new Error("No reachable interaction feet near " + regionId);
 }
 
-/** Builds the smallest catalog containing the real Life Loop interaction contracts. */
-function createLifeLoopCatalog() {
-  return new WorldCatalog([{
-    id: "cottage",
-    mapKey: "test-cottage",
-    displayName: "测试小屋",
-    defaultSpawnId: "entry",
-    isStartRegion: true,
-    widthPixels: 160,
-    heightPixels: 160,
-    collision: {
-      columns: 10,
-      rows: 10,
-      tileWidth: 16,
-      tileHeight: 16,
-      blocked: Array.from({ length: 100 }, () => false),
-    },
-    spawns: {
-      entry: { x: 32, y: 32 },
-      "npc-huaqiang-home": { x: 96, y: 96 },
-      "npc-huaqiang-counter": { x: 64, y: 32 },
-      "npc-huaqiang-shelves": { x: 96, y: 32 },
-    },
-    exits: [],
-    resources: [
-      { entityId: TREE_ID, regionId: "cottage", kind: "tree", x: 64, y: 48 },
-      { entityId: FORAGE_ID, regionId: "cottage", kind: "spring-wildflower", x: 32, y: 32 },
-    ],
-    interactions: [
-      { entityId: BED_ID, regionId: "cottage", kind: "bed", x: 16, y: 16, width: 32, height: 48 },
-      { entityId: FARM_PLOT_ID, regionId: "cottage", kind: "farm-plot", x: 40, y: 32, width: 16, height: 16 },
-    ],
-    npcs: [{
-      entityId: "seed-shop-keeper",
-      regionId: "cottage",
-      npcId: "seed-keeper",
-      dialogueId: "seed-keeper-welcome",
-      interactionType: "shop",
-      x: 64,
-      y: 32,
-    }],
-  }]);
+/** Continues a prepared fixture through the real session and save boundary. */
+async function sessionFor(state) {
+  const repository = new MemorySaveRepository();
+  repository.game = createStoredGame(state, 0);
+  const session = new GameSession(repository, "spring-contract", catalog, "main", () => 0);
+  await session.continueGame();
+  return { repository, session };
 }
 
-/** Advances one session clock in one-second ticks and returns the updated wall-clock timestamp. */
-function advanceSessionClock(session, startNow, gameMinutes, paused = false) {
-  let now = startNow;
-  const ticks = (gameMinutes / 10) * (REAL_MILLISECONDS_PER_TIME_STEP / 1_000);
-  for (let index = 0; index < ticks; index += 1) {
-    now += 1_000;
-    session.tick(now, paused);
+/** Advances eight bounded ticks, collecting visible feedback for one ten-minute clock step. */
+function advanceTenMinutes(session, start = 0) {
+  const feedback = [];
+  for (let index = 1; index <= 8; index += 1) {
+    const result = session.tick(start + index * 1000);
+    if (result) feedback.push(result);
   }
-  return now;
+  return feedback;
 }
 
-/** Advances bounded runtime ticks until one NPC reaches its current schedule target. */
-function advanceNpcToIdle(session, startNow, npcId) {
-  let now = startNow;
-  for (let index = 0; index < 100 && session.activeNpcById(npcId)?.motion !== "idle"; index += 1) {
-    now += 1_000;
-    session.tick(now, false);
+/** Charges and releases one rod, then waits for the first visible bite before hooking. */
+function hookFish(fishing, state) {
+  fishing.setHeld(state, true);
+  fishing.tick(state, 720);
+  fishing.setHeld(state, false);
+  for (let index = 0; index < 45 && !fishing.snapshot().bite; index += 1) fishing.tick(state, 100);
+  assert.equal(fishing.snapshot().bite, true);
+  fishing.setHeld(state, true);
+  assert.equal(fishing.snapshot().phase, "reeling");
+}
+
+/** Follows the one-button safe tension feedback until a deterministic terminal result is reached. */
+function landFish(fishing, state) {
+  let result = null;
+  for (let index = 0; index < 150 && fishing.snapshot().phase === "reeling"; index += 1) {
+    fishing.setHeld(state, fishing.snapshot().tension < 50);
+    result = fishing.tick(state, 50) ?? result;
   }
-  return now;
+  return result;
 }
 
-/** Creates one valid 24-slot v2 inventory with both retired farming item IDs. */
-function createV2Inventory() {
-  const inventory = Array.from({ length: 24 }, () => ({ itemId: "", quantity: 0 }));
-  inventory[0] = { itemId: "alien-seed", quantity: 2 };
-  inventory[1] = { itemId: "alien-crop", quantity: 1 };
-  return inventory;
-}
-
-/** Creates one released v2 envelope covering growing and mature timer-based crops. */
-function createV2StoredGame() {
-  return {
-    version: 2,
-    updatedAt: 123,
-    state: {
-      version: 2,
-      player: { regionId: "cottage", x: 32, y: 32 },
-      inventory: createV2Inventory(),
-      resources: {},
-      farmTiles: {
-        "farm-plot-001": {
-          id: "farm-plot-001",
-          phase: "growing",
-          cropId: "alien-crop",
-          growthStage: 1,
-          watered: true,
-          readyAt: 99_999,
-        },
-        "farm-plot-002": {
-          id: "farm-plot-002",
-          phase: "mature",
-          cropId: "alien-crop",
-          growthStage: 1,
-          watered: true,
-          readyAt: 0,
-        },
-      },
-    },
-  };
-}
-
-/** Reads and decodes one formal TMJ file through the production Tiled boundary. */
-async function decodeFormalMap(name, mapKey) {
-  const raw = JSON.parse(await readFile(new URL(`../public/map/${name}`, import.meta.url), "utf8"));
-  return decodeTiledRegion(raw, mapKey);
-}
-
-test("calendar, spring crop catalog and daily forage use deterministic domain rules", () => {
-  assert.deepEqual(calendarAt(1), { absoluteDay: 1, year: 1, season: "spring", dayOfSeason: 1, weekday: "monday" });
-  assert.deepEqual(calendarAt(28), { absoluteDay: 28, year: 1, season: "spring", dayOfSeason: 28, weekday: "sunday" });
+test("spring catalog and formal Tiled masks remain finite while Day 29 keeps spring content", () => {
   assert.equal(calendarAt(29).season, "summer");
-  assert.equal(calendarAt(112).season, "winter");
-  assert.deepEqual(calendarAt(113), { absoluteDay: 113, year: 2, season: "spring", dayOfSeason: 1, weekday: "monday" });
-  assert.deepEqual(CROP_DEFINITIONS.map(({ cropId, growthDays, seedPrice, sellPrice }) => (
-    [cropId, growthDays, seedPrice, sellPrice]
-  )), [
-    [ITEM_ID.turnip, 3, 20, 35],
-    [ITEM_ID.bokChoy, 5, 45, 80],
-    [ITEM_ID.cauliflower, 8, 80, 170],
-  ]);
-
-  const catalog = createLifeLoopCatalog();
-  const state = createInitialGameState(catalog);
-  const inventory = new InventorySystem();
-  const forage = new ForageSystem(inventory, catalog);
-  const activeDay = Array.from({ length: 28 }, (_, index) => index + 1)
-    .find((day) => forageAppearsOnDay(FORAGE_ID, day));
-  assert.ok(activeDay);
-  state.day = activeDay;
-  state.dailyForage = { day: activeDay, collectedIds: [] };
-  assert.equal(forage.collect(state, FORAGE_ID), "collected");
-  assert.equal(forage.collect(state, FORAGE_ID), "inactive");
-  assert.equal(state.dailyForage.collectedIds.includes(FORAGE_ID), true);
-});
-
-test("released saves migrate to v7 and repeated v7 decode is idempotent", () => {
-  const migrated = decodeStoredGame(createV2StoredGame());
-  assert.equal(migrated.version, 7);
-  assert.equal(migrated.state.version, 7);
-  assert.equal(migrated.state.day, 1);
-  assert.equal(migrated.state.minuteOfDay, DAY_START_MINUTE);
-  assert.equal(migrated.state.gold, 100);
-  assert.equal(migrated.state.inventory[0].itemId, ITEM_ID.turnipSeed);
-  assert.equal(migrated.state.inventory[1].itemId, ITEM_ID.turnip);
-  assert.deepEqual(migrated.state.farmTiles["farm-plot-001"], {
-    id: "farm-plot-001",
-    phase: "growing",
-    cropId: ITEM_ID.turnip,
-    growthDays: 1,
-    watered: true,
-  });
-  assert.equal(migrated.state.farmTiles["farm-plot-002"].growthDays, 3);
-  assert.deepEqual(migrated.state.dailyForage, { day: 1, collectedIds: [] });
-  assert.deepEqual(migrated.state.friendships, {});
-  assert.deepEqual(decodeStoredGame(migrated), migrated);
-  const legacyFarmTiles = Object.fromEntries(Object.entries(migrated.state.farmTiles).map(([id, tile]) => [id, {
-    ...tile,
-    growthStage: tile.growthDays,
-  }]));
-  for (const tile of Object.values(legacyFarmTiles)) delete tile.growthDays;
-  const versionThree = {
-    version: 3,
-    updatedAt: migrated.updatedAt,
-    state: { ...migrated.state, version: 3, farmTiles: legacyFarmTiles },
-  };
-  delete versionThree.state.minuteOfDay;
-  assert.equal(decodeStoredGame(versionThree).state.minuteOfDay, DAY_START_MINUTE);
-  const versionFour = {
-    version: 4,
-    updatedAt: migrated.updatedAt,
-    state: { ...migrated.state, version: 4, farmTiles: legacyFarmTiles },
-  };
-  delete versionFour.state.friendships;
-  assert.deepEqual(decodeStoredGame(versionFour).state.friendships, {});
-  const versionSix = {
-    version: 6,
-    updatedAt: migrated.updatedAt,
-    state: { ...migrated.state, version: 6, farmTiles: legacyFarmTiles },
-  };
-  delete versionSix.state.dailyForage;
-  assert.deepEqual(decodeStoredGame(versionSix).state.dailyForage, { day: 1, collectedIds: [] });
-  assert.throws(
-    () => decodeStoredGame({ ...migrated, state: { ...migrated.state, minuteOfDay: 365 } }),
-    /time is invalid/i,
-  );
-  assert.throws(
-    () => decodeStoredGame({
-      ...migrated,
-      state: {
-        ...migrated.state,
-        friendships: { invalid: { npcId: "invalid", points: 2_501, lastTalkedDay: 0 } },
-      },
-    }),
-    /friendship/i,
-  );
-  assert.throws(() => decodeStoredGame({ ...migrated, version: 8 }), /unsupported/i);
-});
-
-test("friendship records first daily talk, applies light decay and stops decay at max hearts", () => {
-  const state = createInitialGameState(createLifeLoopCatalog());
-  const friendship = new FriendshipSystem();
-  assert.equal(friendship.talk(state, "seed-keeper"), "recorded");
-  assert.equal(state.friendships["seed-keeper"].points, 20);
-  assert.equal(friendship.talk(state, "seed-keeper"), "already-counted");
-  assert.equal(state.friendships["seed-keeper"].points, 20);
-  assert.equal(friendship.settleDay(state), false);
-  state.day += 1;
-  assert.equal(friendship.settleDay(state), true);
-  assert.equal(state.friendships["seed-keeper"].points, 18);
-  state.day += 1;
-  assert.equal(friendship.talk(state, "seed-keeper"), "recorded");
-  assert.equal(state.friendships["seed-keeper"].points, 38);
-  state.friendships["seed-keeper"].points = FRIENDSHIP_MAX_POINTS;
-  state.day += 1;
-  assert.equal(friendship.settleDay(state), false);
-  assert.equal(state.friendships["seed-keeper"].points, FRIENDSHIP_MAX_POINTS);
-});
-
-test("clock advances in ten-minute steps, pauses without catch-up and sleep resets 06:00", async () => {
-  const repository = new MemorySaveRepository();
-  let wallClock = 0;
-  const session = new GameSession(repository, "clock-owner", createLifeLoopCatalog(), "main", () => wallClock);
-  await session.newGame();
-
-  wallClock = advanceSessionClock(session, wallClock, 0);
-  for (let index = 0; index < 7; index += 1) {
-    wallClock += 1_000;
-    session.tick(wallClock, false);
+  assert.deepEqual(playableCalendarAt(29), { absoluteDay: 29, season: "spring", weekday: "monday" });
+  assert.equal(CROP_DEFINITIONS.length, 6);
+  const farm = catalog.requireRegion("farm");
+  assert.equal(farm.tillableTiles.filter(Boolean).length, 492);
+  for (const row of [18, 19]) for (const column of [27, 28, 29, 30]) {
+    assert.equal(catalog.isTillable("farm", column, row), true);
   }
-  assert.equal(session.snapshot().minuteOfDay, DAY_START_MINUTE);
-  wallClock += 60_000;
-  session.tick(wallClock, true);
-  wallClock += 1_000;
-  session.tick(wallClock, false);
-  assert.equal(session.snapshot().minuteOfDay, DAY_START_MINUTE + 10);
-
-  wallClock = advanceSessionClock(
-    session,
-    wallClock,
-    DAY_END_MINUTE - (DAY_START_MINUTE + 10),
-  );
-  assert.equal(session.snapshot().minuteOfDay, DAY_END_MINUTE);
-  wallClock = advanceSessionClock(session, wallClock, 20);
-  assert.equal(session.snapshot().minuteOfDay, DAY_END_MINUTE);
-
-  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
-  assert.equal(session.snapshot().day, 2);
-  assert.equal(session.snapshot().minuteOfDay, DAY_START_MINUTE);
-  await session.flush();
+  assert.equal(catalog.isTillable("farm", -1, 18), false);
+  assert.equal(catalog.isTillable("town", 27, 18), false);
+  assert.deepEqual(stateAt().farmTiles, {});
+  const zone = catalog.requireRegion("lakeshore").fishingZones[0];
+  const state = stateAt(7);
+  placeNear(state, "lakeshore", { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 });
+  assert.ok(Math.hypot(state.player.x - (zone.x + zone.width / 2), state.player.y - (zone.y + zone.height / 2)) <= 52);
+  assert.notEqual(findNpcPath(catalog.requireRegion("lakeshore").collision, catalog.requireSpawn("lakeshore", "town-gate"), state.player), null);
 });
 
-test("one real session completes buy, three watered sleeps, harvest, sale and repeat purchase", async () => {
+test("current v12 saves round-trip while every older development version is unsupported", async () => {
+  const stored = createStoredGame(stateAt(), 123);
+  assert.equal(stored.version, 12);
+  assert.equal(stored.state.version, 12);
+  assert.deepEqual(stored.state.inventory[3], { itemId: ITEM_ID.pickaxe, quantity: 1 });
+  assert.deepEqual(stored.state.inventory[4], { itemId: ITEM_ID.scythe, quantity: 1 });
+  assert.deepEqual(decodeStoredGame(stored), stored);
+  for (const fields of [
+    { stamina: 101 }, { minuteOfDay: 365 }, { wateringCanWater: 21 }, { fishingCastCount: -1 },
+    { lastSurfaceStoneRefreshDay: 2 },
+    { lastSurfaceWeedRefreshDay: 2 },
+    { weather: { day: 2, current: "rain", next: "sunny" } }, { seenEventIds: ["day-7-mirror-teaser"] },
+  ]) assert.throws(() => decodeStoredGame({ ...stored, state: { ...stored.state, ...fields } }));
+  for (let version = 1; version <= 11; version += 1) {
+    assert.throws(() => decodeStoredGame({ ...stored, version, state: { ...stored.state, version } }), /unsupported/i);
+  }
+  assert.throws(() => decodeStoredGame({ ...stored, version: 13 }), /unsupported/i);
+  const unknownCrop = { ...createTilledFarmTile(27, 18), cropId: "unknown-crop" };
+  assert.throws(() => decodeStoredGame({ ...stored, state: { ...stored.state, farmTiles: { [unknownCrop.id]: unknownCrop } } }), /farm/i);
   const repository = new MemorySaveRepository();
-  let wallClock = 1_000;
-  const session = new GameSession(repository, "test-owner", createLifeLoopCatalog(), "main", () => wallClock);
-  let state = await session.newGame();
-  assert.equal(state.day, 1);
-  assert.equal(state.minuteOfDay, DAY_START_MINUTE);
-  assert.equal(state.gold, 100);
-  assert.equal(state.friendships["seed-keeper"].points, 0);
-  assert.equal(session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" }), null);
-  assert.equal(session.snapshot().friendships["seed-keeper"].points, 0);
-  assert.deepEqual(state.inventory.slice(0, 3), [
-    { itemId: ITEM_ID.hoe, quantity: 1 },
-    { itemId: ITEM_ID.wateringCan, quantity: 1 },
-    { itemId: ITEM_ID.axe, quantity: 1 },
-  ]);
-  assert.equal(state.inventory.some((slot) => slot.itemId === ITEM_ID.turnipSeed), false);
-
-  wallClock = advanceSessionClock(session, wallClock, 180);
-  assert.equal(session.snapshot().minuteOfDay, 9 * 60);
-  const walkingKeeper = session.activeNpcById("seed-keeper");
-  assert.equal(walkingKeeper?.motion, "walking");
-  assert.equal(walkingKeeper?.interactionType, "dialogue");
-  assert.equal(session.dispatch({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 })?.code, "not-at-shop");
-  const pausedKeeper = structuredClone(walkingKeeper);
-  wallClock += 1_000;
-  session.tick(wallClock, true);
-  assert.deepEqual(session.activeNpcById("seed-keeper"), pausedKeeper);
-  wallClock = advanceNpcToIdle(session, wallClock, "seed-keeper");
-  assert.equal(session.activeNpcById("seed-keeper")?.interactionType, "shop");
-  assert.equal(session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" }), null);
-  assert.equal(session.snapshot().friendships["seed-keeper"].points, 20);
-  assert.equal(session.dispatch({ type: "talk-to-npc", npcId: "seed-keeper" }), null);
-  assert.equal(session.snapshot().friendships["seed-keeper"].points, 20);
-  assert.equal(session.dispatch({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 })?.code, "bought");
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID })?.code, "tilled");
-  const tilled = session.snapshot();
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: FARM_PLOT_ID }), null);
-  assert.deepEqual(session.snapshot(), tilled);
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.turnipSeed, targetId: FARM_PLOT_ID })?.code, "planted");
-  const planted = session.snapshot();
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID }), null);
-  assert.deepEqual(session.snapshot(), planted);
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
-  wallClock += 1_000;
-  session.tick(wallClock, true);
-  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthDays, 0);
-  await session.flush();
-  const savesBeforeSleep = repository.saveCalls;
-
-  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
-  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "already-saving");
-  state = session.snapshot();
-  assert.equal(state.day, 2);
-  assert.equal(state.minuteOfDay, DAY_START_MINUTE);
-  assert.equal(state.farmTiles[FARM_PLOT_ID].growthDays, 1);
-  assert.equal(state.farmTiles[FARM_PLOT_ID].watered, false);
-  assert.equal(state.friendships["seed-keeper"].points, 20);
-  await session.flush();
-  assert.equal(repository.saveCalls, savesBeforeSleep + 1);
-
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
-  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
-  await session.flush();
-  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].growthDays, 2);
-  assert.equal(session.snapshot().friendships["seed-keeper"].points, 18);
-
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID })?.code, "watered");
-  assert.equal(session.dispatch({ type: "sleep", bedId: BED_ID })?.code, "slept");
-  await session.flush();
-  state = session.snapshot();
-  assert.equal(state.day, 4);
-  assert.equal(state.farmTiles[FARM_PLOT_ID].phase, "mature");
-  const mature = structuredClone(state);
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: FARM_PLOT_ID }), null);
-  assert.deepEqual(session.snapshot(), mature);
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: "", targetId: FARM_PLOT_ID })?.code, "harvested");
-  wallClock = advanceSessionClock(session, wallClock, 180);
-  wallClock = advanceNpcToIdle(session, wallClock, "seed-keeper");
-  assert.equal(session.dispatch({ type: "sell-item", itemId: ITEM_ID.turnip, quantity: 1 })?.code, "sold");
-  assert.equal(session.snapshot().gold, 115);
-  assert.equal(session.dispatch({ type: "buy-item", itemId: ITEM_ID.turnipSeed, quantity: 1 })?.code, "bought");
-  assert.equal(session.snapshot().gold, 95);
-  await session.flush();
-  assert.ok(repository.saveCalls >= 10);
-});
-
-test("selected item and target phase own every tree and farm mutation", async () => {
-  const repository = new MemorySaveRepository();
-  const session = new GameSession(repository, "tool-owner", createLifeLoopCatalog(), "main", () => 2_000);
+  repository.game = { ...stored, version: 11, state: { ...stored.state, version: 11 } };
+  const session = new GameSession(repository, "current-reset", catalog, "main", () => 0);
+  await assert.rejects(session.continueGame(), /unsupported/i);
   await session.newGame();
-
-  const initial = session.snapshot();
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: TREE_ID }), null);
-  assert.deepEqual(session.snapshot(), initial);
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.wateringCan, targetId: FARM_PLOT_ID }), null);
-  assert.deepEqual(session.snapshot(), initial);
-
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: TREE_ID })?.code, "success");
-  assert.equal(session.snapshot().resources[TREE_ID].available, false);
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: "", targetId: FARM_PLOT_ID }), null);
-  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].phase, "untilled");
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.hoe, targetId: FARM_PLOT_ID })?.code, "tilled");
-  assert.equal(session.dispatch({ type: "use-item-on-target", itemId: ITEM_ID.axe, targetId: FARM_PLOT_ID }), null);
-  assert.equal(session.snapshot().farmTiles[FARM_PLOT_ID].phase, "tilled");
+  assert.equal(session.snapshot().day, 1);
+  assert.equal(repository.game.version, 12);
 });
 
-test("shop failure paths leave gold and inventory unchanged", () => {
-  const catalog = createLifeLoopCatalog();
-  const inventory = new InventorySystem();
-  const shop = new ShopSystem(inventory);
-  const state = createInitialGameState(catalog);
-  state.player.x = 64;
-  state.player.y = 32;
-  assert.equal(shop.buySeed(state, activeNpcSpawns(catalog, state.minuteOfDay), ITEM_ID.turnipSeed), "not-at-shop");
-  state.minuteOfDay = 9 * 60;
-  const activeNpcs = activeNpcSpawns(catalog, state.minuteOfDay);
-  const baseline = structuredClone(state);
-  assert.equal(shop.sellItem(state, activeNpcs, ITEM_ID.turnip), "missing-item");
-  assert.deepEqual(state, baseline);
+test("free tilling, actual watered-cell costs and replenishment are atomic", () => {
+  const state = stateAt();
+  inventory.add(state.inventory, ITEM_ID.turnipSeed, 3);
+  for (const column of [27, 28, 29]) {
+    state.player = { ...state.player, regionId: "farm", x: column * 16 + 8, y: 18 * 16 + 8 };
+    assert.equal(farming.use(state, column, 18, ITEM_ID.hoe), "tilled");
+    assert.equal(farming.use(state, column, 18, ITEM_ID.turnipSeed), "planted");
+  }
+  state.player.x = 27 * 16 + 8;
+  state.wateringCanLevel = 2;
+  state.wateringCanWater = 2;
+  state.stamina = 1;
+  assert.equal(farming.use(state, 27, 18, ITEM_ID.wateringCan, "right"), "watered");
+  assert.deepEqual([27, 28, 29].map((column) => state.farmTiles[farmTileId(column, 18)].watered), [true, false, false]);
+  assert.deepEqual([state.stamina, state.wateringCanWater], [0, 1]);
+  const before = structuredClone(state);
+  assert.equal(farming.use(state, 28, 18, ITEM_ID.wateringCan), "insufficient-stamina");
+  assert.deepEqual(state, before);
+  state.stamina = 20;
+  assert.equal(farming.use(state, 27, 18, ITEM_ID.wateringCan, "right"), "watered");
+  assert.equal(state.wateringCanWater, 0);
+  assert.equal(farming.use(state, 29, 18, ITEM_ID.hoe), "too-far");
+  const region = catalog.requireRegion("farm");
+  const waterIndex = region.waterTiles.findIndex((water, index) => {
+    if (!water) return false;
+    const column = index % region.collision.columns;
+    const row = Math.floor(index / region.collision.columns);
+    return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => (
+      !catalog.isBlocked("farm", (column + dx) * 16 + 8, (row + dy) * 16 + 8, 5, 4, [])
+    ));
+  });
+  assert.ok(waterIndex >= 0);
+  const column = waterIndex % region.collision.columns;
+  const row = Math.floor(waterIndex / region.collision.columns);
+  placeNear(state, "farm", { x: column * 16 + 8, y: row * 16 + 8 });
+  assert.equal(farming.refill(state, column, row), "refilled");
+  assert.equal(state.wateringCanWater, 40);
+  assert.equal(state.stamina, 19);
+});
 
+test("rain waters prepared soil, pea regrows and potato yield cannot be rerolled by delaying harvest", () => {
+  const state = stateAt(12);
+  state.weather.current = "rain";
+  state.player = { ...state.player, regionId: "farm", x: 440, y: 296 };
+  inventory.add(state.inventory, ITEM_ID.greenPeaSeed, 1);
+  assert.equal(farming.use(state, 27, 18, ITEM_ID.hoe), "tilled");
+  assert.equal(state.farmTiles["farm:27:18"].watered, true);
+  assert.equal(farming.use(state, 27, 18, ITEM_ID.wateringCan), "waiting");
+  const water = state.wateringCanWater;
+  const energy = state.stamina;
+  farming.applyRain(state);
+  assert.equal(farming.use(state, 27, 18, ITEM_ID.greenPeaSeed), "planted");
+  const pea = state.farmTiles["farm:27:18"];
+  assert.equal(pea.watered, true);
+  assert.deepEqual([state.wateringCanWater, state.stamina], [water, energy]);
+  pea.growthDays = 7; pea.phase = "mature";
+  assert.equal(farming.use(state, 27, 18, ""), "harvested");
+  assert.deepEqual([pea.phase, pea.growthDays, pea.harvestCount], ["growing", 4, 1]);
+  for (let index = 0; index < 3; index += 1) { farming.applyRain(state); farming.settleDay(state); }
+  assert.equal(pea.phase, "mature");
+  const potato = { ...createTilledFarmTile(28, 18), phase: "mature", cropId: ITEM_ID.springPotato, growthDays: 5, plantedDay: 7 };
+  state.farmTiles[potato.id] = potato;
+  const delayed = structuredClone(state);
+  delayed.day += 1;
+  assert.equal(farming.use(state, 28, 18, ""), "harvested");
+  assert.equal(farming.use(delayed, 28, 18, ""), "harvested");
+  const quantity = inventory.quantity(state.inventory, ITEM_ID.springPotato);
+  assert.ok(quantity >= 1 && quantity <= 3);
+  assert.equal(inventory.quantity(delayed.inventory, ITEM_ID.springPotato), quantity);
+  assert.equal(decodeStoredGame(createStoredGame(state, 0)).state.farmTiles[potato.id].phase, "tilled");
+});
+
+test("trees leave harvestable stumps, outdoor trees regrow after seven days and wind branches respect farmland", () => {
+  const state = stateAt(4);
+  const gathering = new GatheringSystem(inventory, catalog, stamina);
+  for (const regionId of ["farm", "foothills"]) {
+    const tree = catalog.requireRegion(regionId).resources.find((resource) => resource.kind === "tree");
+    placeNear(state, regionId, tree);
+    assert.equal(gathering.use(state, tree.entityId, ITEM_ID.axe), "success");
+    assert.equal(state.resources[tree.entityId].phase, "stump");
+    assert.equal(gathering.use(state, tree.entityId, ITEM_ID.axe), "stump-cleared");
+    assert.equal(state.resources[tree.entityId].regrowOnDay, regionId === "farm" ? null : 11);
+  }
+  assert.equal(inventory.quantity(state.inventory, ITEM_ID.wood), 8);
+  state.day = 10;
+  assert.equal(gathering.settleDay(state), 0);
+  state.day = 11;
+  assert.equal(gathering.settleDay(state), 1);
+  state.dailyForage = { day: 11, collectedIds: [] };
+  state.weather.current = "wind";
+  const forage = new ForageSystem(inventory, catalog);
+  const branches = forage.activeSpawns(state, "farm").filter((spawn) => spawn.kind === "fallen-branch");
+  assert.equal(branches.length, 3);
+  const branch = branches[0];
+  placeNear(state, "farm", branch);
+  assert.equal(forage.collect(state, branch.entityId), "collected");
+  assert.equal(forage.collect(state, branch.entityId), "inactive");
+  const covered = branches[1];
+  const tile = createTilledFarmTile(Math.floor(covered.x / 16), Math.floor(covered.y / 16));
+  state.farmTiles[tile.id] = tile;
+  assert.equal(forage.activeSpawns(state, "farm").some((spawn) => spawn.entityId === covered.entityId), false);
+  assert.equal(forage.activeSpawns(stateAt(15), "foothills").some((spawn) => spawn.kind === "bamboo-shoot"), false);
+  assert.ok(Array.from({ length: 11 }, (_, offset) => stateAt(offset + 4)).some((day) => (
+    forage.activeSpawns(day, "foothills").some((spawn) => spawn.kind === "bamboo-shoot")
+  )));
+});
+
+test("surface stones mine atomically and only Foothills restores at most two once per new day", async () => {
+  const state = stateAt(4);
+  const mining = new MiningSystem(inventory, stamina, catalog);
+  const stones = catalog.allRegions().flatMap((region) => region.resources.filter((resource) => resource.kind === "stone"));
+  assert.deepEqual(
+    Object.fromEntries(["farm", "foothills", "lakeshore"].map((regionId) => [
+      regionId,
+      stones.filter((stone) => stone.regionId === regionId).length,
+    ])),
+    { farm: 1, foothills: 4, lakeshore: 2 },
+  );
+
+  const first = stones[0];
+  placeNear(state, first.regionId, first);
+  const wrongTool = structuredClone(state);
+  assert.equal(mining.use(state, first.entityId, ITEM_ID.axe), "wrong-tool");
+  assert.deepEqual(state, wrongTool);
+
+  for (const stone of stones) {
+    placeNear(state, stone.regionId, stone);
+    assert.equal(mining.use(state, stone.entityId, ITEM_ID.pickaxe), "mined");
+  }
+  assert.equal(inventory.quantity(state.inventory, ITEM_ID.stone), 7);
+  assert.equal(sellPriceForItem(ITEM_ID.stone), 2);
+  assert.equal(state.stamina, 86);
+  assert.equal(stones.every((stone) => state.resources[stone.entityId].phase === "cleared"), true);
+  assert.deepEqual(decodeStoredGame(createStoredGame(state, 0)).state.resources, state.resources);
+  assert.equal(mining.settleDay(state), 0);
+
+  state.day = 5;
+  assert.equal(mining.settleDay(state), 2);
+  assert.equal(mining.settleDay(state), 0);
+  assert.equal(stones.filter((stone) => stone.regionId === "foothills" && state.resources[stone.entityId].phase === "standing").length, 2);
+  assert.equal(stones.filter((stone) => stone.regionId !== "foothills" && state.resources[stone.entityId].phase === "standing").length, 0);
+
+  const full = stateAt();
+  full.inventory = full.inventory.map((_, index) => index === 0
+    ? { itemId: ITEM_ID.pickaxe, quantity: 1 }
+    : { itemId: ITEM_ID.wood, quantity: 99 });
+  placeNear(full, first.regionId, first);
+  const fullBefore = structuredClone(full);
+  assert.equal(mining.use(full, first.entityId, ITEM_ID.pickaxe), "inventory-full");
+  assert.deepEqual(full, fullBefore);
+
+  const tired = stateAt();
+  tired.stamina = 1;
+  placeNear(tired, first.regionId, first);
+  const tiredBefore = structuredClone(tired);
+  assert.equal(mining.use(tired, first.entityId, ITEM_ID.pickaxe), "insufficient-stamina");
+  assert.deepEqual(tired, tiredBefore);
+
+  const sessionState = stateAt();
+  placeNear(sessionState, first.regionId, first);
+  const { repository, session } = await sessionFor(sessionState);
+  const savesBefore = repository.saveCalls;
+  assert.equal(session.dispatch({
+    type: "use-item-on-target",
+    itemId: ITEM_ID.pickaxe,
+    targetId: first.entityId,
+  }).code, "mined");
+  await session.flush();
+  assert.equal(repository.saveCalls, savesBefore + 1);
+  assert.equal(session.snapshot().resources[first.entityId].phase, "cleared");
+  assert.equal(inventory.quantity(session.snapshot().inventory, ITEM_ID.stone), 1);
+});
+
+test("surface weeds cut in a facing arc with fixed fiber and restore by bounded region budgets", async () => {
+  const state = stateAt(4);
+  const weedCutting = new WeedCuttingSystem(inventory, catalog);
+  const weeds = catalog.allRegions().flatMap((region) => region.resources.filter((resource) => resource.kind === "weed"));
+  assert.deepEqual(
+    Object.fromEntries(["farm", "foothills", "lakeshore"].map((regionId) => [
+      regionId,
+      weeds.filter((weed) => weed.regionId === regionId).length,
+    ])),
+    { farm: 6, foothills: 5, lakeshore: 4 },
+  );
+  assert.equal(sellPriceForItem(ITEM_ID.fiber), 1);
+
+  state.player = { ...state.player, regionId: "farm", x: 464, y: 304 };
+  const topFarmWeeds = weeds.filter((weed) => weed.regionId === "farm" && weed.y === 272);
+  const expectedFiber = topFarmWeeds.filter((weed) => (
+    stableHash(state.worldSeed, state.day, `weed-fiber:${weed.entityId}`) % 2 === 0
+  )).length;
+  const staminaBefore = state.stamina;
+  assert.deepEqual(
+    weedCutting.use(state, "farm-weed-002", ITEM_ID.scythe, "up"),
+    { code: "cut", cutCount: 3, fiberCount: expectedFiber },
+  );
+  assert.equal(state.stamina, staminaBefore);
+  assert.equal(inventory.quantity(state.inventory, ITEM_ID.fiber), expectedFiber);
+  assert.equal(topFarmWeeds.every((weed) => state.resources[weed.entityId].phase === "cleared"), true);
+  assert.equal(weeds.filter((weed) => weed.regionId === "farm" && weed.y === 336)
+    .every((weed) => state.resources[weed.entityId].phase === "standing"), true);
+
+  const wrongDirection = stateAt(4);
+  wrongDirection.player = { ...wrongDirection.player, regionId: "farm", x: 464, y: 304 };
+  const directionBefore = structuredClone(wrongDirection);
+  assert.equal(
+    weedCutting.use(wrongDirection, "farm-weed-004", ITEM_ID.scythe, "up").code,
+    "wrong-direction",
+  );
+  assert.deepEqual(wrongDirection, directionBefore);
+  assert.equal(weedCutting.use(wrongDirection, "farm-weed-002", ITEM_ID.axe, "up").code, "wrong-tool");
+  assert.deepEqual(wrongDirection, directionBefore);
+
+  const fullDay = Array.from({ length: 28 }, (_, index) => index + 1).find((day) => topFarmWeeds.some((weed) => (
+    stableHash(state.worldSeed, day, `weed-fiber:${weed.entityId}`) % 2 === 0
+  )));
+  assert.ok(fullDay);
+  const full = stateAt(fullDay);
+  full.player = { ...full.player, regionId: "farm", x: 464, y: 304 };
+  full.inventory = full.inventory.map((_, index) => index === 4
+    ? { itemId: ITEM_ID.scythe, quantity: 1 }
+    : { itemId: ITEM_ID.wood, quantity: 99 });
+  const fullBefore = structuredClone(full);
+  assert.equal(weedCutting.use(full, "farm-weed-002", ITEM_ID.scythe, "up").code, "inventory-full");
+  assert.deepEqual(full, fullBefore);
+
+  const refresh = stateAt(4);
+  for (const weed of weeds) refresh.resources[weed.entityId].phase = "cleared";
+  const covered = weeds.find((weed) => weed.entityId === "farm-weed-001");
+  const coveredTile = createTilledFarmTile(Math.floor(covered.x / 16), Math.floor(covered.y / 16));
+  refresh.farmTiles[coveredTile.id] = coveredTile;
+  refresh.day = 5;
+  assert.equal(weedCutting.settleDay(refresh), 4);
+  assert.equal(weedCutting.settleDay(refresh), 0);
+  assert.deepEqual(
+    Object.fromEntries(["farm", "foothills", "lakeshore"].map((regionId) => [
+      regionId,
+      weeds.filter((weed) => weed.regionId === regionId && refresh.resources[weed.entityId].phase === "standing").length,
+    ])),
+    { farm: 1, foothills: 2, lakeshore: 1 },
+  );
+  assert.equal(refresh.resources[covered.entityId].phase, "cleared");
+  const invalid = stateAt(4);
+  const invalidWeed = { ...invalid.resources[covered.entityId], phase: "stump" };
+  assert.throws(() => decodeStoredGame(createStoredGame({
+    ...invalid,
+    resources: { ...invalid.resources, [covered.entityId]: invalidWeed },
+  }, 0)), /resource state/i);
+
+  const sessionState = stateAt(4);
+  sessionState.player = { ...sessionState.player, regionId: "farm", x: 464, y: 304 };
+  const { repository, session } = await sessionFor(sessionState);
+  const savesBefore = repository.saveCalls;
+  assert.equal(session.dispatch({
+    type: "use-item-on-target",
+    itemId: ITEM_ID.scythe,
+    targetId: "farm-weed-002",
+    facing: "up",
+  }).code, "cut");
+  await session.flush();
+  assert.equal(repository.saveCalls, savesBefore + 1);
+  assert.equal(topFarmWeeds.every((weed) => session.snapshot().resources[weed.entityId].phase === "cleared"), true);
+});
+
+test("midnight warns once, hidden time is discarded and 02:00 settlement retries the same candidate", async () => {
+  const state = stateAt(6, 1430);
+  state.gold = 15000;
+  const { repository, session } = await sessionFor(state);
+  const phases = [];
+  session.subscribeDaySettlement((snapshot) => phases.push(snapshot.phase));
+  assert.equal(advanceTenMinutes(session).filter((result) => result.code === "late-night-warning").length, 1);
+  assert.equal(session.snapshot().lateWarningDay, 6);
+  await session.flush();
+  assert.equal(formatGameMinute(session.snapshot().minuteOfDay), "00:00");
+  const reload = new GameSession(repository, "spring-contract", catalog, "main", () => 0);
+  await reload.continueGame();
+  assert.equal(advanceTenMinutes(reload).some((result) => result.code === "late-night-warning"), false);
+  await reload.flush();
+  session.tick(100000, true, true);
+  assert.equal(session.snapshot().minuteOfDay, 1440);
+  repository.failWrites = true;
+  for (let step = 0; step < 12; step += 1) advanceTenMinutes(session, 100000 + step * 8000);
+  assert.equal(session.snapshot().minuteOfDay, DAY_END_MINUTE);
+  assert.equal(session.snapshot().day, 6);
+  assert.equal(session.snapshot().gold, 15000);
+  await assert.rejects(session.flush(), /save failed/i);
+  assert.equal(phases.at(-1), "failed");
+  assert.equal(session.dispatch({ type: "eat-item", itemId: ITEM_ID.turnip }).code, "day-settlement-pending");
+  repository.failWrites = false;
+  assert.equal(session.dispatch({ type: "retry-day-settlement" }).code, "day-saving");
+  await session.flush();
+  assert.deepEqual([session.snapshot().day, session.snapshot().gold, session.snapshot().stamina], [7, 14000, 50]);
+  assert.equal(session.snapshot().player.regionId, "cottage");
+  assert.equal(phases.at(-1), "idle");
+  session.tick(1);
+  assert.equal(session.snapshot().day, 7);
+});
+
+test("Cottage fainting is free and normal sleep commits Day 28→29 only after persistence", async () => {
+  const cottage = stateAt(28, 1550);
+  const bed = catalog.interaction("cottage-bed");
+  placeNear(cottage, "cottage", { x: bed.x + bed.width / 2, y: bed.y + bed.height / 2 });
+  const { session } = await sessionFor(cottage);
+  assert.equal(session.dispatch({ type: "sleep", bedId: bed.entityId }).code, "day-saving");
+  assert.equal(session.snapshot().day, 28);
+  await session.flush();
+  assert.deepEqual([session.snapshot().day, session.snapshot().minuteOfDay, session.snapshot().stamina], [29, 360, 63]);
+  assert.equal(playableCalendarAt(session.snapshot().day).season, "spring");
+  const faintState = stateAt(8, 1560);
+  faintState.player.regionId = "cottage";
+  Object.assign(faintState.player, catalog.requireDefaultSpawn("cottage"));
+  const { session: faint } = await sessionFor(faintState);
+  faint.tick(1);
+  await faint.flush();
+  assert.deepEqual([faint.snapshot().day, faint.snapshot().gold, faint.snapshot().stamina], [9, 100, 50]);
+  assert.deepEqual([staminaAfterSleep(1440), staminaAfterSleep(1500), staminaAfterSleep(1560)], [100, 75, 50]);
+});
+
+test("gifts are per resident, one daily and two weekly with a Sunday reset and no global limit", () => {
+  const state = stateAt();
+  const gifts = new GiftSystem(inventory);
+  inventory.add(state.inventory, ITEM_ID.springWildflower, 12);
+  const npcs = activeNpcSpawns(catalog, 600, { day: 1, weather: "sunny" });
+  for (const npc of npcs) {
+    state.player = { ...state.player, regionId: npc.regionId, x: npc.x, y: npc.y };
+    assert.equal(gifts.give(state, npcs, npc.npcId, ITEM_ID.springWildflower).kind, "given");
+  }
+  const npc = npcs.find((candidate) => candidate.npcId === "seed-keeper");
+  state.player = { ...state.player, regionId: npc.regionId, x: npc.x, y: npc.y };
+  const before = inventory.quantity(state.inventory, ITEM_ID.springWildflower);
+  assert.equal(gifts.give(state, npcs, npc.npcId, ITEM_ID.springWildflower).kind, "daily-limit");
+  assert.equal(inventory.quantity(state.inventory, ITEM_ID.springWildflower), before);
+  state.day = 2;
+  assert.equal(gifts.give(state, npcs, npc.npcId, ITEM_ID.springWildflower).kind, "given");
+  state.day = 3;
+  assert.equal(gifts.give(state, npcs, npc.npcId, ITEM_ID.springWildflower).kind, "weekly-limit");
+  state.day = 7;
+  assert.notEqual(giftWeekIndex(6), giftWeekIndex(7));
+  assert.equal(gifts.give(state, npcs, npc.npcId, ITEM_ID.springWildflower).kind, "given");
+  assert.equal(gifts.give(state, npcs, npc.npcId, ITEM_ID.hoe).kind, "not-giftable");
+});
+
+test("fishing is one-button, time/weather/distance filtered and commits catch or full-bag failure once", () => {
+  const state = stateAt(7, 600);
+  const zone = catalog.requireRegion("lakeshore").fishingZones[0];
+  placeNear(state, "lakeshore", { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 });
+  inventory.add(state.inventory, ITEM_ID.fishingRod, 1);
+  const fishing = new FishingSystem(inventory, stamina, catalog);
+  assert.equal(fishing.start(state, zone.id), "started");
+  assert.deepEqual([state.stamina, state.fishingCastCount], [94, 1]);
+  hookFish(fishing, state);
+  const caught = landFish(fishing, state);
+  assert.equal(caught.kind, "caught");
+  assert.equal(inventory.quantity(state.inventory, caught.itemId), 1);
+  assert.equal(fishing.tick(state, 1000), null);
+  fishing.reset();
+  assert.equal(fishing.start(state, zone.id), "started");
+  hookFish(fishing, state);
   state.inventory = state.inventory.map(() => ({ itemId: ITEM_ID.wood, quantity: 99 }));
-  const fullInventory = structuredClone(state.inventory);
-  assert.equal(shop.buySeed(state, activeNpcs, ITEM_ID.turnipSeed), "inventory-full");
-  assert.equal(state.gold, 100);
-  assert.deepEqual(state.inventory, fullInventory);
-
-  state.inventory = structuredClone(baseline.inventory);
-  state.gold = 0;
-  const emptyGoldInventory = structuredClone(state.inventory);
-  assert.equal(shop.buySeed(state, activeNpcs, ITEM_ID.turnipSeed), "insufficient-gold");
-  assert.equal(state.gold, 0);
-  assert.deepEqual(state.inventory, emptyGoldInventory);
+  assert.equal(landFish(fishing, state).kind, "inventory-full");
+  assert.equal(fishing.snapshot().phase, "inventory-full");
+  assert.equal(fishing.start(state, zone.id), "already-fishing");
+  fishing.reset();
+  state.inventory[0] = { itemId: ITEM_ID.fishingRod, quantity: 1 };
+  assert.equal(fishing.start(state, zone.id), "started");
+  fishing.setHeld(state, true); fishing.tick(state, 600); fishing.setHeld(state, false);
+  for (let index = 0; index < 5; index += 1) fishing.tick(state, 1000);
+  assert.equal(fishing.snapshot().failureReason, "missed-bite");
+  assert.equal(fishing.snapshot().resultItemId, null);
+  assert.equal(eligibleFish(600, "rain", 100).some((fish) => fish.itemId === ITEM_ID.rainLoach), true);
+  assert.equal(eligibleFish(600, "sunny", 100).some((fish) => fish.itemId === ITEM_ID.rainLoach), false);
+  assert.equal(eligibleFish(1080, "wind", 100).some((fish) => fish.itemId === ITEM_ID.windDace), true);
+  assert.equal(eligibleFish(1080, "sunny", 74).some((fish) => fish.itemId === ITEM_ID.jadeBream), false);
+  assert.equal(eligibleFish(1080, "sunny", 100).some((fish) => fish.itemId === ITEM_ID.duskPerch), true);
+  assert.equal(fishingPausesClock("casting"), false);
+  assert.equal(fishingPausesClock("reeling"), true);
 });
 
-test("formal world catalog decodes with the single stable Cottage bed interaction", async () => {
-  const regions = await Promise.all([
-    decodeFormalMap("farm.tmj", "region-farm"),
-    decodeFormalMap("town.tmj", "region-town"),
-    decodeFormalMap("cottage.tmj", "region-cottage"),
-    decodeFormalMap("seed-shop.tmj", "region-seed-shop"),
-    decodeFormalMap("blacksmith.tmj", "region-blacksmith"),
-    decodeFormalMap("town-house-west.tmj", "region-town-house-west"),
-    decodeFormalMap("town-house-north.tmj", "region-town-house-north"),
-    decodeFormalMap("town-house.tmj", "region-town-house"),
-    decodeFormalMap("town-house-southwest.tmj", "region-town-house-southwest"),
-    decodeFormalMap("town-house-east.tmj", "region-town-house-east"),
-    decodeFormalMap("foothills.tmj", "region-foothills"),
-    decodeFormalMap("lakeshore.tmj", "region-lakeshore"),
-  ]);
-  const catalog = new WorldCatalog(regions);
-  const cottage = catalog.requireRegion("cottage");
-  const beds = cottage.interactions.filter((interaction) => interaction.kind === "bed");
-  assert.equal(beds.length, 1);
-  assert.equal(beds[0].entityId, BED_ID);
+test("fishing projection advances without save spam, freezes when hidden and refresh cancels only runtime", async () => {
+  const state = stateAt(7, 600);
+  inventory.add(state.inventory, ITEM_ID.fishingRod, 1);
+  const zone = catalog.requireRegion("lakeshore").fishingZones[0];
+  placeNear(state, "lakeshore", { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 });
+  const { repository, session } = await sessionFor(state);
+  const projections = [];
+  session.subscribeFishing((snapshot) => projections.push(snapshot));
+  session.dispatch({ type: "start-fishing", zoneId: zone.id });
+  await session.flush();
+  const writes = repository.saveCalls;
+  session.dispatch({ type: "set-fishing-input", held: true });
+  session.tick(300);
+  assert.ok(projections.at(-1).castPower > 0);
+  const power = projections.at(-1).castPower;
+  session.tick(100000, true, true);
+  assert.equal(projections.at(-1).castPower, power);
+  assert.equal(repository.saveCalls, writes);
+  const reload = new GameSession(repository, "spring-contract", catalog, "main", () => 0);
+  let reloadedFishing;
+  reload.subscribeFishing((snapshot) => { reloadedFishing = snapshot; });
+  await reload.continueGame();
+  assert.equal(reloadedFishing.phase, "idle");
+  assert.equal(reload.snapshot().stamina, 94);
+});
+
+test("a caught fish exposes durable-save failure and retries without granting a second fish", async () => {
+  const state = stateAt(7, 600);
+  inventory.add(state.inventory, ITEM_ID.fishingRod, 1);
+  const zone = catalog.requireRegion("lakeshore").fishingZones[0];
+  placeNear(state, "lakeshore", { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 });
+  const { repository, session } = await sessionFor(state);
+  let fishing;
+  session.subscribeFishing((snapshot) => { fishing = snapshot; });
+  session.dispatch({ type: "start-fishing", zoneId: zone.id });
+  await session.flush();
+  session.dispatch({ type: "set-fishing-input", held: true });
+  let now = 500;
+  session.tick(now);
+  session.dispatch({ type: "set-fishing-input", held: false });
+  for (let index = 0; index < 45 && !fishing.bite; index += 1) { now += 100; session.tick(now); }
+  assert.equal(fishing.bite, true);
+  session.dispatch({ type: "set-fishing-input", held: true });
+  repository.failWrites = true;
+  for (let index = 0; index < 150 && fishing.phase === "reeling"; index += 1) {
+    session.dispatch({ type: "set-fishing-input", held: fishing.tension < 50 });
+    now += 50;
+    session.tick(now, true);
+  }
+  assert.equal(fishing.phase, "caught");
+  await assert.rejects(session.flush(), /save failed/i);
+  assert.equal(fishing.saveStatus, "failed");
+  assert.equal(session.dispatch({ type: "dismiss-fishing" }).code, "fishing-save-pending");
+  const itemId = fishing.resultItemId;
+  assert.equal(inventory.quantity(session.snapshot().inventory, itemId), 1);
+  repository.failWrites = false;
+  session.dispatch({ type: "retry-fishing-save" });
+  await session.flush();
+  assert.equal(fishing.saveStatus, "saved");
+  session.dispatch({ type: "dismiss-fishing" });
+  assert.equal(fishing.phase, "idle");
+  assert.equal(inventory.quantity(repository.game.state.inventory, itemId), 1);
+  assert.equal(session.snapshot().stamina, 94);
+});
+
+test("weather/rest schedules share shop and upgrade availability; Day 7 rod and fish requests are usable", async () => {
+  assert.equal(weatherAt(123, 1), "sunny");
+  assert.equal(weatherAt(123, 3), "rain");
+  assert.equal(weatherAt(123, 19), weatherAt(123, 19));
+  const rain = activeNpcSpawns(catalog, 600, { day: 3, weather: "rain" });
+  const blacksmith = rain.find((npc) => npc.npcId === "town-blacksmith");
+  assert.equal(blacksmith.regionId, "blacksmith");
+  assert.equal(blacksmith.routine, "rain");
+  const rested = activeNpcById(catalog, "seed-keeper", 600, { day: 3, weather: "rain" });
+  assert.equal(rested.routine, "rest");
+  assert.equal(rested.interactionType, "dialogue");
+  const state = stateAt(3, 600);
+  placeNear(state, blacksmith.regionId, blacksmith);
+  state.gold = 900;
+  inventory.add(state.inventory, ITEM_ID.wood, 15);
+  const upgrades = new UpgradeSystem(inventory);
+  assert.equal(upgrades.upgradeWateringCan(state, rain), "upgraded-watering-can");
+  assert.deepEqual([state.wateringCanLevel, state.wateringCanWater, state.gold], [2, 40, 0]);
+  const sunday = activeNpcSpawns(catalog, 600, { day: 7, weather: "sunny" });
+  state.day = 7; state.wateringCanLevel = 1;
+  assert.equal(upgrades.wateringServiceAvailable(state, sunday), false);
+
+  const rodState = stateAt(7, 600);
+  const xiangzi = activeNpcById(catalog, "town-resident-xiangzi", 600, { day: 7, weather: rodState.weather.current });
+  placeNear(rodState, xiangzi.regionId, xiangzi);
+  const { session } = await sessionFor(rodState);
+  assert.equal(session.dispatch({ type: "claim-fishing-rod", npcId: xiangzi.npcId }).code, "fishing-rod-received");
+  assert.equal(session.dispatch({ type: "claim-fishing-rod", npcId: xiangzi.npcId }).code, "fishing-rod-owned");
+  await session.flush();
+  const requests = new DailyRequestSystem(inventory, new FriendshipSystem());
+  const requestState = stateAt(10, 600);
+  inventory.add(requestState.inventory, ITEM_ID.lakeCarp, 2);
+  assert.equal(requests.submitForNpc(requestState, xiangzi.npcId).result, "request-completed");
+  assert.equal(requests.submitForNpc(requestState, xiangzi.npcId).result, "request-already-completed");
+  const seedKeeper = activeNpcById(catalog, "seed-keeper", 600, { day: 10, weather: "sunny" });
+  state.player = { ...state.player, regionId: seedKeeper.regionId, x: seedKeeper.x, y: seedKeeper.y };
+  assert.equal(new ShopSystem(inventory).buySeed(state, [rested], ITEM_ID.turnipSeed), "not-at-shop");
+});
+
+test("dialogue histories prune untouched residents and first-week hints no longer unlock mirror story", async () => {
+  const state = stateAt(2, 600);
+  const dialogue = new NpcDialogueSystem();
+  const npc = activeNpcById(catalog, "seed-keeper", 600, { day: 2, weather: "sunny" });
+  dialogue.select(state, npc, { result: "request-not-target", request: null });
+  const bedtime = stateAt(10, 1320);
+  bedtime.npcDialogue = state.npcDialogue;
+  const bed = catalog.interaction("cottage-bed");
+  placeNear(bedtime, "cottage", { x: bed.x + bed.width / 2, y: bed.y + bed.height / 2 });
+  dialogue.settleDay(bedtime);
+  assert.doesNotThrow(() => decodeStoredGame(createStoredGame(bedtime, 0)));
+  const { session } = await sessionFor(bedtime);
+  session.dispatch({ type: "sleep", bedId: bed.entityId });
+  await session.flush();
+  assert.equal(session.snapshot().day, 11);
+  assert.equal(latestFirstWeekMilestoneAt(7).eventId, "day-7-fishing-intro");
+  const milestones = new FirstWeekMilestoneSystem();
+  assert.equal(milestones.acknowledge(state, "day-7-fishing-intro"), "milestone-not-yet-available");
+  assert.equal(milestones.acknowledge(state, "day-7-mirror-teaser"), "milestone-unsupported");
 });

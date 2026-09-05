@@ -1,7 +1,14 @@
 import type { Season } from "../calendar/game-calendar.ts";
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 
-export const CROP_IDS = [ITEM_ID.turnip, ITEM_ID.bokChoy, ITEM_ID.cauliflower] as const;
+export const CROP_IDS = [
+  ITEM_ID.turnip,
+  ITEM_ID.bokChoy,
+  ITEM_ID.cauliflower,
+  ITEM_ID.greenPea,
+  ITEM_ID.springPotato,
+  ITEM_ID.rapeseedFlower,
+] as const;
 export type CropId = typeof CROP_IDS[number];
 
 export interface CropDefinition {
@@ -9,6 +16,8 @@ export interface CropDefinition {
   readonly seedId: ItemId;
   readonly seasons: readonly Season[];
   readonly growthDays: number;
+  readonly regrowDays?: number;
+  readonly yieldKind?: "spring-potato";
   readonly seedPrice: number;
   readonly sellPrice: number;
 }
@@ -17,6 +26,9 @@ export const CROP_DEFINITIONS: readonly CropDefinition[] = [
   { cropId: ITEM_ID.turnip, seedId: ITEM_ID.turnipSeed, seasons: ["spring"], growthDays: 3, seedPrice: 20, sellPrice: 35 },
   { cropId: ITEM_ID.bokChoy, seedId: ITEM_ID.bokChoySeed, seasons: ["spring"], growthDays: 5, seedPrice: 45, sellPrice: 80 },
   { cropId: ITEM_ID.cauliflower, seedId: ITEM_ID.cauliflowerSeed, seasons: ["spring"], growthDays: 8, seedPrice: 80, sellPrice: 170 },
+  { cropId: ITEM_ID.greenPea, seedId: ITEM_ID.greenPeaSeed, seasons: ["spring"], growthDays: 7, regrowDays: 3, seedPrice: 70, sellPrice: 48 },
+  { cropId: ITEM_ID.springPotato, seedId: ITEM_ID.springPotatoSeed, seasons: ["spring"], growthDays: 5, yieldKind: "spring-potato", seedPrice: 50, sellPrice: 72 },
+  { cropId: ITEM_ID.rapeseedFlower, seedId: ITEM_ID.rapeseedSeed, seasons: ["spring"], growthDays: 6, seedPrice: 35, sellPrice: 68 },
 ];
 
 /** Resolves one registered crop from its harvested item ID. */
@@ -34,11 +46,19 @@ export function cropsForSeason(season: Season): readonly CropDefinition[] {
   return CROP_DEFINITIONS.filter((definition) => definition.seasons.includes(season));
 }
 
-/** Resolves the fixed sell price for crops and spring forage, or null for unsellable items. */
+/** Resolves the fixed sell price for crops, fish and gathered resources, or null for unsellable items. */
 export function sellPriceForItem(itemId: unknown): number | null {
   const crop = cropDefinition(itemId);
   if (crop) return crop.sellPrice;
   if (itemId === ITEM_ID.springWildflower) return 25;
   if (itemId === ITEM_ID.bambooShoot) return 40;
+  if (itemId === ITEM_ID.stone) return 2;
+  if (itemId === ITEM_ID.fiber) return 1;
+  if (itemId === ITEM_ID.lakeCarp) return 45;
+  if (itemId === ITEM_ID.silverMinnow) return 35;
+  if (itemId === ITEM_ID.rainLoach) return 70;
+  if (itemId === ITEM_ID.windDace) return 65;
+  if (itemId === ITEM_ID.duskPerch) return 85;
+  if (itemId === ITEM_ID.jadeBream) return 140;
   return null;
 }

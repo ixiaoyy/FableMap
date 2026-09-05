@@ -11,7 +11,7 @@ Tiled 保存后运行 `npm run format:tiled-maps`，只压缩 Tile Layer 的大�
 - 行为只由 object `type` 与 properties 决定，object `name` 仅供编辑器阅读。
 - ID 是存档身份，坐标是地图布局。可以移动对象、重画 tile 或修改显示名，不能因移动而更换下列 ID。
 - tileset metadata 必须继续内嵌在 TMJ 中；运行时不接受 external TSJ `source`。
-- Farm 当前正式尺寸为 64×48；Town 保持 40×30；Foothills 与 Lakeshore 为 48×36。四张户外图直接使用 VectoRaith v1.08 Original/16×16 完整 tilesets 与原始 GID；Cottage、Seed Shop、Blacksmith 与 Town House 使用已登记室内占位图集。
+- Farm 当前正式尺寸为 64×48；Town 保持 40×30；Foothills 与 Lakeshore 为 48×36。四张户外图直接使用 VectoRaith v1.08 Original/16×16 完整 tilesets 与原始 GID；Cottage 使用源码定义的 `cottage-woodwork`，Seed Shop 与 Blacksmith 使用共享木作的 `shop-interiors`，Town House 保留已登记室内占位图集。
 - Farm v1 大构图和 Gate C 密度已由 `docs/checkpoints/farm-showcase-v1/` 冻结；只有实际游玩发现的明确碰撞、路径、树脚或院落问题允许小修。
 
 ## Frozen IDs
@@ -34,6 +34,9 @@ Tiled 保存后运行 `npm run format:tiled-maps`，只压缩 Tile Layer 的大�
 - Region-scoped spawn：`entry`
 - Exit：`cottage-exit`
 - Interaction：`cottage-bed`
+- 新增只供客户端固定镜头读取的 spawn：`cottage-room-view`；三处 `pet-cottage-*` 点位保留。
+- 床、门槛、家具与 Collision 同步维护；旧存档落在新障碍时由既有 GameState reconcile 回到 `entry`。
+- `cottage-woodwork.runtime.png` 是供 Tiled 显示的 ignored 缓存，来源为 `client/src/game/presentation/cottage-art.ts` 的 `paintCottageAtlas()`；浏览器直接注册同一配方生成的 256×128 Canvas texture，不请求该 PNG。布局仍只由本 TMJ 拥有。
 
 ### Seed Shop
 
@@ -42,6 +45,15 @@ Tiled 保存后运行 `npm run format:tiled-maps`，只压缩 Tile Layer 的大�
 - Entity：`seed-shop-keeper`
 - NPC：`seed-keeper`
 - Dialogue：`seed-keeper-welcome`
+- Camera spawn：`seed-shop-room-view`；home/counter/shelves 保留 ID，柜台前须在 42px NPC 交谈范围内。
+- Town 返回点 `seed-shop-door` 当前为 `(496,208)`，留出门入口的边界与脚部净空；不要放回入口下边界 `(496,192)`。
+
+### Refined shop interiors
+
+- Blacksmith camera spawn：`blacksmith-room-view`；forge/tool-rack 的查看 bounds 必须匹配陈设，架前/炉前留出 48px 内可达站位。
+- 两图使用 `shop-interiors` 内嵌 tileset，GID 范围 5001–5256。Collision 层的非零 GID 也必须属于该范围。
+- `shop-interiors.runtime.png` 是 `shop-interiors-art.ts` 绘制配方导出的 ignored Tiled 缓存；生产由源码生成 256×256 Canvas texture，不请求该 PNG。
+- 共享固定镜头仍由各自 TMJ 中的 camera spawn 拥有，视口保持 2×，门槛与主要交互留在 HUD 之外。
 
 ### Town expansion
 

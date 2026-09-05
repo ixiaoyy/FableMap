@@ -1,4 +1,4 @@
-import { onUnmounted, ref, type Ref } from "vue";
+import { onMounted, onUnmounted, ref, watch, type Ref } from "vue";
 import { dispatchLocalGameCommand } from "../../session/local-game-session.ts";
 import { isWorldInputLocked } from "../../stores/game-store.ts";
 
@@ -34,6 +34,7 @@ export function useHeldMovement(): Readonly<{
     if (isWorldInputLocked()) return;
     activeDirection.value = direction;
     nudge(direction);
+    if (isWorldInputLocked()) { stopMoving(); return; }
     movementTimer = window.setInterval(() => nudge(direction), 80);
   }
 
@@ -49,6 +50,20 @@ export function useHeldMovement(): Readonly<{
     if (event.detail === 0) nudge(direction);
   }
 
-  onUnmounted(stopMoving);
+  // A disabled button may never receive pointerup after its first nudge opens a modal.
+  watch(() => isWorldInputLocked(), (locked) => { if (locked) stopMoving(); }, { flush: "sync" });
+  onMounted(() => {
+    window.addEventListener("pointerup", stopMoving);
+    window.addEventListener("pointercancel", stopMoving);
+    window.addEventListener("blur", stopMoving);
+    document.addEventListener("visibilitychange", stopMoving);
+  });
+  onUnmounted(() => {
+    stopMoving();
+    window.removeEventListener("pointerup", stopMoving);
+    window.removeEventListener("pointercancel", stopMoving);
+    window.removeEventListener("blur", stopMoving);
+    document.removeEventListener("visibilitychange", stopMoving);
+  });
   return { activeDirection, activateFromKeyboard, startMoving, stopMoving };
 }

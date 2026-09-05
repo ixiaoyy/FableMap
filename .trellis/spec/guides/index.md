@@ -23,6 +23,7 @@ These guides help you **ask the right questions before coding**.
 |-------|---------|-------------|
 | [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When you notice repeated patterns |
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
+| [Exploration Design Thinking Guide](./exploration-design-thinking-guide.md) | Preserve Mirror Island's handcrafted discovery loop and scope | Before planning secrets, environmental interactions, or exploration areas |
 
 ---
 
@@ -50,6 +51,15 @@ These guides help you **ask the right questions before coding**.
 - [ ] Multiple branches update the same derived state from `kind` / `action`
 
 → Read [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md)
+
+### When to Think About Exploration Design
+
+- [ ] You're adding a secret, landmark, environmental interaction, or time-based discovery
+- [ ] A feature asks for more adventure, puzzle, or world-interaction feeling
+- [ ] A new area risks expanding into combat, procedural generation, or a generic framework
+- [ ] A reward currently exists only as Gold, ordinary materials, or a checklist item
+
+→ Read [Exploration Design Thinking Guide](./exploration-design-thinking-guide.md)
 
 ### When Verifying AI Cross-Review Results
 

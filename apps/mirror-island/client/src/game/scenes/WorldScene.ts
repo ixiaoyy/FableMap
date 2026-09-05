@@ -1,10 +1,16 @@
 import Phaser from "phaser";
 import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
+import { homePetRegionAt } from "../../../../domain/pets/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
+import { facingFromVector, isPointInFacingSector } from "../../../../domain/world/facing.ts";
+import { AudioDirector } from "../../audio/AudioDirector.ts";
+import { AUDIO_CUE } from "../../audio/audio-catalog.ts";
+import { emitAudioCue } from "../../audio/audio-events.ts";
 import type {
   ExitDefinition,
   RegionDefinition,
   WorldCatalog,
+  WorldPoint,
 } from "../../../../domain/world/regions.ts";
 import {
   dispatchLocalGameCommand,
@@ -15,7 +21,10 @@ import {
   cancelSleepConfirmation,
   gameUiState,
   isWorldInputLocked,
+  isGameClockPaused,
+  openGiftConfirmation,
   openShop,
+  openRequestBoard,
   openSleepConfirmation,
   selectHotbarSlot,
   setActionFeedback,
@@ -24,18 +33,19 @@ import {
 } from "../../stores/game-store.ts";
 import { MEDIA_KEYS, MEDIA_URLS } from "../assets/media-catalog.ts";
 import {
-  candidateActionForItem,
-  GARDENS_ICON_FRAMES,
-  HELLO_RUMIN_TOOL_FRAMES,
-  isToolArtCandidateEnabled,
-  TOOL_ART_CANDIDATE_KEYS,
-  TOOL_ART_CANDIDATE_URLS,
-  VECTORAITH_PLOWING_FRAMES,
-  type CandidateToolAction,
-} from "../assets/tool-art-candidate.ts";
+  PET_MEDIA_KEYS,
+  PET_MEDIA_URLS,
+  petMediaProfile,
+} from "../assets/pet-media.ts";
+import { GARDENS_ICON_URL } from "../assets/item-icons.ts";
+import { GARDENS_TEXTURE_KEY, registerItemTextures } from "../assets/item-textures.ts";
+import { FarmingActionPresenter, farmActionForItem, type FarmAction } from "../presentation/FarmingActionPresenter.ts";
+import { registerCottageArt } from "../presentation/cottage-art.ts";
+import { registerShopInteriorArt } from "../presentation/shop-interiors-art.ts";
 import {
   activeEntityMediaProfiles,
   entityMediaForRegion,
+  fixedInteriorViewAnchorForRegion,
   playerMediaProfile,
   tilesetBindingsForRegion,
   VECTORAITH_MEDIA_KEYS,
@@ -54,29 +64,35 @@ import {
   BedEntity,
   ExitHintEntity,
   FarmPlotEntity,
+  FishingSpotEntity,
   ForageEntity,
   InspectEntity,
   NpcEntity,
+  PetEntity,
   RockEntity,
   TreeEntity,
+  WeedEntity,
 } from "../entities/WorldEntities.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
+import { petAnchorsForRegion } from "../pets/pet-presentation.ts";
+import { subscribeWorldAction } from "../world/world-input.ts";
 
 const TRANSITION_DURATION_MS = 180;
 const NPC_INTERACTION_DISTANCE = 42;
+const PET_INTERACTION_DISTANCE = 42;
 const BED_INTERACTION_DISTANCE = 42;
+const ROCK_INTERACTION_DISTANCE = 42;
+const WEED_INTERACTION_DISTANCE = 42;
 const INSPECT_INTERACTION_DISTANCE = 48;
 const EXIT_HINT_DISTANCE = 52;
 const WORLD_CAMERA_ZOOM = 2;
+const FOOTSTEP_INTERVAL_MS = 280;
 
 interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
   readonly sprite: Phaser.GameObjects.Sprite;
-  readonly tool: Phaser.GameObjects.Container;
-  readonly heldItem: Phaser.GameObjects.Sprite | null;
-  readonly candidateTool: Phaser.GameObjects.Sprite | null;
-  readonly candidatePlowing: Phaser.GameObjects.Sprite | null;
+  readonly actions: FarmingActionPresenter;
 }
 
 type TransitionPhase = "idle" | "fading-out" | "fading-in";
@@ -86,16 +102,18 @@ export class WorldScene extends Phaser.Scene {
   private readonly playerMedia = playerMediaProfile(
     getLocalGameSession().snapshot().player.appearanceId,
   );
-  private readonly toolArtCandidateEnabled = isToolArtCandidateEnabled();
   private playerView: PlayerView | null = null;
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
+  private readonly weedViews = new Map<string, WeedEntity>();
   private readonly farmViews = new Map<string, FarmPlotEntity>();
+  private readonly fishingSpotViews = new Map<string, FishingSpotEntity>();
   private readonly forageViews = new Map<string, ForageEntity>();
   private readonly bedViews = new Map<string, BedEntity>();
   private readonly inspectViews = new Map<string, InspectEntity>();
   private readonly exitHintViews = new Map<string, ExitHintEntity>();
   private readonly npcViews = new Map<string, NpcEntity>();
+  private petView: PetEntity | null = null;
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private activeMap: Phaser.Tilemaps.Tilemap | null = null;
   private activeRegionId = "";
@@ -104,11 +122,18 @@ export class WorldScene extends Phaser.Scene {
   private movementKeys!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private hotbarKeys!: readonly Phaser.Input.Keyboard.Key[];
   private attackKey!: Phaser.Input.Keyboard.Key;
+  private useKey!: Phaser.Input.Keyboard.Key;
+  private tileCursor: Phaser.GameObjects.Graphics | null = null;
+  private fishingLine: Phaser.GameObjects.Graphics | null = null;
   private stopProjection?: () => void;
+  private stopWorldAction?: () => void;
   private transitionPhase: TransitionPhase = "idle";
   private entityFactory!: EntityFactory;
   private actionTimeline!: ActionTimeline;
+  private audioDirector: AudioDirector | null = null;
   private facing: Facing = "down";
+  private lastFootstepAt = 0;
+  private inputWasLocked = false;
   private disposed = false;
 
   /** Creates the Tiled-backed scene with catalog entities and one shared player action timeline. */
@@ -143,20 +168,9 @@ export class WorldScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 32,
     });
-    if (this.toolArtCandidateEnabled) {
-      this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.plowing, TOOL_ART_CANDIDATE_URLS.plowing, {
-        frameWidth: 32,
-        frameHeight: 32,
-      });
-      this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.helloTools, TOOL_ART_CANDIDATE_URLS.helloTools, {
-        frameWidth: 32,
-        frameHeight: 32,
-      });
-      this.load.spritesheet(TOOL_ART_CANDIDATE_KEYS.gardensIcons, TOOL_ART_CANDIDATE_URLS.gardensIcons, {
-        frameWidth: 16,
-        frameHeight: 16,
-      });
-    }
+    this.load.spritesheet(PET_MEDIA_KEYS.cat, PET_MEDIA_URLS.cat, { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet(PET_MEDIA_KEYS.dog, PET_MEDIA_URLS.dog, { frameWidth: 32, frameHeight: 32 });
+    this.load.image(GARDENS_TEXTURE_KEY, GARDENS_ICON_URL);
     for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
   }
 
@@ -164,9 +178,19 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.disposed = false;
     this.createTilemapFloorTexture();
+    registerItemTextures(this);
     this.registerMediaFrames();
+    registerCottageArt(this);
+    registerShopInteriorArt(this);
     this.createPlayerAnimations();
     this.actionTimeline = new ActionTimeline(this);
+    this.audioDirector = new AudioDirector(() => {
+      setActionFeedback({
+        tone: "error",
+        code: "audio-playback-blocked",
+        message: "浏览器尚未启用声音，请打开声音设置并点击测试声音。",
+      });
+    });
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Keyboard input is unavailable.");
     this.cursors = keyboard.createCursorKeys();
@@ -183,19 +207,34 @@ export class WorldScene extends Phaser.Scene {
     ].map((code) => keyboard.addKey(code));
     keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.attackKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.useKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+    this.tileCursor = this.add.graphics().setDepth(9);
+    this.fishingLine = this.add.graphics().setDepth(9_900);
+    this.stopWorldAction = subscribeWorldAction(() => this.useFacingItem());
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.handleWorldPointer, this);
     this.stopProjection = getLocalGameSession().subscribe((state) => this.renderState(state));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.disposeScene(true));
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.disposeScene(false));
   }
 
   /** Applies collision-aware movement and one exit transition while no action or modal owns input. */
-  override update(_time: number, delta: number): void {
-    const worldInputLocked = isWorldInputLocked();
+  override update(time: number, delta: number): void {
     tickLocalGameSession(
       Date.now(),
-      this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || worldInputLocked,
+      this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isGameClockPaused(),
+      document.hidden,
     );
+    const worldInputLocked = isWorldInputLocked();
+    // DOM dialogs own keyup after taking focus; do not retain a world key pressed before the handoff.
+    if (worldInputLocked && !this.inputWasLocked) this.input.keyboard?.resetKeys();
+    this.inputWasLocked = worldInputLocked;
+    this.renderTileCursor(worldInputLocked);
+    this.renderFishingLine();
     if (this.activeRegionId) this.renderNpcs(this.activeRegionId);
+    this.petView?.advance(
+      delta,
+      worldInputLocked || this.transitionPhase !== "idle" || this.actionTimeline.isBusy(),
+    );
     this.projectInteractionAffordances(worldInputLocked);
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
     if (worldInputLocked) {
@@ -203,6 +242,7 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.updateHotbarSelectionInput();
+    if (Phaser.Input.Keyboard.JustDown(this.useKey)) { this.useFacingItem(); return; }
     if (Phaser.Input.Keyboard.JustDown(this.attackKey) && this.playPunch()) return;
     const xAxis = toAxis(
       Number(this.cursors.right.isDown || this.movementKeys.D.isDown)
@@ -213,8 +253,17 @@ export class WorldScene extends Phaser.Scene {
       - Number(this.cursors.up.isDown || this.movementKeys.W.isDown),
     );
     if (xAxis !== 0 || yAxis !== 0) {
+      const before = this.latestState?.player;
+      const beforeX = before?.x;
+      const beforeY = before?.y;
       this.setMovementAnimation(xAxis, yAxis);
       dispatchLocalGameCommand({ type: "move", xAxis, yAxis, deltaMs: delta });
+      const after = this.latestState?.player;
+      const moved = after && (after.x !== beforeX || after.y !== beforeY);
+      if (moved && time - this.lastFootstepAt >= FOOTSTEP_INTERVAL_MS) {
+        this.lastFootstepAt = time;
+        emitAudioCue(AUDIO_CUE.footstep);
+      }
     } else {
       this.setIdleFrame();
     }
@@ -226,9 +275,15 @@ export class WorldScene extends Phaser.Scene {
 
   /** Projects one state snapshot into the active region and every ephemeral entity view. */
   private renderState(state: GameState): void {
+    const previousDay = this.latestState?.day;
+    const previousPlayer = this.latestState?.player;
+    if (previousDay === state.day && previousPlayer?.regionId === state.player.regionId) {
+      this.facing = facingFromVector(state.player.x - previousPlayer.x, state.player.y - previousPlayer.y, this.facing);
+    }
     this.latestState = state;
     const playerView = this.playerView ?? this.createPlayerView();
     if (state.player.regionId !== this.activeRegionId) this.renderRegion(state.player.regionId, playerView);
+    this.audioDirector?.setWeather(state.weather.current);
     playerView.container.setPosition(state.player.x, state.player.y);
     playerView.container.setDepth(100 + Math.floor(state.player.y));
     const region = this.catalog.requireRegion(state.player.regionId);
@@ -239,6 +294,12 @@ export class WorldScene extends Phaser.Scene {
     this.renderInspects(region.id);
     this.renderExitHints(region);
     this.renderNpcs(region.id);
+    this.renderPet(region.id, state);
+    this.renderFishingSpots(region);
+    if (previousDay !== undefined && previousDay !== state.day) {
+      this.fadeIntoWorld(400);
+      emitAudioCue(AUDIO_CUE.sleep);
+    }
   }
 
   /** Replaces all current Tilemap layers while preserving GameSession and the player view. */
@@ -271,54 +332,41 @@ export class WorldScene extends Phaser.Scene {
     this.entityFactory = new EntityFactory(this, entityMediaForRegion(regionId));
     this.activeMap = map;
     this.activeRegionId = regionId;
+    this.audioDirector?.setRegion(regionId);
     this.cameras.main.setBounds(0, 0, region.widthPixels, region.heightPixels);
     this.cameras.main.setZoom(WORLD_CAMERA_ZOOM);
     this.cameras.main.startFollow(playerView.container, true, 1, 1);
+    const viewAnchor = fixedInteriorViewAnchorForRegion(regionId);
+    if (viewAnchor) {
+      const view = this.catalog.requireSpawn(regionId, viewAnchor);
+      this.cameras.main.stopFollow();
+      this.cameras.main.centerOn(view.x, view.y);
+    }
     if (this.transitionPhase === "fading-out") {
-      this.transitionPhase = "fading-in";
-      this.cameras.main.fadeIn(TRANSITION_DURATION_MS, 7, 16, 13);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
-        this.transitionPhase = "idle";
-      });
+      this.fadeIntoWorld(TRANSITION_DURATION_MS);
     }
   }
 
-  /** Creates the reviewed player plus default and explicitly enabled candidate action layers. */
+  /** Restores the world over the supplied duration, retaining the shared keyboard/touch lock until visible. */
+  private fadeIntoWorld(durationMs: number): void {
+    this.transitionPhase = "fading-in";
+    setWorldActionBusy(true);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
+      this.transitionPhase = "idle";
+      setWorldActionBusy(false);
+      this.setIdleFrame();
+    });
+    this.cameras.main.fadeIn(durationMs, 7, 16, 13);
+  }
+
+  /** Creates the saved avatar and its shared production item/action layers. */
   private createPlayerView(): PlayerView {
     const sprite = this.add.sprite(0, 0, this.playerMedia.textureKey, this.playerMedia.frames.idle.down)
       .setScale(this.playerMedia.scale)
       .setOrigin(0.5, this.playerMedia.originY);
-    const handle = this.add.rectangle(0, 0, 3, 18, 0x7e512e, 1).setOrigin(0.5, 0.85);
-    const blade = this.add.rectangle(4, -7, 8, 6, 0xd9e3d4, 1).setOrigin(0.5);
-    const tool = this.add.container(10, -2, [handle, blade]).setVisible(false);
-    const candidateTool = this.toolArtCandidateEnabled
-      ? this.add.sprite(0, 0, TOOL_ART_CANDIDATE_KEYS.helloTools, HELLO_RUMIN_TOOL_FRAMES.axe)
-        .setOrigin(0.5, this.playerMedia.originY)
-        .setVisible(false)
-      : null;
-    const heldItem = this.toolArtCandidateEnabled
-      ? this.add.sprite(0, 0, TOOL_ART_CANDIDATE_KEYS.helloTools, HELLO_RUMIN_TOOL_FRAMES.hoe)
-        .setOrigin(0.5, this.playerMedia.originY)
-        .setVisible(false)
-      : null;
-    const candidatePlowing = this.toolArtCandidateEnabled
-      ? this.add.sprite(0, 0, TOOL_ART_CANDIDATE_KEYS.plowing, VECTORAITH_PLOWING_FRAMES.down[0])
-        .setOrigin(0.5, this.playerMedia.originY)
-        .setVisible(false)
-      : null;
-    const children: Phaser.GameObjects.GameObject[] = [sprite];
-    if (heldItem) children.push(heldItem);
-    children.push(tool);
-    if (candidateTool) children.push(candidateTool);
-    if (candidatePlowing) children.push(candidatePlowing);
-    const view = {
-      container: this.add.container(0, 0, children),
-      sprite,
-      tool,
-      heldItem,
-      candidateTool,
-      candidatePlowing,
-    };
+    const container = this.add.container(0, 0, [sprite]);
+    const actions = new FarmingActionPresenter(this, container, sprite, this.playerMedia);
+    const view = { container, sprite, actions };
     this.playerView = view;
     return view;
   }
@@ -375,18 +423,7 @@ export class WorldScene extends Phaser.Scene {
         frameRate: 6,
         repeat: -1,
       });
-      if (!this.toolArtCandidateEnabled) continue;
-      const plowingKey = `tool-art-plowing-${facing}`;
-      if (this.anims.exists(plowingKey)) continue;
-      this.anims.create({
-        key: plowingKey,
-        frames: VECTORAITH_PLOWING_FRAMES[facing].map((frame) => ({
-          key: TOOL_ART_CANDIDATE_KEYS.plowing,
-          frame,
-        })),
-        frameRate: 7,
-        repeat: 0,
-      });
+
     }
   }
 
@@ -394,8 +431,7 @@ export class WorldScene extends Phaser.Scene {
   private setMovementAnimation(xAxis: -1 | 0 | 1, yAxis: -1 | 0 | 1): void {
     const player = this.playerView;
     if (!player) return;
-    if (Math.abs(xAxis) >= Math.abs(yAxis) && xAxis !== 0) this.facing = xAxis < 0 ? "left" : "right";
-    else if (yAxis !== 0) this.facing = yAxis < 0 ? "up" : "down";
+    this.facing = facingFromVector(xAxis, yAxis, this.facing);
     player.sprite.play(`hero-walk-${this.facing}`, true);
     this.projectHeldItem();
   }
@@ -419,37 +455,10 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Projects the transient selected item as an idle held sprite without touching domain or save state. */
+  /** Projects the selected item in the saved avatar's hand while no action or region transition owns it. */
   private projectHeldItem(): void {
-    const playerView = this.playerView;
-    if (!playerView?.heldItem || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
-    if (!this.configureHeldItem(playerView.heldItem, gameUiState.selectedItemId)) {
-      playerView.heldItem.setVisible(false);
-      return;
-    }
-    playerView.heldItem
-      .setVisible(true)
-      .setAlpha(1)
-      .setFlipX(this.facing === "left")
-      .setPosition(this.facing === "left" ? -3 : 3, 0);
-  }
-
-  /** Configures one held sprite from the selected item and returns false for empty/unsupported hands. */
-  private configureHeldItem(sprite: Phaser.GameObjects.Sprite, itemId: string): boolean {
-    if (itemId === ITEM_ID.axe || itemId === ITEM_ID.hoe || itemId === ITEM_ID.wateringCan) {
-      const frame = itemId === ITEM_ID.axe
-        ? HELLO_RUMIN_TOOL_FRAMES.axe
-        : itemId === ITEM_ID.hoe
-          ? HELLO_RUMIN_TOOL_FRAMES.hoe
-          : HELLO_RUMIN_TOOL_FRAMES.watering;
-      sprite.setTexture(TOOL_ART_CANDIDATE_KEYS.helloTools, frame).setOrigin(0.5, this.playerMedia.originY);
-      return true;
-    }
-    if (getItemDefinition(itemId)?.category === "seed") {
-      sprite.setTexture(TOOL_ART_CANDIDATE_KEYS.gardensIcons, GARDENS_ICON_FRAMES.seedBag).setOrigin(0.5);
-      return true;
-    }
-    return false;
+    if (!this.playerView || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
+    this.playerView.actions.hold(gameUiState.selectedItemId, this.facing);
   }
 
   /** Creates and projects all catalog resources in the active region through EntityFactory. */
@@ -457,8 +466,10 @@ export class WorldScene extends Phaser.Scene {
     const spawns = this.catalog.requireRegion(regionId).resources;
     const treeIds = new Set(spawns.filter((spawn) => spawn.kind === "tree").map((spawn) => spawn.entityId));
     const rockIds = new Set(spawns.filter((spawn) => spawn.kind === "stone").map((spawn) => spawn.entityId));
+    const weedIds = new Set(spawns.filter((spawn) => spawn.kind === "weed").map((spawn) => spawn.entityId));
     removeMissing(this.treeViews, treeIds);
     removeMissing(this.rockViews, rockIds);
+    removeMissing(this.weedViews, weedIds);
     for (const spawn of spawns) {
       if (spawn.kind === "tree") {
         const view = this.treeViews.get(spawn.entityId)
@@ -466,8 +477,18 @@ export class WorldScene extends Phaser.Scene {
         this.treeViews.set(spawn.entityId, view);
         const resource = state.resources[spawn.entityId];
         if (resource) view.project(resource);
-      } else if (spawn.kind === "stone" && !this.rockViews.has(spawn.entityId)) {
-        this.rockViews.set(spawn.entityId, this.entityFactory.createRock(spawn));
+      } else if (spawn.kind === "stone") {
+        const view = this.rockViews.get(spawn.entityId)
+          ?? this.entityFactory.createRock(spawn, (entity) => this.playRockAction(entity));
+        this.rockViews.set(spawn.entityId, view);
+        const resource = state.resources[spawn.entityId];
+        if (resource) view.project(resource);
+      } else if (spawn.kind === "weed") {
+        const view = this.weedViews.get(spawn.entityId)
+          ?? this.entityFactory.createWeed(spawn, (entity) => this.playWeedAction(entity));
+        this.weedViews.set(spawn.entityId, view);
+        const resource = state.resources[spawn.entityId];
+        if (resource) view.project(resource);
       }
     }
   }
@@ -492,17 +513,23 @@ export class WorldScene extends Phaser.Scene {
 
   /** Creates and projects catalog farm plots in the active region through EntityFactory. */
   private renderFarmPlots(regionId: string, state: GameState): void {
-    const plots = this.catalog.requireRegion(regionId).interactions.filter((interaction) => (
-      interaction.kind === "farm-plot"
-    ));
-    const activeIds = new Set(plots.map((plot) => plot.entityId));
+    const tiles = regionId === "farm" ? Object.values(state.farmTiles) : [];
+    const activeIds = new Set(tiles.map((tile) => tile.id));
     removeMissing(this.farmViews, activeIds);
-    for (const plot of plots) {
-      const view = this.farmViews.get(plot.entityId)
-        ?? this.entityFactory.createFarmPlot(plot, (entity) => this.playFarmAction(entity));
-      this.farmViews.set(plot.entityId, view);
-      const tile = state.farmTiles[plot.entityId];
-      if (tile) view.project(tile);
+    for (const tile of tiles) {
+      const interaction = {
+        entityId: tile.id,
+        regionId: "farm",
+        kind: "farm-plot" as const,
+        x: tile.column * 16,
+        y: tile.row * 16,
+        width: 16,
+        height: 16,
+      };
+      const view = this.farmViews.get(tile.id)
+        ?? this.entityFactory.createFarmPlot(interaction, (entity) => this.playFarmAction(entity));
+      this.farmViews.set(tile.id, view);
+      view.project(tile);
     }
   }
 
@@ -538,6 +565,16 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Projects stable fishing markers for only the current region's authored zones. */
+  private renderFishingSpots(region: RegionDefinition): void {
+    removeMissing(this.fishingSpotViews, new Set(region.fishingZones.map((zone) => zone.id)));
+    for (const zone of region.fishingZones) {
+      if (!this.fishingSpotViews.has(zone.id)) {
+        this.fishingSpotViews.set(zone.id, this.entityFactory.createFishingSpot(zone, () => this.startFishing(zone.id)));
+      }
+    }
+  }
+
   /** Creates stable proximity labels for every automatic door and regional exit. */
   private renderExitHints(region: RegionDefinition): void {
     const activeIds = new Set(region.exits.map((exit) => exit.id));
@@ -567,6 +604,29 @@ export class WorldScene extends Phaser.Scene {
         }));
       }
     }
+  }
+
+  /** Creates one adopted home pet only in its time-derived Farm or Cottage region. */
+  private renderPet(regionId: string, state: GameState): void {
+    const pet = state.pet;
+    if (!pet || homePetRegionAt(state.minuteOfDay) !== regionId) {
+      this.petView?.destroy();
+      this.petView = null;
+      return;
+    }
+    const homeRegion = homePetRegionAt(state.minuteOfDay);
+    const anchors = petAnchorsForRegion(this.catalog, homeRegion);
+    if (this.petView) {
+      this.petView.project(pet, state.day, anchors);
+      return;
+    }
+    this.petView = this.entityFactory.createPet(
+      pet,
+      state.day,
+      anchors,
+      petMediaProfile(pet.species),
+      (entity) => this.interactWithPet(entity),
+    );
   }
 
   /** Projects player proximity into every shared interaction hint without mutating gameplay state. */
@@ -601,6 +661,14 @@ export class WorldScene extends Phaser.Scene {
         distance: view.distanceTo(player.x, player.y),
         limit: NPC_INTERACTION_DISTANCE,
       })),
+      ...Array.from(this.fishingSpotViews.values(), (view) => ({
+        view, distance: view.distanceTo(player.x, player.y), limit: 52,
+      })),
+      ...(this.petView ? [{
+        view: this.petView,
+        distance: this.petView.distanceTo(player.x, player.y),
+        limit: PET_INTERACTION_DISTANCE,
+      }] : []),
     ];
     const nearest = candidates.reduce<(typeof candidates)[number] | null>((current, candidate) => {
       if (candidate.distance > candidate.limit) return current;
@@ -614,63 +682,145 @@ export class WorldScene extends Phaser.Scene {
   /** Runs one tree windup/impact/recovery sequence and mutates gathering only on impact. */
   private playTreeAction(entity: TreeEntity): void {
     if (isWorldInputLocked()) return;
+    this.facePoint(entity.spawn.x, entity.spawn.y);
     const selectedItemId = gameUiState.selectedItemId;
-    this.playToolAction(entity.spawn.x, 0xe8d19b, candidateActionForItem(selectedItemId), () => {
-      entity.playImpact(() => (
-        dispatchLocalGameCommand({
+    this.playToolAction(entity.spawn, farmActionForItem(selectedItemId), () => {
+      let succeeded = false;
+      entity.playImpact(() => {
+        const code = dispatchLocalGameCommand({
           type: "use-item-on-target",
           itemId: selectedItemId,
           targetId: entity.entityId,
-        })?.code === "success"
-      ));
+        })?.code;
+        succeeded = code === "success" || code === "stump-cleared";
+        return succeeded;
+      });
+      return succeeded;
     });
+  }
+
+  /** Runs one surface-mining sequence and mutates the stone only at the captured impact. */
+  private playRockAction(entity: RockEntity): void {
+    const player = this.latestState?.player;
+    if (!player || isWorldInputLocked() || this.transitionPhase !== "idle") return;
+    this.facePoint(entity.spawn.x, entity.spawn.y);
+    const selectedItemId = gameUiState.selectedItemId;
+    if (
+      player.regionId !== entity.spawn.regionId
+      || Math.hypot(player.x - entity.spawn.x, player.y - entity.spawn.y) > ROCK_INTERACTION_DISTANCE
+    ) {
+      dispatchLocalGameCommand({ type: "use-item-on-target", itemId: selectedItemId, targetId: entity.entityId });
+      return;
+    }
+    if (selectedItemId !== ITEM_ID.pickaxe) {
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+      });
+      entity.playTap();
+      return;
+    }
+    this.playToolAction(entity.spawn, "pickaxe", () => {
+      let succeeded = false;
+      entity.playImpact(() => {
+        succeeded = dispatchLocalGameCommand({
+          type: "use-item-on-target",
+          itemId: selectedItemId,
+          targetId: entity.entityId,
+        })?.code === "mined";
+        return succeeded;
+      });
+      return succeeded;
+    });
+  }
+
+  /** Runs one facing-aware scythe sequence while domain state selects every weed hit at impact. */
+  private playWeedAction(entity: WeedEntity, preserveFacing = false): void {
+    const player = this.latestState?.player;
+    if (!player || isWorldInputLocked() || this.transitionPhase !== "idle") return;
+    if (!preserveFacing) this.facePoint(entity.spawn.x, entity.spawn.y);
+    const selectedItemId = gameUiState.selectedItemId;
+    const facing = this.facing;
+    if (
+      player.regionId !== entity.spawn.regionId
+      || Math.hypot(player.x - entity.spawn.x, player.y - entity.spawn.y) > WEED_INTERACTION_DISTANCE
+    ) {
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+        facing,
+      });
+      return;
+    }
+    if (selectedItemId !== ITEM_ID.scythe) {
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+        facing,
+      });
+      entity.playTap();
+      return;
+    }
+    this.playToolAction(entity.spawn, "scythe", () => (
+      dispatchLocalGameCommand({
+        type: "use-item-on-target",
+        itemId: selectedItemId,
+        targetId: entity.entityId,
+        facing,
+      })?.code === "cut"
+    ));
   }
 
   /** Runs one shared tool sequence for tilling, planting, watering or harvesting. */
   private playFarmAction(entity: FarmPlotEntity): void {
     if (isWorldInputLocked()) return;
     const targetX = entity.interaction.x + entity.interaction.width / 2;
-    const selectedItemId = gameUiState.selectedItemId;
-    const action = candidateActionForItem(selectedItemId);
-    this.playToolAction(targetX, 0x8ed3c7, action, () => {
-      const feedback = dispatchLocalGameCommand({
-        type: "use-item-on-target",
-        itemId: selectedItemId,
-        targetId: entity.entityId,
-      });
-      if (feedback?.tone === "success") entity.playImpact();
-    });
+    this.facePoint(targetX, entity.interaction.y + entity.interaction.height / 2);
+    this.playFarmTile(Math.floor(entity.interaction.x / 16), Math.floor(entity.interaction.y / 16));
   }
 
-  /** Plays the one shared player tool pose while executing exactly one supplied impact callback. */
+  /** Plays one selected-item action against an existing or newly tillable coordinate without changing facing mid-action. */
+  private playFarmTile(column: number, row: number): void {
+    if (isWorldInputLocked()) return;
+    const selectedItemId = gameUiState.selectedItemId;
+    const facing = this.facing;
+    const action = farmActionForItem(selectedItemId);
+    const harvestedItemId = this.latestState?.farmTiles[`farm:${column}:${row}`]?.cropId;
+    this.playToolAction({ x: column * 16 + 8, y: row * 16 + 8 }, action, () => {
+      const feedback = dispatchLocalGameCommand({
+        type: "use-item-on-tile",
+        itemId: selectedItemId,
+        column,
+        row,
+        facing,
+      });
+      if (feedback?.tone === "success") this.farmViews.get(`farm:${column}:${row}`)?.playImpact();
+      return feedback?.tone === "success";
+    }, harvestedItemId);
+  }
+
+  /** Runs the captured visual pose around exactly one impact command and its success feedback. */
   private playToolAction(
-    targetX: number,
-    color: number,
-    action: CandidateToolAction,
-    onImpact: () => void,
+    target: WorldPoint,
+    action: FarmAction,
+    onImpact: () => boolean,
+    harvestedItemId?: string,
   ): void {
     const playerView = this.playerView;
-    if (!playerView) return;
-    const direction = targetX >= playerView.container.x ? 1 : -1;
-    this.facing = direction > 0 ? "right" : "left";
+    if (!playerView || this.actionTimeline.isBusy()) return;
+    const facing = this.facing;
+    const heldItemId = gameUiState.selectedItemId;
     setWorldActionBusy(true);
     const started = this.actionTimeline.play({
       windupMs: 220,
       impactMs: 160,
       recoveryMs: 220,
-      onWindup: () => {
-        if (this.toolArtCandidateEnabled) this.beginCandidateToolVisual(playerView, action, direction);
-        else this.beginDefaultToolVisual(playerView, direction, color);
-      },
-      onImpact: () => {
-        if (this.toolArtCandidateEnabled) this.impactCandidateToolVisual(playerView, action, direction);
-        else this.impactDefaultToolVisual(playerView, direction);
-        onImpact();
-      },
-      onRecovery: () => {
-        if (this.toolArtCandidateEnabled) this.recoverCandidateToolVisual(playerView, action);
-        else this.tweens.add({ targets: playerView.tool, alpha: 0, duration: 180 });
-      },
+      onWindup: () => playerView.actions.begin(action, facing, heldItemId),
+      onImpact: () => playerView.actions.impact(onImpact(), target, harvestedItemId),
+      onRecovery: () => playerView.actions.recover(),
       onComplete: () => {
         this.resetPlayerActionVisuals(playerView);
         setWorldActionBusy(false);
@@ -680,137 +830,9 @@ export class WorldScene extends Phaser.Scene {
     if (!started) setWorldActionBusy(false);
   }
 
-  /** Starts the legacy code-drawn placeholder used whenever the local candidate flag is absent. */
-  private beginDefaultToolVisual(playerView: PlayerView, direction: 1 | -1, color: number): void {
-    this.tweens.killTweensOf(playerView.tool);
-    playerView.sprite.stop().setFrame(this.playerMedia.frames.attack[this.facing]);
-    playerView.tool.list.forEach((child, index) => {
-      if (child instanceof Phaser.GameObjects.Rectangle) {
-        child.setFillStyle(index === 0 ? 0x7e512e : color, 1);
-      }
-    });
-    playerView.tool.setVisible(true).setAlpha(1);
-    playerView.tool.setPosition(direction * 9, -2).setRotation(direction > 0 ? -1.05 : 1.05);
-    this.tweens.add({
-      targets: playerView.tool,
-      rotation: direction > 0 ? -0.45 : 0.45,
-      duration: 220,
-      ease: "Quad.Out",
-    });
-  }
-
-  /** Commits the visual swing of the legacy placeholder without owning the gameplay impact. */
-  private impactDefaultToolVisual(playerView: PlayerView, direction: 1 | -1): void {
-    this.tweens.add({
-      targets: playerView.tool,
-      rotation: direction > 0 ? 1.0 : -1.0,
-      duration: 130,
-      ease: "Quad.In",
-    });
-  }
-
-  /** Starts one ignored local candidate pose while leaving command and save state untouched. */
-  private beginCandidateToolVisual(
-    playerView: PlayerView,
-    action: CandidateToolAction,
-    direction: 1 | -1,
-  ): void {
-    this.resetPlayerActionVisuals(playerView);
-    if (action === "plow" && playerView.candidatePlowing) {
-      playerView.sprite.setVisible(false);
-      playerView.candidatePlowing
-        .setVisible(true)
-        .setAlpha(1)
-        .setFlipX(false)
-        .play(`tool-art-plowing-${this.facing}`, true);
-      return;
-    }
-    playerView.sprite.stop().setFrame(this.playerMedia.frames.attack[this.facing]);
-    if ((action === "axe" || action === "water") && playerView.candidateTool) {
-      const frame = action === "axe" ? HELLO_RUMIN_TOOL_FRAMES.axe : HELLO_RUMIN_TOOL_FRAMES.watering;
-      playerView.candidateTool
-        .stop()
-        .setFrame(frame)
-        .setFlipX(direction < 0)
-        .setPosition(direction * 2, 0)
-        .setVisible(true)
-        .setAlpha(1);
-      this.tweens.add({
-        targets: playerView.candidateTool,
-        x: direction * 4,
-        duration: 220,
-        ease: "Quad.Out",
-      });
-      return;
-    }
-    if (action === "plant" && playerView.heldItem) {
-      this.configureHeldItem(playerView.heldItem, ITEM_ID.turnipSeed);
-      playerView.heldItem.setVisible(true).setAlpha(1).setPosition(direction * 4, -1);
-      this.tweens.add({ targets: playerView.heldItem, x: direction * 7, y: 2, duration: 220, ease: "Quad.Out" });
-      return;
-    }
-    this.tweens.add({
-      targets: playerView.sprite,
-      x: direction * 2,
-      y: 2,
-      scaleY: this.playerMedia.scale * 0.84,
-      duration: 220,
-      ease: "Quad.Out",
-    });
-  }
-
-  /** Advances one candidate overlay at impact while GameSession remains the only mutation owner. */
-  private impactCandidateToolVisual(
-    playerView: PlayerView,
-    action: CandidateToolAction,
-    direction: 1 | -1,
-  ): void {
-    if ((action === "axe" || action === "water") && playerView.candidateTool) {
-      this.tweens.add({
-        targets: playerView.candidateTool,
-        x: direction * 7,
-        y: 2,
-        duration: 130,
-        ease: "Quad.In",
-      });
-    }
-  }
-
-  /** Fades or restores the active candidate layer during the shared recovery phase. */
-  private recoverCandidateToolVisual(playerView: PlayerView, action: CandidateToolAction): void {
-    if (action === "plow" && playerView.candidatePlowing) {
-      this.tweens.add({ targets: playerView.candidatePlowing, alpha: 0, duration: 180 });
-      return;
-    }
-    if ((action === "axe" || action === "water") && playerView.candidateTool) {
-      this.tweens.add({ targets: playerView.candidateTool, alpha: 0, duration: 180 });
-      return;
-    }
-    if (action === "plant" && playerView.heldItem) {
-      this.tweens.add({ targets: playerView.heldItem, alpha: 0, duration: 180 });
-    }
-    this.tweens.add({
-      targets: playerView.sprite,
-      x: 0,
-      y: 0,
-      scaleX: this.playerMedia.scale,
-      scaleY: this.playerMedia.scale,
-      duration: 180,
-      ease: "Quad.Out",
-    });
-  }
-
-  /** Hides every ephemeral action layer and restores the reviewed walking sprite defaults. */
+  /** Clears only the current avatar's transient pose and effects at action/scene boundaries. */
   private resetPlayerActionVisuals(playerView: PlayerView): void {
-    this.tweens.killTweensOf(playerView.tool);
-    if (playerView.candidateTool) this.tweens.killTweensOf(playerView.candidateTool);
-    if (playerView.candidatePlowing) this.tweens.killTweensOf(playerView.candidatePlowing);
-    if (playerView.heldItem) this.tweens.killTweensOf(playerView.heldItem);
-    playerView.tool.setVisible(false).setAlpha(1).setPosition(10, -2).setRotation(0);
-    playerView.candidateTool?.stop().setVisible(false).setAlpha(1).setPosition(0, 0).setFlipX(false);
-    playerView.candidatePlowing?.stop().setVisible(false).setAlpha(1).setPosition(0, 0).setFlipX(false);
-    playerView.heldItem?.stop().setVisible(false).setAlpha(1).setPosition(0, 0).setFlipX(false);
-    playerView.sprite.setVisible(true).setPosition(0, 0).setScale(this.playerMedia.scale).setAlpha(1);
+    playerView.actions.reset();
   }
 
   /** Starts one empty-hand punch and returns whether this frame entered the shared action timeline. */
@@ -885,6 +907,156 @@ export class WorldScene extends Phaser.Scene {
     openSleepConfirmation(() => this.beginSleep(bed.entityId));
   }
 
+  /** Routes bare-map clicks into dynamic tilling, water refill or one authored fishing zone. */
+  private handleWorldPointer(pointer: Phaser.Input.Pointer): void {
+    const state = this.latestState;
+    if (
+      !state
+      || this.transitionPhase !== "idle"
+      || this.actionTimeline.isBusy()
+      || isWorldInputLocked()
+    ) return;
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const column = Math.floor(point.x / 16);
+    const row = Math.floor(point.y / 16);
+    if (gameUiState.selectedItemId === ITEM_ID.wateringCan && this.catalog.isWaterSource(state.player.regionId, column, row)) {
+      const feedback = dispatchLocalGameCommand({ type: "refill-watering-can", column, row });
+      if (feedback?.tone === "success") emitAudioCue(AUDIO_CUE.watering);
+      return;
+    }
+    if (gameUiState.selectedItemId === ITEM_ID.fishingRod) {
+      const zone = this.catalog.requireRegion(state.player.regionId).fishingZones.find((candidate) => (
+        point.x >= candidate.x
+        && point.x <= candidate.x + candidate.width
+        && point.y >= candidate.y
+        && point.y <= candidate.y + candidate.height
+      ));
+      if (zone) this.startFishing(zone.id);
+      return;
+    }
+    if (state.player.regionId !== "farm" || gameUiState.selectedItemId !== ITEM_ID.hoe) return;
+    if (state.farmTiles[`farm:${column}:${row}`]) return;
+    this.facePoint(column * 16 + 8, row * 16 + 8);
+    this.playFarmTile(column, row);
+  }
+
+  /** Applies C or the touch action button to the facing tile or a nearby context target. */
+  private useFacingItem(): void {
+    const state = this.latestState;
+    if (!state || isWorldInputLocked() || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
+    const itemId = gameUiState.selectedItemId;
+    const vector = facingVector(this.facing);
+    const column = Math.floor(state.player.x / 16) + vector.x;
+    const row = Math.floor(state.player.y / 16) + vector.y;
+    if (itemId === ITEM_ID.fishingRod) {
+      const zone = [...this.fishingSpotViews.values()].sort((a, b) => a.distanceTo(state.player.x, state.player.y) - b.distanceTo(state.player.x, state.player.y))[0];
+      if (zone) this.startFishing(zone.entityId);
+      else setActionFeedback({ tone: "error", code: "missing-zone", message: "去湖岸旧码头的浮漂标记处抛竿。" });
+      return;
+    }
+    if (itemId === ITEM_ID.axe) {
+      const tree = [...this.treeViews.values()].filter((view) => state.resources[view.entityId]?.phase !== "cleared")
+        .sort((a, b) => Math.hypot(a.spawn.x - state.player.x, a.spawn.y - state.player.y) - Math.hypot(b.spawn.x - state.player.x, b.spawn.y - state.player.y))[0];
+      if (tree && Math.hypot(tree.spawn.x - state.player.x, tree.spawn.y - state.player.y) <= 42) this.playTreeAction(tree);
+      return;
+    }
+    if (itemId === ITEM_ID.pickaxe) {
+      const rock = [...this.rockViews.values()].filter((view) => state.resources[view.entityId]?.phase === "standing")
+        .sort((a, b) => Math.hypot(a.spawn.x - state.player.x, a.spawn.y - state.player.y) - Math.hypot(b.spawn.x - state.player.x, b.spawn.y - state.player.y))[0];
+      if (rock && Math.hypot(rock.spawn.x - state.player.x, rock.spawn.y - state.player.y) <= ROCK_INTERACTION_DISTANCE) {
+        this.playRockAction(rock);
+      }
+      return;
+    }
+    if (itemId === ITEM_ID.scythe) {
+      const weed = [...this.weedViews.values()]
+        .filter((view) => state.resources[view.entityId]?.phase === "standing")
+        .filter((view) => Math.hypot(view.spawn.x - state.player.x, view.spawn.y - state.player.y) <= WEED_INTERACTION_DISTANCE)
+        .filter((view) => isPointInFacingSector(state.player, view.spawn, this.facing))
+        .sort((left, right) => {
+          const leftDistance = Math.hypot(left.spawn.x - state.player.x, left.spawn.y - state.player.y);
+          const rightDistance = Math.hypot(right.spawn.x - state.player.x, right.spawn.y - state.player.y);
+          return leftDistance - rightDistance || (left.entityId < right.entityId ? -1 : left.entityId > right.entityId ? 1 : 0);
+        })[0];
+      if (weed) this.playWeedAction(weed, true);
+      return;
+    }
+    if (itemId === ITEM_ID.wateringCan && this.catalog.isWaterSource(state.player.regionId, column, row)) {
+      dispatchLocalGameCommand({ type: "refill-watering-can", column, row });
+      return;
+    }
+    const tile = state.farmTiles[`farm:${column}:${row}`];
+    if (state.player.regionId === "farm" && (itemId === ITEM_ID.hoe || itemId === ITEM_ID.wateringCan
+      || getItemDefinition(itemId)?.category === "seed" || (itemId === "" && tile?.phase === "mature"))) {
+      this.playFarmTile(column, row);
+      return;
+    }
+    const choices: Array<{ distance: number; action: () => void }> = [
+      ...[...this.npcViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.interactWithNpc(view) })),
+      ...[...this.bedViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.requestSleepConfirmation(view) })),
+      ...[...this.inspectViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.inspectEnvironment(view) })),
+    ];
+    if (itemId === "") {
+      for (const view of this.forageViews.values()) choices.push({
+        distance: Math.hypot(view.spawn.x - state.player.x, view.spawn.y - state.player.y),
+        action: () => { dispatchLocalGameCommand({ type: "use-item-on-target", itemId: "", targetId: view.entityId }); },
+      });
+      const pet = this.petView;
+      if (pet) choices.push({ distance: pet.distanceTo(state.player.x, state.player.y), action: () => this.interactWithPet(pet) });
+    }
+    choices.filter((candidate) => candidate.distance <= 42).sort((a, b) => a.distance - b.distance)[0]?.action();
+  }
+
+  /** Faces a clicked world point while preserving the previous direction for an exact overlap. */
+  private facePoint(x: number, y: number): void {
+    const player = this.latestState?.player;
+    if (!player) return;
+    const dx = x - player.x;
+    const dy = y - player.y;
+    this.facing = facingFromVector(dx, dy, this.facing);
+  }
+
+  /** Starts a single authored fishing interaction only when the player is holding the rod. */
+  private startFishing(zoneId: string): void {
+    if (isWorldInputLocked() || this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    if (gameUiState.selectedItemId !== ITEM_ID.fishingRod) {
+      setActionFeedback({ tone: "error", code: "rod-not-selected", message: "先从背包选中竹制鱼竿；Day 7 起可向祥子领取。" });
+      return;
+    }
+    dispatchLocalGameCommand({ type: "start-fishing", zoneId });
+  }
+
+  /** Shows the adjacent tool target with a tile-sized outline; validity still belongs to the domain. */
+  private renderTileCursor(locked: boolean): void {
+    const view = this.tileCursor;
+    view?.clear();
+    const state = this.latestState;
+    if (!view || !state || locked || state.player.regionId !== "farm") return;
+    const item = getItemDefinition(gameUiState.selectedItemId);
+    if (!item || (item.id !== ITEM_ID.hoe && item.id !== ITEM_ID.wateringCan && item.category !== "seed")) return;
+    const vector = facingVector(this.facing);
+    const column = Math.floor(state.player.x / 16) + vector.x;
+    const row = Math.floor(state.player.y / 16) + vector.y;
+    const valid = this.catalog.isTillable("farm", column, row) || (item.id === ITEM_ID.wateringCan && this.catalog.isWaterSource("farm", column, row));
+    view.lineStyle(1, valid ? 0xffefb1 : 0xac4d3b, .95).strokeRect(column * 16, row * 16, 16, 16);
+  }
+
+  /** Draws the current rod line and bobber from the read-only fishing projection. */
+  private renderFishingLine(): void {
+    const view = this.fishingLine;
+    view?.clear();
+    const state = this.latestState;
+    const fishing = gameUiState.fishing;
+    if (!view || !state || !fishing.zoneId || fishing.phase === "idle" || fishing.phase === "casting") return;
+    const zone = this.catalog.fishingZone(fishing.zoneId);
+    if (!zone || zone.regionId !== state.player.regionId) return;
+    const x = zone.x + zone.width / 2;
+    const y = zone.y + zone.height + 8 + fishing.castPower * .4 + (fishing.bite ? 4 : 0);
+    view.lineStyle(1, 0xf4ecd1, .8).lineBetween(state.player.x + 3, state.player.y - 16, x, y);
+    view.fillStyle(0xf4ecd1).fillRect(x - 1, y - 6, 3, 7);
+    view.fillStyle(0xa4513f).fillRect(x - 1, y - 8, 3, 4);
+  }
+
   /** Opens the exact nearby clicked NPC's existing dialogue or shop projection. */
   private interactWithNpc(npc: NpcEntity): void {
     const state = this.latestState;
@@ -907,34 +1079,66 @@ export class WorldScene extends Phaser.Scene {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
       return;
     }
-    const friendshipBefore = gameUiState.friendships[npc.spawn.npcId];
-    const firstTalkToday = friendshipBefore !== undefined && friendshipBefore.lastTalkedDay !== gameUiState.day;
-    dispatchLocalGameCommand({ type: "talk-to-npc", npcId: npc.spawn.npcId });
-    if (firstTalkToday && gameUiState.friendships[npc.spawn.npcId]?.lastTalkedDay === gameUiState.day) {
-      npc.playFriendshipPulse();
-      setActionFeedback({
-        tone: "success",
-        code: "friendship-talked",
-        message: `与${dialogue.speaker}更熟悉了一点。`,
-      });
-    }
-    if (npc.spawn.interactionType === "shop") {
-      openShop(dialogue.lines[0]);
+    const heldItem = getItemDefinition(gameUiState.selectedItemId);
+    if (heldItem && heldItem.category !== "tool" && heldItem.category !== "seed") {
+      openGiftConfirmation({ npcId: npc.spawn.npcId, npcName: dialogue.speaker, itemId: heldItem.id });
       return;
     }
-    setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });
+    const interaction = dispatchLocalGameCommand({ type: "talk-to-npc", npcId: npc.spawn.npcId });
+    if (!interaction) return;
+    const selectedDialogue = getDialogueDefinition(interaction.dialogueId, {
+      day: state.day,
+      minuteOfDay: state.minuteOfDay,
+      shopAvailable: interaction.shopAvailable,
+    });
+    if (!selectedDialogue) {
+      setActionFeedback({ tone: "error", code: "missing-dialogue", message: "对话内容暂时不可用。" });
+      return;
+    }
+    if (interaction.firstTalkToday && gameUiState.friendships[npc.spawn.npcId]?.lastTalkedDay === gameUiState.day) {
+      npc.playFriendshipPulse();
+      if (!interaction.feedback) setActionFeedback({
+        tone: "success",
+        code: "friendship-talked",
+        message: `与${selectedDialogue.speaker}更熟悉了一点。`,
+      });
+    }
+    if (interaction.shopAvailable && !interaction.dialogueId.startsWith("event:")) {
+      openShop(selectedDialogue.lines[0]);
+      return;
+    }
+    setDialogue({
+      dialogueId: interaction.dialogueId,
+      wateringServiceAvailable: interaction.wateringServiceAvailable,
+      npcId: interaction.npcId,
+      speaker: selectedDialogue.speaker,
+      lines: selectedDialogue.lines,
+    });
   }
 
   /** Opens one nearby environment hotspot through the existing transient dialogue projection. */
   private inspectEnvironment(entity: InspectEntity): void {
-    const player = this.latestState?.player;
-    if (!player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    const state = this.latestState;
+    const player = state?.player;
+    if (!state || !player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
     if (player.regionId !== entity.interaction.regionId) return;
     if (entity.distanceTo(player.x, player.y) > INSPECT_INTERACTION_DISTANCE) {
       setActionFeedback({ tone: "error", code: "inspect-too-far", message: "走近一些再查看。" });
       return;
     }
-    const dialogue = getDialogueDefinition(entity.interaction.dialogueId);
+    if (entity.entityId === "town-notice-board") {
+      openRequestBoard();
+      return;
+    }
+    if (entity.entityId === "lakeshore-dock" && gameUiState.selectedItemId === ITEM_ID.fishingRod) {
+      const zone = this.catalog.requireRegion(player.regionId).fishingZones[0];
+      if (zone) this.startFishing(zone.id);
+      return;
+    }
+    const dialogue = getDialogueDefinition(entity.interaction.dialogueId, {
+      day: state.day,
+      minuteOfDay: state.minuteOfDay,
+    });
     if (!dialogue) {
       setActionFeedback({ tone: "error", code: "missing-dialogue", message: "这里暂时没有可查看的内容。" });
       return;
@@ -942,29 +1146,38 @@ export class WorldScene extends Phaser.Scene {
     setDialogue({ speaker: dialogue.speaker, lines: dialogue.lines });
   }
 
-  /** Fades once around a single atomic sleep command and blocks repeat input during the transition. */
+  /** Requests the save-first overnight transaction; the day-status panel owns waiting and retry. */
   private beginSleep(bedId: string): void {
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
-    this.transitionPhase = "fading-out";
-    this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      dispatchLocalGameCommand({ type: "sleep", bedId });
-      this.transitionPhase = "fading-in";
-      this.cameras.main.fadeIn(TRANSITION_DURATION_MS, 7, 16, 13);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_IN_COMPLETE, () => {
-        this.transitionPhase = "idle";
-      });
-    });
+    dispatchLocalGameCommand({ type: "sleep", bedId });
   }
 
   /** Locks input, fades out, then asks GameSession to resolve one reviewed exit ID. */
   private beginRegionTransition(exitId: string): void {
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    const exit = this.catalog.requireRegion(this.activeRegionId).exits.find((candidate) => candidate.id === exitId);
+    const playsDoor = Boolean(exit && isOutdoorRegion(this.activeRegionId) !== isOutdoorRegion(exit.targetRegionId));
     this.transitionPhase = "fading-out";
-    this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
+    setWorldActionBusy(true);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      dispatchLocalGameCommand({ type: "transition-region", exitId });
+      const feedback = dispatchLocalGameCommand({ type: "transition-region", exitId });
+      if (feedback !== null) this.fadeIntoWorld(TRANSITION_DURATION_MS);
+      else if (playsDoor) emitAudioCue(AUDIO_CUE.door);
     });
+    this.cameras.main.fadeOut(TRANSITION_DURATION_MS, 7, 16, 13);
+  }
+
+  /** Dispatches one nearby pet interaction and plays a heart only for the first valid touch that day. */
+  private interactWithPet(pet: PetEntity): void {
+    const state = this.latestState;
+    const player = state?.player;
+    if (!state || !player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    if (pet.distanceTo(player.x, player.y) > PET_INTERACTION_DISTANCE) {
+      setActionFeedback({ tone: "error", code: "pet-too-far", message: `再靠近${state.pet?.name ?? "伙伴"}一点。` });
+      return;
+    }
+    const feedback = dispatchLocalGameCommand({ type: "pet-home-pet" });
+    if (feedback?.code === "pet-petted") pet.playHeartPulse();
   }
 
   /** Destroys current map/entity views and cancels ephemeral actions before rendering another region. */
@@ -977,12 +1190,18 @@ export class WorldScene extends Phaser.Scene {
     this.activeMap = null;
     destroyAll(this.treeViews);
     destroyAll(this.rockViews);
+    destroyAll(this.weedViews);
     destroyAll(this.forageViews);
     destroyAll(this.farmViews);
+    destroyAll(this.fishingSpotViews);
+    this.fishingLine?.clear();
+    this.tileCursor?.clear();
     destroyAll(this.bedViews);
     destroyAll(this.inspectViews);
     destroyAll(this.exitHintViews);
     destroyAll(this.npcViews);
+    this.petView?.destroy();
+    this.petView = null;
   }
 
   /** Releases subscriptions and optionally destroys views while the scene systems are still valid. */
@@ -990,10 +1209,18 @@ export class WorldScene extends Phaser.Scene {
     if (this.disposed) return;
     this.disposed = true;
     cancelSleepConfirmation();
+    this.audioDirector?.destroy();
+    this.audioDirector = null;
+    this.input.off(Phaser.Input.Events.POINTER_DOWN, this.handleWorldPointer, this);
     this.stopProjection?.();
+    this.stopWorldAction?.();
+    this.stopWorldAction = undefined;
     this.stopProjection = undefined;
     if (destroyViews) this.destroyRegionViews();
-    else setWorldActionBusy(false);
+    else {
+      this.petView = null;
+      setWorldActionBusy(false);
+    }
   }
 }
 

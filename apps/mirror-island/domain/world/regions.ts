@@ -43,7 +43,12 @@ export interface ExitDefinition extends WorldRect {
 export interface ResourceSpawnDefinition extends WorldPoint {
   readonly entityId: string;
   readonly regionId: string;
-  readonly kind: "tree" | "stone" | "spring-wildflower" | "bamboo-shoot";
+  readonly kind: "tree" | "stone" | "weed" | "spring-wildflower" | "bamboo-shoot" | "fallen-branch";
+}
+
+export interface FishingZoneDefinition extends WorldRect {
+  readonly id: string;
+  readonly regionId: string;
 }
 
 export interface StandardInteractionDefinition extends WorldRect {
@@ -67,6 +72,7 @@ export interface NpcSpawnDefinition extends WorldPoint {
   readonly npcId: string;
   readonly dialogueId: string;
   readonly interactionType: "shop" | "dialogue";
+  readonly routine?: "regular" | "rain" | "rest";
 }
 
 export interface RegionDefinition {
@@ -78,11 +84,14 @@ export interface RegionDefinition {
   readonly widthPixels: number;
   readonly heightPixels: number;
   readonly collision: CollisionGrid;
+  readonly waterTiles: readonly boolean[];
+  readonly tillableTiles: readonly boolean[];
   readonly spawns: Readonly<Record<string, WorldPoint>>;
   readonly exits: readonly ExitDefinition[];
   readonly resources: readonly ResourceSpawnDefinition[];
   readonly interactions: readonly InteractionDefinition[];
   readonly npcs: readonly NpcSpawnDefinition[];
+  readonly fishingZones: readonly FishingZoneDefinition[];
 }
 
 export class WorldCatalog {
@@ -90,12 +99,26 @@ export class WorldCatalog {
   private readonly resources = new Map<string, ResourceSpawnDefinition>();
   private readonly interactions = new Map<string, InteractionDefinition>();
   private readonly npcs = new Map<string, NpcSpawnDefinition>();
+  private readonly fishingZones = new Map<string, FishingZoneDefinition>();
   readonly startRegionId: string;
 
   /** Builds a validated immutable lookup catalog from decoded region definitions. */
   constructor(definitions: readonly RegionDefinition[]) {
     if (definitions.length === 0) throw new Error("World catalog requires at least one region.");
-    for (const definition of definitions) this.registerRegion(definition);
+    for (const definition of definitions) {
+      const normalized: RegionDefinition = {
+        ...definition,
+        waterTiles: definition.waterTiles ?? Array.from(
+          { length: definition.collision.columns * definition.collision.rows },
+          () => false,
+        ),
+        tillableTiles: definition.tillableTiles ?? Array.from(
+          { length: definition.collision.columns * definition.collision.rows }, () => false,
+        ),
+        fishingZones: definition.fishingZones ?? [],
+      };
+      this.registerRegion(normalized);
+    }
     const startRegions = definitions.filter((definition) => definition.isStartRegion);
     if (startRegions.length !== 1) throw new Error("World catalog requires exactly one start region.");
     this.startRegionId = startRegions[0]!.id;
@@ -135,6 +158,37 @@ export class WorldCatalog {
   /** Returns one stable NPC spawn or null when the ID is not part of the world catalog. */
   npc(entityId: string): NpcSpawnDefinition | null {
     return this.npcs.get(entityId) ?? null;
+  }
+
+  /** Returns one stable Tiled fishing zone or null when the ID is not part of the world catalog. */
+  fishingZone(zoneId: string): FishingZoneDefinition | null {
+    return this.fishingZones.get(zoneId) ?? null;
+  }
+
+  /** Reports whether one tile coordinate belongs to an authored Farm tillable zone and is not fixed collision. */
+  isTillable(regionId: string, column: number, row: number): boolean {
+    const region = this.requireRegion(regionId);
+    if (regionId !== "farm" || !Number.isSafeInteger(column) || !Number.isSafeInteger(row)
+      || column < 0 || row < 0 || column >= region.collision.columns || row >= region.collision.rows) return false;
+    const x = column * region.collision.tileWidth + region.collision.tileWidth / 2;
+    const y = row * region.collision.tileHeight + region.collision.tileHeight / 2;
+    return Boolean(region.tillableTiles[row * region.collision.columns + column])
+      && !this.isBlockedPoint(region, x, y) && !this.isWaterSource(regionId, column, row)
+      && !this.exitAt(regionId, x, y);
+  }
+
+  /** Reports whether one finite tile coordinate is covered by the authored Water tile layer. */
+  isWaterSource(regionId: string, column: number, row: number): boolean {
+    const region = this.requireRegion(regionId);
+    if (
+      !Number.isInteger(column)
+      || !Number.isInteger(row)
+      || column < 0
+      || row < 0
+      || column >= region.collision.columns
+      || row >= region.collision.rows
+    ) return false;
+    return region.waterTiles[row * region.collision.columns + column] ?? false;
   }
 
   /** Returns the exit containing one world-space point, or null outside all exits. */
@@ -196,6 +250,11 @@ export class WorldCatalog {
       this.registerEntity(this.interactions, interaction.entityId, interaction);
     }
     for (const npc of definition.npcs) this.registerEntity(this.npcs, npc.entityId, npc);
+    for (const zone of definition.fishingZones) {
+      assertStableId(zone.id, "Fishing zone ID");
+      if (this.fishingZones.has(zone.id)) throw new Error(`Duplicate fishing zone ID: ${zone.id}.`);
+      this.fishingZones.set(zone.id, zone);
+    }
   }
 
   /** Adds one globally stable entity ID to its typed index and rejects cross-region duplicates. */
@@ -234,6 +293,13 @@ export class WorldCatalog {
     for (const interaction of region.interactions) {
       this.assertRectInside(region, interaction, `Interaction ${interaction.entityId}`);
     }
+    if (region.waterTiles.length !== region.collision.columns * region.collision.rows) {
+      throw new Error(`Water grid dimensions are invalid in region ${region.id}.`);
+    }
+    if (region.tillableTiles.length !== region.waterTiles.length) {
+      throw new Error(`Tillable grid dimensions are invalid in region ${region.id}.`);
+    }
+    for (const zone of region.fishingZones) this.assertRectInside(region, zone, `Fishing zone ${zone.id}`);
   }
 
   /** Requires one catalog point to remain inside the finite pixel boundary. */

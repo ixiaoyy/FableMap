@@ -1,5 +1,253 @@
 # Mirror Island Phaser Single-player
 
+## Active development save reset policy (2026-09-04)
+
+### 1. Scope / Trigger
+
+- Trigger：镜像岛仍处于本地玩法开发与试玩阶段，新增或重塑 `GameState` / `StoredGame` 字段时，不再为此前开发版本投入迁移、回填、隐藏备份或兼容测试成本。
+- 本节优先于下方 v1–v10 历史场景中的迁移要求；历史段落只记录当时已经实施的版本事实，不构成后续版本继续兼容的义务。
+- 本政策只适用于浏览器本地 gameplay save。它不授权删除或忽略 PostgreSQL、Keycloak、论坛、媒体对象、部署数据或其他生产数据的迁移与保护规则。
+
+### 2. Signatures
+
+```typescript
+const GAME_STATE_VERSION: number;
+const SAVE_FORMAT_VERSION: number;
+
+function createInitialGameState(catalog: WorldCatalog): GameState;
+function decodeStoredGame(value: unknown): StoredGame;
+```
+
+### 3. Contracts
+
+- 每个开发里程碑只定义一个 current `GameState` / `StoredGame` 形态；新游戏直接创建完整 current state。
+- `decodeStoredGame()` 只需完整验证 current version。旧 version 可以明确拒绝并引导清除本地试玩存档后新建，不需要迁移为 current。
+- 不新增 `migrateGameStateV*`、旧字段 alias、旧坐标映射、旧版本原始备份或“背包满时待补发”等仅为开发存档兼容存在的状态。
+- 新增开局物品时直接修改 current new-game defaults；不为旧存档设计自动插槽、替换物品、邮件、NPC 补领或隐藏队列。
+- 当前版本内的刷新、继续游戏、原子保存、损坏值校验和保存失败反馈仍是必须合同；“不兼容旧版”不等于可以静默覆盖、丢失 current save 或跳过 decoder。
+- 若用户未来明确宣布一个可对外保留的发布基线，再从该基线开始单独恢复 forward migration 评审；不得自行假定某次开发存档已经成为兼容基线。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 全新浏览器槽 | 创建完整 current state，包含本版本全部默认字段和开局物品 |
+| 合法 current save | 完整解码并继续，刷新前后 current state 保持 |
+| 旧开发版本 save | 明确报告版本不兼容；允许用户清除本地试玩存档并重新开始，不执行迁移或备份 |
+| current save 缺字段、非法 ID、越界数值或重复记录 | 解码失败且不静默覆盖原记录 |
+| IndexedDB 写入失败 | 保持已提交前状态并显示可恢复错误；不得用“开发阶段”作为忽略原子性的理由 |
+| PostgreSQL、Keycloak、论坛或部署数据变更 | 不适用本政策；继续遵守人工评审、备份和 migration 约束 |
+
+### 5. Good / Base / Bad Cases
+
+- Good：新版本增加基础镐和共建状态；新游戏直接拥有完整字段，同版本刷新可恢复，旧 v10 存档显示“不兼容，请重新开始”。
+- Base：只调整纯表现且不改变 state 时，继续使用当前 schema，不为版本号制造无意义变更。
+- Bad：为每个开发版本继续堆叠 v1→v2→…迁移链；或反过来因为不兼容旧版而跳过 current decoder、静默覆盖坏档或删除外部服务数据。
+
+### 6. Tests Required
+
+- 保留 current state / stored envelope 的创建、严格解码、round-trip、损坏值失败和 current-version 刷新恢复检查。
+- 新开局默认值直接断言当前工具、物品和持久状态；不新增或维护旧开发版本迁移、备份、回填和满背包补领测试。
+- 浏览器人工路线从清理本地试玩站点数据后的新游戏开始；若保留一个旧开发存档样本，只验证它得到明确不兼容反馈，不验证进度保留。
+- 本政策不改变最小 `typecheck`、client build、玩法路线与保存失败检查，也不允许连接数据库。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: new development content carries an ever-growing compatibility chain.
+const state = raw.version === 10 ? migrateGameStateV10(raw.state) : decodeCurrent(raw.state);
+
+// Correct: fresh games create current state and the decoder validates only that shape.
+if (raw.version !== GAME_STATE_VERSION) throw new Error("Local playtest save version is no longer supported.");
+const state = decodeCurrentGameState(raw.state);
+```
+
+## Scenario: surface resource tools current v12
+
+### 1. Scope / Trigger
+
+- Trigger：`09-04-surface-mining-v1` 先为小镇共建提供石料来源，再按用户确认补齐《星露谷物语》式开局基础镰刀；两者共用 formal Farm/Foothills/Lakeshore 地表资源链。
+- 本场景拥有基础镐/镰刀、石料/植物纤维、一次 impact、确定性掉落、有限每日恢复和 current v12；矿洞、矿石、干草、筒仓、动物、战斗、技能与工具升级不进入范围。
+
+### 2. Signatures
+
+```typescript
+type MiningResult =
+  | "mined"
+  | "missing-target"
+  | "depleted"
+  | "too-far"
+  | "wrong-tool"
+  | "inventory-full"
+  | "insufficient-stamina";
+
+interface GameState {
+  readonly version: 12;
+  lastSurfaceStoneRefreshDay: number;
+  lastSurfaceWeedRefreshDay: number;
+}
+
+class MiningSystem {
+  use(state: GameState, targetId: string, itemId: ItemId | ""): MiningResult;
+  settleDay(state: GameState): number;
+}
+
+type WeedCuttingResult =
+  | { code: "cut"; cutCount: number; fiberCount: number }
+  | { code: "missing-target" | "depleted" | "too-far" | "wrong-tool" | "wrong-direction" | "inventory-full"; cutCount: 0; fiberCount: 0 };
+
+class WeedCuttingSystem {
+  use(state: GameState, targetId: string, itemId: ItemId | "", facing?: Facing): WeedCuttingResult;
+  settleDay(state: GameState): number;
+}
+```
+
+- `ITEM_ID.pickaxe="pickaxe"`、`ITEM_ID.scythe="scythe"`、`ITEM_ID.stone="stone"`、`ITEM_ID.fiber="fiber"`；工具 stack=1，资源 stack=99，stone/fiber 售价为 2g/1g。
+- 复用现有 `{ type:"use-item-on-target", itemId, targetId, facing? }`，不增加 mining/scythe-only command kind；Facing 只作为镰刀扇区输入，不由客户端提交命中列表。
+
+### 3. Contracts
+
+- 新游戏 slots 0..4 固定为 hoe、watering-can、axe、pickaxe、scythe；默认仍为空手。v12 只创建/解码 current shape，v1–v11 一律 unsupported，不迁移或备份。
+- `MiningSystem` 是 stone phase、距离、体力和掉落的唯一规则 owner；依赖现有 InventorySystem、StaminaSystem、WorldCatalog 和 `stableHash()`。
+- 合法采石要求同 region、42px 内、stone phase=standing、背包确实持有并选中 pickaxe、至少 2 stamina 且能完整加入 1 stone。成功顺序为容量校验 → 扣 2 stamina → phase=cleared → +1 stone → 一次 critical save。
+- formal stone 数量固定为 Farm 1、Foothills 4、Lakeshore 2。Farm/Lakeshore cleared 永久保持；Foothills 是唯一可持续来源。
+- 日结增加 day 后调用 `settleDay`，只从 Foothills cleared 点按 `stableHash(worldSeed, day, "surface-stone:"+entityId)` 排序恢复最多两个；hash 同值按 ASCII stable ID。`lastSurfaceStoneRefreshDay` 使同日重复调用返回 0，已 standing 点不消耗恢复名额。
+- Tiled 继续拥有七个坐标和 stable IDs；GameState 只保存 standing/cleared。Phaser 的 RockEntity 只投影 phase、播放震动/碎屑，ActionTimeline impact 只 dispatch 一次。
+- 基础镐复用已登记 GARDENS 原图 `(6,1)`；stone 图标由 `item-pixel-art.ts` 的原创 16×16 配方生成，成功结果复用已登记 stone SFX，不增加媒体对象或 Git 图片/音频二进制。
+- IndexedDB 当前 save 只 put main record；不再创建 v2/v9 backup。显式删除仍精确清理 main 和两个已知 retired backup key，不枚举其他记录。
+- formal weed 数量固定为 Farm 6、Foothills 5、Lakeshore 4。WeedCuttingSystem 是 phase、Facing 扇区、目标上限、掉落与恢复的唯一规则 owner；weed 只允许 standing/cleared 且 `regrowOnDay=null`。
+- 合法挥割要求同 region、42px 内、目标位于当前 Facing 的前方 90° 扇区、背包持有且选中 scythe；按距离和 ASCII stable ID 最多清除三株，不调用 StaminaSystem。
+- 每株 fiber 用 `stableHash(worldSeed, day, "weed-fiber:"+entityId)%2` 固定判定 50%。先计算总量并通过 `InventorySystem.canAdd`，再统一 cleared/+fiber/一次 critical save；零掉落仍成功，背包不足时全部不变。
+- 新日按 `surface-weed:<entityId>` 分区稳定排序，Farm/Foothills/Lakeshore 最多恢复 1/2/1 株；standing 不占名额，Farm 已有 `farmTiles` 的格子跳过。`lastSurfaceWeedRefreshDay` 使同日重复结算为 0。
+- WeedEntity 使用源码图元渲染并从 saved standing→cleared transition 播放叶片；FarmingActionPresenter 只画挥割弧线。scythe/fiber 使用源码 16×16 图标，成功 `cut` 复用 harvest cue；无新增媒体对象或二进制。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| pickaxe + nearby standing stone + capacity + stamina | -2 stamina、+1 stone、phase=cleared、一次保存与 stone cue |
+| 背包满或 stamina < 2 | inventory/stamina/resource 全部不变，明确错误 |
+| wrong tool | 零 domain mutation；clicked rock 可播放轻敲但无成功 cue/碎裂 |
+| unknown、跨 region、>42px 或 cleared | 零 mutation，返回 closed result |
+| 同一 Foothills 新日首次 settle | 恢复 0..2 个 cleared 点，并写 refresh day |
+| 同日再次 settle / 保存失败重试同一 candidate | 恢复 0，不重抽、不多生石块 |
+| current stone=stump、regrowOnDay 非 null、refresh day > state.day | current decoder 失败 |
+| scythe + facing + 1–3 nearby weeds | stamina 不变，命中全部 cleared，固定 0–3 fiber、一次保存与 harvest cue |
+| wrong tool、背向、跨 region、>42px 或 cleared weed | 零 mutation；错误工具只允许轻微 rustle，无成功 cue/叶片 |
+| 本次 fiber 总量无法完整入包 | 所有候选 weed、inventory 和 stamina 全部不变 |
+| 新日 weed settle | Farm/Foothills/Lakeshore 恢复 0..1/0..2/0..1，跳过农田；同日再次为 0 |
+| current weed=stump、regrowOnDay 非 null、任一 refresh day > state.day | current decoder 失败 |
+| v11 或更早 envelope | 明确 unsupported；原 IndexedDB record 不覆盖 |
+
+### 5. Good / Base / Bad Cases
+
+- Good：Day 1 第四/第五槽为镐/镰刀；采石使体力 100→98、+1 石料，面向三株杂草挥割最多清除三株、体力保持、固定获得纤维；刷新继续仍保持。
+- Base：错误工具只提示；杂草可清除但本次 hash 为零纤维。没有矿洞、干草、战斗、作物挥割或升级承诺。
+- Bad：Phaser 自行决定 AoE/掉落、每次 render 随机重抽、背包不足仍部分清草、镰刀扣体力、同日重复恢复，或继续维护旧 migration chain。
+
+### 6. Tests Required
+
+- life-loop contract：formal stone 1/4/2、weed 6/5/4、采石与三株挥割成功、wrong tool/direction、背包满原子性、固定 fiber、current v12 round-trip、v1–v11 unsupported、两个日结 marker 与 GameSession 一次保存。
+- town/audio contract：第四/第五 Hotbar 槽可选择；`mined -> stone`、`cut -> harvest`，错误结果静音。
+- 最小自动门禁：`test:life-loop`、`test:town-population`、typecheck、client build；Git 游戏媒体二进制增量为零。
+- 浏览器从新 origin 正常新建，核对镐/镰刀图标、Farm stone/weed、采矿扣体力、镰刀零消耗、fiber 图标、刷新继续与 console error/warn；Foothills/Lakeshore 全路线和主观手感由真人确认。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation decides the area hit, drop and resource removal.
+nearbyWeeds.forEach((weed) => weed.setVisible(false));
+gameUiState.inventory.push({ itemId: "fiber", quantity: Math.random() < 0.5 ? 1 : 0 });
+
+// Correct: the existing command reaches the sole domain owner once at ActionTimeline impact.
+dispatchLocalGameCommand({
+  type: "use-item-on-target",
+  itemId: ITEM_ID.scythe,
+  targetId: weed.entityId,
+  facing,
+});
+```
+
+## Active Spring v10 contract (human acceptance confirmed 2026-09-03)
+
+### 1. Scope / Trigger
+
+- 用户已批准 `.trellis/tasks/09-02-spring-complete-v1/`。本节优先于下方历史 v3–v9 场景：实施日程/体力/天气、动态农田、六作物、资源再生、钓鱼、送礼和营业；删除镜门伏笔，不增加剧情/节庆/数据库。
+
+### 2. Signatures
+
+- `GameState.version = StoredGame.version = 10`；`minuteOfDay` 为 360..1560，10 分钟粒度。
+- 新命令：`use-item-on-tile`、`refill-watering-can`、`eat-item`、`gift-item-to-npc`、`claim-fishing-rod`、钓鱼 press/release/dismiss、`retry-fishing-save`、`retry-day-settlement`；payload 以 `domain/session/commands.ts` 为准。
+- `tick(now, paused, activityPaused)` 返回 `ActionFeedback | null`；`subscribeFishing` 与 `subscribeDaySettlement` 提供不进入存档的防御性 UI 投影。
+- 坐标农田键为 `farm:column:row`；允许区域只由 Tiled 提供。
+- `facingFromVector(x, y, fallback)` 为输入无关的朝向解析；Phaser 必须用同区域 snapshot 位移同步触摸方向，不能仅从 WASD 读取。
+
+### 3. Contracts
+
+- `GameSession` 是唯一 mutable aggregate，所有新状态只保存在一个 v10 中；Phaser/Vue 消费只读投影。
+- 午夜提醒一次，02:00 强制日结；Cottage 外扣 `min(floor(gold/10),1000)`，不丢物品。晚睡恢复下降但不低于50%。
+- 日结先生成候选 snapshot，保存失败不得推进日期或重复扣款；失败有明确重试路径。
+- `.game-canvas` 必须建立独立 formatting context，约束 Phaser FIT 注入的 canvas 居中 margin；手机方向键、聚焦和 resize 后 `.world-frame.scrollTop` 保持 0。恢复画布焦点使用 `preventScroll: true`。
+- v9 原记录在首次 v10 写入的同一个 IndexedDB transaction 中备份；不枚举旧账号、不增加可玩槽。
+- 钓鱼只有 casting/waiting 继续岛上计时，reeling/result 暂停；隐藏页面冻结两者且不补算隐藏时间。开始一竿扣 6 体力并保存 attempt；刷新取消 runtime，不返还体力。
+- caught 投影附加 `saveStatus: saving/saved/failed`。只有写入成功才能收竿；失败持续显示重试入口，重试不得重新加鱼。escaped 不暴露未获得的鱼名。
+- 所有 DOM dialog 的 keydown/keyup 在 App 边界停止冒泡，但不取消按钮原生默认行为；Tab 留在 dialog，钓鱼输入 blur/pointercancel 必须释放。
+- HUD 原生 Space/Enter 激活也与 Phaser 捕获隔离；输入转为 locked 时 WorldScene 重置已有 keyboard keys，防止被 dialog 接走的 keyup 导致回到世界后继续移动。
+- 方向键长按必须在 modal lock、全局 pointerup/pointercancel、blur、visibilitychange 时停止；首个 nudge 触发弹框后不得再创建 interval，防止按钮禁用吞掉 pointerup 后自动续走。
+- 体力上限 100，锄地/砍伐 2、浇水每实际格 1；水壶 20/40 水。雨天新开垦与采收后土壤保持湿润，重复浇水不扣资源。
+- Farm `Tillable` 当前 492 格，稀疏 key 必须是规范 `farm:column:row`，不接受前导零或越界。原 8 格迁移到列 27–30、行 18–19。
+- Farm 外清桩 7 天再生，Farm 树不再生；枯枝不刷在已有农田上。Foothills 春笋仅每轮 28 天第 4–14 天参与候选，其他地区仍保留零星来源。
+- 礼物每日/每周计数按 NPC 保存：1/日、2/周，周日重置，没有全镇总限制。营业 09:00–17:00，休息日优先于雨天覆盖；UI 不另算服务资格。
+- Day 7 从祥子免费领取鱼竿，雨天去东岸民宅；不得让提示断言 NPC 此刻必在码头。原始剧情/节庆/品质/矿洞均不进入本版。
+- 天气图层与 `AudioDirector -> WeatherAmbience` 只表现 saved weather；后者用原生 Web Audio 合成原创噪声，不新增第三方素材 URL、库或二进制。
+
+### 4. Validation & Error Matrix
+
+- 不可耕/越界/远距/遮挡坐标：无 mutation；不足体力/水/库存：明确失败且原子保持。
+- v9 合法记录：原8格按发布坐标迁移，镜门 marker 移除；未知字段值/未来版本：不覆盖原记录。
+- 02:00 与床铺竞态：只能一个日结；保存失败重试复用同一候选，不能再次扣钱。
+- 鱼获保存失败：结果框保持失败状态，`dismiss-fishing` 被拒绝，`retry-fishing-save` 保存同一背包。
+- 菜单/角色创建时 visibilitychange：不调用未开始的 GameSession.tick；显式新游戏只等待旧队列结束，不能因旧失败标记永久禁止重建。
+
+### 5. Good / Base / Bad
+
+- Good：种田、雨天、钓鱼、送礼均可刷新恢复，Day28→29继续春季内容。
+- Base：剧情和活动为空，不用虚构入口承诺后续玩法。
+- Bad：客户端计算鱼获/扣体力、静默覆盖坏档、重载重抽结果或部署半完成 v10。
+
+### 6. Checks
+
+- 相关检查：life-loop 21 项、town/audio 12 项、typecheck 与 client build 通过；用户于2026-09-03明确确认本批真人验收全部完成。后续改动仍按范围覆盖完整种植/钓鱼/送礼手感、真实 v9 备份、02:00 与 200% 浏览器缩放，不连接服务端数据库。
+- 开发 HMR 若仍返回旧 domain 模块，重新构建并用隔离 origin 的 production preview 复验；不能把热更新中 GameSession 重建错误记为生产验收通过。
+
+### 7. Wrong vs Correct
+
+- Wrong：Phaser 更新背包后再按钓鱼动画判断成功。
+- Correct：FishingSystem 判定成功并由 GameSession 原子保存，客户端只显示结果。
+
+## Spring art polish v1 (2026-09-03, human review pending)
+
+- 范围为 Cottage、当前 25 个物品与种田动作，保留 v10；不从本表现合同扩展其他地图或玩法。
+- `itemIconForItem()` 是 Hotbar、Backpack、Gift、Fishing result 与 Phaser 持物的共享源。原图 frame 使用 `AtlasItemIcon`，原创小图形使用 `PixelArt`；seed badge 复用 `cropForSeed()` 身份，不复制种植规则。
+- GARDENS 正式坐标：hoe `(0,2)`、watering `(0,5)`、axe `(0,10)`、seed bag `(6,5)`；旧 Gate A 记录中的部分坐标误指铁锹/镰刀/钳子，不能作为现行依据。
+- `FarmingActionPresenter` 只拥有原角色 pose、tool grip、held item 与有限视觉效果；`ActionTimeline -> WorldScene impact -> GameSession` 仍只有一次 mutation。错误反馈不产生成功效果，切图/动作结束清理本实例拥有的 tweens。
+- 工具图片翻转时握点也要镜像；各工具使用其原图的手柄/提手位置，不共用一个任意旋转中心。九种外观都使用自身 profile，不能套用另一角色的 plowing sheet。
+- Cottage 的 256×128 `cottage-woodwork` texture 由源码配方生成；Tiled metadata 的 PNG 只作为 ignored 编辑缓存，不是运行时 URL 或新 CDN 对象。布局、Collision、床/出口及 `cottage-room-view` 镜头点仍属于 TMJ。
+- 即使 Collision 层不渲染，非零 GID 也必须属于当前内嵌 tileset；Phaser 解析全部图层，遗留 GID 会使切图失败。
+- Cottage 收紧布局保留所有旧 stable IDs 与宠物锚点；旧坐标撞到新 Collision 时复用既有 `reconcileGameStateWithCatalog()` 安全入口逻辑，不添加迁移。
+- 最小检查：typecheck、client build、Tiled/图标结构检查及当前画面；真人手感与审美单独确认，不扩大测试矩阵。
+
+## Shop interiors and safe doorway transitions (2026-09-03)
+
+- 第二批仅覆盖 Seed Shop/Blacksmith 的室内表现和接近路径；保留 NPC、商品、日程与 v10。Town 只允许本次已复现门口缺陷所需的单一落点调整。
+- `shop-interiors` 在 256×256 Canvas atlas 内复用 Cottage 原有配方，再添加职业陈设；新图 GID 5001–5256，包括隐藏 Collision。静态摆放与脚部阻挡须一致。
+- `fixedInteriorViewAnchorForRegion()` 只返回地图拥有的 camera spawn ID；有 anchor 的室内使用固定 2× 镜头，其余区域继续跟随角色。
+- 华强的 home/counter/shelves 必须连通，柜台前有 42px 内的可达交谈点；炉前/架前有 48px 内的可达查看点，其他服务由 domain 决定。
+- `WorldCatalog.exitAt()` 当前包含矩形上边界。返回点必须位于入口之外并保留脚部净空，禁止依赖玩家在淡入期间赶快移开来逃离反向触发。
+- `WorldScene` 从淡出开始到淡入结束都须持有 `setWorldActionBusy(true)`；仅锁私有 transition phase 无法停止 DOM 方向控制。
+- `fadeIntoWorld(durationMs)` 集中恢复画面并释放共享输入锁。拒绝切图也必须走淡入恢复，不得永久停留在黑屏。
+- 不新增保存字段、数据迁移或动画框架；本次真实缺陷只增加一条门外落点净空回归检查。
+
 ## Ownership
 
 - 唯一应用位于 `apps/mirror-island/`；公开 `/` 只服务一份 Phaser/Vue 单人 client。
@@ -25,7 +273,7 @@ Phaser/Vue -> typed GameCommand -> GameSession -> pure domain mutation
 ## Local persistence
 
 - SaveRepository 暴露 `has/load/save/delete`，domain 不知道 IndexedDB。
-- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前 save schema v7 包含 region、player appearance、absolute day、minuteOfDay、gold、通用作物、每日采集与 NPC friendship，旧 v1–v6 只通过显式幂等 decoder 迁移，不使用 localStorage 保存玩法。
+- IndexedDB adapter 使用固定 DB `mirror-island-local`、store `game-saves`；当前工作区 save schema v10 保留 v9 宠物并增加春季玩法字段。旧 v1–v9 通过显式幂等 decoder 迁移，v9 原始记录在首次 v10 写入时同事务备份；不使用 localStorage 保存玩法。
 - save value 包含 schema version、updatedAt、玩家、背包、资源、农田和 friendship；读取从 unknown 完整验证，未来/损坏版本明确失败。
 - token、ticket、密码、Keycloak 对象、数据库 URL 和 secret 禁止写入 IndexedDB；当前 Web 试玩 ownerKey 由 client session adapter 以固定 opaque 值 `local-playtest-v1` 提供，不生成用户或设备身份。
 - 关键玩法事件立即排队保存，移动使用有界 debounce，页面隐藏/退出调用 flush；不得逐帧写盘。
@@ -1223,7 +1471,7 @@ function itemIconForItem(itemId: string): ItemIconDefinition | null;
 
 ### 6. Tests Required
 
-- manifest 断言 14 images / 214731 bytes，并从 CDN 校验全部 SHA-256、dimensions、MIME 与 immutable cache。
+- manifest 断言 15 images / 2874147 bytes，并从 CDN 校验全部 SHA-256、dimensions、MIME 与 immutable cache。
 - typecheck、client build；产物包含正式 GARDENS URL 和 `THIRD_PARTY_NOTICES.txt`，不包含旧 local GARDENS candidate URL。
 - Git 图片 binary diff 为 0；真实浏览器断言前三格使用图标且 notice 可访问。
 
@@ -1445,11 +1693,360 @@ frontend:
     dockerfile: apps/mirror-island/Dockerfile.web
 ```
 
+## Scenario: generated homepage hero media
+
+### 1. Scope / Trigger
+
+- Trigger：公开 `/` 的非 playing 启动页需要一张项目原创东方田园主视觉；交互文字、按钮和存档状态仍由 Vue/HTML 渲染。
+
+### 2. Signatures
+
+```typescript
+export const HOME_HERO_URL: string;
+```
+
+```text
+assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png
+```
+
+### 3. Contracts
+
+- `client/src/game/assets/media-catalog.ts` 是首页 hero URL 的唯一 owner；`App.vue` 只把该 URL 注入 CSS custom property，不散落 CDN 地址。
+- 正式 PNG 固定为 1672×941、2659416 bytes、SHA-256 `f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf`。
+- 图像不包含文字、按钮、品牌、存档状态或其他交互 UI；这些信息必须保持可访问 DOM。
+- 对象通过 `/game-media/v1` 同源加载，CDN key 不可覆盖；生成 prompt 与采用记录位于 `docs/assets/mirror-island-home-hero-2026-08-31.md`。
+- `prepare-media.mjs` 可以复用已存在且 bytes/hash 完全匹配的 ignored 本地输出；本地缺失或不匹配时必须从正式 CDN 下载并重新校验。
+- repository-dispatch 使用 base64 临时源时，文本必须是无 BOM、无换行的纯 ASCII；本 hero 的精确长度为 3545888 字符。PowerShell 管道默认编码不可作为发布源，必须用 `UTF8Encoding(false)` 或等价无 BOM 写法并在 dispatch 前核对字符数和文件字节数相等。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| 本地 ignored hero bytes/hash 完全匹配 | `prepare:media` 复用，不发起重复下载 |
+| 本地 hero 缺失或不匹配，CDN 对象正确 | 下载后校验并写入 ignored `public/game-media` |
+| base64 临时源含 UTF-8 BOM、换行污染或长度不等于 3545888 | 工作流在 `base64 --decode` 阶段失败，S3 写入前终止；修正源后以同 object key/hash 幂等重试 |
+| CDN 缺失、bytes/hash 不符或 key 已存在不同内容 | 发布/准备失败，不回退临时 Gist 或把图片提交 Git |
+| 背景运行时加载失败 | CSS 同色系背景仍显示，菜单 DOM 和操作保持可用 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：生产浏览器只请求登记的同源 PNG，画卷菜单和存档状态可被键盘与辅助技术读取。
+- Base：本地已有精确生成输出时，开发启动不依赖重复网络下载。
+- Bad：把生成图 base64 内联、指向临时 Gist、把按钮烘焙进 PNG，或把 PNG 加入 Git。
+
+### 6. Tests Required
+
+- `prepare:media` 断言 15 个对象并校验 hero bytes/hash；typecheck、client build 必须通过。
+- dispatch 前断言 base64 字符数与无 BOM UTF-8 文件字节数都为 3545888；失败 run 必须确认停在 S3 写入之前。
+- manifest 断言 15 images / 2874147 bytes；发布后从 CDN 和同源代理回读 hero 的尺寸、MIME、SHA-256 与 immutable cache。
+- Git 图片 binary diff 为 0；真实浏览器覆盖桌面、手机、200% zoom、无存档/有存档、加载和错误状态。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: temporary generation output becomes a runtime dependency.
+const hero = "https://gist.githubusercontent.com/.../hero.png";
+
+// Correct: Vue injects the reviewed same-origin immutable media URL into CSS.
+const homeHeroStyle = { "--home-hero-image": `url("${HOME_HERO_URL}")` };
+```
+
+## Scenario: browser-local audio feedback and ambience
+
+### 1. Scope / Trigger
+
+- Trigger：Farm/Town/Lakeshore/室内需要真实 SFX 与环境层，并提供独立于 gameplay save 的 Master/Music/SFX 本地音量设置。
+
+### 2. Signatures
+
+```typescript
+interface AudioSettings {
+  readonly version: 1;
+  readonly master: number;
+  readonly music: number;
+  readonly sfx: number;
+}
+
+type AudioCue =
+  | "footstep" | "hoe" | "watering" | "axe" | "stone"
+  | "harvest" | "pickup" | "door" | "buy" | "sell"
+  | "dialogue-page" | "sleep";
+
+function audioCueForCommandResult(
+  command: GameCommand,
+  feedback: ActionFeedback | null,
+): AudioCue | null;
+
+function updateAudioVolume(channel: "master" | "music" | "sfx", value: number): AudioSettings;
+```
+
+### 3. Contracts
+
+- `AudioDirector` 是声音实例、one-shot、脚步轮换、区域 loop crossfade 和 teardown 的唯一 client owner；Vue、GameSession 与实体不得保存 `HTMLAudioElement`。
+- typed command/result 先完成 gameplay mutation，再由 `audioCueForCommandResult` 映射成功 cue；失败交易、错误工具和无 mutation 结果不得播放成功音。
+- 门声只在室内/室外边界播放，Farm↔Town、Town↔Foothills/Lakeshore 等纯室外切图不播放门声。
+- current v12 中 stone/weed 只有在 `mined`/`cut` 已完成 domain mutation 后才映射 stone/harvest cue；错误工具、背包失败和无 mutation 结果保持静音。
+- 音量设置 key 固定 `mirror-island.audio-settings.v1`，只含有限 0..1 数值；不进入 IndexedDB `GameState`，不包含身份、URL 或 secret。
+- `Music Volume` 在本阶段保存但没有音乐轨；SFX 同时控制 one-shot 和环境层。
+- 音频只从 manifest 登记的同源 `/game-media/v1` URL 读取。manifest schema v1 分别记录 `tracked_image_*` 与 `tracked_audio_*`；音频 MIME allowlist 为 `audio/ogg`、`audio/mpeg`、`audio/wav`，不得伪造 width/height。
+- 19 个采用音频对象必须由 CDN 回读验证 bytes、SHA-256、MIME 与 `public,max-age=31536000,immutable`；Git tracked audio binary 必须为 0。
+- autoplay/load rejection 只显示一次可恢复提示，游戏继续可用；直接用户点击“测试声音”后可恢复 one-shot 并重新启动当前环境层。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| localStorage 缺失、损坏、未来 version 或非有限音量 | 使用 reviewed defaults，不阻断游戏 |
+| 音量超出 0..1 | decoder/update clamp 到边界 |
+| buy/sell/harvest/pickup/tool mutation 失败 | 无对应成功 cue |
+| autoplay 或单个文件 load/play reject | 一次错误提示；移除失败 voice，玩法继续；可通过测试声音重试 |
+| 同 ambience group 重复 render | 保留当前层，不叠加 duplicate loop |
+| region group 改变 | 旧层 650ms fade-out 并释放，新层从 0 fade-in |
+| Scene shutdown/HMR | 取消 animation frame、停止所有 voice、解绑 cue/settings listener |
+| manifest 音频包含 dimensions、未知 MIME、错误 totals/hash/URL | 构建/部署媒体校验失败 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：玩家在 Farm 行走、耕作和浇水，进入 Town/室内/Lakeshore 时环境平滑切换；刷新后 80/70/80 音量偏好恢复。
+- Base：Music slider 可调整并保存，但明确显示本阶段暂无配乐。
+- Bad：Vue 直接 `new Audio`、失败购买也响金币、每次 render 都新增 loop、把音量写入 GameState，或从 Freesound/OpenGameArt URL 直接运行时加载。
+
+### 6. Tests Required
+
+- 纯合同断言 settings v1 decode/default/clamp、成功/失败 command→cue 映射和 region→ambience group。
+- `test:town-population`、typecheck、client build；`prepare:media` 必须准备 19 个音频且逐项 hash 匹配。
+- manifest validator 断言图片仍需正尺寸、音频禁止尺寸且 totals 分类型匹配；CDN verifier 对所有媒体检查 bytes/hash/MIME/cache，仅 PNG 检查 IHDR。
+- 真人按交付清单听取所有 cue、Farm/Town/Lakeshore/室内层、循环接缝、相对响度、静音和 autoplay 恢复；Agent 不伪造听感通过。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: component duplicates mutation rules and plays success before the domain result.
+coinSound.play();
+dispatchLocalGameCommand({ type: "buy-item", itemId, quantity: 1 });
+
+// Correct: one adapter maps the committed typed result into a semantic cue.
+const feedback = activeSession.dispatch(command);
+const cue = audioCueForCommandResult(command, feedback);
+if (cue) emitAudioCue(cue);
+```
+
+```typescript
+// Wrong: audio preference changes the durable gameplay schema.
+state.musicVolume = sliderValue;
+
+// Correct: non-sensitive local preference remains outside GameState.
+updateAudioVolume("music", sliderValue);
+```
+
+## Scenario: retention GameState v8
+
+### 1. Scope / Trigger
+
+- Trigger：首周需要 24→32 背包、水壶 Lv2、确定性每日委托、关系对话历史、once-only 事件和 Spring28 后继续 Day N，必须一次升级本地 durable contract。
+
+### 2. Signatures
+
+```typescript
+type InventoryCapacity = 24 | 32;
+type WateringCanLevel = 1 | 2;
+type RelationshipStage = "stranger" | "familiar" | "friendly";
+
+interface DailyRequestState {
+  day: number;
+  requestId: string;
+  completed: boolean;
+}
+
+interface NpcDialogueState {
+  recent: Array<{ dialogueId: string; day: number }>;
+  acknowledgedStage: RelationshipStage;
+}
+
+interface GameState {
+  readonly version: 8;
+  inventory: InventorySlot[];
+  inventoryCapacity: InventoryCapacity;
+  wateringCanLevel: WateringCanLevel;
+  dailyRequest: DailyRequestState | null;
+  npcDialogue: Record<string, NpcDialogueState>;
+  seenEventIds: RetentionEventId[];
+}
+```
+
+```typescript
+type GameCommand =
+  | { type: "use-item-on-target"; itemId: ItemId | ""; targetId: string; facing?: Facing }
+  | { type: "upgrade-watering-can" }
+  | { type: "upgrade-backpack" }
+  | { type: "acknowledge-retention-event"; eventId: RetentionEventId }
+  | /* existing commands */;
+```
+
+### 3. Contracts
+
+- `SAVE_FORMAT_VERSION` 与 `GAME_STATE_VERSION` 同步为 8；v7 通过唯一 `migrateGameStateV7` 增加 24/Lv1、deterministic current request、空 dialogue/event state，v1–v6 继续走各自 released decoder 后补同一 v8 defaults。
+- current v8 inventory length 必须等于 `inventoryCapacity`；v1–v7 迁移输入仍必须先满足 released 24-slot shape。24→32 只在华强附近、Day≥5、1500g 时追加八个空槽，前24槽和八格 Hotbar 不移动。
+- 水壶 Lv2 只在 Town/Blacksmith 的昊天附近、Day≥3、900g+15 wood 时购买；无耐久、体力、水量或通用 upgrade tree。
+- Lv2 watering 先验证 clicked plot 42px 距离，再按 facing 的 0/16/32 像素中心查找 catalog 注册的 same-region contiguous plots；只改变 `growing && !watered`，不得合成 ID 或越界。
+- Day1 `dailyRequest=null`；Day≥2 使用 `(day-2)%8` 选择并保存 request ID。submit 必须 target NPC、足量 item、safe Gold；consume + Gold + capped Friendship + completed 在同一 GameSession mutation 中完成，重复 submit 不领奖，sleep 无惩罚替换次日 request。
+- 内部 friendship 保持 250 points/heart、2500 max、daily talk +20、missed -2；外显 stage 只投影 250 familiar / 500 friendly。
+- Domain `NpcDialogueSystem` 按 request→event→new stage→activity→personality 选择稳定 ID，排除当前及前三个 absolute day history，最多保存12条。中文文本由 client catalog 按 stable ID 渲染，不进入 save；候选/优先级/history mutation 不能在 client 复制。
+- 两心事件继续由同一 `NpcDialogueSystem` 按 NPC identity + 当前 `regionId` 判定：华强只允许在 `seed-shop`，昊天只允许在 `town` 或 `blacksmith`；住宅或其他日程地点的普通交谈不得消费 once-only event ID。
+- `seenEventIds` 是 closed catalog，当前含华强/昊天两心事件与 Day3/5/7 里程碑；unknown/duplicate ID current decode 失败。
+- `FirstWeekMilestoneSystem` 只接受 Day3/5/7 三个 milestone ID：日期未到、两心 event ID 或重复确认均不写 state；成功确认由 GameSession 立即 publish/save，并由现有 feedback toast 展示一次。功能可用性始终按 absolute day 判定，不能反向依赖 seen ID。
+- 当前 gameplay 使用 `playableCalendarAt`：absolute Day N 永不进入未实现 Summer，crop/shop/forage 继续 spring content。`calendarAt` 只保留未来四季工具，不得被当前 gameplay/UI 用来重置 Day29。
+- LifeHud/CalendarPanel 只外显 absolute `Day N`、星期与滚动 28 天页，不显示“春季结束”或未实现季节；TodayHint 只从 snapshot 派生首周目标，Day4 必须读取实际 friendship points。
+- v10 已删除 `lakeshore-waystone` 的微光和镜门预告；所有日期均是普通环境说明。Day7 改为领取鱼竿/旧码头钓鱼引导，不注册出口或 Expedition state。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| v7 合法 Day1/Day28 save | 确定性迁移 v8；保留位置、Gold、inventory、farm、friendship |
+| current v8 缺字段、future version、unknown request/dialogue/event | load 明确失败，原 IndexedDB record 不覆盖 |
+| capacity=32 但 inventory=24 或其他长度 | `Inventory state is invalid` |
+| upgrade locked/remote/already owned/Gold或wood不足 | fixed error feedback；inventory/Gold/level/capacity 不变 |
+| request missing item/non-target/already completed | 无扣物、无奖励；对应 dialogue state 可见 |
+| 两心 NPC 在非工作地点交谈 | 不选择 event dialogue，不写入 `seenEventIds`；到正确地点后仍可触发一次 |
+| request reward Gold 超 safe integer 或 friendship missing | mutation 抛错并恢复 inventory/Gold/friendship |
+| dialogue history >12、future/过旧 day、unknown/duplicate recent ID | current v8 decode 失败 |
+| milestone 日期未到 / two-heart ID / 已确认 | 返回固定 feedback，`seenEventIds` 不变；只有首次已解锁 milestone 追加并保存 |
+| Day28 sleep | friendship/farm/forage/request 只结算一次，进入 Day29 06:00 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Day2 华强委托完成后加170，Day1–4 每日交谈各20，Day4 恰好250并优先 familiar 台词；刷新不 reroll。
+- Base：玩家不做委托，睡觉后请求自然过期，无惩罚；absolute day 继续增长。
+- Bad：Vue 直接 push 8 slots/seen ID、Phaser 循环调用三次 watering、用 `Math.random()` 生成委托、保存中文 dialogue text，让 `calendarAt(29).season` 驱动当前玩法，或把 Day7 石标注册成出口。
+
+### 6. Tests Required
+
+- Life Loop：Day3 之前确认失败、two-heart ID 不被 milestone system 接受、首次确认保存、重复确认幂等；Day6 deterministic request 仍为15木材/320g/100关系奖励。
+- Town/client：Day6/Day7 waystone 都保持同一句普通说明；新 typed command 在 audio mapping 明确映射或静音。
+- 自动门禁：`test:life-loop`、`test:town-population`、typecheck、client build；镜光体感、提示时机、手机/200% zoom 与 Day1–7/Day29 连玩由真人验收，不由 Agent 代签。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: UI writes durable presentation history or uses it as an unlock flag.
+state.seenEventIds.push("day-5-backpack-intro");
+const backpackAvailable = state.seenEventIds.includes("day-5-backpack-intro");
+
+// Correct: UI dispatches one closed acknowledgement; domain unlocks remain day-owned.
+dispatchLocalGameCommand({
+  type: "acknowledge-retention-event",
+  eventId: "day-5-backpack-intro",
+});
+const backpackAvailable = state.day >= 5;
+```
+
+### 6. Tests Required
+
+- `test:life-loop` 覆盖 v1–v7→v8、current round-trip、unknown/future/capacity mismatch、upgrade atomicity、three-tile boundary、request once-only、Day4 points、dialogue history、event once-only、Day28→29。
+- `test:town-population` 覆盖现有 modal/Hotbar/NPC contracts 与新 snapshot 字段兼容。
+- typecheck + client build；不连接数据库、不新增 migration/E2E 矩阵。
+- 真人后续验证 IndexedDB refresh/continue、三格实际朝向、委托交付和 Day29 UI；Agent 不伪造人工通过。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: UI owns the permanent capacity mutation.
+gameUiState.inventory.push(...eightEmptySlots);
+
+// Correct: UI sends a typed command; GameSession owns the atomic upgrade.
+dispatchLocalGameCommand({ type: "upgrade-backpack" });
+```
+
+```typescript
+// Wrong: reload can reroll the same day.
+state.dailyRequest = requests[Math.floor(Math.random() * requests.length)];
+
+// Correct: absolute day selects and save records one deterministic ID.
+state.dailyRequest = createDailyRequestState(state.day);
+```
+
+## Scenario: home cat and dog GameState v9
+
+### 1. Scope / Trigger
+
+- Trigger：Retention v8 已稳定，但 Day 2 缺少一个可恢复、低负担的家园伙伴循环；本场景只拥有一次猫/狗领养、Farm/Cottage 表现与每日一次抚摸。
+- 饥饿、喂食、疾病、繁殖、战斗、农场工作、第二只宠物、换宠和通用 animal framework 均不在本场景。
+
+### 2. Signatures
+
+```typescript
+type PetSpecies = "cat" | "dog";
+
+interface PetState {
+  readonly species: PetSpecies;
+  readonly name: string;
+  readonly adoptedDay: number;
+  bond: number;          // hidden 0..100
+  lastPettedDay: number; // 0 or adoptedDay..state.day
+}
+
+type GameCommand =
+  | { readonly type: "adopt-pet"; readonly species: PetSpecies; readonly name: string }
+  | { readonly type: "pet-home-pet" }
+  | ExistingGameCommand;
+
+function homePetRegionAt(minuteOfDay: number): "farm" | "cottage";
+```
+
+### 3. Contracts
+
+- `SAVE_FORMAT_VERSION` 与 `GAME_STATE_VERSION` 同步为 9；v8 完整验证后由唯一 `migrateGameStateV8` 补 `pet:null`，v1–v7 的既有 decoder 直接输出相同 current default。
+- `adopt-pet` 只在 Day≥2 且 `pet===null` 成功；species 是 closed cat/dog，name trim 后为 1–12 Unicode code points 且不含控制字符。确认后没有遗弃、替换或重领命令。
+- Day≥2、`pet===null` 只在玩家进入 Farm 小院时打开领养 modal；取消只写 client transient deferral，不写 `seenEventIds` 或 save，下一次进入 Farm/playing 仍可补发。
+- `pet-home-pet` 只在当前 `homePetRegionAt` 对应区域成功；每日首次设置 `lastPettedDay=day` 并把 bond 加一、封顶100，同日重复只返回温和反馈且不 publish/save。
+- 06:00–17:59 宠物在 Farm，18:00–24:00 在 Cottage；位置、anchor index、motion、idle/rest cadence 和 sprite frame 均为 client presentation，不进入 GameState/StoredGame。
+- Farm/Cottage 各有三个 Tiled `SpawnPoints` pet anchor；client 在启动时采样验证短直线路径不穿 Collision。PetEntity 不进入 NPC registry、schedule、friendship、dynamic avoidance 或玩家碰撞集合。
+- 正式媒体为 bluecarrot16 `[LPC] Cats and Dogs` 两个原始 512×256 PNG，按 CC BY 3.0 选项采用并交付 NOTICE；runtime 只选橘猫/黄犬 32×32 frame。CDN 缺图时 code-drawn fallback 保持命令与存档可用，Git 不跟踪媒体二进制。
+
+### 4. Validation & Error Matrix
+
+| 条件 | 结果 |
+|---|---|
+| v8 合法 save | 迁移 v9 `pet:null`，其余 retention/progression 字段保持 |
+| current v9 缺 pet、unknown species、非法 name/bond/day | decode 明确失败，原 IndexedDB record 不覆盖 |
+| Day1 adopt / 已有 pet 再 adopt | fixed error feedback；state byte-equivalent |
+| Farm 白天或 Cottage 夜间首次 pet | bond +1、lastPettedDay=current day、critical save |
+| 同日重复 pet | bond/day 不变，只返回 already-petted feedback |
+| 非 home region、Town/Foothills/Lakeshore | 无宠物 projection；命令返回 pet-not-present |
+| CDN pet sheet 缺失 | 显示可恢复媒体提示并使用 code-drawn pet；玩法继续 |
+
+### 5. Good/Base/Bad Cases
+
+- Good：Day 2 走出 Cottage 到小院，选择黄犬并命名“来福”，确认后 Farm 看见闲逛；刷新仍是来福，当日重复抚摸不加 bond，睡觉后可再互动。
+- Base：选择“稍后再说”零 mutation；离开/刷新后再次进入 Farm 仍出现同一 pending choice。
+- Bad：把宠物复用为 NPC friendship/schedule identity、保存 world 坐标/animation frame、Vue 直接写 bond，或用 seen event 永久吞掉取消后的领养。
+
+### 6. Tests Required
+
+- `test:life-loop` 覆盖 v8→v9、v9 幂等、损坏宠物字段、Unicode name、不可重复领养、每日 bond 与刷新恢复。
+- `test:town-population` 覆盖 Farm-only pending modal、取消 deferral、统一 input lock 与 pet command 静音映射。
+- 正式 Farm/Cottage decoder 断言各三个 anchor 且闭环采样不穿 Collision；typecheck、client build、manifest totals 与 Git 媒体二进制为0。
+- 真人检查猫/狗各一次、闲逛/休息/爱心、手机/键盘/200% zoom、CDN 缺图 fallback；Agent 不代签 CDN 对象或听感。
+
+### 7. Wrong vs Correct
+
+```typescript
+// Wrong: presentation invents durable identity/progress and joins NPC collision.
+gameUiState.pet.bond += 1;
+activeNpcs.push(petSprite);
+
+// Correct: UI dispatches one typed command; domain owns durable progress and client owns only motion.
+dispatchLocalGameCommand({ type: "pet-home-pet" });
+const snapshot = session.snapshot();
+if (snapshot.pet) petEntity.project(snapshot.pet, snapshot.day, presentationAnchors);
+```
+
 ## Open-source contract
 
 - Phaser/Vue 和既有固定开源来源继续锁版本；规则迁移以当前 checkpoint 源码为依据，不建立复制分叉。
 - 已评审 `idb@8.0.3`，许可证 ISC 不在默认 allowlist，且当前接口窄，因此采用受控原生 IndexedDB 薄层并记录拒绝原因。
-- 图片仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 图片二进制为零。
+- 图片与音频仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 游戏媒体二进制为零。
 - VectoRaith Farming v1.08 与 NPC v1.6 DEMO 采用自定义项目使用许可。用户已批准 Web runtime 直接读取登记的官方完整 PNG 并接受作者回复前的残余风险；禁止原 ZIP、32/48px 版本、未采用目录、素材浏览/下载入口或素材包式产品。作者回复若附加条件则 forward-fix。
 
 ## Verification
