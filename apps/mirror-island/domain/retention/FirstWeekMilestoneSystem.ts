@@ -1,5 +1,6 @@
 import type { RetentionEventId } from "../dialogue/definitions.ts";
 import type { GameState } from "../state/game-state.ts";
+import { BACKPACK_UPGRADE_GOLD, SECOND_BACKPACK_UPGRADE_GOLD } from "../progression/definitions.ts";
 
 export interface FirstWeekMilestone {
   readonly eventId: RetentionEventId;
@@ -22,7 +23,7 @@ export const FIRST_WEEK_MILESTONES: readonly FirstWeekMilestone[] = [
   {
     eventId: "day-5-backpack-intro",
     unlockDay: 5,
-    message: "华强添了背包扩容服务：1500g，可从 24 格扩到 32 格。",
+    message: `别忘了种子店柜台旁的背包陈列：${BACKPACK_UPGRADE_GOLD}g 升到 24 格，再花 ${SECOND_BACKPACK_UPGRADE_GOLD}g 升到 36 格。`,
   },
   {
     eventId: "day-7-fishing-intro",

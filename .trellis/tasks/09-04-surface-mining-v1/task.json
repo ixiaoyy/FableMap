@@ -15,12 +15,12 @@
   "branch": null,
   "base_branch": "codex/tool-interaction-mvp",
   "worktree_path": null,
-  "commit": null,
+  "commit": "15a7b61f799d09c0aa7c42a6e86e85211ff67359",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-04-town-community-ledger-v1",
   "relatedFiles": [],
-  "notes": "采矿与镰刀生产实现、自动检查和隔离手机 Farm 触控路线已通过；等待用户完成键鼠/真实触摸/200% zoom、Foothills/Lakeshore 与两类刷新节奏真人验收。",
+  "notes": "2026-09-06 Git 对账：采矿与镰刀实现已在 15a7b61 提交并包含于本地 main；提交状态已完成，生产部署本次未核验。此前自动检查和隔离手机 Farm 触控路线已通过；仍等待用户完成键鼠/真实触摸/200% zoom、Foothills/Lakeshore 与两类刷新节奏真人验收，保持 in_progress，不代签完成或归档。",
   "meta": {}
 }

@@ -15,12 +15,12 @@
   "branch": null,
   "base_branch": "codex/tool-interaction-mvp",
   "worktree_path": null,
-  "commit": null,
+  "commit": "fd5457ed1aba24b66323f27e092d3fe88d17869b",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "2026-09-03：生产代码已暂存，文档与视觉证据未自动暂存；无新增静态媒体、依赖、数据库或存档版本。仅本地构建预览，未提交或部署。验收记录见 verification.md。",
+  "notes": "2026-09-06 Git 对账：小屋、共享物品图标和种田动作与商店室内精修同在 fd5457e 提交，并包含于本地 main；生产部署本次未核验。本批未新增静态媒体、依赖、数据库或存档版本；真人美术与手感反馈仍待确认，保持 in_progress。历史验收记录见 verification.md，其中当时的暂存/未提交说明不再代表当前 Git 状态。",
   "meta": {}
 }

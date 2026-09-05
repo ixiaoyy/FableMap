@@ -5,6 +5,9 @@ import {
 import { activeNpcSpawns, type NpcDayContext } from "./npc-schedules.ts";
 import { findNpcPath } from "./npc-pathfinding.ts";
 import {
+  CARPENTER_NPC_ID, CARPENTER_REGION_ID, CARPENTER_PASS_SPAWN, carpenterServiceAt,
+} from "../building/carpenter-schedule.ts";
+import {
   NPC_FEET_HALF_HEIGHT,
   NPC_FEET_HALF_WIDTH,
   PLAYER_FEET_HALF_HEIGHT,
@@ -28,6 +31,8 @@ export type NpcMotionKind = "idle" | "walking" | "waiting" | "leaving" | "arrivi
 export interface NpcAvoidancePosition extends WorldPoint {
   readonly regionId: string;
 }
+
+export type NpcWorldBlocked = (npc: NpcSpawnDefinition, x: number, y: number) => boolean;
 
 export interface NpcRuntimeSpawn extends NpcSpawnDefinition {
   readonly opacity: number;
@@ -60,6 +65,7 @@ interface WalkingNpcMotion {
   readonly activity: NpcActivityState | null;
   readonly arrivalActivity: NpcActivityState | null;
   readonly blockedMs: number;
+  readonly continuation?: NpcMotionState;
 }
 
 interface TransferNpcMotion {
@@ -68,6 +74,7 @@ interface TransferNpcMotion {
   readonly target: NpcSpawnDefinition;
   readonly elapsedMs: number;
   readonly arrivalActivity: NpcActivityState | null;
+  readonly continuation?: NpcMotionState;
 }
 
 type NpcMotionState = IdleNpcMotion | WalkingNpcMotion | TransferNpcMotion;
@@ -79,30 +86,44 @@ interface NpcAvoidanceObstacle extends NpcAvoidancePosition {
 
 export class NpcMotionRuntime {
   private motions = new Map<string, NpcMotionState>();
+  private scheduleTargets = new Map<string, NpcSpawnDefinition>();
+  private minuteOfDay = 360;
   private dayContext: NpcDayContext = { day: 2, weather: "sunny" };
 
-  /** Creates one transient NPC movement owner over the immutable world catalog and fixed schedules. */
-  constructor(private readonly catalog: WorldCatalog) {}
+  /** Creates transient NPC motion; the optional synchronous blocker may enqueue push intents but must not mutate saved state. */
+  constructor(private readonly catalog: WorldCatalog, private readonly worldBlocked?: NpcWorldBlocked) {}
 
   /** Resets every NPC directly to the schedule anchor for one persisted game minute. */
   reset(minuteOfDay: number, context: NpcDayContext = this.dayContext): void {
     this.dayContext = context;
-    this.motions = new Map(activeNpcSpawns(this.catalog, minuteOfDay, context).map((target) => (
+    this.minuteOfDay = minuteOfDay;
+    const targets = activeNpcSpawns(this.catalog, minuteOfDay, context);
+    this.scheduleTargets = new Map(targets.map((target) => [target.entityId, target]));
+    this.motions = new Map(targets.map((target) => (
       [target.entityId, this.createIdleMotion(target, minuteOfDay)]
     )));
   }
 
-  /** Starts routes from each current runtime position to the anchors owned by one new schedule phase. */
+  /** Synchronizes exact-minute schedule targets while preserving every unchanged patrol, dwell and in-progress route. */
   transitionTo(minuteOfDay: number, context: NpcDayContext = this.dayContext): void {
     this.dayContext = context;
+    this.minuteOfDay = minuteOfDay;
     const next = new Map<string, NpcMotionState>();
+    const nextTargets = new Map<string, NpcSpawnDefinition>();
     for (const target of activeNpcSpawns(this.catalog, minuteOfDay, context)) {
+      nextTargets.set(target.entityId, target);
       const current = this.motions.get(target.entityId);
+      const previous = this.scheduleTargets.get(target.entityId);
+      if (current && previous && sameScheduleTarget(previous, target)) {
+        next.set(target.entityId, current);
+        continue;
+      }
       const source = current ? projectMotion(current) : idleProjection(target, null);
       const arrivalActivity = this.createActivityState(target, minuteOfDay);
       next.set(target.entityId, this.createTransition(source, target, arrivalActivity));
     }
     this.motions = next;
+    this.scheduleTargets = nextTargets;
   }
 
   /** Advances routes in bounded substeps against the optional player and every latest NPC footprint. */
@@ -119,7 +140,13 @@ export class NpcMotionRuntime {
 
   /** Returns defensive runtime projections for every stable NPC identity. */
   activeSpawns(): readonly NpcRuntimeSpawn[] {
-    return Array.from(this.motions.values(), (motion) => projectMotion(motion));
+    return Array.from(this.motions.values(), (motion) => {
+      const npc = projectMotion(motion);
+      if (npc.npcId !== CARPENTER_NPC_ID) return npc;
+      const serving = npc.motion !== "leaving" && npc.motion !== "arriving"
+        && carpenterServiceAt(this.catalog, npc, this.minuteOfDay, this.dayContext);
+      return { ...npc, interactionType: serving ? "building-service" : "dialogue" };
+    });
   }
 
   /** Returns defensive runtime projections currently belonging to one region. */
@@ -143,8 +170,8 @@ export class NpcMotionRuntime {
 
   /** Resolves one applicable transient phase activity while leaving unknown fixture identities activity-free. */
   private createActivityState(target: NpcSpawnDefinition, minuteOfDay: number): NpcActivityState | null {
-    if (target.routine === "rest" || target.routine === "rain") return null;
-    const plan = npcActivityAt(this.catalog, target.npcId, minuteOfDay);
+    if (target.npcId !== CARPENTER_NPC_ID && (target.routine === "rest" || target.routine === "rain")) return null;
+    const plan = npcActivityAt(this.catalog, target.npcId, minuteOfDay, this.dayContext);
     if (!plan || plan.regionId !== target.regionId) return null;
     const routeIndex = plan.route.findIndex((point) => point.x === target.x && point.y === target.y);
     if (plan.route.length > 0 && routeIndex < 0) {
@@ -164,7 +191,12 @@ export class NpcMotionRuntime {
     source: NpcRuntimeSpawn,
     target: NpcSpawnDefinition,
     arrivalActivity: NpcActivityState | null,
+    allowCarpenterRoute = true,
   ): NpcMotionState {
+    if (allowCarpenterRoute && source.npcId === CARPENTER_NPC_ID && source.regionId !== target.regionId
+      && (source.regionId === CARPENTER_REGION_ID || target.regionId === CARPENTER_REGION_ID)) {
+      return this.createCarpenterTransition(source, target, arrivalActivity);
+    }
     if (
       source.regionId === target.regionId
       && source.x === target.x
@@ -197,6 +229,22 @@ export class NpcMotionRuntime {
     };
   }
 
+  /** Routes carpenter departures/returns through the authored counter-pass and door before transferring regions. */
+  private createCarpenterTransition(source: NpcRuntimeSpawn, target: NpcSpawnDefinition, arrivalActivity: NpcActivityState | null): NpcMotionState {
+    const pass = { ...target, ...this.catalog.requireSpawn(CARPENTER_REGION_ID, CARPENTER_PASS_SPAWN), regionId: CARPENTER_REGION_ID };
+    const entry = { ...target, ...this.catalog.requireSpawn(CARPENTER_REGION_ID, "entry"), regionId: CARPENTER_REGION_ID };
+    const intermediate = source.regionId === CARPENTER_REGION_ID ? [pass, entry] : [entry, pass];
+    const points: NpcSpawnDefinition[] = [source, ...intermediate, target];
+    let continuation: NpcMotionState = { kind: "idle", target, activity: arrivalActivity };
+    for (let index = points.length - 2; index >= 0; index -= 1) {
+      const from = idleProjection(points[index]!, null);
+      const to = points[index + 1]!;
+      const leg = this.createTransition(from, to, null, false);
+      if (leg.kind !== "idle") continuation = { ...leg, continuation };
+    }
+    return continuation;
+  }
+
   /** Advances one motion variant and starts patrol legs only after their reviewed dwell interval. */
   private advanceMotion(motion: NpcMotionState, deltaMs: number): NpcMotionState {
     switch (motion.kind) {
@@ -204,7 +252,7 @@ export class NpcMotionRuntime {
       case "transfer": {
         const elapsedMs = Math.min(NPC_TRANSFER_DURATION_MS, motion.elapsedMs + deltaMs);
         return elapsedMs >= NPC_TRANSFER_DURATION_MS
-          ? { kind: "idle", target: motion.target, activity: motion.arrivalActivity }
+          ? motion.continuation ?? { kind: "idle", target: motion.target, activity: motion.arrivalActivity }
           : { ...motion, elapsedMs };
       }
       case "walking": return this.advanceWalkingMotion(motion, deltaMs);
@@ -267,6 +315,7 @@ export class NpcMotionRuntime {
       remaining = 0;
     }
     if (waypointIndex >= motion.waypoints.length) {
+      if (motion.continuation) return motion.continuation;
       return {
         kind: "idle",
         target: motion.target,
@@ -288,17 +337,20 @@ export class NpcMotionRuntime {
     ));
     for (const [entityId, motion] of orderedMotions) {
       let next = this.advanceMotion(motion, deltaMs);
+      const projectedNext = projectMotion(next);
+      const worldObstructed = projectedNext.opacity > 0
+        && Boolean(this.worldBlocked?.(projectedNext, projectedNext.x, projectedNext.y));
       if (motion.kind === "walking") {
-        const candidate = projectMotion(next);
+        const candidate = projectedNext;
         const obstacles = avoidanceObstacles(entityId, candidate.regionId, projections, player);
         const collision = this.catalog.requireRegion(candidate.regionId).collision;
-        if (obstacles.some((obstacle) => (
+        if (worldObstructed || obstacles.some((obstacle) => (
           npcOverlapsObstacle(candidate, obstacle)
           || sharesCollisionTile(candidate, obstacle, collision)
         ))) {
           next = this.blockWalkingMotion(motion, deltaMs, obstacles);
         }
-      }
+      } else if (worldObstructed) next = motion;
       this.motions.set(entityId, next);
       projections.set(entityId, projectMotion(next));
     }
@@ -330,6 +382,12 @@ export class NpcMotionRuntime {
       blockedMs: 0,
     };
   }
+}
+
+/** Compares schedule-owned facts, excluding runtime patrol positions so ten-minute updates cannot restart activities. */
+function sameScheduleTarget(left: NpcSpawnDefinition, right: NpcSpawnDefinition): boolean {
+  return left.regionId === right.regionId && left.x === right.x && left.y === right.y
+    && left.interactionType === right.interactionType && left.routine === right.routine;
 }
 
 /** Projects one internal motion into the sole shape consumed by rendering, collision and interaction. */

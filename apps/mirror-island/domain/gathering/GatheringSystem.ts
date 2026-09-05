@@ -4,6 +4,7 @@ import type { GameState } from "../state/game-state.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 import { STAMINA_COST } from "../stamina/definitions.ts";
 import { StaminaSystem } from "../stamina/StaminaSystem.ts";
+import { worldObjectCoversTile } from "../world/world-object-state.ts";
 
 const GATHER_DISTANCE_PIXELS = 42;
 const TREE_WOOD_YIELD = 3;
@@ -63,6 +64,8 @@ export class GatheringSystem {
     for (const resource of Object.values(state.resources)) {
       if (resource.kind !== "tree" || resource.phase !== "cleared" || resource.regrowOnDay === null) continue;
       if (resource.regrowOnDay > state.day) continue;
+      const spawn = this.catalog.resource(resource.id);
+      if (spawn && worldObjectCoversTile(state, spawn.regionId, Math.floor(spawn.x / 16), Math.floor(spawn.y / 16))) continue;
       resource.phase = "standing";
       resource.regrowOnDay = null;
       regrown += 1;

@@ -2,7 +2,8 @@ import {
   schedulePhaseAt,
   type NpcSchedulePhase,
 } from "../time/game-time.ts";
-import { activeNpcById, activeNpcSpawns } from "./npc-schedules.ts";
+import { activeNpcById, activeNpcSpawns, type NpcDayContext } from "./npc-schedules.ts";
+import { CARPENTER_NPC_ID, resolveCarpenterSchedule } from "../building/carpenter-schedule.ts";
 import { findNpcPath } from "./npc-pathfinding.ts";
 import type {
   WorldCatalog,
@@ -70,7 +71,7 @@ const NPC_ACTIVITY_SCHEDULES: Readonly<Record<string, NpcActivitySchedule>> = {
   },
   "town-resident-mozi": {
     morning: { kind: "prepare", regionId: "town-house-west" },
-    day: { kind: "repair", regionId: "town" },
+    day: { kind: "serve", regionId: "town-house-west" },
     evening: { kind: "repair", regionId: "town" },
     night: { kind: "organize", regionId: "town-house-west" },
   },
@@ -121,7 +122,12 @@ export function npcActivityAt(
   catalog: WorldCatalog,
   npcId: string,
   minuteOfDay: number,
+  context: NpcDayContext = { day: 2, weather: "sunny" },
 ): NpcActivityPlan | null {
+  if (npcId === CARPENTER_NPC_ID) {
+    const resolution = resolveCarpenterSchedule(minuteOfDay, context);
+    return { kind: resolution.activity, regionId: resolution.regionId, route: [] };
+  }
   const definition = NPC_ACTIVITY_SCHEDULES[npcId]?.[schedulePhaseAt(minuteOfDay)];
   if (!definition) return null;
   return {
@@ -145,6 +151,11 @@ export function validateNpcActivities(catalog: WorldCatalog): void {
       const definition = schedule[phase];
       const minuteOfDay = ACTIVITY_MINUTE_BY_PHASE[phase];
       const target = activeNpcById(catalog, npcId, minuteOfDay);
+      if (npcId === CARPENTER_NPC_ID) {
+        const plan = npcActivityAt(catalog, npcId, minuteOfDay);
+        if (!target || !plan || target.regionId !== plan.regionId) throw new Error("Carpenter activity differs from its resolver.");
+        continue;
+      }
       if (!target || target.regionId !== definition.regionId) {
         throw new Error(`NPC activity region does not match ${phase} schedule: ${npcId}.`);
       }

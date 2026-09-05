@@ -1,13 +1,13 @@
 import Phaser from "phaser";
 import { WorldScene } from "./scenes/WorldScene.ts";
 
-/** Creates one Phaser 4 canvas instance owned by the provided Vue container element. */
+/** Returns one Phaser canvas that follows the already sized Vue parent without CSS magnification. */
 export function startGame(parent: HTMLElement): Phaser.Game {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: 640,
-    height: 480,
+    width: Math.max(1, parent.clientWidth),
+    height: Math.max(1, parent.clientHeight),
     backgroundColor: "#0b1714",
     pixelArt: true,
     render: {
@@ -15,8 +15,9 @@ export function startGame(parent: HTMLElement): Phaser.Game {
       roundPixels: true,
     },
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER,
+      autoRound: true,
     },
     scene: [WorldScene],
   });

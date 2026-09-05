@@ -1,7 +1,7 @@
 export type DayEndReason = "slept" | "passed-out";
 
 export interface DaySettlementSnapshot {
-  readonly phase: "idle" | "saving" | "failed";
+  readonly phase: "idle" | "saving" | "failed" | "report";
   readonly reason: DayEndReason | null;
   readonly goldLost: number;
   readonly nextStamina: number;

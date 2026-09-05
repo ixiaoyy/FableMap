@@ -54,13 +54,27 @@ import {
 import { decodeRelationshipStage } from "../social/relationship-stage.ts";
 import {
   decodePetState,
+  reconcilePetState,
   type PetState,
 } from "../pets/definitions.ts";
 import { MAX_STAMINA, decodeStamina } from "../stamina/definitions.ts";
 import { WeatherSystem } from "../weather/WeatherSystem.ts";
 import { decodeWeatherState, type WeatherState } from "../weather/definitions.ts";
+import {
+  createStorageWorldState,
+  cloneStorageWorldState,
+  decodeStorageWorldState,
+  reconcileStorageWorldState,
+  type StorageWorldState,
+} from "../world/world-object-state.ts";
+import {
+  createShippingState,
+  cloneShippingState,
+  decodeShippingState,
+  type ShippingState,
+} from "../shipping/shipping-state.ts";
 
-export const GAME_STATE_VERSION = 12 as const;
+export const GAME_STATE_VERSION = 13 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
 const DEFAULT_WORLD_SEED = 0x4d495252;
@@ -102,7 +116,7 @@ export interface DailyForageState {
   collectedIds: string[];
 }
 
-export interface GameState {
+export interface GameState extends StorageWorldState, ShippingState {
   readonly version: typeof GAME_STATE_VERSION;
   day: number;
   minuteOfDay: number;
@@ -162,6 +176,8 @@ export function createInitialGameState(
     farmTiles: {},
     friendships: {},
     dailyForage: { day: 1, collectedIds: [] },
+    ...createStorageWorldState(catalog),
+    ...createShippingState(),
   };
   reconcileGameStateWithCatalog(state, catalog);
   return state;
@@ -229,6 +245,8 @@ export function reconcileGameStateWithCatalog(state: GameState, catalog: WorldCa
   if (Object.keys(state.npcDialogue).some((npcId) => !knownNpcIds.has(npcId))) {
     throw new Error("Save references an unknown NPC dialogue identity.");
   }
+  reconcileStorageWorldState(state, catalog);
+  reconcilePetState(state.pet, catalog);
   return changed;
 }
 
@@ -267,7 +285,9 @@ export function cloneGameState(state: GameState): GameState {
       acknowledgedStage: memory.acknowledgedStage,
     }])),
     seenEventIds: [...state.seenEventIds],
-    pet: state.pet ? { ...state.pet } : null,
+    pet: state.pet ? structuredClone(state.pet) : null,
+    ...cloneStorageWorldState(state),
+    ...cloneShippingState(state),
   };
 }
 
@@ -303,6 +323,8 @@ export function decodeGameState(value: unknown): GameState {
     npcDialogue: decodeNpcDialogue(state.npcDialogue, day),
     seenEventIds: decodeSeenEventIds(state.seenEventIds),
     pet: decodePetState(state.pet, day),
+    ...decodeStorageWorldState(state, day),
+    ...decodeShippingState(state, day),
   };
 }
 
@@ -495,7 +517,7 @@ function decodeInventory(
 }
 
 /** Validates one current inventory slot against the closed item catalog and stack limit. */
-function decodeInventorySlot(value: unknown): InventorySlot {
+export function decodeInventorySlot(value: unknown): InventorySlot {
   const slot = recordFrom(value, "Inventory slot is invalid.");
   if (slot.itemId === "" && slot.quantity === 0) return { itemId: "", quantity: 0 };
   const definition = getItemDefinition(slot.itemId);

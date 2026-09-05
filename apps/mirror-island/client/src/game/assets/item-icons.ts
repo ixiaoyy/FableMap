@@ -13,16 +13,18 @@ export interface AtlasItemIcon {
   readonly sourceHeight: number;
   readonly x: number;
   readonly y: number;
-  readonly width: 16;
-  readonly height: 16;
+  readonly width: 16 | 32;
+  readonly height: 16 | 32;
 }
 
 export type ItemIconDefinition = AtlasItemIcon | { readonly kind: "pixels"; readonly art: PixelArt };
 
 const GARDENS_SOURCE = { url: GARDENS_ICON_URL, width: 160, height: 176 } as const;
 const VECTORAITH_CROPS_SOURCE = { url: VECTORAITH_MEDIA_URLS.crops, width: 256, height: 256 } as const;
+const VECTORAITH_BUILDINGS_SOURCE = { url: VECTORAITH_MEDIA_URLS.buildings, width: 256, height: 256 } as const;
 
 const ITEM_ICONS: Readonly<Partial<Record<ItemId, ItemIconDefinition>>> = {
+  [ITEM_ID.chest]: icon(VECTORAITH_BUILDINGS_SOURCE, 5, 0, 32),
   [ITEM_ID.axe]: icon(GARDENS_SOURCE, 0, 10),
   [ITEM_ID.hoe]: icon(GARDENS_SOURCE, 0, 2),
   [ITEM_ID.pickaxe]: icon(GARDENS_SOURCE, 6, 1),
@@ -47,12 +49,13 @@ export function itemIconForItem(itemId: string): ItemIconDefinition | null {
   return ITEM_ICONS[itemId as ItemId] ?? null;
 }
 
-/** Converts one reviewed source-sheet frame into a crisp integer-scale CSS sprite. */
+/** Fits a reviewed square source frame into the 16px UI cell; 32px originals stay native at the default 2x UI size. */
 export function itemIconStyle(iconDefinition: AtlasItemIcon, scale = 2): Record<string, string> {
+  const sourceScale = (16 * scale) / iconDefinition.width;
   return {
     backgroundImage: `url("${iconDefinition.url}")`,
-    backgroundPosition: `${-iconDefinition.x * scale}px ${-iconDefinition.y * scale}px`,
-    backgroundSize: `${iconDefinition.sourceWidth * scale}px ${iconDefinition.sourceHeight * scale}px`,
+    backgroundPosition: `${-iconDefinition.x * sourceScale}px ${-iconDefinition.y * sourceScale}px`,
+    backgroundSize: `${iconDefinition.sourceWidth * sourceScale}px ${iconDefinition.sourceHeight * sourceScale}px`,
   };
 }
 
@@ -62,11 +65,12 @@ export function seedBadgeForItem(itemId: string): ItemIconDefinition | null {
   return crop ? itemIconForItem(crop.cropId) : null;
 }
 
-/** Creates one immutable 16×16 frame reference into an unchanged reviewed source sheet. */
+/** References an unchanged square source frame on the 16px atlas grid; larger props retain their complete source frame. */
 function icon(
   source: { readonly url: string; readonly width: number; readonly height: number },
   column: number,
   row: number,
+  frameSize: 16 | 32 = 16,
 ): AtlasItemIcon {
   return {
     kind: "atlas",
@@ -75,7 +79,7 @@ function icon(
     sourceHeight: source.height,
     x: column * 16,
     y: row * 16,
-    width: 16,
-    height: 16,
+    width: frameSize,
+    height: frameSize,
   };
 }

@@ -12,6 +12,7 @@ import { STAMINA_COST } from "../stamina/definitions.ts";
 import { StaminaSystem } from "../stamina/StaminaSystem.ts";
 import { stableHash } from "../weather/WeatherSystem.ts";
 import { facingVector, type Facing } from "../world/facing.ts";
+import { worldObjectCoversTile } from "../world/world-object-state.ts";
 import type { WorldCatalog } from "../world/regions.ts";
 import { cropDefinition, cropForSeed } from "./crops.ts";
 
@@ -40,7 +41,7 @@ export class FarmingSystem {
     private readonly catalog: WorldCatalog,
   ) {}
 
-  /** Applies one selected item or empty hand to a nearby Farm tile after catalog validation. */
+  /** Applies a selected item to nearby Farm soil only when no persistent object or building covers the target tile. */
   use(
     state: GameState,
     column: number,
@@ -50,6 +51,7 @@ export class FarmingSystem {
   ): FarmingResult {
     if (state.player.regionId !== "farm" || !this.playerNearTile(state, column, row)) return "too-far";
     if (itemId !== "" && this.inventory.quantity(state.inventory, itemId) < 1) return "no-effect";
+    if (worldObjectCoversTile(state, "farm", column, row)) return "no-effect";
     const id = farmTileId(column, row);
     const tile = state.farmTiles[id];
     if (itemId === ITEM_ID.hoe && !tile) return this.till(state, column, row);
@@ -152,7 +154,7 @@ export class FarmingSystem {
     return "watered";
   }
 
-  /** Resolves current and forward sparse crop tiles without synthesizing unowned farm state. */
+  /** Resolves contiguous soil until terrain, missing soil or a persistent object interrupts the watering line. */
   private contiguousWateringTargets(
     state: GameState,
     tile: FarmTileState,
@@ -163,7 +165,7 @@ export class FarmingSystem {
     for (let offset = 0; offset < 3; offset += 1) {
       const column = tile.column + direction.x * offset;
       const row = tile.row + direction.y * offset;
-      if (!this.catalog.isTillable("farm", column, row)) break;
+      if (!this.catalog.isTillable("farm", column, row) || worldObjectCoversTile(state, "farm", column, row)) break;
       const id = farmTileId(column, row);
       const candidate = state.farmTiles[id];
       if (!candidate) break;

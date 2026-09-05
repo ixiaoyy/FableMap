@@ -45,6 +45,7 @@
 - Tiled 增加独立 `Placeable` 与 `Buildable` 合同，未提供即全 false；不能用 Tillable、Collision 的反集或客户端视觉空白推断合法位置。
 - 每格检查统一返回 `blocked`、`clear-on-place`、`relocate-on-place` 或 `free`，并附带受影响 identity；不能把所有动态状态压成一个布尔值。普通箱保留空耕地及地板，作物格阻挡；出货箱建筑按证据清除空耕地/肥料、树种、高草与标准路径，拒绝作物、成长树、杂草/石块/树枝和玩家，并在确认时先移开宠物。具体矩阵见 `research/stardew-building-occupancy-1.6.15.md`。
 - 宠物实时位置必须进入 domain snapshot 后才参与占用；客户端坐标不能作为摆放命令的可信参数。
+- 占用合同必须覆盖跨日资源再生/野采刷新，避免资源恢复后与玩家物件重叠；实施前在 design 中收敛被占用候选点的处理及参考依据，不自行更改已有再生数量、周期或确定性。
 
 ### R5 - 出货与隔夜结算
 

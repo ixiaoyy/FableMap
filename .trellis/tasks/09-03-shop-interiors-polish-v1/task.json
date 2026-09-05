@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "codex/tool-interaction-mvp",
   "worktree_path": null,
-  "commit": null,
+  "commit": "fd5457ed1aba24b66323f27e092d3fe88d17869b",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -30,6 +30,6 @@
     "apps/mirror-island/public/map/town.tmj",
     "apps/mirror-island/test/town-population-contract.test.mjs"
   ],
-  "notes": "本地实现与验证完成，生产代码已暂存；测试、文档、截图不自动暂存。沿用 v10、零采购预算和既有依赖。未提交/部署，真人审美待反馈。验证见 verification.md。",
+  "notes": "2026-09-06 Git 对账：两处商店室内精修与春季美术同在 fd5457e 提交，并包含于本地 main；生产部署本次未核验。此前本地实现与验证完成，零采购预算并复用既有依赖；真人观感仍待反馈，保持 in_progress。历史验证见 verification.md，其中当时的暂存/未提交说明不再代表当前 Git 状态。",
   "meta": {}
 }

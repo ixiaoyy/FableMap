@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions.ts";
-import { homePetRegionAt } from "../../../../domain/pets/definitions.ts";
 import type { GameState } from "../../../../domain/state/game-state.ts";
 import { facingFromVector, isPointInFacingSector } from "../../../../domain/world/facing.ts";
 import { AudioDirector } from "../../audio/AudioDirector.ts";
@@ -30,7 +29,15 @@ import {
   setActionFeedback,
   setDialogue,
   setWorldActionBusy,
+  openContainer,
+  openShippingBin,
+  openBuildingService,
+  openBackpackUpgrade,
+  beginWorldPlacement,
+  closeWorldPlacement,
+  setPlacementPreview,
 } from "../../stores/game-store.ts";
+import { StorageWorldView, createWorldDropView, registerStorageFrames } from "../entities/StorageWorldView.ts";
 import { MEDIA_KEYS, MEDIA_URLS } from "../assets/media-catalog.ts";
 import {
   PET_MEDIA_KEYS,
@@ -72,6 +79,7 @@ import {
   RockEntity,
   TreeEntity,
   WeedEntity,
+  worldLabelStyle,
 } from "../entities/WorldEntities.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
@@ -113,6 +121,13 @@ export class WorldScene extends Phaser.Scene {
   private readonly inspectViews = new Map<string, InspectEntity>();
   private readonly exitHintViews = new Map<string, ExitHintEntity>();
   private readonly npcViews = new Map<string, NpcEntity>();
+  private readonly storageViews = new Map<string, StorageWorldView>();
+  private readonly dropViews = new Map<string, Phaser.GameObjects.Container>();
+  private readonly serviceViews = new Map<string, Phaser.GameObjects.Container>();
+  private placementWasOpen = false;
+  private placementGhost: Phaser.GameObjects.Graphics | null = null;
+  private chestPunchId: string | null = null;
+  private chestHitAt = 0;
   private petView: PetEntity | null = null;
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
   private activeMap: Phaser.Tilemaps.Tilemap | null = null;
@@ -182,6 +197,7 @@ export class WorldScene extends Phaser.Scene {
     this.registerMediaFrames();
     registerCottageArt(this);
     registerShopInteriorArt(this);
+    registerStorageFrames(this);
     this.createPlayerAnimations();
     this.actionTimeline = new ActionTimeline(this);
     this.audioDirector = new AudioDirector(() => {
@@ -204,15 +220,23 @@ export class WorldScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.SIX,
       Phaser.Input.Keyboard.KeyCodes.SEVEN,
       Phaser.Input.Keyboard.KeyCodes.EIGHT,
+      Phaser.Input.Keyboard.KeyCodes.NINE,
+      Phaser.Input.Keyboard.KeyCodes.ZERO,
+      Phaser.Input.Keyboard.KeyCodes.MINUS,
+      Phaser.Input.Keyboard.KeyCodes.PLUS,
     ].map((code) => keyboard.addKey(code));
     keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.attackKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.useKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
     this.tileCursor = this.add.graphics().setDepth(9);
     this.fishingLine = this.add.graphics().setDepth(9_900);
+    this.placementGhost = this.add.graphics().setDepth(20_000);
+    window.addEventListener("keydown", this.handleStorageKey);
+    this.input.on(Phaser.Input.Events.POINTER_WHEEL, this.handleHotbarWheel, this);
     this.stopWorldAction = subscribeWorldAction(() => this.useFacingItem());
     this.input.on(Phaser.Input.Events.POINTER_DOWN, this.handleWorldPointer, this);
     this.stopProjection = getLocalGameSession().subscribe((state) => this.renderState(state));
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleScaleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.disposeScene(true));
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.disposeScene(false));
   }
@@ -228,6 +252,12 @@ export class WorldScene extends Phaser.Scene {
     // DOM dialogs own keyup after taking focus; do not retain a world key pressed before the handoff.
     if (worldInputLocked && !this.inputWasLocked) this.input.keyboard?.resetKeys();
     this.inputWasLocked = worldInputLocked;
+    this.syncPlacementView();
+    if (gameUiState.worldPlacement) {
+      this.drawPlacementPreview();
+      this.setIdleFrame();
+      return;
+    }
     this.renderTileCursor(worldInputLocked);
     this.renderFishingLine();
     if (this.activeRegionId) this.renderNpcs(this.activeRegionId);
@@ -236,6 +266,9 @@ export class WorldScene extends Phaser.Scene {
       worldInputLocked || this.transitionPhase !== "idle" || this.actionTimeline.isBusy(),
     );
     this.projectInteractionAffordances(worldInputLocked);
+    if (this.latestState) {
+      for (const view of this.storageViews.values()) view.affordance(this.latestState.player.x, this.latestState.player.y, worldInputLocked);
+    }
     if (this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
     if (worldInputLocked) {
       this.setIdleFrame();
@@ -275,6 +308,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Projects one state snapshot into the active region and every ephemeral entity view. */
   private renderState(state: GameState): void {
+    const previousQueueLength = this.latestState?.shippingQueue.length;
     const previousDay = this.latestState?.day;
     const previousPlayer = this.latestState?.player;
     if (previousDay === state.day && previousPlayer?.regionId === state.player.regionId) {
@@ -282,11 +316,14 @@ export class WorldScene extends Phaser.Scene {
     }
     this.latestState = state;
     const playerView = this.playerView ?? this.createPlayerView();
-    if (state.player.regionId !== this.activeRegionId) this.renderRegion(state.player.regionId, playerView);
+    const buildingPreview = gameUiState.worldPlacement && gameUiState.worldPlacement.request.kind !== "chest";
+    const visibleRegionId = buildingPreview ? "farm" : state.player.regionId;
+    if (visibleRegionId !== this.activeRegionId) this.renderRegion(visibleRegionId);
+    playerView.container.setVisible(!buildingPreview);
     this.audioDirector?.setWeather(state.weather.current);
     playerView.container.setPosition(state.player.x, state.player.y);
     playerView.container.setDepth(100 + Math.floor(state.player.y));
-    const region = this.catalog.requireRegion(state.player.regionId);
+    const region = this.catalog.requireRegion(visibleRegionId);
     this.renderResources(region.id, state);
     this.renderForage(region.id);
     this.renderFarmPlots(region.id, state);
@@ -296,6 +333,12 @@ export class WorldScene extends Phaser.Scene {
     this.renderNpcs(region.id);
     this.renderPet(region.id, state);
     this.renderFishingSpots(region);
+    this.renderStorageObjects(region.id, state);
+    this.renderStorageServices(region.id, state);
+    if (previousQueueLength !== undefined && state.shippingQueue.length > previousQueueLength) {
+      for (const view of this.storageViews.values()) view.pulse();
+      emitAudioCue(AUDIO_CUE.pickup);
+    }
     if (previousDay !== undefined && previousDay !== state.day) {
       this.fadeIntoWorld(400);
       emitAudioCue(AUDIO_CUE.sleep);
@@ -303,7 +346,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Replaces all current Tilemap layers while preserving GameSession and the player view. */
-  private renderRegion(regionId: string, playerView: PlayerView): void {
+  private renderRegion(regionId: string): void {
     this.destroyRegionViews();
     const region = this.catalog.requireRegion(regionId);
     const map = this.make.tilemap({ key: region.mapKey });
@@ -333,15 +376,7 @@ export class WorldScene extends Phaser.Scene {
     this.activeMap = map;
     this.activeRegionId = regionId;
     this.audioDirector?.setRegion(regionId);
-    this.cameras.main.setBounds(0, 0, region.widthPixels, region.heightPixels);
-    this.cameras.main.setZoom(WORLD_CAMERA_ZOOM);
-    this.cameras.main.startFollow(playerView.container, true, 1, 1);
-    const viewAnchor = fixedInteriorViewAnchorForRegion(regionId);
-    if (viewAnchor) {
-      const view = this.catalog.requireSpawn(regionId, viewAnchor);
-      this.cameras.main.stopFollow();
-      this.cameras.main.centerOn(view.x, view.y);
-    }
+    this.layoutWorldCamera();
     if (this.transitionPhase === "fading-out") {
       this.fadeIntoWorld(TRANSITION_DURATION_MS);
     }
@@ -453,6 +488,201 @@ export class WorldScene extends Phaser.Scene {
         return;
       }
     }
+  }
+
+  /** Rotates saved hotbar rows only when the world has focus; dialogs retain native Tab navigation. */
+  private readonly handleStorageKey = (event: KeyboardEvent): void => {
+    const focus = document.activeElement;
+    if (gameUiState.worldPlacement && focus instanceof HTMLElement && focus.closest(".game-canvas")
+      && gameUiState.storageSave.phase === "idle") {
+      if (event.key === "Escape") { event.preventDefault(); closeWorldPlacement(); return; }
+      const offsets: Readonly<Record<string, readonly [number, number]>> = {
+        ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+      };
+      const delta = offsets[event.key];
+      if (delta) {
+        event.preventDefault();
+        this.selectPlacementTile(gameUiState.worldPlacement.column + delta[0], gameUiState.worldPlacement.row + delta[1]);
+        return;
+      }
+    }
+    if (event.key !== "Tab" || event.repeat || isWorldInputLocked() || this.transitionPhase !== "idle"
+      || this.actionTimeline.isBusy() || !(focus instanceof HTMLElement) || !focus.closest(".game-canvas")) return;
+    event.preventDefault();
+    dispatchLocalGameCommand({ type: "rotate-hotbar-row", direction: event.shiftKey ? -1 : 1 });
+  };
+
+  /** Selects one of the current twelve slots from a canvas wheel event, without intercepting dialog scrolling. */
+  private handleHotbarWheel(_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number): void {
+    if (!deltaY || isWorldInputLocked() || this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    const current = gameUiState.selectedInventoryIndex ?? (deltaY > 0 ? -1 : 0);
+    selectHotbarSlot((current + (deltaY > 0 ? 1 : -1) + 12) % 12);
+    this.projectHeldItem();
+  }
+
+  /** Reflows only the scene camera after its canvas changes size, preserving the selected tile and all world coordinates. */
+  private handleScaleResize(): void {
+    if (this.disposed) return;
+    this.cameras.main.setSize(this.scale.gameSize.width, this.scale.gameSize.height);
+    this.layoutWorldCamera();
+  }
+
+  /** Projects the active region into the current viewport; only the whole-farm preview uses fractional zoom to leave room for its controls. */
+  private layoutWorldCamera(): void {
+    if (!this.playerView || !this.activeRegionId) return;
+    const region = this.catalog.requireRegion(this.activeRegionId);
+    const camera = this.cameras.main;
+    const placement = gameUiState.worldPlacement;
+    if (placement && placement.request.kind !== "chest") {
+      const availableHeight = Math.max(80, camera.height - 180);
+      camera.stopFollow();
+      camera.removeBounds();
+      camera.setZoom(Math.min(WORLD_CAMERA_ZOOM, camera.width / region.widthPixels,
+        availableHeight / region.heightPixels));
+      camera.centerOn(region.widthPixels / 2,
+        region.heightPixels / 2 + (camera.height - availableHeight) / (2 * camera.zoom));
+      return;
+    }
+    camera.setZoom(WORLD_CAMERA_ZOOM);
+    const anchorId = fixedInteriorViewAnchorForRegion(region.id);
+    if (anchorId) {
+      const anchor = this.catalog.requireSpawn(region.id, anchorId);
+      camera.stopFollow();
+      camera.removeBounds();
+      camera.centerOn(anchor.x, anchor.y);
+    } else {
+      camera.setBounds(0, 0, region.widthPixels, region.heightPixels);
+      camera.startFollow(this.playerView.container, true, 1, 1);
+    }
+  }
+
+  /** Switches a carpenter preview to the actual farm map and restores the player camera after cancel or save. */
+  private syncPlacementView(): void {
+    const placement = gameUiState.worldPlacement;
+    if (Boolean(placement) === this.placementWasOpen) return;
+    this.placementWasOpen = Boolean(placement);
+    const state = this.latestState;
+    if (!state || !this.playerView) return;
+    this.renderState(state);
+    this.layoutWorldCamera();
+    if (placement?.request.kind !== "chest" && placement) {
+      const object = state.worldObjects.find((candidate) => candidate.id === placement.request.objectId);
+      this.selectPlacementTile(object?.column ?? 23, object?.row ?? 14);
+    } else if (placement) {
+      this.selectPlacementTile(placement.column, placement.row);
+    } else {
+      this.placementGhost?.clear();
+    }
+  }
+
+  /** Projects one selected tile through the shared occupancy owner; no preview mutates the farm. */
+  private selectPlacementTile(column: number, row: number): void {
+    const placement = gameUiState.worldPlacement;
+    if (!placement) return;
+    const kind = placement.request.kind === "chest" ? "chest" : "shipping-bin";
+    const result = getLocalGameSession().placementPreview(kind, column, row, placement.request.objectId);
+    setPlacementPreview(column, row, result.valid, result.message);
+  }
+
+  /** Draws a one- or two-tile placement footprint from the latest read-only verdict. */
+  private drawPlacementPreview(): void {
+    const ghost = this.placementGhost;
+    const placement = gameUiState.worldPlacement;
+    ghost?.clear();
+    this.tileCursor?.clear();
+    if (!ghost || !placement) return;
+    const width = placement.request.kind === "chest" ? 16 : 32;
+    const color = placement.valid ? 0xa1d37f : 0xe38470;
+    ghost.fillStyle(color, 0.3).fillRect(placement.column * 16, placement.row * 16, width, 16);
+    ghost.lineStyle(1, color, 1).strokeRect(placement.column * 16, placement.row * 16, width, 16);
+  }
+
+  /** Maintains stable storage and drop views for the visible region using only published saved state. */
+  private renderStorageObjects(regionId: string, state: GameState): void {
+    const objects = state.worldObjects.filter((object) => object.regionId === regionId);
+    removeMissing(this.storageViews, new Set(objects.map((object) => object.id)));
+    for (const object of objects) {
+      const view = this.storageViews.get(object.id)
+        ?? new StorageWorldView(this, object, (id) => this.interactStorageObject(id));
+      view.project(object);
+      this.storageViews.set(object.id, view);
+    }
+    const drops = state.worldDrops.filter((drop) => drop.regionId === regionId);
+    removeMissing(this.dropViews, new Set(drops.map((drop) => drop.id)));
+    for (const drop of drops) {
+      if (!this.dropViews.has(drop.id)) this.dropViews.set(drop.id, createWorldDropView(this, drop, () => {
+        if (isWorldInputLocked() || this.actionTimeline.isBusy() || this.transitionPhase !== "idle") return;
+        dispatchLocalGameCommand({ type: "collect-world-drop", dropId: drop.id });
+      }));
+    }
+  }
+
+  /** Creates independent counter/display affordances and removes the backpack display after the final upgrade. */
+  private renderStorageServices(regionId: string, state: GameState): void {
+    const interactions = this.catalog.requireRegion(regionId).interactions.filter((interaction) =>
+      interaction.kind === "building-service" || (interaction.kind === "backpack-display" && state.inventoryCapacity < 36));
+    removeMissing(this.serviceViews, new Set(interactions.map((interaction) => interaction.entityId)));
+    for (const interaction of interactions) {
+      if (this.serviceViews.has(interaction.entityId)) continue;
+      const marker = this.add.text(0, -9, interaction.kind === "backpack-display" ? "背包" : "木匠", {
+        ...worldLabelStyle("#fff1c8"), backgroundColor: "#63452c", padding: { x: 3, y: 2 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      marker.on("pointerdown", () => this.openStorageService(interaction.entityId));
+      this.serviceViews.set(interaction.entityId, this.add.container(interaction.x + interaction.width / 2,
+        interaction.y + interaction.height / 2, [marker]).setDepth(200 + interaction.y));
+    }
+  }
+
+  /** Opens a reachable object, ships the held stack, or primes and repeats an intentional chest hit. */
+  private interactStorageObject(id: string, emptyHandHit = false): void {
+    const state = this.latestState;
+    if (!state || isWorldInputLocked() || this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    const object = state.worldObjects.find((candidate) => candidate.id === id);
+    if (!object) return;
+    if (!getLocalGameSession().canInteractWorldObject(id)) {
+      setActionFeedback({ tone: "error", code: "storage-too-far", message: "走近箱子再操作。" });
+      return;
+    }
+    this.facePoint(object.column * 16 + 8, object.row * 16 + 8);
+    const itemId = gameUiState.selectedItemId;
+    const definition = getItemDefinition(itemId);
+    if (object.kind === "shipping-bin") {
+      if (definition?.canShip && gameUiState.selectedInventoryIndex !== null) {
+        dispatchLocalGameCommand({ type: "ship-item", objectId: id, sourceIndex: gameUiState.selectedInventoryIndex, quantity: "stack" });
+      } else openShippingBin(id);
+      return;
+    }
+    const empty = object.slots.every((slot) => slot.itemId === "");
+    if (empty && definition?.category === "tool") {
+      dispatchLocalGameCommand({ type: "recover-empty-chest", objectId: id, itemId });
+      return;
+    }
+    const pushingTool = itemId === ITEM_ID.axe || itemId === ITEM_ID.pickaxe || itemId === ITEM_ID.hoe;
+    if ((emptyHandHit && itemId === "") || (!empty && pushingTool)) {
+      const repeats = this.chestPunchId === id && this.time.now - this.chestHitAt <= 1_200;
+      this.chestPunchId = id;
+      this.chestHitAt = this.time.now;
+      this.storageViews.get(id)?.pulse();
+      if (!repeats) {
+        setActionFeedback({ tone: "success", code: "storage-hit-ready", message: empty ? "再敲一下，收回空箱。" : "再敲一下，把箱子移到附近空地。" });
+        return;
+      }
+      this.chestPunchId = null;
+      if (empty) dispatchLocalGameCommand({ type: "recover-empty-chest", objectId: id, itemId: "" });
+      else if (pushingTool) dispatchLocalGameCommand({ type: "push-chest", objectId: id, itemId, facing: this.facing });
+      else setActionFeedback({ tone: "error", code: "storage-not-empty", message: "箱内还有物品；用斧、镐或锄连续敲击可移动。" });
+      return;
+    }
+    openContainer(id);
+  }
+
+  /** Opens only a domain-validated local service point; this method never infers business hours in the renderer. */
+  private openStorageService(interactionId: string): void {
+    if (isWorldInputLocked() || this.transitionPhase !== "idle" || this.actionTimeline.isBusy()) return;
+    const session = getLocalGameSession();
+    if (session.backpackServiceAvailable(interactionId)) { openBackpackUpgrade(interactionId); return; }
+    if (session.buildingServiceAvailable(interactionId)) { openBuildingService(interactionId); return; }
+    setActionFeedback({ tone: "error", code: "storage-service-unavailable", message: "请走到陈列或柜台旁；木匠服务还需要墨子正在柜台。" });
   }
 
   /** Projects the selected item in the saved avatar's hand while no action or region transition owns it. */
@@ -606,16 +836,15 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Creates one adopted home pet only in its time-derived Farm or Cottage region. */
+  /** Projects an adopted pet only in its domain-owned region and saved movement position. */
   private renderPet(regionId: string, state: GameState): void {
     const pet = state.pet;
-    if (!pet || homePetRegionAt(state.minuteOfDay) !== regionId) {
+    if (!pet || pet.regionId !== regionId) {
       this.petView?.destroy();
       this.petView = null;
       return;
     }
-    const homeRegion = homePetRegionAt(state.minuteOfDay);
-    const anchors = petAnchorsForRegion(this.catalog, homeRegion);
+    const anchors = petAnchorsForRegion(this.catalog, pet.regionId);
     if (this.petView) {
       this.petView.project(pet, state.day, anchors);
       return;
@@ -840,6 +1069,14 @@ export class WorldScene extends Phaser.Scene {
     const playerView = this.playerView;
     const player = this.latestState?.player;
     if (!playerView || !player || gameUiState.selectedItemId !== "" || isWorldInputLocked()) return false;
+    const chest = this.latestState?.worldObjects.filter((object) => object.kind === "chest" && object.regionId === player.regionId)
+      .filter((object) => isPointInFacingSector(player, { x: object.column * 16 + 8, y: object.row * 16 + 8 }, this.facing))
+      .sort((left, right) => Math.hypot(left.column * 16 + 8 - player.x, left.row * 16 + 8 - player.y)
+        - Math.hypot(right.column * 16 + 8 - player.x, right.row * 16 + 8 - player.y))[0];
+    if (chest && Math.hypot(chest.column * 16 + 8 - player.x, chest.row * 16 + 8 - player.y) <= 42) {
+      this.interactStorageObject(chest.id, true);
+      return true;
+    }
     const direction = facingVector(this.facing);
     setWorldActionBusy(true);
     const started = this.actionTimeline.play({
@@ -909,6 +1146,12 @@ export class WorldScene extends Phaser.Scene {
 
   /** Routes bare-map clicks into dynamic tilling, water refill or one authored fishing zone. */
   private handleWorldPointer(pointer: Phaser.Input.Pointer): void {
+    if (gameUiState.worldPlacement) {
+      if (gameUiState.storageSave.phase !== "idle") return;
+      const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      this.selectPlacementTile(Math.floor(point.x / 16), Math.floor(point.y / 16));
+      return;
+    }
     const state = this.latestState;
     if (
       !state
@@ -919,6 +1162,11 @@ export class WorldScene extends Phaser.Scene {
     const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     const column = Math.floor(point.x / 16);
     const row = Math.floor(point.y / 16);
+    if (gameUiState.selectedItemId === ITEM_ID.chest && gameUiState.selectedInventoryIndex !== null) {
+      beginWorldPlacement({ kind: "chest", inventoryIndex: gameUiState.selectedInventoryIndex });
+      this.selectPlacementTile(column, row);
+      return;
+    }
     if (gameUiState.selectedItemId === ITEM_ID.wateringCan && this.catalog.isWaterSource(state.player.regionId, column, row)) {
       const feedback = dispatchLocalGameCommand({ type: "refill-watering-can", column, row });
       if (feedback?.tone === "success") emitAudioCue(AUDIO_CUE.watering);
@@ -948,6 +1196,14 @@ export class WorldScene extends Phaser.Scene {
     const vector = facingVector(this.facing);
     const column = Math.floor(state.player.x / 16) + vector.x;
     const row = Math.floor(state.player.y / 16) + vector.y;
+    if (itemId === ITEM_ID.chest && gameUiState.selectedInventoryIndex !== null) {
+      beginWorldPlacement({ kind: "chest", inventoryIndex: gameUiState.selectedInventoryIndex });
+      this.selectPlacementTile(column, row);
+      return;
+    }
+    const frontObject = state.worldObjects.find((object) => object.regionId === state.player.regionId
+      && object.row === row && column >= object.column && column < object.column + (object.kind === "shipping-bin" ? 2 : 1));
+    if (frontObject) { this.interactStorageObject(frontObject.id); return; }
     if (itemId === ITEM_ID.fishingRod) {
       const zone = [...this.fishingSpotViews.values()].sort((a, b) => a.distanceTo(state.player.x, state.player.y) - b.distanceTo(state.player.x, state.player.y))[0];
       if (zone) this.startFishing(zone.entityId);
@@ -992,6 +1248,17 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     const choices: Array<{ distance: number; action: () => void }> = [
+      ...state.worldObjects.filter((object) => object.regionId === state.player.regionId).map((object) => ({
+        distance: Math.hypot(object.column * 16 + (object.kind === "chest" ? 8 : 16) - state.player.x, object.row * 16 + 8 - state.player.y),
+        action: () => this.interactStorageObject(object.id),
+      })),
+      ...this.catalog.requireRegion(state.player.regionId).interactions.filter((interaction) => interaction.kind === "building-service" || (interaction.kind === "backpack-display" && state.inventoryCapacity < 36))
+        .map((interaction) => ({ distance: Math.hypot(interaction.x + interaction.width / 2 - state.player.x, interaction.y + interaction.height / 2 - state.player.y),
+          action: () => this.openStorageService(interaction.entityId) })),
+      ...state.worldDrops.filter((drop) => drop.regionId === state.player.regionId).map((drop) => ({
+        distance: Math.hypot(drop.originX - state.player.x, drop.originY - state.player.y),
+        action: () => { dispatchLocalGameCommand({ type: "collect-world-drop", dropId: drop.id }); },
+      })),
       ...[...this.npcViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.interactWithNpc(view) })),
       ...[...this.bedViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.requestSleepConfirmation(view) })),
       ...[...this.inspectViews.values()].map((view) => ({ distance: view.distanceTo(state.player.x, state.player.y), action: () => this.inspectEnvironment(view) })),
@@ -1062,6 +1329,10 @@ export class WorldScene extends Phaser.Scene {
     const state = this.latestState;
     const player = state?.player;
     if (!player || this.transitionPhase !== "idle" || this.actionTimeline.isBusy() || isWorldInputLocked()) return;
+    if (npc.spawn.interactionType === "building-service") {
+      this.openStorageService("town-house-west-carpenter-counter");
+      return;
+    }
     const dialogue = getDialogueDefinition(npc.spawn.dialogueId, {
       day: state.day,
       minuteOfDay: state.minuteOfDay,
@@ -1200,6 +1471,9 @@ export class WorldScene extends Phaser.Scene {
     destroyAll(this.inspectViews);
     destroyAll(this.exitHintViews);
     destroyAll(this.npcViews);
+    destroyAll(this.storageViews);
+    destroyAll(this.dropViews);
+    destroyAll(this.serviceViews);
     this.petView?.destroy();
     this.petView = null;
   }
@@ -1212,6 +1486,9 @@ export class WorldScene extends Phaser.Scene {
     this.audioDirector?.destroy();
     this.audioDirector = null;
     this.input.off(Phaser.Input.Events.POINTER_DOWN, this.handleWorldPointer, this);
+    this.input.off(Phaser.Input.Events.POINTER_WHEEL, this.handleHotbarWheel, this);
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleScaleResize, this);
+    window.removeEventListener("keydown", this.handleStorageKey);
     this.stopProjection?.();
     this.stopWorldAction?.();
     this.stopWorldAction = undefined;

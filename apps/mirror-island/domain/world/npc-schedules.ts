@@ -8,10 +8,15 @@ import type {
 } from "./regions.ts";
 import { playableCalendarAt, type Weekday } from "../calendar/game-calendar.ts";
 import type { WeatherKind } from "../weather/definitions.ts";
+import {
+  CARPENTER_NPC_ID, carpenterServiceAt, resolveCarpenterSchedule,
+  type CarpenterSpecialSchedule,
+} from "../building/carpenter-schedule.ts";
 
 export interface NpcDayContext {
   readonly day: number;
   readonly weather: WeatherKind;
+  readonly carpenterSpecialSchedule?: CarpenterSpecialSchedule;
 }
 
 const DEFAULT_DAY_CONTEXT: NpcDayContext = { day: 2, weather: "sunny" };
@@ -19,7 +24,7 @@ const REST_DAYS: Readonly<Record<string, Weekday>> = {
   "seed-keeper": "wednesday",
   "town-blacksmith": "sunday",
   "town-resident-01": "sunday",
-  "town-resident-mozi": "sunday",
+  "town-resident-mozi": "tuesday",
   "town-resident-haonan": "friday",
   "town-resident-alan": "monday",
   "town-resident-haomeili": "sunday",
@@ -62,7 +67,7 @@ const NPC_SCHEDULES: Readonly<Record<string, NpcSchedule>> = {
   },
   "town-resident-mozi": {
     morning: anchor("town-house-west", "npc-mozi-home"),
-    day: anchor("town", "npc-mozi-work"),
+    day: anchor("town-house-west", "npc-mozi-counter", "building-service"),
     evening: anchor("town", "npc-mozi-evening"),
     night: anchor("town-house-west", "npc-mozi-home"),
   },
@@ -151,7 +156,7 @@ export function activeNpcSpawns(
   context: NpcDayContext = DEFAULT_DAY_CONTEXT,
 ): readonly NpcSpawnDefinition[] {
   const phase = schedulePhaseAt(minuteOfDay);
-  return baseNpcs(catalog).map((npc) => projectNpcAtPhase(catalog, npc, phase, context));
+  return baseNpcs(catalog).map((npc) => projectNpcAtPhase(catalog, npc, phase, context, minuteOfDay));
 }
 
 /** Returns active NPC projections belonging to one region at one game minute. */
@@ -180,7 +185,15 @@ function projectNpcAtPhase(
   npc: NpcSpawnDefinition,
   phase: NpcSchedulePhase,
   context: NpcDayContext = DEFAULT_DAY_CONTEXT,
+  minuteOfDay = { morning: 360, day: 540, evening: 1020, night: 1260 }[phase],
 ): NpcSpawnDefinition {
+  if (npc.npcId === CARPENTER_NPC_ID) {
+    const resolution = resolveCarpenterSchedule(minuteOfDay, context);
+    const point = catalog.requireSpawn(resolution.regionId, resolution.spawnId);
+    const projected = { ...npc, ...point, regionId: resolution.regionId, routine: resolution.routine };
+    return { ...projected, interactionType: carpenterServiceAt(catalog, projected, minuteOfDay, context)
+      ? "building-service" : "dialogue" };
+  }
   const schedule = NPC_SCHEDULES[npc.npcId];
   let scheduled = schedule?.[phase];
   if (!scheduled) return npc;

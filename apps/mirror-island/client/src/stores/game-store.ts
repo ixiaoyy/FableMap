@@ -4,7 +4,8 @@ import {
   getItemDefinition,
   type ItemId,
 } from "../../../domain/items/definitions.ts";
-import type { ActionFeedback } from "../../../domain/session/commands.ts";
+import type { ActionFeedback, StorageSaveSnapshot } from "../../../domain/session/commands.ts";
+import type { WorldObjectState, WorldDropState } from "../../../domain/world/world-object-state.ts";
 import type { GameState } from "../../../domain/state/game-state.ts";
 import type { PetState } from "../../../domain/pets/definitions.ts";
 import {
@@ -68,6 +69,21 @@ export interface GiftConfirmation {
   readonly itemId: ItemId;
 }
 
+export interface WorldPlacementRequest {
+  readonly kind: "chest" | "build-shipping-bin" | "move-farm-building";
+  readonly inventoryIndex?: number;
+  readonly objectId?: string;
+  readonly interactionId?: string;
+}
+
+export interface WorldPlacementProjection {
+  readonly request: WorldPlacementRequest;
+  readonly column: number;
+  readonly row: number;
+  readonly valid: boolean;
+  readonly message: string;
+}
+
 const mutableState = reactive({
   phase: "initializing" as GamePhase,
   saveAvailable: false,
@@ -81,7 +97,12 @@ const mutableState = reactive({
   stamina: MAX_STAMINA,
   maxStamina: MAX_STAMINA,
   inventory: [] as InventorySlotProjection[],
-  inventoryCapacity: 24 as 24 | 32,
+  inventoryCapacity: 12 as 12 | 24 | 36,
+  worldObjects: [] as WorldObjectState[],
+  worldDrops: [] as WorldDropState[],
+  lastShipment: null as GameState["shippingQueue"][number] | null,
+  shippingReport: null as GameState["unacknowledgedShippingReport"],
+  storageSave: { phase: "idle", feedback: null } as StorageSaveSnapshot,
   wateringCanLevel: 1 as 1 | 2,
   wateringCanWater: 20,
   wateringCanCapacity: wateringCanCapacity(1),
@@ -106,6 +127,12 @@ const mutableState = reactive({
   calendarOpen: false,
   audioSettingsOpen: false,
   backpackOpen: false,
+  craftingOpen: false,
+  containerId: null as string | null,
+  shippingBinId: null as string | null,
+  buildingServiceId: null as string | null,
+  backpackUpgradeId: null as string | null,
+  worldPlacement: null as WorldPlacementProjection | null,
   requestBoardOpen: false,
   petAdoptionOpen: false,
   audioSettings: getAudioSettings(),
@@ -146,6 +173,22 @@ export function applyGameState(state: GameState): void {
     quantity: slot.quantity,
   }));
   mutableState.inventoryCapacity = state.inventoryCapacity;
+  mutableState.worldObjects = state.worldObjects.map((object) => object.kind === "chest"
+    ? { ...object, slots: object.slots.map((slot) => ({ ...slot })) }
+    : { ...object });
+  mutableState.worldDrops = state.worldDrops.map((drop) => ({ ...drop, stack: { ...drop.stack } }));
+  mutableState.lastShipment = state.shippingQueue.length > 0
+    ? { ...state.shippingQueue[state.shippingQueue.length - 1]! }
+    : null;
+  mutableState.shippingReport = state.unacknowledgedShippingReport
+    ? structuredClone(state.unacknowledgedShippingReport)
+    : null;
+  if (mutableState.containerId && !state.worldObjects.some((object) => object.id === mutableState.containerId)) {
+    mutableState.containerId = null;
+  }
+  if (mutableState.shippingBinId && !state.worldObjects.some((object) => object.id === mutableState.shippingBinId)) {
+    mutableState.shippingBinId = null;
+  }
   mutableState.wateringCanLevel = state.wateringCanLevel;
   mutableState.wateringCanWater = state.wateringCanWater;
   mutableState.wateringCanCapacity = wateringCanCapacity(state.wateringCanLevel);
@@ -347,6 +390,107 @@ export function openBackpack(): boolean {
 /** Closes the complete inventory projection without moving or mutating item slots. */
 export function closeBackpack(): void { mutableState.backpackOpen = false; }
 
+/** Opens the anywhere crafting page, replacing the backpack tab without changing inventory. */
+export function openCrafting(): boolean {
+  if (!mutableState.backpackOpen && isWorldInputLocked()) return false;
+  if (isStorageMutationLocked()) return false;
+  mutableState.backpackOpen = false;
+  mutableState.craftingOpen = true;
+  return true;
+}
+
+/** Closes crafting previews; unconfirmed recipes have consumed no materials. */
+export function closeCrafting(): void { mutableState.craftingOpen = false; }
+
+/** Opens a nearby container already authorized by the session/world interaction query. */
+export function openContainer(id: string): boolean {
+  if (isWorldInputLocked()) return false;
+  if (!mutableState.worldObjects.some((object) => object.id === id && object.kind === "chest")) return false;
+  mutableState.containerId = id;
+  return true;
+}
+
+/** Closes the container view without holding or altering a durable stack. */
+export function closeContainer(): void { mutableState.containerId = null; }
+
+/** Opens an existing shipping building; only the latest global shipment is projected to its panel. */
+export function openShippingBin(id: string): boolean {
+  if (isWorldInputLocked()) return false;
+  if (!mutableState.worldObjects.some((object) => object.id === id && object.kind === "shipping-bin")) return false;
+  mutableState.shippingBinId = id;
+  return true;
+}
+
+/** Closes the shipping panel without withdrawing any queued goods. */
+export function closeShippingBin(): void { mutableState.shippingBinId = null; }
+
+/** Opens one scene-validated carpenter counter; domain commands recheck its availability. */
+export function openBuildingService(interactionId: string): boolean {
+  if (isWorldInputLocked()) return false;
+  mutableState.buildingServiceId = interactionId;
+  return true;
+}
+
+/** Closes the carpenter service without purchasing, moving, or demolishing a building. */
+export function closeBuildingService(): void { mutableState.buildingServiceId = null; }
+
+/** Opens the independent backpack display after the world has validated its interaction. */
+export function openBackpackUpgrade(interactionId: string): boolean {
+  if (isWorldInputLocked() || mutableState.inventoryCapacity === 36) return false;
+  mutableState.backpackUpgradeId = interactionId;
+  return true;
+}
+
+/** Closes the backpack display without spending Gold or changing unlocked rows. */
+export function closeBackpackUpgrade(): void { mutableState.backpackUpgradeId = null; }
+
+/** Begins a read-only world placement preview; the world scene owns pointer and map coordinates. */
+export function beginWorldPlacement(request: WorldPlacementRequest): boolean {
+  if (isStorageMutationLocked()) return false;
+  mutableState.backpackOpen = false;
+  mutableState.buildingServiceId = null;
+  mutableState.worldPlacement = {
+    request: { ...request },
+    column: Math.floor(mutableState.playerX / 16),
+    row: Math.floor(mutableState.playerY / 16),
+    valid: false,
+    message: "请选择一块空地。",
+  };
+  return true;
+}
+
+/** Cancels or finishes a temporary placement preview without mutating world objects. */
+export function closeWorldPlacement(): void { mutableState.worldPlacement = null; }
+
+/** Projects the domain's current tile verdict; the renderer cannot commit placement through this helper. */
+export function setPlacementPreview(column: number, row: number, valid: boolean, message: string): void {
+  const placement = mutableState.worldPlacement;
+  if (!placement) return;
+  mutableState.worldPlacement = { ...placement, column, row, valid, message };
+}
+
+/** Projects atomic storage save status without stealing focus while an ordinary save is in flight. */
+export function applyStorageSave(snapshot: StorageSaveSnapshot): void {
+  mutableState.storageSave = { ...snapshot, feedback: snapshot.feedback ? { ...snapshot.feedback } : null };
+}
+
+/** Reports whether mutations must wait for the outstanding durable transaction or day transition. */
+export function isStorageMutationLocked(): boolean {
+  return mutableState.storageSave.phase !== "idle"
+    || mutableState.daySettlement.phase === "saving"
+    || mutableState.daySettlement.phase === "failed";
+}
+
+/** Closes all storage-related temporary views on day transitions and application cleanup. */
+function closeStoragePanels(): void {
+  mutableState.craftingOpen = false;
+  mutableState.containerId = null;
+  mutableState.shippingBinId = null;
+  mutableState.buildingServiceId = null;
+  mutableState.backpackUpgradeId = null;
+  mutableState.worldPlacement = null;
+}
+
 /** Opens the deterministic daily-request board while no other modal owns world input. */
 export function openRequestBoard(): boolean {
   if (isWorldInputLocked()) return false;
@@ -405,6 +549,13 @@ export function isGameClockPaused(): boolean {
     || mutableState.calendarOpen
     || mutableState.audioSettingsOpen
     || mutableState.backpackOpen
+    || mutableState.craftingOpen
+    || mutableState.containerId !== null
+    || mutableState.shippingBinId !== null
+    || mutableState.buildingServiceId !== null
+    || mutableState.backpackUpgradeId !== null
+    || mutableState.worldPlacement !== null
+    || mutableState.storageSave.phase !== "idle"
     || mutableState.requestBoardOpen
     || mutableState.petAdoptionOpen
     || mutableState.daySettlement.phase !== "idle"
@@ -435,6 +586,7 @@ export function applyDaySettlement(state: DaySettlementSnapshot): void {
   mutableState.calendarOpen = false;
   mutableState.audioSettingsOpen = false;
   mutableState.backpackOpen = false;
+  closeStoragePanels();
   mutableState.requestBoardOpen = false;
   mutableState.petAdoptionOpen = false;
   mutableState.worldActionBusy = false;
@@ -451,7 +603,12 @@ export function clearGameState(): void {
   mutableState.gold = 0;
   mutableState.stamina = MAX_STAMINA;
   mutableState.inventory = [];
-  mutableState.inventoryCapacity = 24;
+  mutableState.inventoryCapacity = 12;
+  mutableState.worldObjects = [];
+  mutableState.worldDrops = [];
+  mutableState.lastShipment = null;
+  mutableState.shippingReport = null;
+  mutableState.storageSave = { phase: "idle", feedback: null };
   mutableState.wateringCanLevel = 1;
   mutableState.wateringCanWater = wateringCanCapacity(1);
   mutableState.wateringCanCapacity = wateringCanCapacity(1);
@@ -474,6 +631,7 @@ export function clearGameState(): void {
   mutableState.calendarOpen = false;
   mutableState.audioSettingsOpen = false;
   mutableState.backpackOpen = false;
+  closeStoragePanels();
   mutableState.requestBoardOpen = false;
   mutableState.petAdoptionOpen = false;
   petAdoptionDeferredDay = null;

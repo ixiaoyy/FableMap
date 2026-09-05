@@ -28,7 +28,7 @@ const REQUIRED_OBJECT_LAYERS = [
   "NpcSpawns",
 ] as const;
 const OPTIONAL_OBJECT_LAYERS = ["FishingZones"] as const;
-const OPTIONAL_TILE_LAYERS = ["Tillable"] as const;
+const OPTIONAL_TILE_LAYERS = ["Tillable", "Placeable", "Buildable"] as const;
 
 /** Decodes one raw Tiled JSON map into the only plain region contract consumed by the app. */
 export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinition {
@@ -68,6 +68,8 @@ export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinit
   const tillableTiles = tillableLayer
     ? decodeTilePresence(tillableLayer, width, height)
     : Array.from({ length: width * height }, () => false);
+  const placeableTiles = decodePlacementMask(layers, "Placeable", regionId, width, height);
+  const buildableTiles = decodePlacementMask(layers, "Buildable", regionId, width, height);
   const spawns = decodeSpawns(objectLayers.get("SpawnPoints")!);
   const exits = decodeExits(objectLayers.get("Exits")!);
   const resources = decodeResources(objectLayers.get("ResourceSpawns")!, regionId);
@@ -86,6 +88,8 @@ export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinit
     collision,
     waterTiles,
     tillableTiles,
+    placeableTiles,
+    buildableTiles,
     spawns,
     exits,
     resources,
@@ -98,6 +102,14 @@ export function decodeTiledRegion(value: unknown, mapKey: string): RegionDefinit
 /** Builds a cross-region catalog after every individual TMJ passes structural decoding. */
 export function createWorldCatalog(regions: readonly RegionDefinition[]): WorldCatalog {
   return new WorldCatalog(regions);
+}
+
+/** Decodes an explicit placement mask; an absent layer grants no placement, and buildings belong only to Farm. */
+function decodePlacementMask(layers: readonly Record<string, unknown>[], name: "Placeable" | "Buildable", regionId: string, width: number, height: number): readonly boolean[] {
+  const layer = layers.find((entry) => entry.name === name);
+  if (!layer) return Array.from({ length: width * height }, () => false);
+  if (layer.type !== "tilelayer" || (name === "Buildable" && regionId !== "farm")) throw new Error(`${name} layer is invalid.`);
+  return decodeTilePresence(layer, width, height);
 }
 
 /** Rejects external TSJ references and malformed embedded tileset metadata unsupported by Phaser. */
@@ -261,7 +273,7 @@ function decodeInteractions(layer: Record<string, unknown>, regionId: string): r
       assertStableId(dialogueId, "Dialogue ID");
       return { entityId, regionId, kind, dialogueId, ...rectFrom(object) };
     }
-    if (kind !== "farm-plot" && kind !== "door" && kind !== "bed") {
+    if (kind !== "farm-plot" && kind !== "door" && kind !== "bed" && kind !== "backpack-display" && kind !== "building-service") {
       throw new Error("Interaction kind is invalid.");
     }
     return { entityId, regionId, kind, ...rectFrom(object) };

@@ -54,7 +54,7 @@ export interface FishingZoneDefinition extends WorldRect {
 export interface StandardInteractionDefinition extends WorldRect {
   readonly entityId: string;
   readonly regionId: string;
-  readonly kind: "farm-plot" | "door" | "bed";
+  readonly kind: "farm-plot" | "door" | "bed" | "backpack-display" | "building-service";
 }
 
 export interface InspectInteractionDefinition extends WorldRect {
@@ -71,7 +71,7 @@ export interface NpcSpawnDefinition extends WorldPoint {
   readonly regionId: string;
   readonly npcId: string;
   readonly dialogueId: string;
-  readonly interactionType: "shop" | "dialogue";
+  readonly interactionType: "shop" | "dialogue" | "building-service";
   readonly routine?: "regular" | "rain" | "rest";
 }
 
@@ -86,6 +86,8 @@ export interface RegionDefinition {
   readonly collision: CollisionGrid;
   readonly waterTiles: readonly boolean[];
   readonly tillableTiles: readonly boolean[];
+  readonly placeableTiles: readonly boolean[];
+  readonly buildableTiles: readonly boolean[];
   readonly spawns: Readonly<Record<string, WorldPoint>>;
   readonly exits: readonly ExitDefinition[];
   readonly resources: readonly ResourceSpawnDefinition[];
@@ -113,6 +115,12 @@ export class WorldCatalog {
           () => false,
         ),
         tillableTiles: definition.tillableTiles ?? Array.from(
+          { length: definition.collision.columns * definition.collision.rows }, () => false,
+        ),
+        placeableTiles: definition.placeableTiles ?? Array.from(
+          { length: definition.collision.columns * definition.collision.rows }, () => false,
+        ),
+        buildableTiles: definition.buildableTiles ?? Array.from(
           { length: definition.collision.columns * definition.collision.rows }, () => false,
         ),
         fishingZones: definition.fishingZones ?? [],
@@ -298,6 +306,9 @@ export class WorldCatalog {
     }
     if (region.tillableTiles.length !== region.waterTiles.length) {
       throw new Error(`Tillable grid dimensions are invalid in region ${region.id}.`);
+    }
+    if (region.placeableTiles.length !== region.waterTiles.length || region.buildableTiles.length !== region.waterTiles.length) {
+      throw new Error(`Placement grid dimensions are invalid in region ${region.id}.`);
     }
     for (const zone of region.fishingZones) this.assertRectInside(region, zone, `Fishing zone ${zone.id}`);
   }

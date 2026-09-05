@@ -1,13 +1,11 @@
 import { ITEM_ID } from "../items/definitions.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
 import type { GameState } from "../state/game-state.ts";
-import type { NpcSpawnDefinition } from "../world/regions.ts";
+import type { NpcSpawnDefinition, WorldCatalog } from "../world/regions.ts";
 import { schedulePhaseAt } from "../time/game-time.ts";
 import {
-  BACKPACK_UPGRADE_DAY,
-  BACKPACK_UPGRADE_GOLD,
-  BASE_INVENTORY_CAPACITY,
-  EXPANDED_INVENTORY_CAPACITY,
+  BACKPACK_DISPLAY_ID,
+  nextBackpackUpgrade,
   WATERING_CAN_MAX_LEVEL,
   WATERING_CAN_UPGRADE_DAY,
   WATERING_CAN_UPGRADE_GOLD,
@@ -33,7 +31,7 @@ export type BackpackUpgradeResult =
   | "backpack-upgrade-insufficient-gold";
 
 export class UpgradeSystem {
-  /** Creates the two reviewed long-term upgrades over the existing inventory owner. */
+  /** Creates the watering-can and sequential backpack upgrades over the existing inventory owner. */
   constructor(private readonly inventory: InventorySystem) {}
 
   /** Atomically upgrades the nearby blacksmith-serviced watering can for 900g and 15 wood. */
@@ -66,24 +64,34 @@ export class UpgradeSystem {
       && isPlayerNearNpc(state, activeNpcs, "town-blacksmith", new Set(["town", "blacksmith"]));
   }
 
-  /** Atomically expands the nearby Seed Keeper-serviced backpack from 24 to 32 slots. */
-  upgradeBackpack(state: GameState, activeNpcs: readonly NpcSpawnDefinition[]): BackpackUpgradeResult {
-    if (state.day < BACKPACK_UPGRADE_DAY) return "backpack-upgrade-locked";
-    if (state.inventoryCapacity === EXPANDED_INVENTORY_CAPACITY) return "backpack-already-upgraded";
-    if (!isPlayerNearNpc(state, activeNpcs, "seed-keeper", new Set(["seed-shop"]))) {
+  /** Buys exactly the next twelve-slot row at the authored independent display; no date lock or generic shop sale applies. */
+  upgradeBackpack(state: GameState, catalog: WorldCatalog, interactionId = BACKPACK_DISPLAY_ID): BackpackUpgradeResult {
+    const offer = nextBackpackUpgrade(state.inventoryCapacity);
+    if (!offer) return "backpack-already-upgraded";
+    if (!this.backpackDisplayAvailable(state, catalog, interactionId)) {
       return "backpack-upgrade-unavailable";
     }
-    if (state.gold < BACKPACK_UPGRADE_GOLD) return "backpack-upgrade-insufficient-gold";
-    if (state.inventoryCapacity !== BASE_INVENTORY_CAPACITY || state.inventory.length !== BASE_INVENTORY_CAPACITY) {
+    if (state.gold < offer.gold) return "backpack-upgrade-insufficient-gold";
+    if (state.inventory.length !== state.inventoryCapacity) {
       throw new Error("Backpack state is inconsistent before upgrade.");
     }
-    state.gold -= BACKPACK_UPGRADE_GOLD;
+    state.gold -= offer.gold;
     state.inventory.push(...Array.from(
-      { length: EXPANDED_INVENTORY_CAPACITY - BASE_INVENTORY_CAPACITY },
+      { length: offer.capacity - state.inventoryCapacity },
       () => ({ itemId: "" as const, quantity: 0 }),
     ));
-    state.inventoryCapacity = EXPANDED_INVENTORY_CAPACITY;
+    state.inventoryCapacity = offer.capacity;
     return "upgraded-backpack";
+  }
+
+  /** Reports whether the player is close enough to the one authored backpack display and still has a next upgrade. */
+  backpackDisplayAvailable(state: GameState, catalog: WorldCatalog, interactionId = BACKPACK_DISPLAY_ID): boolean {
+    if (interactionId !== BACKPACK_DISPLAY_ID || !nextBackpackUpgrade(state.inventoryCapacity)) return false;
+    const display = catalog.interaction(interactionId);
+    return Boolean(display && display.kind === "backpack-display" && display.regionId === "seed-shop"
+      && state.player.regionId === display.regionId
+      && Math.hypot(state.player.x - (display.x + display.width / 2),
+        state.player.y - (display.y + display.height / 2)) <= UPGRADE_INTERACTION_DISTANCE_PIXELS);
   }
 }
 

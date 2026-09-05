@@ -34,6 +34,13 @@ import CalendarPanel from "./ui/calendar/CalendarPanel.vue";
 import CharacterCreator from "./ui/character/CharacterCreator.vue";
 import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
 import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
+import BackpackUpgradePanel from "./ui/inventory/BackpackUpgradePanel.vue";
+import CraftingPanel from "./ui/crafting/CraftingPanel.vue";
+import ContainerPanel from "./ui/storage/ContainerPanel.vue";
+import ShippingBinPanel from "./ui/shipping/ShippingBinPanel.vue";
+import BuildingServicePanel from "./ui/building/BuildingServicePanel.vue";
+import FarmPlacementPanel from "./ui/building/FarmPlacementPanel.vue";
+import StorageSaveStatus from "./ui/storage/StorageSaveStatus.vue";
 import RequestBoardPanel from "./ui/requests/RequestBoardPanel.vue";
 import TodayHint from "./ui/retention/TodayHint.vue";
 import PetAdoptionPanel from "./ui/pets/PetAdoptionPanel.vue";
@@ -121,7 +128,7 @@ function isolateUiActivationKeys(event: KeyboardEvent): void {
   if (!(event.target instanceof Element)) return;
   const inDialog = event.target.closest('[role="dialog"], [role="alertdialog"]');
   const nativeActivation = (event.code === "Space" || event.code === "Enter")
-    && event.target.closest("button, a, input, select, textarea");
+    && event.target.closest("button, a, input, select, textarea, summary");
   if (inDialog || nativeActivation) event.stopPropagation();
 }
 
@@ -207,7 +214,7 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen || gameUiState.fishing.phase !== 'idle' || gameUiState.giftConfirmation !== null || gameUiState.daySettlement.phase !== 'idle'"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.craftingOpen || gameUiState.containerId !== null || gameUiState.shippingBinId !== null || gameUiState.buildingServiceId !== null || gameUiState.backpackUpgradeId !== null || gameUiState.worldPlacement !== null || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen || gameUiState.fishing.phase !== 'idle' || gameUiState.giftConfirmation !== null || gameUiState.daySettlement.phase !== 'idle'"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
@@ -217,6 +224,7 @@ onUnmounted(() => {
       <SocialPanel />
       <AudioSettingsPanel />
       <BackpackPanel />
+      <CraftingPanel />
       <RequestBoardPanel />
       <CalendarPanel />
       <button
@@ -237,6 +245,12 @@ onUnmounted(() => {
       <FishingPanel />
       <GiftConfirmationPanel />
       <DaySettlementPanel />
+      <BackpackUpgradePanel />
+      <ContainerPanel />
+      <ShippingBinPanel />
+      <BuildingServicePanel />
+      <FarmPlacementPanel />
+      <StorageSaveStatus />
       <div v-if="!debugMode" class="game-hud">
         <Hotbar />
       </div>

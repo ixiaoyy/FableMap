@@ -1,4 +1,5 @@
 import type { GameState } from "../state/game-state.ts";
+import { WorldOccupancySystem } from "./WorldOccupancySystem.ts";
 import {
   PLAYER_FEET_HALF_HEIGHT,
   PLAYER_FEET_HALF_WIDTH,
@@ -24,31 +25,34 @@ export function movePlayer(
   const previousX = state.player.x;
   const previousY = state.player.y;
   const region = catalog.requireRegion(state.player.regionId);
+  const occupancy = new WorldOccupancySystem(catalog);
   const nextX = clamp(
     previousX + (xAxis / magnitude) * distance,
     PLAYER_FEET_HALF_WIDTH,
     region.widthPixels - PLAYER_FEET_HALF_WIDTH,
   );
-  if (!catalog.isBlocked(
+  if (!occupancy.isBlocked(
+    state,
     state.player.regionId,
     nextX,
     previousY,
     PLAYER_FEET_HALF_WIDTH,
     PLAYER_FEET_HALF_HEIGHT,
-    activeNpcs,
+    undefined, activeNpcs,
   )) state.player.x = nextX;
   const nextY = clamp(
     previousY + (yAxis / magnitude) * distance,
     PLAYER_FEET_HALF_HEIGHT,
     region.heightPixels - PLAYER_FEET_HALF_HEIGHT,
   );
-  if (!catalog.isBlocked(
+  if (!occupancy.isBlocked(
+    state,
     state.player.regionId,
     state.player.x,
     nextY,
     PLAYER_FEET_HALF_WIDTH,
     PLAYER_FEET_HALF_HEIGHT,
-    activeNpcs,
+    undefined, activeNpcs,
   )) state.player.y = nextY;
   return state.player.x !== previousX || state.player.y !== previousY;
 }

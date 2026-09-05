@@ -4,7 +4,7 @@ import {
   type GameState,
 } from "../state/game-state.ts";
 
-export const SAVE_FORMAT_VERSION = 12 as const;
+export const SAVE_FORMAT_VERSION = 13 as const;
 export const MAIN_SAVE_SLOT = "main";
 
 export interface StoredGame {

@@ -449,7 +449,7 @@ export class BedEntity {
       interaction.y - 6,
       "休息",
       {
-      ...textStyle("#ffe7b5"),
+      ...worldLabelStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
       padding: { x: 3, y: 1 },
       },
@@ -534,7 +534,7 @@ export class FishingSpotEntity {
     hit.on(Phaser.Input.Events.POINTER_DOWN, onInteract);
     hit.on(Phaser.Input.Events.POINTER_OVER, () => { this.hovered = true; this.refreshPrompt(); });
     hit.on(Phaser.Input.Events.POINTER_OUT, () => { this.hovered = false; this.refreshPrompt(); });
-    this.prompt = scene.add.text(x, y - 25, "钓鱼", { ...textStyle("#fff0c2"), backgroundColor: "#3d4c36", padding: { x: 3, y: 2 } })
+    this.prompt = scene.add.text(x, y - 25, "钓鱼", { ...worldLabelStyle("#fff0c2"), backgroundColor: "#3d4c36", padding: { x: 3, y: 2 } })
       .setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
     this.container = scene.add.container(x, y, [marker, cap, hit]).setDepth(105 + zone.y + zone.height);
   }
@@ -578,7 +578,7 @@ export class InspectEntity {
       interaction.y + interaction.height / 2 + inspectPromptOffsetY(interaction.height),
       inspectPromptLabel(interaction.dialogueId),
       {
-        ...textStyle("#ffe7b5"),
+        ...worldLabelStyle("#ffe7b5"),
         backgroundColor: "#3d2918",
         padding: { x: 3, y: 1 },
       },
@@ -637,7 +637,7 @@ export class ExitHintEntity {
   ) {
     this.entityId = exit.id;
     this.prompt = scene.add.text(0, 0, label, {
-      ...textStyle("#fff0c2"),
+      ...worldLabelStyle("#fff0c2"),
       backgroundColor: "#3d2918",
       padding: { x: 4, y: 2 },
     }).setOrigin(0.5).setVisible(false);
@@ -699,17 +699,17 @@ export class NpcEntity {
       this.refreshPrompt();
     });
     this.prompt = scene.add.text(spawn.x, spawn.y - 28, npcInteractionLabel(spawn), {
-      ...textStyle("#ffe7b5"),
+      ...worldLabelStyle("#ffe7b5"),
       backgroundColor: "#3d2918",
       padding: { x: 3, y: 1 },
     }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
     this.activityMark = scene.add.text(8, -15, "", {
-      ...textStyle("#fff0b0"),
+      ...worldLabelStyle("#fff0b0"),
       backgroundColor: "#2d2117",
       padding: { x: 2, y: 1 },
     }).setOrigin(0.5).setVisible(false);
     this.friendshipPulse = scene.add.text(spawn.x, spawn.y - 31, "♥", {
-      ...textStyle("#ff8a82"),
+      ...worldLabelStyle("#ff8a82"),
       fontSize: "12px",
       stroke: "#5b2f2d",
       strokeThickness: 2,
@@ -828,12 +828,6 @@ export class NpcEntity {
   }
 }
 
-type PetMotionKind = "idle" | "walking" | "resting";
-
-const PET_WALK_SPEED_PIXELS_PER_SECOND = 18;
-const PET_IDLE_DURATION_MS = 1_400;
-const PET_REST_DURATION_MS = 2_600;
-
 export class PetEntity {
   readonly container: Phaser.GameObjects.Container;
   private readonly body: Phaser.GameObjects.Sprite;
@@ -841,33 +835,22 @@ export class PetEntity {
   private readonly heart: Phaser.GameObjects.Text;
   private readonly usesFormalTexture: boolean;
   private currentPet: PetState;
-  private anchors: readonly WorldPoint[];
-  private currentDay: number;
-  private anchorIndex: number;
-  private motion: PetMotionKind = "idle";
-  private pauseRemainingMs = PET_IDLE_DURATION_MS;
-  private facing: Facing = "down";
   private hovered = false;
   private nearby = false;
   private inputLocked = false;
   private animationPaused = false;
 
-  /** Creates one non-colliding client pet over a reviewed home-anchor loop. */
+  /** Creates a read-only pet view at its durable domain position; legacy day/anchor arguments preserve scene call compatibility. */
   constructor(
     scene: Phaser.Scene,
     pet: PetState,
-    day: number,
-    anchors: readonly WorldPoint[],
+    _day: number,
+    _anchors: readonly WorldPoint[],
     private readonly media: PetMediaProfile,
     onInteract: (entity: PetEntity) => void,
   ) {
-    if (anchors.length < 2) throw new Error("Pet presentation requires at least two anchors.");
     if (pet.species !== media.species) throw new Error("Pet media species does not match durable state.");
     this.currentPet = { ...pet };
-    this.currentDay = day;
-    this.anchors = [...anchors];
-    this.anchorIndex = petAnchorIndex(pet, day, anchors.length);
-    const start = this.anchors[this.anchorIndex]!;
     this.usesFormalTexture = scene.textures.exists(media.textureKey);
     const textureKey = this.usesFormalTexture
       ? media.textureKey
@@ -886,58 +869,43 @@ export class PetEntity {
       this.hovered = false;
       this.refreshPrompt();
     });
-    this.prompt = scene.add.text(start.x, start.y - 23, `${pet.name} · 抚摸`, {
-      ...textStyle("#fff0c6"),
+    this.prompt = scene.add.text(pet.x, pet.y - 23, `${pet.name} · 抚摸`, {
+      ...worldLabelStyle("#fff0c6"),
       backgroundColor: "#4a321f",
       padding: { x: 3, y: 1 },
     }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH).setVisible(false);
-    this.heart = scene.add.text(start.x, start.y - 25, "♥", {
-      ...textStyle("#ff8d86"),
+    this.heart = scene.add.text(pet.x, pet.y - 25, "♥", {
+      ...worldLabelStyle("#ff8d86"),
       fontSize: "12px",
       stroke: "#663433",
       strokeThickness: 2,
     }).setOrigin(0.5).setDepth(INTERACTION_PROMPT_DEPTH + 1).setVisible(false);
-    this.container = scene.add.container(start.x, start.y, [this.body]).setDepth(100 + start.y);
+    this.container = scene.add.container(pet.x, pet.y, [this.body]).setDepth(100 + Math.floor(pet.y));
     this.refreshVisual();
   }
 
-  /** Returns Euclidean distance from the pet's presentation position to one player point. */
+  /** Returns distance from the last projected domain position to one player point without simulating movement. */
   distanceTo(x: number, y: number): number {
     return Math.hypot(x - this.container.x, y - this.container.y);
   }
 
-  /** Projects durable identity changes while preserving unsaved movement within the same day and region. */
-  project(pet: PetState, day: number, anchors: readonly WorldPoint[]): void {
+  /** Projects every durable coordinate, facing and motion update; day/anchors no longer own an independent movement state. */
+  project(pet: PetState, _day: number, _anchors: readonly WorldPoint[]): void {
     if (pet.species !== this.currentPet.species) throw new Error("Adopted pet species cannot change.");
     this.currentPet = { ...pet };
     this.prompt.setText(`${pet.name} · 抚摸`);
-    if (day === this.currentDay) return;
-    this.currentDay = day;
-    this.anchors = [...anchors];
-    this.anchorIndex = petAnchorIndex(pet, day, anchors.length);
-    const start = this.anchors[this.anchorIndex]!;
-    this.container.setPosition(start.x, start.y).setDepth(100 + start.y);
-    this.motion = "idle";
-    this.pauseRemainingMs = PET_IDLE_DURATION_MS;
+    this.container.setPosition(pet.x, pet.y).setDepth(100 + Math.floor(pet.y));
     this.refreshVisual();
     this.refreshDetachedObjects();
   }
 
-  /** Advances deterministic short-path idle, walk and rest presentation without touching GameState. */
-  advance(deltaMs: number, paused: boolean): void {
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
+  /** Pauses or resumes sprite animation only; all realtime coordinates and idle/rest timing are domain-owned. */
+  advance(_deltaMs: number, paused: boolean): void {
     if (paused) {
       this.pauseAnimation();
       return;
     }
     this.resumeAnimation();
-    const elapsed = Math.min(deltaMs, 100);
-    if (this.motion !== "walking") {
-      this.pauseRemainingMs -= elapsed;
-      if (this.pauseRemainingMs <= 0) this.startWalking();
-      return;
-    }
-    this.advanceWalking(elapsed);
   }
 
   /** Projects proximity and modal ownership into one touch-safe pet affordance. */
@@ -947,11 +915,8 @@ export class PetEntity {
     this.refreshPrompt();
   }
 
-  /** Plays the once-per-day heart response and briefly settles the pet into a resting pose. */
+  /** Plays the successful petting heart feedback without overriding durable position, facing or rest state. */
   playHeartPulse(): void {
-    this.motion = "resting";
-    this.pauseRemainingMs = 1_800;
-    this.refreshVisual();
     this.container.scene.tweens.killTweensOf(this.heart);
     this.heart
       .setVisible(true)
@@ -978,52 +943,20 @@ export class PetEntity {
     this.container.destroy(true);
   }
 
-  /** Starts the next direct anchor leg and chooses a four-direction walk animation. */
-  private startWalking(): void {
-    const target = this.anchors[(this.anchorIndex + 1) % this.anchors.length]!;
-    this.facing = petFacingForDelta(target.x - this.container.x, target.y - this.container.y);
-    this.motion = "walking";
-    this.refreshVisual();
-  }
-
-  /** Consumes one bounded walking slice and settles exactly on the reviewed target anchor. */
-  private advanceWalking(deltaMs: number): void {
-    const targetIndex = (this.anchorIndex + 1) % this.anchors.length;
-    const target = this.anchors[targetIndex]!;
-    const deltaX = target.x - this.container.x;
-    const deltaY = target.y - this.container.y;
-    const distance = Math.hypot(deltaX, deltaY);
-    const step = PET_WALK_SPEED_PIXELS_PER_SECOND * deltaMs / 1_000;
-    if (distance <= step || distance === 0) {
-      this.container.setPosition(target.x, target.y);
-      this.anchorIndex = targetIndex;
-      this.motion = (this.currentDay + targetIndex + (this.currentPet.species === "dog" ? 1 : 0)) % 3 === 0
-        ? "resting"
-        : "idle";
-      this.pauseRemainingMs = this.motion === "resting" ? PET_REST_DURATION_MS : PET_IDLE_DURATION_MS;
-      this.refreshVisual();
-    } else {
-      this.container.setPosition(
-        this.container.x + deltaX / distance * step,
-        this.container.y + deltaY / distance * step,
-      );
-    }
-    this.container.setDepth(100 + Math.floor(this.container.y));
-    this.refreshDetachedObjects();
-  }
-
   /** Applies one formal frame/animation or leaves the code-drawn fallback stable and readable. */
   private refreshVisual(): void {
     if (!this.usesFormalTexture) return;
-    if (this.motion === "walking") {
-      this.body.play(petWalkAnimationKey(this.media, this.facing), true);
+    const { motion, facing } = this.currentPet;
+    if (motion === "walking") {
+      this.body.play(petWalkAnimationKey(this.media, facing), true);
+      if (this.animationPaused) this.body.anims.pause();
       return;
     }
     this.body.stop();
-    if (this.motion === "resting") {
-      this.body.setFrame(this.media.rest[this.facing === "left" ? "left" : "right"]);
+    if (motion === "resting") {
+      this.body.setFrame(this.media.rest[facing === "left" ? "left" : "right"]);
     } else {
-      this.body.setFrame(this.media.idle[this.facing]);
+      this.body.setFrame(this.media.idle[facing]);
     }
   }
 
@@ -1051,18 +984,6 @@ export class PetEntity {
     this.body.anims.resume();
     this.animationPaused = false;
   }
-}
-
-/** Creates a stable starting anchor from durable identity and the current absolute day. */
-function petAnchorIndex(pet: PetState, day: number, anchorCount: number): number {
-  if (!Number.isInteger(anchorCount) || anchorCount < 1) throw new Error("Pet anchor count is invalid.");
-  return (pet.adoptedDay + day + (pet.species === "dog" ? 1 : 0)) % anchorCount;
-}
-
-/** Chooses the dominant four-direction facing for one short client-only route leg. */
-function petFacingForDelta(deltaX: number, deltaY: number): Facing {
-  if (Math.abs(deltaX) >= Math.abs(deltaY)) return deltaX < 0 ? "left" : "right";
-  return deltaY < 0 ? "up" : "down";
 }
 
 /** Returns one globally stable Phaser animation key for a species and facing. */
@@ -1299,9 +1220,14 @@ export class EntityFactory {
   }
 }
 
-/** Returns the shared compact code-drawn entity label style. */
-function textStyle(color: string): Phaser.Types.GameObjects.Text.TextStyle {
-  return { color, fontFamily: "monospace", fontSize: "7px" };
+/** Returns a label style in the supplied color; double raster resolution preserves Chinese strokes at the normal 2x camera zoom. */
+export function worldLabelStyle(color: string): Phaser.Types.GameObjects.Text.TextStyle {
+  return {
+    color,
+    fontFamily: '"Microsoft YaHei UI", "PingFang SC", sans-serif',
+    fontSize: "9px",
+    resolution: 2,
+  };
 }
 
 /** Maps inspect dialogue identities to short verbs that do not promise unavailable behavior. */

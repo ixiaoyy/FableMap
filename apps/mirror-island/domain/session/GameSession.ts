@@ -1,9 +1,13 @@
-import { CraftingSystem, type CraftingResult } from "../crafting/CraftingSystem.ts";
+import { CraftingSystem } from "../crafting/CraftingSystem.ts";
 import { FarmingSystem, type FarmingResult } from "../farming/FarmingSystem.ts";
 import { GatheringSystem, type GatheringResult } from "../gathering/GatheringSystem.ts";
 import { ForageSystem, type ForageResult } from "../gathering/ForageSystem.ts";
 import { WeedCuttingSystem, type WeedCuttingResult } from "../gathering/WeedCuttingSystem.ts";
 import { InventorySystem } from "../inventory/InventorySystem.ts";
+import { ShippingSystem } from "../shipping/ShippingSystem.ts";
+import { isStorageCommand, StorageCommandSystem } from "./storage-commands.ts";
+import { WorldOccupancySystem } from "../world/WorldOccupancySystem.ts";
+import { WorldObjectSystem } from "../world/WorldObjectSystem.ts";
 import { ITEM_ID, getItemDefinition, type ItemId } from "../items/definitions.ts";
 import { MiningSystem, type MiningResult } from "../mining/MiningSystem.ts";
 import {
@@ -25,7 +29,6 @@ import {
 } from "../retention/FirstWeekMilestoneSystem.ts";
 import {
   UpgradeSystem,
-  type BackpackUpgradeResult,
   type WateringCanUpgradeResult,
 } from "../progression/UpgradeSystem.ts";
 import {
@@ -80,6 +83,8 @@ import type {
   GameCommand,
   GameCommandResult,
   NpcInteractionResult,
+  StorageCommand,
+  StorageSaveSnapshot,
 } from "./commands.ts";
 
 const MOVEMENT_CHECKPOINT_INTERVAL_MS = 500;
@@ -93,6 +98,7 @@ type NonNpcGameCommand = Exclude<GameCommand, NpcInteractionCommand>;
 export type GameStateListener = (state: GameState) => void;
 export type FishingStateListener = (state: FishingSnapshot) => void;
 export type DaySettlementListener = (state: DaySettlementSnapshot) => void;
+export type StorageSaveListener = (state: StorageSaveSnapshot) => void;
 
 interface PendingDaySettlement {
   readonly state: GameState;
@@ -102,6 +108,12 @@ interface PendingDaySettlement {
 
 export class GameSession {
   private readonly inventory = new InventorySystem();
+  private readonly shipping = new ShippingSystem(this.inventory);
+  private readonly storageCommands: StorageCommandSystem;
+  private storageSave: StorageSaveSnapshot = { phase: "idle", feedback: null };
+  private readonly storageSaveListeners = new Set<StorageSaveListener>();
+  private pendingStorageChange: { readonly state: GameState; readonly feedback: ActionFeedback; readonly dismissReport: boolean } | null = null;
+  private storageSavePromise: Promise<void> = Promise.resolve();
   private readonly stamina = new StaminaSystem(this.inventory);
   private readonly gathering: GatheringSystem;
   private readonly mining: MiningSystem;
@@ -116,7 +128,10 @@ export class GameSession {
   private readonly dialogue = new NpcDialogueSystem();
   private readonly firstWeekMilestones = new FirstWeekMilestoneSystem();
   private readonly upgrades = new UpgradeSystem(this.inventory);
-  private readonly pets = new PetSystem();
+  private readonly pets: PetSystem;
+  private readonly occupancy: WorldOccupancySystem;
+  private readonly worldObjects: WorldObjectSystem;
+  private readonly npcChestPushes = new Set<string>();
   private readonly weather = new WeatherSystem();
   private readonly npcMotions: NpcMotionRuntime;
   private readonly fishing: FishingSystem;
@@ -152,8 +167,21 @@ export class GameSession {
     this.forage = new ForageSystem(this.inventory, catalog);
     this.farming = new FarmingSystem(this.inventory, this.stamina, catalog);
     this.shop = new ShopSystem(this.inventory);
-    this.npcMotions = new NpcMotionRuntime(catalog);
+    this.pets = new PetSystem(catalog);
+    this.occupancy = new WorldOccupancySystem(catalog);
+    this.worldObjects = new WorldObjectSystem(this.inventory, catalog);
+    this.npcMotions = new NpcMotionRuntime(catalog, (npc, x, y) => {
+      const current = this.state;
+      if (!current) return false;
+      for (const object of current.worldObjects) {
+        if (object.kind === "chest" && object.regionId === npc.regionId
+          && x + 5 > object.column * 16 && x - 5 < (object.column + 1) * 16
+          && y + 3 > object.row * 16 && y - 3 < (object.row + 1) * 16) this.npcChestPushes.add(object.id);
+      }
+      return this.occupancy.isBlocked(current, npc.regionId, x, y, 5, 3);
+    });
     this.fishing = new FishingSystem(this.inventory, this.stamina, catalog);
+    this.storageCommands = new StorageCommandSystem(catalog, this.inventory);
   }
 
   /** Reports whether this authenticated browser profile has a valid local save record. */
@@ -165,11 +193,15 @@ export class GameSession {
   async newGame(
     appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
   ): Promise<GameState> {
+    await this.storageSavePromise;
     await this.daySavePromise;
     await this.saveQueue;
     const state = createInitialGameState(this.catalog, appearanceId, worldSeedForNewGame(this.ownerKey, this.now()));
     await this.repository.save(this.ownerKey, this.slotId, createStoredGame(state, this.now()));
     this.state = state;
+    this.pendingStorageChange = null;
+    this.storageSave = { phase: "idle", feedback: null };
+    this.publishStorageSave();
     this.npcMotions.reset(state.minuteOfDay, { day: state.day, weather: state.weather.current });
     this.lastSaveError = null;
     this.daySettlement = { ...IDLE_DAY_SETTLEMENT };
@@ -198,7 +230,8 @@ export class GameSession {
     this.state = candidate;
     this.npcMotions.reset(this.state.minuteOfDay, { day: this.state.day, weather: this.state.weather.current });
     this.lastSaveError = null;
-    this.daySettlement = { ...IDLE_DAY_SETTLEMENT };
+    this.daySettlement = candidate.unacknowledgedShippingReport
+      ? { ...IDLE_DAY_SETTLEMENT, phase: "report" } : { ...IDLE_DAY_SETTLEMENT };
     this.pendingDaySettlement = null;
     this.movementDirty = false;
     const currentNow = this.now();
@@ -220,6 +253,17 @@ export class GameSession {
   /** Applies one typed local intent while preserving narrow result types for NPC and action callers. */
   dispatch(command: GameCommand): GameCommandResult {
     const state = this.requireState();
+    if (command.type === "retry-storage-save") {
+      if (this.storageSave.phase === "failed") this.persistPendingStorage();
+      return null;
+    }
+    if (this.pendingStorageChange) return command.type === "talk-to-npc" ? null : {
+      tone: "error", code: "storage-save-pending", message: "请先完成本次保存，失败时可以重试。",
+    };
+    if (command.type === "dismiss-day-settlement") {
+      if (this.daySettlement.phase !== "report" || !state.unacknowledgedShippingReport) return null;
+      return this.beginStorageChange(command);
+    }
     if (command.type === "retry-day-settlement") {
       if (this.daySettlement.phase !== "failed" || !this.pendingDaySettlement) return null;
       this.persistPendingDay();
@@ -237,6 +281,7 @@ export class GameSession {
         tone: "error", code: "fishing-active", message: "先收好鱼竿，再进行其他操作。",
       };
     }
+    if (isStorageCommand(command)) return this.beginStorageChange(command);
     switch (command.type) {
       case "move": {
         const activeNpcs = this.npcMotions.activeSpawnsInRegion(state.player.regionId);
@@ -268,11 +313,6 @@ export class GameSession {
         const result = this.stamina.eat(state, command.itemId);
         if (result === "ate") this.commitCriticalChange();
         return eatingFeedback(result, command.itemId);
-      }
-      case "craft": {
-        const result = this.crafting.craft(state, command.recipeId);
-        if (result === "success") this.commitCriticalChange();
-        return craftingFeedback(result);
       }
       case "sleep": {
         const result = this.sleep(state, command.bedId);
@@ -317,11 +357,6 @@ export class GameSession {
         const result = this.upgrades.upgradeWateringCan(state, this.npcMotions.activeSpawns());
         if (result === "upgraded-watering-can") this.commitCriticalChange();
         return wateringCanUpgradeFeedback(result);
-      }
-      case "upgrade-backpack": {
-        const result = this.upgrades.upgradeBackpack(state, this.npcMotions.activeSpawns());
-        if (result === "upgraded-backpack") this.commitCriticalChange();
-        return backpackUpgradeFeedback(result);
       }
       case "acknowledge-retention-event": {
         const result = this.firstWeekMilestones.acknowledge(state, command.eventId);
@@ -395,7 +430,7 @@ export class GameSession {
     const elapsed = previousClockTick === null
       ? 0
       : Math.max(0, Math.min(now - previousClockTick, MAX_CLOCK_TICK_DELTA_MS));
-    if (this.daySettlement.phase !== "idle" || activityPaused) return feedback;
+    if (this.daySettlement.phase !== "idle" || this.pendingStorageChange || activityPaused) return feedback;
     if (state.minuteOfDay >= DAY_END_MINUTE) {
       this.beginDaySettlement(state, "passed-out", DAY_END_MINUTE);
       return { tone: "success", code: "day-saving", message: "已经 02:00，正在保存并送你回家。" };
@@ -414,15 +449,20 @@ export class GameSession {
     }
     if (!paused && !fishingPausesClock(this.fishing.snapshot().phase) && previousClockTick !== null) {
       this.npcMotions.advance(elapsed, state.player);
+      if (this.pets.advance(state, elapsed)) {
+        this.movementDirty = true;
+        this.publish();
+      }
+      if (this.npcChestPushes.size > 0) {
+        this.resolveNpcChestPushes();
+        if (this.pendingStorageChange) return feedback;
+      }
       if (state.minuteOfDay < DAY_END_MINUTE) {
         this.clockAccumulatorMs += elapsed;
         if (this.clockAccumulatorMs >= REAL_MILLISECONDS_PER_TIME_STEP) {
           this.clockAccumulatorMs -= REAL_MILLISECONDS_PER_TIME_STEP;
-          const previousPhase = schedulePhaseAt(state.minuteOfDay);
           state.minuteOfDay = advanceGameMinute(state.minuteOfDay);
-          if (schedulePhaseAt(state.minuteOfDay) !== previousPhase) {
-            this.npcMotions.transitionTo(state.minuteOfDay, { day: state.day, weather: state.weather.current });
-          }
+          this.npcMotions.transitionTo(state.minuteOfDay, { day: state.day, weather: state.weather.current });
           if (state.minuteOfDay === MIDNIGHT_MINUTE && state.lateWarningDay !== state.day) {
             state.lateWarningDay = state.day;
             feedback = { tone: "error", code: "late-night-warning", message: "已经午夜了，02:00 前记得回家休息。" };
@@ -535,14 +575,112 @@ export class GameSession {
     return () => this.listeners.delete(listener);
   }
 
+  /** Publishes transient candidate-save status so clients can lock repeated input and retry the same failed write. */
+  subscribeStorageSave(listener: StorageSaveListener): () => void {
+    this.storageSaveListeners.add(listener);
+    listener(structuredClone(this.storageSave));
+    return () => this.storageSaveListeners.delete(listener);
+  }
+
+  /** Returns whether the player can reach one current chest or bin; UI opening never mutates domain state. */
+  canInteractWorldObject(objectId: string): boolean {
+    return this.storageCommands.canInteract(this.requireState(), objectId);
+  }
+
+  /** Projects one known recipe's complete material requirements without consuming items or reserving a cursor stack. */
+  craftingPreview(recipeId: unknown, quantity: 1 | 5 | 25 = 1) {
+    return this.crafting.preview(this.requireState(), recipeId, quantity);
+  }
+
+  /** Projects the authored backpack display's current availability, including remaining capacity upgrades. */
+  backpackServiceAvailable(interactionId: string): boolean {
+    return this.upgrades.backpackDisplayAvailable(this.requireState(), this.catalog, interactionId);
+  }
+
+  /** Resolves carpenter service from the same actual NPC positions used by movement and interaction. */
+  buildingServiceAvailable(interactionId: string): boolean {
+    return this.storageCommands.buildingServiceAvailable(this.requireState(), this.npcMotions.activeSpawns(), interactionId);
+  }
+
+  /** Validates a client preview against current domain occupancy; only a later command can place or clear anything. */
+  placementPreview(kind: "chest" | "shipping-bin", column: number, row: number, ignoreId?: string) {
+    return this.storageCommands.placementPreview(this.requireState(), this.npcMotions.activeSpawns(), kind, column, row, ignoreId);
+  }
+
+  /** Builds an isolated storage candidate; failed preconditions leave live and durable inventories unchanged. */
+  private beginStorageChange(command: StorageCommand): ActionFeedback {
+    const candidate = cloneGameState(this.requireState());
+    const feedback = this.storageCommands.apply(candidate, this.npcMotions.activeSpawns(), command);
+    if (feedback.tone === "error") return feedback;
+    this.pendingStorageChange = { state: candidate, feedback, dismissReport: command.type === "dismiss-day-settlement" };
+    this.movementDirty = false;
+    this.persistPendingStorage();
+    return { tone: "success", code: "storage-saving", message: "正在保存…" };
+  }
+
+  /** Saves the same candidate on every retry and publishes it only after persistence succeeds; no reward is recomputed. */
+  private persistPendingStorage(): void {
+    const pending = this.pendingStorageChange;
+    if (!pending || this.storageSave.phase === "saving") return;
+    this.storageSave = { phase: "saving", feedback: null };
+    this.publishStorageSave();
+    this.storageSavePromise = this.persistSnapshot(pending.state).then(() => {
+      if (this.pendingStorageChange !== pending) return;
+      this.state = pending.state;
+      this.pendingStorageChange = null;
+      this.lastMovementCheckpointAt = this.now();
+      this.resetClockBaseline(this.now());
+      if (pending.dismissReport) this.daySettlement = { ...IDLE_DAY_SETTLEMENT };
+      this.publish();
+      if (pending.dismissReport) this.publishDaySettlement();
+      this.storageSave = { phase: "idle", feedback: pending.feedback };
+      this.pendingFeedback = pending.feedback;
+      this.publishStorageSave();
+    }, () => {
+      if (this.pendingStorageChange !== pending) return;
+      this.storageSave = { phase: "failed", feedback: {
+        tone: "error", code: "storage-save-failed", message: "本次操作未保存，物品和金币仍保持原样。请重试保存。",
+      } };
+      this.publishStorageSave();
+    });
+  }
+
+  /** Sends a defensive transient save projection without exposing the pending mutable candidate. */
+  private publishStorageSave(): void {
+    for (const listener of this.storageSaveListeners) listener(structuredClone(this.storageSave));
+  }
+
+  /** Converts NPC collision intents into one saved candidate, preserving chest contents as durable drops on terminal failure. */
+  private resolveNpcChestPushes(): void {
+    const ids = [...this.npcChestPushes];
+    this.npcChestPushes.clear();
+    if (this.pendingStorageChange || ids.length === 0) return;
+    const state = cloneGameState(this.requireState());
+    let changed = false;
+    let dropped = false;
+    for (const id of ids) {
+      const result = this.worldObjects.pushChest(state, id, "npc", undefined, this.npcMotions.activeSpawns());
+      changed ||= result === "pushed" || result === "destroyed-with-drops";
+      dropped ||= result === "destroyed-with-drops";
+    }
+    if (!changed) return;
+    this.pendingStorageChange = { state, dismissReport: false, feedback: {
+      tone: "success", code: dropped ? "storage-npc-drops" : "storage-npc-pushed",
+      message: dropped ? "箱子挡住了居民且无处移动，箱体已损坏，里面的物品留在原处等待拾取。" : "居民把挡路的箱子移到了一旁，物品仍在箱内。",
+    } };
+    this.movementDirty = false;
+    this.persistPendingStorage();
+  }
+
   /** Flushes pending and dirty movement saves, surfacing the most recent persistence failure. */
   async flush(): Promise<void> {
-    if (this.state && this.movementDirty && this.daySettlement.phase === "idle") {
+    if (this.state && this.movementDirty && this.daySettlement.phase === "idle" && !this.pendingStorageChange) {
       this.queueSave();
       this.movementDirty = false;
       this.lastMovementCheckpointAt = this.now();
     }
     await this.daySavePromise;
+    await this.storageSavePromise;
     await this.saveQueue;
     if (this.lastSaveError) {
       throw new Error("Local game save failed.", { cause: this.lastSaveError });
@@ -612,6 +750,7 @@ export class GameSession {
     const passedOutOutside = reason === "passed-out" && state.player.regionId !== "cottage";
     const goldLost = passedOutOutside ? Math.min(1_000, Math.floor(state.gold * 0.1)) : 0;
     state.gold -= goldLost;
+    this.shipping.settle(state);
     this.stamina.settleSleep(state, sleepMinute);
     this.friendship.settleDay(state);
     this.farming.settleDay(state);
@@ -648,7 +787,7 @@ export class GameSession {
       if (this.pendingDaySettlement !== pending) return;
       this.state = pending.state;
       this.pendingDaySettlement = null;
-      this.daySettlement = { ...IDLE_DAY_SETTLEMENT };
+      this.daySettlement = { ...IDLE_DAY_SETTLEMENT, phase: "report", reason: pending.reason, goldLost: pending.goldLost, nextStamina: pending.state.stamina };
       this.npcMotions.reset(pending.state.minuteOfDay, { day: pending.state.day, weather: pending.state.weather.current });
       this.resetClockBaseline(this.now());
       this.publish();
@@ -766,15 +905,6 @@ function gatheringFeedback(result: GatheringResult): ActionFeedback | null {
     case "inventory-full": return { tone: "error", code: result, message: "背包已满。" };
     case "missing-target": return { tone: "error", code: result, message: "目标不存在。" };
     case "insufficient-stamina": return { tone: "error", code: result, message: "体力不足，先吃点东西或休息。" };
-  }
-}
-
-/** Maps one crafting result to fixed local UI feedback. */
-function craftingFeedback(result: CraftingResult): ActionFeedback {
-  switch (result) {
-    case "success": return { tone: "success", code: result, message: "木斧制作完成。" };
-    case "requirements-not-met": return { tone: "error", code: result, message: "制作材料不足或背包已满。" };
-    case "unknown-recipe": return { tone: "error", code: result, message: "未知配方。" };
   }
 }
 
@@ -944,17 +1074,6 @@ function wateringCanUpgradeFeedback(result: WateringCanUpgradeResult): ActionFee
     case "watering-upgrade-unavailable": return { tone: "error", code: result, message: "需要到昊天身边升级水壶。" };
     case "watering-upgrade-insufficient-gold": return { tone: "error", code: result, message: "升级需要 900g。" };
     case "watering-upgrade-insufficient-wood": return { tone: "error", code: result, message: "升级还需要 15 份木材。" };
-  }
-}
-
-/** Maps the fixed backpack upgrade result without duplicating capacity mutation in Vue. */
-function backpackUpgradeFeedback(result: BackpackUpgradeResult): ActionFeedback {
-  switch (result) {
-    case "upgraded-backpack": return { tone: "success", code: result, message: "背包已经扩充到 32 格。" };
-    case "backpack-upgrade-locked": return { tone: "error", code: result, message: "华强会在 Day 5 带来扩容背包。" };
-    case "backpack-already-upgraded": return { tone: "error", code: result, message: "背包已经扩充到 32 格。" };
-    case "backpack-upgrade-unavailable": return { tone: "error", code: result, message: "需要到华强身边购买背包扩容。" };
-    case "backpack-upgrade-insufficient-gold": return { tone: "error", code: result, message: "背包扩容需要 1500g。" };
   }
 }
 

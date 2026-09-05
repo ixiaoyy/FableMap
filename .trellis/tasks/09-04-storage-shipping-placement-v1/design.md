@@ -4,7 +4,7 @@
 
 本任务只扩展 `apps/mirror-island/`，沿用 `Phaser/Vue -> typed GameCommand -> GameSession/domain -> SaveRepository -> IndexedDB`。不增加后端、数据库迁移、生产依赖或第二套可变状态。
 
-开始生产修改前必须先完成并独立提交/归档当前 `09-04-surface-mining-v1`，再把本 child 设为 active。开发存档直接提升到新的 current version，不实现 v12 迁移；IndexedDB object store 不变，因此数据库版本保持不变。
+前置 `09-04-surface-mining-v1` 已在 `15a7b61` 独立提交并合入本地 main；其真人验收与归档仍待完成。用户于 2026-09-06 确认开始本 child，现已在从本地 main 创建的 `codex/storage-shipping-v1` 分支实施并设为 active，不把前置待验收误记为通过。开发存档为 current v13，不实现 v12 迁移；IndexedDB object store 不变，因此数据库版本保持不变。
 
 主要现有接线：
 
@@ -87,13 +87,15 @@ interface ShippingReport {
 
 新增或扩展 typed commands：
 
-- `reorder-inventory`、`split-inventory-stack`、`rotate-hotbar-row`、`buy-backpack-upgrade`
+- `move-inventory`（整组/单件/半组与交换）、`sort-inventory`、`rotate-hotbar-row`、`buy-backpack-upgrade`
 - `craft-item`，带数量和最终目标槽；拖到目标前只显示客户端预览，不扣材料
-- `place-world-object`、`interact-world-object`、`recover-empty-chest`、`push-chest`、`collect-world-drop`
-- `transfer-container-item`、`add-to-existing-stacks`、`sort-container`、`set-chest-color`
+- `place-world-object`、`recover-empty-chest`、`push-chest`、`collect-world-drop`；只读打开经 `canInteractWorldObject()` 检查
+- `transfer-container-item`、`move-container-item`、`add-to-existing-stacks`、`sort-container`、`set-chest-color`
 - `ship-item`，数量只允许 `one | stack`；`reclaim-last-shipment`
 - `build-shipping-bin`、`move-farm-building`、`demolish-farm-building`
-- `dismiss-day-settlement`
+- `dismiss-day-settlement`、`retry-storage-save`
+
+旧 `craft`、`upgrade-backpack` 命令已移除，制作和背包购买只有上述候选保存入口。`StorageCommandSystem` 编排窄 owner，`GameSession` 保留候选、保存状态与重试；保存成功后才发布新状态。
 
 所有命令先完整预检，再对一个 candidate 变更并调用一次既有关键保存链。指针拖拽、触摸选择和放置预览不改变 gameplay state；落槽/落地确认时只发一个命令，取消不会产生待补偿状态。
 
@@ -102,7 +104,7 @@ interface ShippingReport {
 ### Inventory, crafting and containers
 
 - 槽位转移先验证 source identity/quantity、destination compatibility 与完整容量，再同时改两端。
-- 自动整理由 item catalog 的稳定 sort key 决定；工具保留原相对位置，不能由 Vue 自排。
+- 自动整理由 item catalog 的稳定 sort key 决定；工具保留原来的精确槽位，不能由 Vue 自排。
 - 制作预览只读；确认目标槽时一次验证配方、材料总量和产物落位，再扣料并加入产物。这样保留产物附着光标的交互，同时避免客户端持有未保存物品。
 - 摆放先验证 item placement、footprint 与动态占用，成功后一次消费箱体并新增对象。
 - 空箱回收先验证背包可完整接收；非空箱推移只改位置，保持 ID、颜色和 slots。
@@ -111,7 +113,7 @@ interface ShippingReport {
 
 把上游 `TryMoveToSafePosition` 写成一个共享的有界四向深度优先搜索：每个节点先随机排序，再将偏好方向、反方向置前，随后检查候选和可通行中间格。不要改写成广度优先搜索、固定最近格或硬编码三格半径。
 
-玩家斧/镐/锄推动把 facing 作为偏好；失败返回 `blocked` 且状态不变。NPC 接触不提供玩家 facing；失败时先为每个非空 stack 创建持久 `WorldDropState`，再移除箱体，箱体不掉落。掉落拾取先验证背包可完整接收，再同时加入背包和删除 drop；失败或刷新保持原状。方向随机顺序只在 candidate 中决定，保存失败重试同一结果，不能重新抽取。
+玩家斧/镐/锄推动把 facing 作为偏好；失败返回 `blocked` 且状态不变。NPC 接触不提供玩家 facing，固定参考快照的缺省分支仍以南/北为优先；失败时先为每个非空 stack 创建持久 `WorldDropState`，再移除箱体，箱体不掉落。掉落拾取先验证背包可完整接收，再同时加入背包和删除 drop；失败或刷新保持原状。方向随机顺序只在 candidate 中决定，保存失败重试同一结果，不能重新抽取。
 
 ### Shipping and settlement
 
@@ -135,7 +137,11 @@ interface ShippingReport {
 
 操作策略不能互换：普通箱可放在无作物的 HoeDirt 或标准路径上并保留底层状态，有作物即拒绝；标准出货箱建筑会清除空 HoeDirt/水/肥料、stage 0 树种、高草和路径，拒绝任意阶段作物、stage 1+ 树、debris 杂草/石块/树枝、玩家和其他 footprint，并把宠物移到预先计算的安全格。所有清除、移开、扣费与创建在同一个 candidate 中提交。
 
-当前宠物运动只存在于客户端。为满足实时占用，宠物 tile/motion 下沉到 domain snapshot；`WorldEntities.PetEntity` 只投影。建筑放置遇宠物时先计算安全目标，再与允许清除项和建筑创建在同一 candidate 提交；小物件目标被宠物占用时拒绝。
+### 日结资源再生的整合准备（2026-09-06）
+
+`GatheringSystem.settleDay()`、`MiningSystem.settleDay()`、`WeedCuttingSystem.settleDay()` 与 `ForageSystem` 已接入持久 footprint；依据和候选处理记录在 [资源再生占用研究](research/resource-regeneration-occupancy.md)。树受占时保留原再生日期并在后续日结重试；石块/杂草在既有排序和上限截取前排除受占点，不累计欠额；野采只过滤当天派生候选，不伪造已采标记。保留既定数量、周期、确定性和失败重试合同。
+
+宠物位置、方向、运动与等待计时已下沉到 domain snapshot；`WorldEntities.PetEntity` 只投影。建筑放置遇宠物时先计算安全目标，再与允许清除项和建筑创建在同一 candidate 提交；小物件目标被宠物占用时拒绝。
 
 NPC motion 遇箱子只返回 push intent；`GameSession` 调用 `WorldObjectSystem` 修改并保存，表现 runtime 不直接写 `GameState`。
 
@@ -157,7 +163,7 @@ NPC motion 遇箱子只返回 push intent；`GameSession` 调用 `WorldObjectSys
 
 ## 7. Backpack and carpenter services
 
-背包升级由种子店独立 Tiled interaction 开启，只购买下一档：12->24 为 2,000g，24->36 为 10,000g。无日期锁；第二档在第一档前不可见，两档完成后 interaction 投影为已售罄陈列。`ItemDefinition.inventorySortOrder` 是唯一稳定排序键，当前值与 catalog 既有展示顺序一致且不得重复；工具不参加移动。
+背包升级由种子店独立 Tiled interaction 开启，只购买下一档：12->24 为 2,000g，24->36 为 10,000g。无日期锁；第二档在第一档前不可见，两档完成后背包陈列标识消失，按 PRD 不保留可交互的售罄入口。`ItemDefinition.inventorySortOrder` 是唯一稳定排序键，当前值与 catalog 既有展示顺序一致且不得重复；工具不参加移动。
 
 墨子建筑入口要求：
 
@@ -176,6 +182,6 @@ v1 不新增依赖：使用标准 Pointer Events 做拖动预览，并提供点�
 
 ## 9. Verification and rollback
 
-最小自动检查：相关既有 contract test、`npm --prefix .\apps\mirror-island run typecheck` 与 `npm --prefix .\apps\mirror-island run build:client`。不扩建全量 E2E；人工路线覆盖新档、背包升级、制作/箱子、NPC 极端推箱、双入口出货、保存失败、日结报告、桌面/移动/200% zoom。用户已确认本 child 暂不增加手柄输入，验证不包含手柄路线。
+默认自动检查：`npm --prefix .\apps\mirror-island run typecheck`、`npm --prefix .\apps\mirror-island run build:client` 和 `git diff --check`。不默认扩展/全跑历史 contract tests 或建设 E2E；稳定复现的高风险真实缺陷才按价值补单个低成本检查。人工路线覆盖新档、背包升级、制作/箱子、跨日资源再生占用、NPC 极端推箱、双入口出货、保存失败、日结报告、桌面/移动/200% zoom。用户已确认本 child 暂不增加手柄输入，验证不包含手柄路线。
 
 回滚只撤销本 child 新增的 current state、domain owners、commands、map contracts、panels 和投影；不恢复旧开发存档 migration，不触碰已独立提交的地表采矿代码。

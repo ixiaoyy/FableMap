@@ -11,10 +11,11 @@
 ## Ordered delivery
 
 1. **Close the current slice**
-   - [ ] `surface-mining-v1` 完整真人验收、独立 commit 和归档。
+   - [x] `surface-mining-v1` 独立 commit `15a7b61` 已进入本地 main（2026-09-06 对账）。
+   - [ ] `surface-mining-v1` 完整真人验收和归档。
 
 2. **Foundation state and economy**
-   - [ ] `storage-shipping-placement-v1`
+   - [ ] `storage-shipping-placement-v1`：2026-09-06 已单独确认启动，v13 代码与最小检查完成，完整真人验收/提交/归档待办；不将子项打勾为完成。
    - [ ] `skills-recipe-unlocks-v1`
 
 3. **Materials and calendar**

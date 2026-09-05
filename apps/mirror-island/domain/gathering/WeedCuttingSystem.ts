@@ -4,6 +4,7 @@ import { farmTileId, type GameState } from "../state/game-state.ts";
 import { stableHash } from "../weather/WeatherSystem.ts";
 import { isPointInFacingSector, type Facing } from "../world/facing.ts";
 import type { WorldCatalog, WorldPoint } from "../world/regions.ts";
+import { worldObjectCoversTile } from "../world/world-object-state.ts";
 
 const WEED_INTERACTION_DISTANCE_PIXELS = 42;
 const MAX_WEEDS_PER_SWING = 3;
@@ -80,6 +81,7 @@ export class WeedCuttingSystem {
     for (const regionId of SURFACE_WEED_REGIONS) {
       const candidates = this.catalog.requireRegion(regionId).resources
         .filter((spawn) => spawn.kind === "weed" && state.resources[spawn.entityId]?.phase === "cleared")
+        .filter((spawn) => !worldObjectCoversTile(state, regionId, Math.floor(spawn.x / 16), Math.floor(spawn.y / 16)))
         .filter((spawn) => regionId !== "farm" || !state.farmTiles[farmTileId(
           Math.floor(spawn.x / 16),
           Math.floor(spawn.y / 16),

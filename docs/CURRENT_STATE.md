@@ -1,80 +1,89 @@
 # 镜像岛当前状态
 
-最后对账：2026-09-04（工作区实施与规划状态；未重新核验生产部署）
-生产验收基线：`7b33bd5b`（Deploy Mirror Island run `33473240482`）
+最后对账：2026-09-06。仓储 child 已获单独启动，当前工作分支为 `codex/storage-shipping-v1`，基于本地 `main` / `16e7ee1`；v13 实现位于工作区，不能据此宣称已提交、合并或部署。本次未核验远端发布流水线或生产部署。
+
+## 本轮界面与素材优化
+
+用户要求改善现有界面与素材后，已在当前分支完成以下表现层调整：
+
+- HUD 统一奶油色、橄榄绿和中文无衬线字体；顶部菜单对齐，今日目标可展开，底部快捷栏保留 12 格和滚动操作，短横屏移至左下方。
+- 背包采用页签、清晰格名和真实物品详情图；制作展示配方、缺料数量和产物预览。小窗口保留固定标题与独立滚动内容。
+- Phaser 画布改为容器 `RESIZE`，常规镜头保持 2×；室内与建筑预览在 resize 时重排。世界中文标签为 9px / resolution 2。
+- 普通箱修正为已登记 Buildings 图集的完整木箱帧；道具和掉落采用明确原始尺寸，移除箱体拉伸闪动。没有新增依赖或素材二进制，没有变更领域规则、存档结构或 v13 兼容范围。
+
+自动检查：`typecheck`、客户端类型复核、`build:client` 和 diff 格式检查通过；构建仍保留既有单包体积提示。17 张本地 PNG 与 manifest SHA-256 一致，Buildings 的线上响应为 200 / image/png / 16502 字节 / 一年 immutable 缓存，Git 跟踪图片二进制仍为零。
+
+浏览器已查看 1280×720 桌面、390×844 手机尺寸、844×390 横屏及 640×360 紧凑尺寸；核对背包/制作页签、选中详情、方向键/回车、拿在手上、刷新后继续现有 v13 农场、触屏方向按钮和进入小屋后的 resize。前后截图保存在本机忽略的 `artifacts/visual-polish-2026-09-06/`。尺寸模拟不等同于真机触摸或实际浏览器 200% 缩放验收；建筑预览完整操作、长时间玩法与最终美术观感仍待真人反馈。
+
+本轮生产改动已暂存，文档和截图未自动暂存；尚未 commit、push 或部署。
 
 ## 读取优先级
 
-发生冲突时按以下顺序判断当前事实：
-
 1. 用户最新明确决定。
-2. 本文件记录的当前实现、验收和任务状态。
-3. [PRODUCT_BRIEF](PRODUCT_BRIEF.md)、[WHAT_NOT_TO_BUILD](WHAT_NOT_TO_BUILD.md) 与 [TOWN_ROADMAP](TOWN_ROADMAP.md)。
-4. 当前未归档 Trellis 任务及其 PRD。
-5. `.trellis/spec/` 中的当前合同；其中带版本号的旧场景保留迁移历史，不代表当前版本。
-6. Checkpoint、workspace journal 和 `trellis mem` 原始对话；它们只提供历史证据，不能覆盖以上来源。
+2. 本文件的当前实现、提交与验收事实。
+3. [PRODUCT_BRIEF](PRODUCT_BRIEF.md)、[WHAT_NOT_TO_BUILD](WHAT_NOT_TO_BUILD.md)、[开发计划](DEVELOPMENT_PLAN.md)与 [TOWN_ROADMAP](TOWN_ROADMAP.md)。
+4. 当前未归档 Trellis 任务及其 PRD；精确机制由对应 child 拥有。
+5. `.trellis/spec/` 当前合同；旧版本场景只解释历史实现。
+6. Checkpoint、workspace journal 和原始对话只作历史证据。
 
-## 当前产品
+## 当前产品和代码基线
 
-- 唯一产品是 `apps/mirror-island/` 下的单人 Web 像素生活 RPG，公开入口为 `/`。
-- 客户端采用 Phaser 4 + Vue 3 + TypeScript + Vite + Tiled；玩法由本地 GameSession 处理并保存到 IndexedDB。
-- 当前公开试玩无账号、无云存档、无实时后端依赖；同一浏览器 profile 只有一个本地农场。
-- 此前基线为 v9（家园宠物）；本批 v10 已实现并通过相关自动检查。用户于2026-09-03要求提交推送 main，部署结果以发布流水线为准，真人验收已由用户于2026-09-03确认全部完成。
-- 当前工作区另已实现地表资源工具 current v12：新游戏开局基础镐与基础镰刀；七个既有石块可产石料，三张地表地图的 6/5/4 个固定杂草点可确定性产植物纤维，并按 1/2/1 每日有限补充。自动检查和隔离浏览器 Farm 触控路线通过，尚未提交、部署或取得完整真人手感反馈。
+- 唯一应用为 `apps/mirror-island/`，公开入口 `/`；目标是星露谷式单人 Web 像素生活游戏。
+- Phaser `4.2.1` + Vue 3 + TypeScript + Vite + Tiled；规则由本地 GameSession 处理，保存到 IndexedDB。
+- 公开试玩无账号、无云存档、无实时后端依赖；同一 origin / 浏览器 profile 只有一个本地农场。
+- 当前 `GameState` 与 `StoredGame` 均为 **v13**。开发期只保证 current schema 的严格校验、保存与同版本恢复，不维护旧开发档迁移。
+- 地表采矿、镰刀和两批美术精修已经提交并合入本地 main；旧文档的“尚未 commit / 生产代码暂存待提交”已失效。
 
-## 已提交基线（v9，保留历史验收口径）
+## 已实现与尚未闭环
 
-- Farm、Town、Cottage、Seed Shop、Blacksmith、五栋民宅、Foothills、Lakeshore，共 12 个区域。
-- Hotbar/工具选择、采集、制作底座、三种春季作物、每日野花/春笋、买卖、睡觉和 Day N 连续日历；Day 28 可继续进入 Day 29。
-- 06:00–24:00 时钟、室内外昼夜色调、八名 NPC 四段日程、同区寻路、跨区淡入淡出、动态避让和四时段生活动作。
-- 八名 NPC 的每日交谈、十心基础好感、Social 名册和按日/时段变化的对话。
-- 新游戏角色创建、九种同风格预设、IndexedDB 恢复、桌面键盘/鼠标与移动端触摸入口。
-- 空手击打 NPC 的表现代码已经存在，但仍需要在当前精细化门禁中完成真实体验判断。
-- Day 1–7 递进目标、每日委托、水壶 Lv2、32 格背包、关系阶段/三日对话去重、Day N 连续日历、真实 SFX/环境声和本地音量设置。
-- Day 7 Lakeshore 石标已有镜门微光与三句预告；当前生产没有远征入口、敌人、Cargo、捕获或撤离运行时。
+| 范围 | 当前代码事实 | 证据入口 |
+|---|---|---|
+| 世界 | Farm / Town / Cottage / Seed Shop / Blacksmith、五栋民宅、Foothills / Lakeshore，共 12 个区域 | `client/src/game/world/world-catalog.ts`、`public/map/` |
+| 日常 | 06:00–次日 02:00、午夜提醒、体力 / 食用 / 睡眠、晴雨风、预报和日结候选保存 | `domain/session/GameSession.ts`、`domain/session/day-settlement.ts` |
+| 农场资源 | 六种春作、自由耕地、水壶补水、采集 / 树桩 / 再生、地表石块 / 杂草和五件开局工具 | `domain/farming/`、`domain/gathering/`、`domain/mining/`、`domain/state/game-state.ts` |
+| 生活关系 | 基础钓鱼、八名 NPC 日程 / 对话 / 好感 / 送礼、每日委托、家园猫狗 | `domain/fishing/`、`domain/social/`、`domain/world/npc-schedules.ts`、`domain/requests/`、`domain/pets/` |
+| 经济与成长 | 即时商店买卖、水壶 Lv2、独立背包升级陈列、Day 1–7 目标 | `domain/shop/`、`domain/progression/`、`domain/retention/` |
+| 背包 / 制作 | 12/24/36 格背包、12 格活动行、999 普通堆叠、槽位转移与整理；暂停式制作入口、1/5/25 批量与普通箱配方 | `domain/inventory/InventorySystem.ts`、`domain/recipes/definitions.ts`、`client/src/ui/inventory/`、`client/src/ui/crafting/` |
+| 仓储 / 出货 | 36 槽/21 色普通箱、回收与玩家/NPC 推动、持久掉落；共享出货队列、最后一笔撤回、分类隔夜报告与确认恢复 | `domain/storage/`、`domain/world/`、`domain/shipping/`、`client/src/ui/storage/`、`client/src/ui/shipping/` |
+| 摆放 / 木匠 | 12 图 Placeable、Farm Buildable、统一占用与资源恢复避让、domain 宠物位置；墨子真实柜台服务与出货箱建造/移动/拆除 | `domain/world/WorldOccupancySystem.ts`、`domain/pets/`、`domain/building/`、`public/map/` |
+| 季节 / 矿洞 | 日历纯函数存在四季计算，`playableCalendarAt()` 仍使用 spring-content；无矿洞、技能经验或战斗系统 | `domain/calendar/game-calendar.ts`、`domain/mining/MiningSystem.ts` |
+| 表现 / 入口 | 九种角色预设、桌面 / 触摸入口、声音、东方田园首页、小屋与两处商店精修 | `client/src/App.vue`、`client/src/game/presentation/`、`client/src/ui/`、`client/src/audio/` |
 
-## 春季 v10（真人验收全部通过）
+表中代码路径相对于 `apps/mirror-island/`。v13 的领域规则和客户端入口已接入工作区，浏览器、真人玩法与 IndexedDB 完整恢复路线仍待验收；代码存在不等于闭环已通过。真实四季、技能、矿洞、自动化、家畜、加工、烹饪与小镇共建仍未实现。
 
-- 06:00–次日 02:00；午夜提醒，Cottage 外昏倒扣 10% 金币、上限 1000g，屋内不扣钱，均不掉物品。
-- 100 点体力、食用恢复、晚睡恢复表；日结保存成功后才推进次日，失败可重试同一候选，不重复收费或成长。
-- 晴/雨/风与次日预报；雨天自动浇水，休息日与雨天 NPC 日程共同控制营业，天气画面和原创合成环境声不新增素材二进制。
-- Farm 的 Tiled `Tillable` mask 当前含 492 格；按坐标稀疏保存农田，水壶容量 20/40，临水补满，Lv2 按实际格数扣水和体力。
-- 六作物：萝卜、小白菜、花椰菜、青豌豆（再生）、春土豆（确定性多产）、油菜花（送礼）；树→树桩→清除，Farm 外清桩 7 天后再生；每日枯枝与山坡春笋窗口。
-- Day 7 起向祥子免费领鱼竿；旧码头单键抛竿、咬钩和张力收线，六鱼种受时间/天气/距离影响。鱼获保存失败有持续提示和重试，不重复发鱼。
-- 每 NPC 每日一份、每周两份礼物，周日重置，无全镇总限制；背包任意槽可拿在手上。镜门异光/预告已从当前运行时删除，石标只保留普通说明。
-- 旧 v1–v9 显式迁移到唯一 v10，首次覆盖 v9 时在同一 IndexedDB 事务保留原始备份；不新增数据库 migration 或外部服务。
-- 检查：`test:life-loop` 21/21、`test:town-population` 12/12、`typecheck`、`build:client` 通过。浏览器自动操作已覆盖新建/恢复、雨天田块、触摸方向、模态 Space/Tab、手机/短高视口与正常日结到 Day 7；不代替用户真人验收。
+## 提交、验收和部署分别记录
 
-## 已有历史验收
+| 批次 | 本地 Git 状态 | 验收证据 / 待办 |
+|---|---|---|
+| 春季 v10 | 后续提交已包含该基线 | 仓库记录用户于 2026-09-03 确认完整真人验收；属于历史结果，本次未重测 |
+| 小屋 / 图标 / 种田动作 | `fd5457e` 已进入本地 main | 任务记录类型 / 构建 / 相关检查通过；真人美术与手感待反馈 |
+| 种子店 / 铁匠铺 | 同属 `fd5457e` 的美术提交 | 任务记录交易 / 查看 / 往返和店门黑屏窄修验证；真人观感待反馈 |
+| 地表采矿 / 镰刀 v12 | `15a7b61` 已进入本地 main | 任务记录自动检查和 Farm 手机视口路线通过；完整三图、真实触摸与再生节奏真人反馈待补 |
+| 后续整合 / 首页 | `c914a65`、`16e7ee1` 为本地 main 合并记录 | 合并记录不代表本次已查证部署或首页真人验收 |
+| 仓储 / 出货 / 摆放 v13 | `codex/storage-shipping-v1` 工作区实现，生产变更按最小验证暂存 | 当前 child 为 in_progress；最终静态检查证据见实施清单，完整浏览器/真人路线待验收；尚未宣称提交、合并或部署 |
 
-- Farm Showcase、World Foundation、Life Loop v1、Town Gate A/B/C 与 Town Population MVP 已在对应 checkpoint 基线中通过。
-- 2026-08-27 后公开入口已切换为无账号本地试玩；更早 checkpoint 中的账号验收属于历史部署条件。
+历史生产验收记录为 `7b33bd5b` / Deploy Mirror Island run `33473240482`；这里只保留追溯线索，不宣称它是当前线上版本。春季 v10 的旧迁移链与双账号 checkpoint 属于当时条件，不能覆盖当前 v13 / 无账号 / 不迁移开发档合同。
 
-## 已通过的人体验收门禁
+已有 Farm Showcase、World Foundation、Life Loop v1、Town Gate A/B/C 与 Town Population MVP 的历史验收保留。仓库记录 2026-09-01 精细化门禁与 Day 1–7 真人通过；后续缺陷按复现路径窄修，不重开冻结构图。
 
-- 用户于 2026-09-01 明确确认 [现阶段精细化验收门禁](CURRENT_SLICE_POLISH_GATE.md) 与 Day 1–7 完整体验真人通过。
-- 通过范围包含现有功能/动作、12 张地图、8 名 NPC、交互/看板/UI、声音、刷新恢复、手机、200% zoom、Day 1–7 与 Day 28→29。
-- 后续若出现稳定 P0/P1，仍按复现路径建立窄修复任务，不重开已冻结的大构图或扩建测试矩阵。
+## 当前任务队列
 
-## 当前任务
+- **当前唯一实施项**：`09-04-storage-shipping-placement-v1` 已按用户最新决定单独启动，状态为 `in_progress`，在 `codex/storage-shipping-v1` 接入 v13；当前推进最终验证与完整路线验收。
+- **已有验收尾项**：`09-04-surface-mining-v1` 保持 `in_progress`，代码已提交，只剩记录中未完成的真人验收 / 归档；两批美术任务同样保持验收待反馈。仓储启动不代表这些验收已通过。
+- **下一阶段规划**：`09-04-skills-recipe-unlocks-v1`；待当前 child 收尾后按已确认依赖顺序推进，不随本次启动批量实施。
+- **总路线**：`09-04-pre-pivot-life-sim-foundation` 为规划父任务，十个 child 顺序见[开发计划](DEVELOPMENT_PLAN.md)。父任务不承载生产实现，也不授权批量启动。
+- **最终集成**：`09-04-town-community-ledger-v1` 是第十个 child，当前无共建玩法代码。
+- **历史 / 独立尾项**：春季 v10 任务为 `completed`；宠物任务按已有验收记录收尾；`08-21-forum-sso-compose-network` 只保留独立论坛登录人工验收。
+- **被否决**：两个 `09-01` 镜门 / 远征任务带 `meta.rejected=true`，即使历史状态字段为 `planning`，也不是可执行候选。本次保留原目录与引用。
 
-- `09-04-pre-pivot-life-sim-foundation`：用户已评审并继续修正转型前总规划；当前包含仓储出货、四类既有劳动技能、浅层矿洞先行切片、完整 120 层矿洞与战斗、四季、农田自动化、鸡舍草料、加工、烹饪和小镇共建十个 child。用户明确要求在这十个已选系统内完整参考《星露谷物语》1.6.15 机制，逐项查证且禁止自行猜值；浅层无战斗不再是最终边界。父任务与新 child 均为 `planning`，没有获得批量实施授权。
-- `09-04-town-community-ledger-v1`：现作为上述总任务的最后集成 child；三个 Day 8 并行项目采用逐项投入/候选槽位，完成后分别建成公共苗圃、恢复山泉和修缮旧码头，并在下一晴天提供一次全镇完成仪式。任务保持 `planning`，没有玩法代码或地图改动。
-- `09-04-surface-mining-v1`：用户已批准并在工作区实现采矿与镰刀扩展。开局第四/第五槽为基础镐/镰刀；石块为 Farm/Foothills/Lakeshore 1/4/2，杂草为 6/5/4；镰刀前方最多清除三株、不耗体力，每株固定 50% 植物纤维，日结三区最多恢复 1/2/1 且不覆盖农田。life-loop 19/19、town/audio 13/13、typecheck、client build 和手机视口 Farm 触控挥割/纤维/刷新继续通过；完整三图与真人手感待反馈，未部署。
+`task.py current --source` 返回当前任务 `.trellis/tasks/09-04-storage-shipping-placement-v1`，来源为本 Codex session；父任务继续只管理规划。
 
-- `09-03-shop-interiors-polish-v1`：第二批种子店/铁匠铺室内精修已在工作区实现；共享木作、两处职业陈设、NPC 通路及查看范围已对齐。类型、client build、针对性回归检查通过，浏览器已完成柜台购买、两处查看和往返；同时窄修了店门外落点与切图锁导致的黑屏路径。真人观感待反馈，未部署。
+## 本次验证与实施边界
 
-- `09-03-spring-art-polish-v1`：用户已确认首批范围；工作区已实现 Cottage 木作与完整室内构图、25 物品共享图标、九种现有外观的生产种田动作。类型、client build、地图/图标结构检查通过；真人美术与手感验收待用户反馈，本批未部署。
-
-- `09-02-spring-complete-v1`：2026-09-03 已恢复并实现，用户随后要求提交推送 main；相关自动检查通过，用户已确认真人验收全部完成，任务标记 `completed`；发布结果以流水线为准。
-- `09-02-home-pet-mvp`：代码已提交，保留既有宠物；验收状态以任务记录为准。
-- `08-21-forum-sso-compose-network`：独立运维缺口，只差生产论坛首次登录和再次登录人工验收。
-
-## 当前实施边界
-
-- 用户于 2026-09-04 明确否决镜门远征提案；镜门、Expedition Cargo、撤离、抓宠、肉鸽和塔防不再是长期产品候选，也不得换名恢复旧规划。
-- 用户已单独批准“地表采矿与镰刀 v1”实施，工作区范围只到基础镐/镰刀、石料/植物纤维及既有三张地表地图的固定石块/杂草；它尚未 commit/归档，后续 child 不得混入当前暂存集。
-- 用户已批准“转型前生活模拟基础盘”进入规划，但不是十个 child 的实施授权。每个 child 必须先查证参考机制、写明阶段拆分与真实偏离并再次取得启动确认。
-- 开发阶段的浏览器本地玩法存档不再迁移或兼容此前开发版本；新里程碑从清理站点数据后的新游戏验收，只保证 current save 严格校验、保存和刷新恢复。数据库、论坛、身份、媒体和部署数据不受此政策影响。
-- 春季 v10 只做已批准正常游玩；不新建剧情或节庆，删除当前镜门异光/文案，Day 28 不封档。
-- 浅层矿洞/矿石/冶炼、四类既有劳动技能/职业、完整 120 层矿洞与战斗、第五条 Combat skill、品质/肥料、鸡舍草料、加工与烹饪已进入 planning，尚未批准实施；矿层、怪物、武器、生命归零与公会规则须按 1.6.15 资料逐项收敛。宠物复杂养成和通用复杂经济仍不在转型前范围。
+- 已检查代码入口、任务文档、Git 历史与本轮实现；未代签真人验收。v13 的检查和缺口以[实施清单](../.trellis/tasks/09-04-storage-shipping-placement-v1/implement.md)本轮记录为准。
+- 本轮 `typecheck`（本地 Prisma codegen 与 client/server TypeScript）及 `build:client` 均 exit 0，工作区/暂存区 `git diff --check` 通过；package/lockfile 未变化，Git 跟踪媒体二进制为零。Prisma codegen 不连接数据库。
+- 本轮浏览器已走通空 profile 新建、12 槽背包、锄头由第 1 槽移至第 6 槽保存、刷新继续保持槽位，并检查制作缺料与 1/5/25 数量入口；桌面 1280×720 与手机 390×844 截图无横向溢出。完整建造/出货/NPC 推箱、200% zoom、真实触摸与真人路线尚未完成。
+- 早期规划盘点曾因依赖缺失而无法执行 TypeScript 检查；本轮已恢复现有 lockfile 对应依赖，`prisma`、`tsx` 和 `vue-tsc` 命令可用。该早期失败不再作为当前阻塞，也不替代最终集成检查结果。
+- 本轮新增范围限于已批准 child 的本地 domain、client 与地图合同；没有引入新数据库结构、依赖包或媒体对象，不连接数据库，不提交 / 推送 / 部署。
+- 继续保持纯本地路线、单一 GameSession / current save；普通 120 层矿洞与战斗属于已选基础盘，镜门远征 / Cargo / 撤离 / 抓宠 / 肉鸽 / 塔防已否决。
+- 新阶段默认只做相关类型 / 构建与必要静态检查，业务 / 存档 / 视觉正确性依靠真实路线反馈，不建立大规模测试矩阵。

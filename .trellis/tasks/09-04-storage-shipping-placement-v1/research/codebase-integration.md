@@ -16,3 +16,7 @@
 - 当前没有建筑服务；`TOWN_ROADMAP.md` 的墨子木匠功能尚未实现。用户已确认由墨子映射 Robin 的木匠服务和完整日程。
 - `npc-schedules.ts` 当前只支持全体共用的 09:00/17:00 phase，墨子为周日休息且雨天回家；它不能表达非雨周五 16:00 离柜、周二普通雨重新营业、施工日关闭或特殊日短暂过柜。实现需要 `星期/天气/施工/特殊日 + 精确分钟` 的 domain override，同时让 schedule、activity 与 service availability 共用同一 resolver。
 - 建筑服务必须拥有独立的 typed availability/result；不能把墨子改为通用 `shop`，因为客户端当前会把任何 `shopAvailable` 打开为种子店。服务入口还需绑定正式木匠服务点，不能只复用 `任意区域靠近 NPC` 谓词。
+
+## 2026-09-06 regeneration integration addendum
+
+本次只读核查确认 `GatheringSystem.settleDay`、`MiningSystem.settleDay`、`WeedCuttingSystem.settleDay` 与 `ForageSystem.activeSpawns` 还没有 world-object footprint 排除。仓储接入时必须同时消费箱体/建筑占用，避免下一日树、石、杂草或 forage 与玩家物件重叠。现有数量、七天普通树回长、固定 hash、每日幂等 marker 与 Farm 永久清理规则保持不变；具体延期语义、上游证据及特殊大树桩例外见 [resource-regeneration-occupancy.md](resource-regeneration-occupancy.md)。

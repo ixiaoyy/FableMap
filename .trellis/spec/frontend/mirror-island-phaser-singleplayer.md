@@ -1,5 +1,7 @@
 # Mirror Island Phaser Single-player
 
+当前实现合同为下方 v13 仓储场景与开发存档重置政策。旧 v1–v12 场景保留历史来源；与当前背包容量、堆叠上限、宠物位置、存档版本或验证方式冲突时，以 v13、当前 AGENTS 和对应 child PRD 为准，不据历史 `Tests Required` 扩建自动测试矩阵。
+
 ## Active development save reset policy (2026-09-04)
 
 ### 1. Scope / Trigger
@@ -62,7 +64,75 @@ if (raw.version !== GAME_STATE_VERSION) throw new Error("Local playtest save ver
 const state = decodeCurrentGameState(raw.state);
 ```
 
-## Scenario: surface resource tools current v12
+## Scenario: storage shipping placement current v13
+
+### 1. Scope / Trigger
+
+- Trigger：用户于 2026-09-06 单独启动 [09-04-storage-shipping-placement-v1](../../tasks/09-04-storage-shipping-placement-v1/prd.md)；当前分支为 `codex/storage-shipping-v1`，v13 领域与客户端实现位于工作区，完整浏览器/真人路线仍待验收。
+- 本场景拥有背包/Hotbar、制作入口、普通箱、摆放占用、持久掉落、出货和墨子出货箱建筑服务；其他基础盘 child 仍是规划，不能据本节提前接入技能、矿洞、四季、施工、肥料或自动化。
+- 精确参考证据由 child 的 PRD/design/research 持有。公开推箱快照固定在 `5225ef409e42a6159a82cf81200bf6eb315c9961`，实际程序集 `1.6.8.24119`；对 PC 1.6.15 的推断必须保留标记，不把反编译实现纳入产品源码。
+
+### 2. Signatures and state owners
+
+```typescript
+const GAME_STATE_VERSION = 13;
+const SAVE_FORMAT_VERSION = 13;
+
+type InventoryCapacity = 12 | 24 | 36;
+type OccupancyStatus = "blocked" | "clear-on-place" | "relocate-on-place" | "free";
+
+interface StorageWorldState {
+  worldObjects: WorldObjectState[];
+  worldDrops: WorldDropState[];
+  nextWorldEntitySequence: number;
+}
+
+interface ShippingState {
+  shippingQueue: ShippingEntry[];
+  unacknowledgedShippingReport: ShippingReport | null;
+}
+
+class StorageCommandSystem {
+  apply(state: GameState, npcs: readonly NpcSpawnDefinition[], command: StorageCommand): ActionFeedback;
+}
+```
+
+- `GameState` 扩展 `StorageWorldState` 与 `ShippingState`。`world-object-state.ts` 持有对象/掉落 identity、严格 decode、clone 和地图对账；单调 `world-N` 序号不能倒退或与默认出货箱 identity 重复。
+- `PetState` 直接持有 `regionId/x/y/facing/motion/anchorIndex/pauseRemainingMs`，`PetSystem` 推进领域位置；Phaser `PetEntity` 只投影位置、动画和反馈，不保留第二套行走计时或碰撞事实。
+- item definition 唯一拥有 `maxStack`、`inventorySortOrder`、出货资格/分类和普通箱 placement allowlist；各系统不能按售价、物品分类或旧硬编码推断资格。
+
+### 3. Contracts
+
+- 新档背包 12 槽，五件开局工具仍占前五槽，默认空手；普通堆叠与箱体物品上限 999，工具 1。种子店独立陈列按 2,000g / 10,000g 逐级扩为 24/36 槽，购买不依赖华强柜台营业；完成第二档后陈列消失。
+- 当前世界 Hotbar 固定前 12 槽；轮换操作保存行顺序，世界焦点下 `Tab` / `Shift+Tab` 前后轮换，面板内继续用于焦点导航。鼠标/触摸有等价操作；整理合并普通堆叠并按 item 顺序排序，工具保持原槽位。
+- 制作页暂停世界，仅从玩家背包取料；普通箱新档已知，50 Wood 制作一个，支持 1/5/25。产物选择/持有预览只属于菜单临时状态，确定合法背包落槽后由同一次候选保存扣料并放入；取消、关闭、缺料、满包或保存失败不能丢失材料/产物。
+- 普通箱是稳定 identity 的 1×1 物件、36 个槽位和默认色加 20 色，不命名、不腐坏；存取复用整组/单件/半组规则，“放入已有堆叠”只补箱内已有类型的现有堆叠，不因存在空格而引入新类型。
+- 空箱回收先确认背包能完整接收箱体。非空箱由玩家斧/镐/锄推动时使用有界四向搜索，成功移动同一 identity，失败保持原位；NPC 路径碰撞沿用同一搜索，未传面对方向时按已核实的默认南方向处理。NPC 终局失败才销毁箱体并生成持久内容掉落，箱体不回收；掉落须完整拾取才删除。
+- 12 张现有地图显式提供 `Placeable`，Farm 另有 `Buildable`，缺失 mask 全 false；普通箱仅允许 item 白名单区域，普通矿洞和未知 region 默认禁止。出货箱仅限 Farm 2×1 Buildable footprint，不从 Collision 反集、Tillable 或视觉空白推断合法格。
+- `WorldOccupancySystem` 统一输出四类状态及受影响 identity；现有作物/资源、静态阻挡、其他物件与角色参与判断。普通箱保留空耕地但拒绝宠物；出货箱清除空耕地并在可行时先迁移宠物。检查、清除/迁移、扣费和创建/移动须在同一个候选内原子完成，未出现的树种/高草/路径/肥料不新增虚构状态。
+- 跨日资源复用同一世界 footprint：树受占时保持 cleared 与原 `regrowOnDay`，释放后下一日结再试；石块/杂草在既有 hash 排序和上限截取前过滤受占点，不累计欠额、不改变数量/周期；野采在纯派生候选入口过滤，移物后可按当天原规则重新可见，不写“已采集”或补偿。资源恢复不得推箱、清箱或重抽保存失败的 candidate。
+- 新档按 Farm Tiled 点创建 `farm-shipping-bin-default`，初始 cell `(23,14)`、2×1 footprint，之后可移动。全部普通出货箱共享当天队列；可投一个/整组，只显示并允许完整取回最后一次投入，不能读取或取回更早条目。
+- 睡眠 candidate 一次性计算出货收入、清空队列并增加 Gold，报告按 Farming/Foraging/Fishing/Mining/Other 分组。保存成功后展示报告，确认操作也经保存；刷新恢复未确认报告，确认前不开放新一天操作，失败重试同一 candidate 不重复发钱。
+- 墨子只在西街住宅正式 `building-service` 柜台提供服务；普通日、周二/周五、雨天和过柜窗口均由专属日程 resolver 与实际 NPC 坐标共同决定，Vue 不自行按星期判断。追加出货箱 250g + 150 Wood，即时完成；移动免费，拆除始终保留至少一个普通出货箱。
+- Summer 18、节日、Night Market、绿雨由四季 child 在真实 calendar markers 可用时接通；施工日关闭由鸡舍/筒仓、农舍升级 child 在真实 job 出现时接通。本阶段只留清楚的输入合同，不创建无调用方持久字段或宣称特殊日已可玩。
+- 仓储命令通过 `StorageCommandSystem` 修改 GameSession 深克隆 candidate；只在保存成功后发布新 snapshot。保存中锁定重复输入，失败显示重试并保持已提交状态。候选、面板焦点、放置预览和菜单持有状态不能另存到 localStorage 或形成第二套玩法 owner。
+- 所有新字段只按 current v13 严格解码、地图对账与同版本恢复；旧开发档明确拒绝，不新增迁移、回填或隐藏备份。
+
+### 4. Validation and acceptance boundary
+
+| 情况 | 必须结果 |
+|---|---|
+| 整理/拆分/合并、制作取消或目标满格 | 工具位置与总量正确，拒绝操作不扣料或丢物 |
+| 非法摆放、无法迁移宠物、建筑材料不足 | 世界、农田、宠物、背包和 Gold 都保持原状态 |
+| 玩家推箱失败 / NPC 推箱终局失败 | 前者箱物不变；后者仅丢失箱体，内容变为持久可拾取掉落并有明确反馈 |
+| 资源点被箱/建筑占用并跨日 | 不覆盖物件，不补刷超额，不改变既有确定性 |
+| 出货或日结保存失败后重试 | 重试同一候选，不重复扣物、收费或发收入 |
+| 报告未确认时刷新 / current save 非法 identity、容量、颜色或数量 | 前者恢复报告；后者明确拒绝，不覆盖原记录 |
+| 桌面、手机、200% zoom、键盘焦点导航 | 能完成完整闭环；暂停与锁输入有效，关闭后焦点可恢复 |
+
+自动检查选择相关 `typecheck`、`build:client`、必要模块/地图解析及 `git diff --check`，不建设新的测试矩阵。真人路线从新 v13 开发档覆盖制作→摆箱→存取→出货→睡眠报告→刷新继续，以及升级/木匠服务、资源占用、NPC 推箱和失败重试。当前工作区实现和最小检查不代替完整浏览器/真人验收；实际结果记录在 child implement.md，未验证部署。
+
+## Historical scenario: surface resource tools v12
 
 ### 1. Scope / Trigger
 
@@ -187,7 +257,7 @@ dispatchLocalGameCommand({
 - `GameSession` 是唯一 mutable aggregate，所有新状态只保存在一个 v10 中；Phaser/Vue 消费只读投影。
 - 午夜提醒一次，02:00 强制日结；Cottage 外扣 `min(floor(gold/10),1000)`，不丢物品。晚睡恢复下降但不低于50%。
 - 日结先生成候选 snapshot，保存失败不得推进日期或重复扣款；失败有明确重试路径。
-- `.game-canvas` 必须建立独立 formatting context，约束 Phaser FIT 注入的 canvas 居中 margin；手机方向键、聚焦和 resize 后 `.world-frame.scrollTop` 保持 0。恢复画布焦点使用 `preventScroll: true`。
+- `.game-canvas` 占满已定尺寸的 Vue 容器，Phaser 使用 `RESIZE` / `NO_CENTER`，不通过 CSS 拉伸固定尺寸画布；手机方向键、聚焦和 resize 后 `.world-frame.scrollTop` 保持 0。恢复画布焦点使用 `preventScroll: true`。
 - v9 原记录在首次 v10 写入的同一个 IndexedDB transaction 中备份；不枚举旧账号、不增加可玩槽。
 - 钓鱼只有 casting/waiting 继续岛上计时，reeling/result 暂停；隐藏页面冻结两者且不补算隐藏时间。开始一竿扣 6 体力并保存 attempt；刷新取消 runtime，不返还体力。
 - caught 投影附加 `saveStatus: saving/saved/failed`。只有写入成功才能收竿；失败持续显示重试入口，重试不得重新加鱼。escaped 不暴露未获得的鱼名。
@@ -1173,7 +1243,7 @@ const media = playerMediaProfile(snapshot.player.appearanceId);
 - 正式 `public/map/*.tmj` 由 Tiled 手工维护，生成器只写 ignored fixture，运行时与构建命令禁止重写正式地图。
 - 已登记 ID 是持久身份、坐标只是布局；Tiled 中可移动对象与重画 tile，但不得因构图变化重命名 `entityId`、`exitId`、`spawnId`、`npcId` 或 `dialogueId`。
 - 地图阶段以实际画面、动线、碰撞与操作为主要验收证据；decoder、类型检查和构建仅证明最低结构完整性。
-- 正式世界使用 2× 整数 camera zoom；不得退回 1× 全图总览造成角色和交互物过小，响应式缩放继续由 Phaser FIT 处理。
+- 正式世界使用 2× 整数 camera zoom；不得退回 1× 全图总览造成角色和交互物过小。响应式尺寸由 Phaser `RESIZE` 处理，resize 时同步室内固定 anchor 和建筑预览镜头。建筑全农场预览单独按可用视口 fit，关闭后恢复 2×；世界中文标签使用 9px 中文无衬线字体和 resolution 2。
 - Town 扩展继续使用分区切图而不是放大单张主镇：`blacksmith`、五栋 `town-house*` 使用现有室内占位图集，`foothills`、`lakeshore` 使用现有 VectoRaith 户外 profile；每栋住宅外门可进入公共区，私人内屋只由 Collision + Tiled-owned `inspect dialogueId` 阻挡，禁止把访问状态写入 GameState/save。
 - Farm 固定扩为 64×48；核心构图集中在出生镜头附近，依次建立小屋、水塘/农田和东向道路三个视觉焦点。Gate A 只审大块构图，用户确认前禁止提前堆细节或新玩法实体。
 - Gate A v2 与 VectoRaith 方向验证已通过；Gate B 冻结 23 个 stable object，只允许在 ignored 候选 TMJ 完成岸线、院落/石板、弯曲道路、农田边界、小桥、林缘、Collision 与 AbovePlayer。截图确认前不得进入 Gate C、装饰或新系统。

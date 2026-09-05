@@ -50,9 +50,9 @@ surface resources closeout
 
 ## 5. Validation strategy
 
-- 每个子阶段只扩展与自身规则直接相关的现有 contract；默认门禁仍为 typecheck、client build、必要窄测试和真实浏览器路线。
+- 默认自动门禁为相关 typecheck、client build 和必要静态检查；业务与存档通过人工路线验证，不默认扩展或全跑历史 contract tests。只有稳定复现的高风险真实缺陷且有防复发价值时，才补单个低成本检查。
 - 跨阶段集成点在依赖方启动前复查，不建立覆盖十个系统的全排列 E2E。
-- 每阶段验证 current save round-trip、原子失败、同日/同 tick 幂等、地图 stable IDs 和媒体二进制为零。
+- 每阶段以相关人工路线验证 current save 恢复、原子失败和重复操作；地图 stable IDs、媒体二进制等静态检查只在改动相关内容时执行。
 - 人工验收负责玩法理解、布局、手感、声音、桌面/手机和 200% zoom；Agent 不代签主观结果。
 
 ## 6. Rollback and transition

@@ -15,6 +15,7 @@ import {
   applyGameState,
   applyFishingState,
   applyDaySettlement,
+  applyStorageSave,
   clearGameState,
   gameUiState,
   setActionFeedback,
@@ -27,6 +28,7 @@ let repository: IndexedDbSaveRepository | null = null;
 let stopStoreProjection: (() => void) | null = null;
 let stopFishingProjection: (() => void) | null = null;
 let stopDayProjection: (() => void) | null = null;
+let stopStorageProjection: (() => void) | null = null;
 let stopVisibilityTracking: (() => void) | null = null;
 
 /** Initializes the single anonymous playtest slot without creating a user or device identity. */
@@ -42,6 +44,7 @@ export function initializeLocalGameSession(ownerKey: string, catalog: WorldCatal
   stopStoreProjection = session.subscribe((state) => applyGameState(state));
   stopFishingProjection = session.subscribeFishing((state) => applyFishingState(state));
   stopDayProjection = session.subscribeDaySettlement((state) => applyDaySettlement(state));
+  stopStorageProjection = session.subscribeStorageSave((state) => applyStorageSave(state));
   if (typeof document !== "undefined") {
     /** Discards hidden-tab elapsed time before the next visible simulation frame. */
     const onVisibility = (): void => tickLocalGameSession(Date.now(), true, true);
@@ -74,7 +77,7 @@ export function dispatchLocalGameCommand(command: GameCommand): GameCommandResul
   const audioCue = audioCueForCommandResult(command, feedback);
   if (audioCue) emitAudioCue(audioCue);
   if (feedback) setActionFeedback(feedback);
-  if (feedback?.tone === "success" && feedback.code !== "day-saving") {
+  if (feedback?.tone === "success" && feedback.code !== "day-saving" && feedback.code !== "storage-saving") {
     void activeSession.flush().catch(() => {
       setActionFeedback({
         tone: "error",
@@ -105,12 +108,14 @@ export async function shutdownLocalGameSession(): Promise<void> {
   const activeStopStoreProjection = stopStoreProjection;
   const activeStopFishingProjection = stopFishingProjection;
   const activeStopDayProjection = stopDayProjection;
+  const activeStopStorageProjection = stopStorageProjection;
   const activeStopVisibility = stopVisibilityTracking;
   session = null;
   repository = null;
   stopStoreProjection = null;
   stopFishingProjection = null;
   stopDayProjection = null;
+  stopStorageProjection = null;
   stopVisibilityTracking = null;
   activeStopVisibility?.();
   try {
@@ -119,6 +124,7 @@ export async function shutdownLocalGameSession(): Promise<void> {
     activeStopStoreProjection?.();
     activeStopFishingProjection?.();
     activeStopDayProjection?.();
+    activeStopStorageProjection?.();
     activeRepository?.close();
     if (!session) clearGameState();
   }

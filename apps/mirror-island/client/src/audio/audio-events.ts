@@ -1,4 +1,5 @@
 import type { ActionFeedback, GameCommand } from "../../../domain/session/commands.ts";
+import { isStorageCommand } from "../../../domain/session/storage-commands.ts";
 import { AUDIO_CUE, type AudioCue } from "./audio-catalog.ts";
 
 export type AudioCueListener = (cue: AudioCue) => void;
@@ -21,6 +22,8 @@ export function audioCueForCommandResult(
   command: GameCommand,
   feedback: ActionFeedback | null,
 ): AudioCue | null {
+  // Storage feedback is asynchronous; its published saved state owns confirmation cues.
+  if (isStorageCommand(command)) return null;
   if (feedback?.tone === "error") return null;
   switch (command.type) {
     case "buy-item": return feedback?.code === "bought" ? AUDIO_CUE.buy : null;
@@ -44,13 +47,11 @@ export function audioCueForCommandResult(
       return null;
     }
     case "move":
-    case "craft":
     case "refill-watering-can":
     case "eat-item":
     case "talk-to-npc":
     case "gift-item-to-npc":
     case "upgrade-watering-can":
-    case "upgrade-backpack":
     case "acknowledge-retention-event":
     case "adopt-pet":
     case "pet-home-pet":

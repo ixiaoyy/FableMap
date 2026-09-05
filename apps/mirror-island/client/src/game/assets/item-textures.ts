@@ -10,6 +10,7 @@ const ATLAS_KEYS: Readonly<Record<string, string>> = {
   [GARDENS_ICON_URL]: GARDENS_TEXTURE_KEY,
   [VECTORAITH_MEDIA_URLS.crops]: VECTORAITH_MEDIA_KEYS.crops,
   [VECTORAITH_MEDIA_URLS.details]: VECTORAITH_MEDIA_KEYS.details,
+  [VECTORAITH_MEDIA_URLS.buildings]: VECTORAITH_MEDIA_KEYS.buildings,
 };
 
 /** Registers UI-identical item frames on loaded originals or small source-authored runtime textures. */

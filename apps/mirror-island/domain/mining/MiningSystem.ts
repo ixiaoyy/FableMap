@@ -5,6 +5,7 @@ import { StaminaSystem } from "../stamina/StaminaSystem.ts";
 import type { GameState } from "../state/game-state.ts";
 import { stableHash } from "../weather/WeatherSystem.ts";
 import type { WorldCatalog } from "../world/regions.ts";
+import { worldObjectCoversTile } from "../world/world-object-state.ts";
 
 const MINING_INTERACTION_DISTANCE_PIXELS = 42;
 const STONE_YIELD = 1;
@@ -59,6 +60,7 @@ export class MiningSystem {
     }
     const candidates = this.catalog.requireRegion("foothills").resources
       .filter((spawn) => spawn.kind === "stone" && state.resources[spawn.entityId]?.phase === "cleared")
+      .filter((spawn) => !worldObjectCoversTile(state, spawn.regionId, Math.floor(spawn.x / 16), Math.floor(spawn.y / 16)))
       .sort((left, right) => {
         const leftHash = stableHash(state.worldSeed, state.day, `surface-stone:${left.entityId}`);
         const rightHash = stableHash(state.worldSeed, state.day, `surface-stone:${right.entityId}`);

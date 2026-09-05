@@ -1,4 +1,6 @@
 import { decodeGameMinute } from "../time/game-time.ts";
+import type { Facing } from "../world/facing.ts";
+import type { WorldCatalog, WorldPoint } from "../world/regions.ts";
 
 export const PET_SPECIES = {
   cat: "cat",
@@ -25,7 +27,19 @@ export interface PetState {
   readonly adoptedDay: number;
   bond: number;
   lastPettedDay: number;
+  regionId: PetHomeRegionId;
+  x: number;
+  y: number;
+  facing: Facing;
+  motion: "idle" | "walking" | "resting";
+  anchorIndex: number;
+  pauseRemainingMs: number;
 }
+
+export const PET_ANCHOR_IDS: Readonly<Record<PetHomeRegionId, readonly string[]>> = {
+  farm: ["pet-farm-yard-west", "pet-farm-yard-east", "pet-farm-yard-rest"],
+  cottage: ["pet-cottage-hearth", "pet-cottage-window", "pet-cottage-rug"],
+};
 
 /** Reports whether an unknown value is one of the two reviewed pet species. */
 export function isPetSpecies(value: unknown): value is PetSpecies {
@@ -66,6 +80,13 @@ export function createPetState(species: PetSpecies, name: string, adoptedDay: nu
     adoptedDay: day,
     bond: 0,
     lastPettedDay: 0,
+    regionId: "farm",
+    x: 352,
+    y: 272,
+    facing: "down",
+    motion: "idle",
+    anchorIndex: 0,
+    pauseRemainingMs: 1_400,
   };
 }
 
@@ -83,6 +104,14 @@ export function decodePetState(value: unknown, currentDay: number): PetState | n
     || bond > PET_MAX_BOND
     || lastPettedDay > day
     || (lastPettedDay !== 0 && lastPettedDay < adoptedDay)
+    || (pet.regionId !== "farm" && pet.regionId !== "cottage")
+    || typeof pet.x !== "number" || !Number.isFinite(pet.x) || pet.x < 0
+    || typeof pet.y !== "number" || !Number.isFinite(pet.y) || pet.y < 0
+    || !["left", "right", "up", "down"].includes(String(pet.facing))
+    || !["idle", "walking", "resting"].includes(String(pet.motion))
+    || !Number.isSafeInteger(pet.anchorIndex) || Number(pet.anchorIndex) < 0 || Number(pet.anchorIndex) > 2
+    || typeof pet.pauseRemainingMs !== "number" || !Number.isFinite(pet.pauseRemainingMs)
+    || pet.pauseRemainingMs < 0 || pet.pauseRemainingMs > 2_600
   ) {
     throw new Error("Pet state is invalid.");
   }
@@ -92,7 +121,28 @@ export function decodePetState(value: unknown, currentDay: number): PetState | n
     adoptedDay,
     bond,
     lastPettedDay,
+    regionId: pet.regionId,
+    x: pet.x,
+    y: pet.y,
+    facing: pet.facing as Facing,
+    motion: pet.motion as PetState["motion"],
+    anchorIndex: Number(pet.anchorIndex),
+    pauseRemainingMs: pet.pauseRemainingMs,
   };
+}
+
+/** Resolves the original three authored home anchors now consumed by domain motion rather than mutable client animation. */
+export function petDomainAnchors(catalog: WorldCatalog, regionId: PetHomeRegionId): readonly WorldPoint[] {
+  return PET_ANCHOR_IDS[regionId].map((spawnId) => catalog.requireSpawn(regionId, spawnId));
+}
+
+/** Rejects persisted pet positions outside the finite authored home world without silently migrating coordinates. */
+export function reconcilePetState(pet: PetState | null, catalog: WorldCatalog): void {
+  if (!pet) return;
+  const region = catalog.requireRegion(pet.regionId);
+  if (pet.x >= region.widthPixels || pet.y >= region.heightPixels || catalog.isBlocked(pet.regionId, pet.x, pet.y, 4, 3, [])) {
+    throw new Error("Pet position is invalid.");
+  }
 }
 
 /** Derives the only region where the adopted pet is present at a validated game minute. */

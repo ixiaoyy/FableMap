@@ -3,6 +3,7 @@ import { InventorySystem } from "../inventory/InventorySystem.ts";
 import { ITEM_ID, type ItemId } from "../items/definitions.ts";
 import type { GameState } from "../state/game-state.ts";
 import type { ResourceSpawnDefinition, WorldCatalog } from "../world/regions.ts";
+import { worldObjectCoversTile } from "../world/world-object-state.ts";
 
 const FORAGE_INTERACTION_DISTANCE_PIXELS = 42;
 
@@ -18,6 +19,7 @@ export class ForageSystem {
     const dayOfCycle = (state.day - 1) % DAYS_PER_SEASON + 1;
     const collected = new Set(state.dailyForage.day === state.day ? state.dailyForage.collectedIds : []);
     return this.catalog.requireRegion(regionId).resources.filter((spawn) => {
+      if (worldObjectCoversTile(state, regionId, Math.floor(spawn.x / 16), Math.floor(spawn.y / 16))) return false;
       if (spawn.kind === "bamboo-shoot" && regionId === "foothills" && (dayOfCycle < 4 || dayOfCycle > 14)) return false;
       const farmTile = regionId === "farm"
         ? state.farmTiles[`farm:${Math.floor(spawn.x / 16)}:${Math.floor(spawn.y / 16)}`]
