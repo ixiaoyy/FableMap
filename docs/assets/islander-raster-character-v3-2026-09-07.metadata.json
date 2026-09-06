@@ -1,0 +1,215 @@
+{
+  "version": 3,
+  "creator": "Mirror Island project, OpenAI built-in image_gen with Codex mechanical raster preparation",
+  "approval": "User approved the eight-view static design with 这种可以; this is not a claim that every generated animation was user-approved.",
+  "approved": {
+    "file": "approved-character-design.png",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 1371025,
+    "content_type": "image/png",
+    "hasAlpha": false,
+    "sha256": "96c2fa4b2e9de8faaf13dfdbf121572f31a4fcda9c92e18330e0778ac6683169"
+  },
+  "sources": [
+    {
+      "file": "male-short-overalls-trousers.source.png",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1538681,
+      "content_type": "image/png",
+      "hasAlpha": false,
+      "sha256": "5bd489eacd1b6f9b901f49881610910124051ed83fa6547d4df020eee378fd03"
+    },
+    {
+      "file": "male-bob-shirt-shorts.source.png",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1623252,
+      "content_type": "image/png",
+      "hasAlpha": false,
+      "sha256": "b68fb852c55a1c9f4744825feab7e96073ca122d1d65ec524ecbf41e8b537018"
+    },
+    {
+      "file": "male-ponytail-jacket-skirt.source.png",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1663787,
+      "content_type": "image/png",
+      "hasAlpha": false,
+      "sha256": "0c88d62ef1dcf5493e9f01453af999812c4d5fc29b9819f41d08f5c885129748"
+    },
+    {
+      "file": "female-ponytail-overalls-trousers.source.png",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1630921,
+      "content_type": "image/png",
+      "hasAlpha": false,
+      "sha256": "544fbd0d3975c51f3408e20156998125773a28e62c290c6bc4a753a7f640e6f9"
+    },
+    {
+      "file": "female-bob-shirt-shorts.source.png",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1646545,
+      "content_type": "image/png",
+      "hasAlpha": false,
+      "sha256": "d9e52bea0d6544ce71e0597a309eb3153b3f9991690bd97311d16ccd4e6bd973"
+    },
+    {
+      "file": "female-short-jacket-skirt.source.png",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1612076,
+      "content_type": "image/png",
+      "hasAlpha": false,
+      "sha256": "3cdaf6322a7b78dc5acf478aeca6d6cd60fbd0039b33eb74c6f56813e1bb9037"
+    }
+  ],
+  "outputs": [
+    {
+      "filename": "character-layers-v3.png",
+      "width": 432,
+      "height": 1536,
+      "bytes": 168215,
+      "content_type": "image/png",
+      "sha256": "d60a4de60f4fd051d1892ea8f2437b89a1d91cc0401eef67b35352f5633c50e4",
+      "hasAlpha": true
+    },
+    {
+      "filename": "character-materials-v3.png",
+      "width": 432,
+      "height": 1536,
+      "bytes": 22698,
+      "content_type": "image/png",
+      "sha256": "485190d95294ac78b7e8cad6a9bcad5bd482560787f17146f98e957af5a8335d",
+      "hasAlpha": true
+    }
+  ],
+  "processing": {
+    "background": "Edge-seeded four-connected removal of near-neutral bright baked checkerboard; minimum RGB channel 228, maximum spread 18. Original files remain unchanged.",
+    "extraction": "Measured occupied bands, not assumed equal ImageGen cells; four directions down/left/right/up, three frame columns. Nearest-neighbor normalization to 48x64, foot (24,60).",
+    "layers": "Head, shirt/arms, lower garment extracted from original pixels and registered to neck y28, waist y40 and feet y60; hanging hair retained with head. Disconnected nape outlines belong to head. No code-drawn replacement anatomy.",
+    "animation": "Neutral head copied to contact frames with 1px downward motion. Female right/step2 contains a wrong-facing generated source; only that body frame maps to valid right/step0. Side animation uses contact-neutral cycles; true opposing-limb contacts still need a later art revision.",
+    "materials": "R-channel material codes 0 unchanged,1 skin,2 hair,3 upper fabric,4 denim. Mask only categorizes source pixels. Runtime colors preserve texture and keep default source RGB unchanged.",
+    "guides": [
+      {
+        "name": "male-short-overalls-trousers",
+        "neck": [
+          28,
+          28,
+          27,
+          28
+        ],
+        "waist": [
+          40,
+          41,
+          40,
+          39
+        ]
+      },
+      {
+        "name": "male-bob-shirt-shorts",
+        "neck": [
+          26,
+          26,
+          26,
+          25
+        ],
+        "waist": [
+          38,
+          39,
+          39,
+          38
+        ]
+      },
+      {
+        "name": "male-ponytail-jacket-skirt",
+        "neck": [
+          27,
+          28,
+          27,
+          27
+        ],
+        "waist": [
+          40,
+          41,
+          41,
+          39
+        ]
+      },
+      {
+        "name": "female-ponytail-overalls-trousers",
+        "neck": [
+          26,
+          27,
+          26,
+          26
+        ],
+        "waist": [
+          39,
+          39,
+          39,
+          39
+        ]
+      },
+      {
+        "name": "female-bob-shirt-shorts",
+        "neck": [
+          26,
+          26,
+          26,
+          25
+        ],
+        "waist": [
+          37,
+          36,
+          36,
+          36
+        ]
+      },
+      {
+        "name": "female-short-jacket-skirt",
+        "neck": [
+          27,
+          27,
+          27,
+          27
+        ],
+        "waist": [
+          39,
+          40,
+          40,
+          39
+        ]
+      }
+    ]
+  },
+  "layout": {
+    "width": 432,
+    "height": 1536,
+    "parts": [
+      "head",
+      "top",
+      "bottom"
+    ],
+    "variantRows": 6,
+    "facings": [
+      "down",
+      "left",
+      "right",
+      "up"
+    ]
+  },
+  "frame": {
+    "width": 48,
+    "height": 64,
+    "foot": {
+      "x": 24,
+      "y": 60
+    },
+    "neck": 28,
+    "waist": 40
+  }
+}

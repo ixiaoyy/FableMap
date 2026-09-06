@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-02T00:00:00Z",
+  "generated_at": "2026-09-06T17:01:46.354Z",
   "media_base_url": "https://img.pingxingxian.space/game/media/v1",
-  "tracked_image_count": 17,
-  "tracked_image_bytes": 2891697,
+  "tracked_image_count": 19,
+  "tracked_image_bytes": 3082610,
   "tracked_audio_count": 19,
   "tracked_audio_bytes": 7806934,
   "entries": [
@@ -470,6 +470,34 @@
       "content_type": "audio/mpeg",
       "object_key": "assets/vendor/leonelmail/roomtone-bedroom-329569/interior-room-tone.mp3",
       "url": "https://img.pingxingxian.space/game/media/v1/assets/vendor/leonelmail/roomtone-bedroom-329569/interior-room-tone.mp3"
+    },
+    {
+      "source": "OpenAI image_gen original islander six-source set, 2026-09-07-v3",
+      "source_url": "docs/assets/islander-raster-character-v3-2026-09-07.md",
+      "license": "Project-original AI-generated art",
+      "creator": "Mirror Island project, OpenAI built-in image_gen with Codex mechanical raster preparation",
+      "transformation": "Alpha extraction, nearest-neighbor frame registration and independent head/upper/lower raster atlas; 432x1536 RGBA; processing and source hashes in provenance metadata.",
+      "width": 432,
+      "height": 1536,
+      "bytes": 168215,
+      "sha256": "d60a4de60f4fd051d1892ea8f2437b89a1d91cc0401eef67b35352f5633c50e4",
+      "content_type": "image/png",
+      "object_key": "assets/original/islander/2026-09-07-v3/character-layers-v3.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/original/islander/2026-09-07-v3/character-layers-v3.png"
+    },
+    {
+      "source": "OpenAI image_gen original islander six-source set, 2026-09-07-v3",
+      "source_url": "docs/assets/islander-raster-character-v3-2026-09-07.md",
+      "license": "Project-original AI-generated art",
+      "creator": "Mirror Island project, OpenAI built-in image_gen with Codex mechanical raster preparation",
+      "transformation": "Indexed material mask mechanically derived from original generated pixel parts; 432x1536 RGBA.",
+      "width": 432,
+      "height": 1536,
+      "bytes": 22698,
+      "sha256": "485190d95294ac78b7e8cad6a9bcad5bd482560787f17146f98e957af5a8335d",
+      "content_type": "image/png",
+      "object_key": "assets/original/islander/2026-09-07-v3/character-materials-v3.png",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/original/islander/2026-09-07-v3/character-materials-v3.png"
     }
   ]
 }
