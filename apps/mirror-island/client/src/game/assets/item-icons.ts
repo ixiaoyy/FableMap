@@ -3,6 +3,7 @@ import { ITEM_ID, type ItemId } from "../../../../domain/items/definitions.ts";
 import { ITEM_PIXEL_ART } from "./item-pixel-art.ts";
 import type { PixelArt } from "./pixel-art.ts";
 import { VECTORAITH_MEDIA_URLS } from "./visual-profile.ts";
+import { PASTORAL_PREVIEW, pastoralToolCell } from "./pastoral-art-preview.ts";
 
 export const GARDENS_ICON_URL = "/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png?v=de4dbbb5";
 
@@ -13,8 +14,8 @@ export interface AtlasItemIcon {
   readonly sourceHeight: number;
   readonly x: number;
   readonly y: number;
-  readonly width: 16 | 32;
-  readonly height: 16 | 32;
+  readonly width: number;
+  readonly height: number;
 }
 
 export type ItemIconDefinition = AtlasItemIcon | { readonly kind: "pixels"; readonly art: PixelArt };
@@ -46,6 +47,14 @@ const ITEM_ICONS: Readonly<Partial<Record<ItemId, ItemIconDefinition>>> = {
 
 /** Resolves one production Hotbar icon without adding media fields to item definitions or saves. */
 export function itemIconForItem(itemId: string): ItemIconDefinition | null {
+  const cell = pastoralToolCell(itemId);
+  if (PASTORAL_PREVIEW && cell) {
+    return {
+      kind: "atlas", url: PASTORAL_PREVIEW.tools.url,
+      sourceWidth: 1536, sourceHeight: 1024,
+      x: cell[0] * 512, y: cell[1] * 512, width: 512, height: 512,
+    };
+  }
   return ITEM_ICONS[itemId as ItemId] ?? null;
 }
 

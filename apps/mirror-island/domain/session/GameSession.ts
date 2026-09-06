@@ -11,7 +11,9 @@ import { WorldObjectSystem } from "../world/WorldObjectSystem.ts";
 import { ITEM_ID, getItemDefinition, type ItemId } from "../items/definitions.ts";
 import { MiningSystem, type MiningResult } from "../mining/MiningSystem.ts";
 import {
-  DEFAULT_PLAYER_APPEARANCE_ID,
+  DEFAULT_PLAYER_APPEARANCE,
+  decodePlayerAppearance,
+  type PlayerAppearance,
   type PlayerAppearanceId,
 } from "../player/appearance.ts";
 import {
@@ -191,12 +193,12 @@ export class GameSession {
 
   /** Replaces the current slot with one chosen appearance and persists it before play begins. */
   async newGame(
-    appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
+    appearance: PlayerAppearance | PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE,
   ): Promise<GameState> {
     await this.storageSavePromise;
     await this.daySavePromise;
     await this.saveQueue;
-    const state = createInitialGameState(this.catalog, appearanceId, worldSeedForNewGame(this.ownerKey, this.now()));
+    const state = createInitialGameState(this.catalog, appearance, worldSeedForNewGame(this.ownerKey, this.now()));
     await this.repository.save(this.ownerKey, this.slotId, createStoredGame(state, this.now()));
     this.state = state;
     this.pendingStorageChange = null;
@@ -283,6 +285,17 @@ export class GameSession {
     }
     if (isStorageCommand(command)) return this.beginStorageChange(command);
     switch (command.type) {
+      case "change-appearance": {
+        let appearance: PlayerAppearance;
+        try {
+          appearance = decodePlayerAppearance(command.appearance);
+        } catch {
+          return { tone: "error", code: "invalid-appearance", message: "这套装扮无效，请重新选择。" };
+        }
+        state.player.appearance = appearance;
+        this.commitCriticalChange();
+        return { tone: "success", code: "appearance-changed", message: "已换上新的装扮。" };
+      }
       case "move": {
         const activeNpcs = this.npcMotions.activeSpawnsInRegion(state.player.regionId);
         if (movePlayer(state, this.catalog, command.xAxis, command.yAxis, command.deltaMs, activeNpcs)) {

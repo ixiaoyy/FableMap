@@ -4,7 +4,7 @@ export function isToolArtCandidateEnabled(search = window.location.search): bool
   return import.meta.env.DEV && (mode === "free" || mode === "preview");
 }
 
-/** Keeps the existing isolated Farm preview entry while rendering the same artwork as normal gameplay. */
+/** Selects the isolated development farm used to review unpublished original art without changing the regular save. */
 export function isToolArtPreviewEnabled(search = window.location.search): boolean {
   const parameters = new URLSearchParams(search);
   return isToolArtCandidateEnabled(search)

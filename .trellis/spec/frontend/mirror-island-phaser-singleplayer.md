@@ -301,7 +301,7 @@ dispatchLocalGameCommand({
 - `itemIconForItem()` 是 Hotbar、Backpack、Gift、Fishing result 与 Phaser 持物的共享源。原图 frame 使用 `AtlasItemIcon`，原创小图形使用 `PixelArt`；seed badge 复用 `cropForSeed()` 身份，不复制种植规则。
 - GARDENS 正式坐标：hoe `(0,2)`、watering `(0,5)`、axe `(0,10)`、seed bag `(6,5)`；旧 Gate A 记录中的部分坐标误指铁锹/镰刀/钳子，不能作为现行依据。
 - `FarmingActionPresenter` 只拥有原角色 pose、tool grip、held item 与有限视觉效果；`ActionTimeline -> WorldScene impact -> GameSession` 仍只有一次 mutation。错误反馈不产生成功效果，切图/动作结束清理本实例拥有的 tweens。
-- 工具图片翻转时握点也要镜像；各工具使用其原图的手柄/提手位置，不共用一个任意旋转中心。九种外观都使用自身 profile，不能套用另一角色的 plowing sheet。
+- 工具图片翻转时握点也要镜像；各工具使用其原图的手柄/提手位置，不共用一个任意旋转中心。正式角色统一使用 `PlayerAppearance` 驱动的头部、上装、下装三层和同一四方向动作帧合同；当前 v3 原生帧 48×64、脚底 `(24,60)`、世界 scale 0.5，手心 y43 换算为相对脚底的世界偏移 `-8.5`；不再按九种整身预设选择 profile，也不套用另一角色的 plowing sheet。
 - Cottage 的 256×128 `cottage-woodwork` texture 由源码配方生成；Tiled metadata 的 PNG 只作为 ignored 编辑缓存，不是运行时 URL 或新 CDN 对象。布局、Collision、床/出口及 `cottage-room-view` 镜头点仍属于 TMJ。
 - 即使 Collision 层不渲染，非零 GID 也必须属于当前内嵌 tileset；Phaser 解析全部图层，遗留 GID 会使切图失败。
 - Cottage 收紧布局保留所有旧 stable IDs 与宠物锚点；旧坐标撞到新 Collision 时复用既有 `reconcileGameStateWithCatalog()` 安全入口逻辑，不添加迁移。
@@ -1164,70 +1164,107 @@ const dialogue = getDialogueDefinition(npc.spawn.dialogueId, {
 });
 ```
 
-## Scenario: local player appearance creation
+## Scenario: local layered character creation and wardrobe
 
 ### 1. Scope / Trigger
 
-- Trigger：公开本地试玩的新游戏必须先选择真正影响世界精灵的角色外观；旧 React/localStorage 角色创建与 Ninja/Samurai 素材继续退役。
-- 本场景拥有现有 farmer + VectoRaith NPC demo 八个动画预设、创建页与 v6 持久化；分层发型/上衣/下装/鞋子仍等待专用同风格素材。
+- Trigger：用户要求参考农场生活游戏，将角色拆成上、中、下三部分，自由更换性别与衣服，取代九张整身预设卡片。
+- 当前美术合同为 2026-09-07 的 v3 PNG 分层；用户拒绝两轮源码绘制后认可新的男女四向设计。被拒绝的 v2 只作历史来源，不能因其曾通过类型与构建而记为审美通过。
+- 公开本地试玩 `/` 的新建角色和游戏内「外观」使用同一组合编辑器；正式角色不依赖 `?toolArt=preview`、候选图片或 VectoRaith farmer/NPC demo 外观。旧 React/localStorage 角色创建与 Ninja/Samurai 素材继续退役。
+- 当前范围为性别、头部、上装、下装、肤色和三类配色；鞋子属于下装绘制，不提供独立鞋子选项。本章节替代历史素材章节中的玩家整身 farmer/profile 约定，地图和 NPC 素材合同保持原范围。
 
 ### 2. Signatures
 
 ```typescript
-type PlayerAppearanceId = "farmer-original" | "islander-spring" | ExistingPresetId;
+interface PlayerAppearance {
+  gender: "male" | "female";
+  head: "short" | "bob" | "ponytail";
+  top: "shirt" | "overalls" | "jacket";
+  bottom: "trousers" | "shorts" | "skirt";
+  skinTone: "peach" | "tan" | "umber";
+  hairColor: "chestnut" | "black" | "gold";
+  topColor: "mint" | "cream" | "coral" | "sky";
+  bottomColor: "denim" | "sand" | "forest";
+}
 
-interface PlayerStateV6 {
+interface PlayerState {
   regionId: string;
   x: number;
   y: number;
-  appearanceId: PlayerAppearanceId;
+  appearanceId: PlayerAppearanceId; // 仅保留旧存档兼容身份，渲染不再读取它。
+  appearance: PlayerAppearance;
 }
 
-function GameSession.newGame(appearanceId?: PlayerAppearanceId): Promise<GameState>;
-function playerMediaProfile(appearanceId: PlayerAppearanceId): PlayerMediaProfile;
+declare function decodePlayerAppearance(value: unknown): PlayerAppearance;
+declare function legacyPlayerAppearance(appearanceId: PlayerAppearanceId): PlayerAppearance;
+
+// GameSession 的外观相关入口；未传参时使用 DEFAULT_PLAYER_APPEARANCE。
+interface AppearanceSession {
+  newGame(appearance?: PlayerAppearance | PlayerAppearanceId): Promise<GameState>;
+  dispatch(command: { type: "change-appearance"; appearance: PlayerAppearance }): ActionFeedback | null;
+}
+
+declare function playerMediaProfile(): PlayerMediaProfile;
+declare function ensureCharacterArtReady(): Promise<void>;
 ```
 
 ### 3. Contracts
 
-- `domain/player/appearance.ts` 是 stable appearance ID、默认值和 decoder 的唯一 owner；domain/save 禁止出现 URL、texture key、atlas frame 或 NPC identity。
-- `GameState`/`StoredGame` 当前版本 6；v1–v5 迁移统一补 `farmer-original`，保证已发布存档继续后视觉不变。
-- 新游戏只在角色页最终确认后调用 `GameSession.newGame(id)`；浏览、取消或返回不得覆盖当前 IndexedDB 记录。
-- `visual-profile.ts` 唯一映射 ID 到 VectoRaith farmer 或 NPC demo 的四方向帧；NPC demo 按 12列×8行、每角色3×4帧的官方布局解析。
-- 创建页直接 CSS 裁切 manifest 已登记原图，不生成、提交或上传衍生 PNG；选择支持点击、触屏、Tab、方向键、Enter 和 Escape。
+- `domain/player/appearance.ts` 是八个语义字段、默认值和 decoder 的唯一 owner；domain/save 禁止出现 URL、texture key、atlas frame 或 NPC identity。性别不限制发型和衣服，切换性别保留其余七项搭配。
+- `GameState` 与 `StoredGame` 继续使用 v13，不改变 IndexedDB 对象仓库或后端数据库结构。已有 v13 若没有 `player.appearance`，decoder 根据已验证的旧 `appearanceId` 作固定映射，返回包含完整八字段的状态；已有组合则逐字段验证。旧 ID 只承担兼容职责，不开放整身预设选择，也不扩展对其他存档版本的支持。
+- 新游戏只在角色页最终确认后调用 `GameSession.newGame(appearance)`，并在首次保存成功后挂载 Phaser。创建页浏览、取消或返回不写当前存档；已有农场的覆盖提示仍由原新游戏入口处理。
+- 游戏内「外观」从只读 snapshot 复制草稿；编辑阶段只影响编辑器预览，取消直接丢弃草稿。保存时发送 `change-appearance`，domain 校验后仅替换 `player.appearance`，发布新 snapshot 并排队保存，不修改位置、背包、日期、金币或体力。
+- 「外观」面板等待 `flushLocalGameSession()` 完成后才关闭并显示已保存。失败时保留已提交草稿和未保存提示，锁定编辑、取消及世界输入；重试重新发送同一草稿以排队一次新写入，然后再次等待 flush，不能只重复 flush 已经失败的旧队列。
+- `character-art.ts` 从已发布 v3 PNG 裁切、组合和按材质遮罩调色，不再以源码像素簇或图元绘制人体。`CharacterPreview` 与 `LayeredPlayerArtwork` 共用 `paintCharacterFrame()`；正常 `/` 的 Vue 预览和 Phaser 角色必须使用同一组部件。原生帧 48×64，头部、上装、下装各生成一张三列四行的 144×256 透明 CanvasTexture；方向为下、左、右、上，步态 1 为站立，显示循环为 0→1→2→1。
+- 两张源图 `character-layers-v3.png` 与 `character-materials-v3.png` 均为 432×1536 RGBA，位于已发布的不可变 `game/media/v1/assets/original/islander/2026-09-07-v3/`，由 manifest 登记、浏览器默认通过同源 `/game-media/v1` 读取。媒体配置与来源文本已进入 main `633f29e`；应用源码本地接入不等于生产应用已部署。真实来源与处理链路见 [v3 素材记录](../../../docs/assets/islander-raster-character-v3-2026-09-07.md)。
+- `App` 在初始化本地入口之前等待 `ensureCharacterArtReady()`；两图共同加载、432×1536 尺寸与 Canvas 可读性全部成功后才发布可用素材。单图请求最多等待 15 秒，失败不发布半套 source，入口进入错误页并提供“刷新重试”；不得回退到 v2 或空白角色。
+- `visual-profile.ts` 只返回统一帧和脚底锚点合同；`LayeredPlayerArtwork` 用上装精灵驱动原行走、种田及出拳动作，在 `POST_UPDATE` 同步另两层的 frame、位置、缩放、旋转与可见性。换装按八字段组合 key 原位重绘三张固定纹理，避免每套搭配累计新纹理；场景关闭时解绑同步回调和状态订阅。
+- 统一原生脚底为 `(24,60)`，世界 scale 为 0.5；手心参考 y43，换算为相对脚底的世界偏移 `(43-60)×0.5=-8.5`。角色素材不拥有碰撞、移动或存档规则；图像二进制不进入 Git。UI 使用原生性别按钮、款式选择和配色按钮，方向和行走预览均为临时表现状态。
+- 头部固定使用各向站立帧，接触相位向下沉一个原生像素，维持面部一致性；已明确排除女性马尾右向第三帧的错向源图。侧面步势仍是短接触/站立循环，完整交替肢体动画尚待精修，不能把现有循环或静态设计获认可记为动画验收通过。
 
 ### 4. Validation & Error Matrix
 
 | 条件 | 结果 |
 |---|---|
-| unknown/empty appearance ID | domain decoder 或 save decoder 明确失败，不创建/覆盖存档 |
-| v5 或更旧合法存档 | 迁移为 v6 + `farmer-original`，其他进度保持 |
-| 创建页浏览或 Escape/返回 | 当前 save byte-equivalent，回到原菜单/错误页 |
-| 最终确认且写盘成功 | 首次 publish 后进入 Phaser，玩家使用选中动画 |
-| 最终写盘失败 | 进入可恢复错误页，不挂载半初始化 Phaser 世界 |
-| 素材加载失败 | 使用现有 media-load-failed 可见错误，不回退旧 Ninja 玩家 |
+| 外观任一字段未知、缺失或类型错误 | 新建/存档 decoder 明确失败；换装命令返回错误且不修改当前外观 |
+| v13 只保存已知旧 appearanceId | 固定转换为八字段组合，其他存档进度保持；后续保存包含组合字段 |
+| v13 已有完整合法组合 | 原样恢复组合，返回防御性副本 |
+| 未知旧 appearanceId 或不支持的存档版本 | 保持现行 decoder 拒绝，不静默回退或重建农场 |
+| 创建页浏览、取消或返回 | 不调用 newGame，不写当前存档 |
+| 新建最终确认且保存成功 | 进入 Phaser，三层绘制与创建页同一组合 |
+| 新建保存失败 | 进入可恢复错误页，不挂载半初始化 Phaser 世界 |
+| 角色源图失败、超时、尺寸错误或 Canvas 不可读 | 入口明确报错并提供刷新重试；不初始化半套角色或回退到 v2 |
+| 游戏内编辑草稿后取消 | 当前角色和存档不变 |
+| 换装已提交但保存失败 | 新外观已投影到当前 session，尚未持久化；面板保留失败状态并提供重新排队保存 |
+| 换装或切图 | 保持当前三层组合、统一朝向和动作相位，碰撞尺寸及脚底位置不随服装变化 |
 
 ### 5. Good/Base/Bad Cases
 
-- Good：选择“春芽”后进入 Farm，室内外切图与刷新继续均保持同一角色。
-- Base：v5 老存档继续后仍是原 farmer；新游戏打开角色页再返回不会改动 Day/Gold。
-- Bad：Vue 只保存临时卡片索引、把 texture/frame 写进 IndexedDB、浏览第一张卡时就调用 newGame，或恢复旧 localStorage 外观。
+- Good：短发、薄荷衬衫与牛仔长裤可分别调整，换为另一性别仍保留服装；保存后世界与预览使用同一组合。
+- Base：已有 v13 农场确定性补齐组合；创建或换装草稿取消不改动农场，已保存组合可由继续游戏恢复。
+- Bad：继续用九张整身候选卡代替分层、只改预览不改世界、把 texture/frame 写进 IndexedDB、切换性别重置服装，或将未完成写入显示为已保存。
 
-### 6. Tests Required
+### 6. Checks
 
-- 最小门禁：typecheck + client build；save decoder 需要覆盖 v5→v6 默认外观、v6 幂等和未知 ID 失败。
-- 真实浏览器检查九个预览、方向键/Enter/Escape、已有存档覆盖提示、最终世界精灵与刷新恢复。
+- 自动验证选择最小相关类型和客户端构建检查，不新增测试矩阵。旧 v13 补齐、非法字段拒绝、快照隔离及换装不改变玩法状态可用有界内存检查复核，不连接数据库。
+- 人工验收关注正式 `/` 的新建与「外观」、草稿取消、保存与失败重试、四方向走路/使用工具、切图和刷新恢复，以及手机与键盘可达性；本章节记录实现合同，不宣称这些人工项目已经全部完成。
 - 不新增数据库、migration、账号、E2E 矩阵或图片二进制。
 
 ### 7. Wrong vs Correct
 
 ```typescript
-// Wrong: persistence knows an atlas frame and browsing a card already replaces the farm.
+// Wrong: browsing already replaces the farm and persistence knows an atlas frame.
 await session.newGame();
 state.player.textureKey = "vectoraith-npcs";
 
-// Correct: one semantic ID crosses domain/save; the client alone resolves presentation frames.
-await session.newGame(selectedAppearanceId);
-const media = playerMediaProfile(snapshot.player.appearanceId);
+// Correct: only final confirmation crosses the domain boundary; the client paints independent layers.
+await session.newGame(selectedAppearance);
+const media = playerMediaProfile();
+registerCharacterTextures(scene, snapshot.player.appearance);
+
+// A wardrobe retry queues the locked draft again before waiting for the durable write.
+session.dispatch({ type: "change-appearance", appearance: { ...draft } });
+await flushLocalGameSession();
 ```
 
 ## World Foundation contract
@@ -2116,7 +2153,9 @@ if (snapshot.pet) petEntity.project(snapshot.pet, snapshot.day, presentationAnch
 
 - Phaser/Vue 和既有固定开源来源继续锁版本；规则迁移以当前 checkpoint 源码为依据，不建立复制分叉。
 - 已评审 `idb@8.0.3`，许可证 ISC 不在默认 allowlist，且当前接口窄，因此采用受控原生 IndexedDB 薄层并记录拒绝原因。
-- 图片与音频仍遵循官方固定来源、许可 allowlist、不可变 `game/media/v1` manifest 和 Git 游戏媒体二进制为零。
+- 第三方图片与音频核对官方固定来源及覆盖实际用途的许可；原创媒体记录制作来源与版本，AI 生成保留真实 prompt sidecar。两者均遵循不可变 `game/media/v1` manifest 和 Git 游戏媒体二进制为零。
+- 美术以质量和风格统一为准，不要求全部开源，不设现成/自制比例；达不到要求的现成素材可以由项目原创替换，具体制作与实景验收标准以 `docs/IMAGE_ASSETS_SPEC.md` 为准。
+- 用户已选定 A「清新田园」作为后续视觉方向，采用明亮配色、清晰像素簇与轻快比例；先成组统一五件工具与小屋内外。示例尺寸不直接改变现有 Tilemap、碰撞、相机或存档合同，正式素材按实际缩放、动作和遮挡验收；当前示例尚未接入运行时。
 - VectoRaith Farming v1.08 与 NPC v1.6 DEMO 采用自定义项目使用许可。用户已批准 Web runtime 直接读取登记的官方完整 PNG 并接受作者回复前的残余风险；禁止原 ZIP、32/48px 版本、未采用目录、素材浏览/下载入口或素材包式产品。作者回复若附加条件则 forward-fix。
 
 ## Verification

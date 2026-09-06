@@ -18,7 +18,7 @@ const staminaPercent = computed(() => Math.round(gameUiState.stamina / gameUiSta
       <button type="button" class="life-hud__date" title="查看日历" @click="openCalendar">
         第 {{ date.absoluteDay }} 天 <span>{{ weekdayLabels[date.weekday] }}</span>
       </button>
-      <span class="life-hud__weather" :title="`明日：${weatherLabels[gameUiState.nextWeather]}`">{{ weatherLabels[gameUiState.weather] }}</span>
+      <span class="life-hud__weather" :data-weather="gameUiState.weather" :title="`明日：${weatherLabels[gameUiState.nextWeather]}`">{{ weatherLabels[gameUiState.weather] }}</span>
     </div>
     <div class="life-hud__numbers">
       <time>{{ clockLabel }}</time>

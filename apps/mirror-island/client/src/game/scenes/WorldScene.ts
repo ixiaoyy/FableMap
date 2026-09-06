@@ -45,10 +45,12 @@ import {
   petMediaProfile,
 } from "../assets/pet-media.ts";
 import { GARDENS_ICON_URL } from "../assets/item-icons.ts";
+import { PASTORAL_PREVIEW } from "../assets/pastoral-art-preview.ts";
 import { GARDENS_TEXTURE_KEY, registerItemTextures } from "../assets/item-textures.ts";
 import { FarmingActionPresenter, farmActionForItem, type FarmAction } from "../presentation/FarmingActionPresenter.ts";
-import { registerCottageArt } from "../presentation/cottage-art.ts";
+import { COTTAGE_BACKDROP, registerCottageArt } from "../presentation/cottage-art.ts";
 import { registerShopInteriorArt } from "../presentation/shop-interiors-art.ts";
+import { characterAppearanceKey, LayeredPlayerArtwork, registerCharacterTextures } from "../presentation/LayeredPlayerArtwork.ts";
 import {
   activeEntityMediaProfiles,
   entityMediaForRegion,
@@ -101,15 +103,15 @@ interface PlayerView {
   readonly container: Phaser.GameObjects.Container;
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly actions: FarmingActionPresenter;
+  readonly artwork: LayeredPlayerArtwork;
 }
 
 type TransitionPhase = "idle" | "fading-out" | "fading-in";
 
 export class WorldScene extends Phaser.Scene {
   private readonly catalog: WorldCatalog = getWorldCatalog();
-  private readonly playerMedia = playerMediaProfile(
-    getLocalGameSession().snapshot().player.appearanceId,
-  );
+  private readonly playerMedia = playerMediaProfile();
+  private appearanceKey = "";
   private playerView: PlayerView | null = null;
   private readonly treeViews = new Map<string, TreeEntity>();
   private readonly rockViews = new Map<string, RockEntity>();
@@ -130,6 +132,8 @@ export class WorldScene extends Phaser.Scene {
   private chestHitAt = 0;
   private petView: PetEntity | null = null;
   private readonly tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
+  private pastoralCottage: Phaser.GameObjects.Image | null = null;
+  private pastoralInterior: Phaser.GameObjects.Image | null = null;
   private activeMap: Phaser.Tilemaps.Tilemap | null = null;
   private activeRegionId = "";
   private latestState: GameState | null = null;
@@ -175,10 +179,6 @@ export class WorldScene extends Phaser.Scene {
     this.load.image(VECTORAITH_MEDIA_KEYS.details, VECTORAITH_MEDIA_URLS.details);
     this.load.image(VECTORAITH_MEDIA_KEYS.orchard, VECTORAITH_MEDIA_URLS.orchard);
     this.load.image(VECTORAITH_MEDIA_KEYS.crops, VECTORAITH_MEDIA_URLS.crops);
-    this.load.spritesheet(VECTORAITH_MEDIA_KEYS.farmer, VECTORAITH_MEDIA_URLS.farmer, {
-      frameWidth: 16,
-      frameHeight: 32,
-    });
     this.load.spritesheet(VECTORAITH_MEDIA_KEYS.npcs, VECTORAITH_MEDIA_URLS.npcs, {
       frameWidth: 16,
       frameHeight: 32,
@@ -186,6 +186,11 @@ export class WorldScene extends Phaser.Scene {
     this.load.spritesheet(PET_MEDIA_KEYS.cat, PET_MEDIA_URLS.cat, { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet(PET_MEDIA_KEYS.dog, PET_MEDIA_URLS.dog, { frameWidth: 32, frameHeight: 32 });
     this.load.image(GARDENS_TEXTURE_KEY, GARDENS_ICON_URL);
+    if (PASTORAL_PREVIEW) {
+      this.load.image(PASTORAL_PREVIEW.tools.key, PASTORAL_PREVIEW.tools.url);
+      this.load.image(PASTORAL_PREVIEW.cottage.key, PASTORAL_PREVIEW.cottage.url);
+      this.load.image(PASTORAL_PREVIEW.interior.key, PASTORAL_PREVIEW.interior.url);
+    }
     for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
   }
 
@@ -198,6 +203,8 @@ export class WorldScene extends Phaser.Scene {
     registerCottageArt(this);
     registerShopInteriorArt(this);
     registerStorageFrames(this);
+    registerCharacterTextures(this, getLocalGameSession().snapshot().player.appearance);
+    this.appearanceKey = characterAppearanceKey(getLocalGameSession().snapshot().player.appearance);
     this.createPlayerAnimations();
     this.actionTimeline = new ActionTimeline(this);
     this.audioDirector = new AudioDirector(() => {
@@ -315,6 +322,11 @@ export class WorldScene extends Phaser.Scene {
       this.facing = facingFromVector(state.player.x - previousPlayer.x, state.player.y - previousPlayer.y, this.facing);
     }
     this.latestState = state;
+    const nextAppearanceKey = characterAppearanceKey(state.player.appearance);
+    if (nextAppearanceKey !== this.appearanceKey) {
+      registerCharacterTextures(this, state.player.appearance);
+      this.appearanceKey = nextAppearanceKey;
+    }
     const playerView = this.playerView ?? this.createPlayerView();
     const buildingPreview = gameUiState.worldPlacement && gameUiState.worldPlacement.request.kind !== "chest";
     const visibleRegionId = buildingPreview ? "farm" : state.player.regionId;
@@ -349,6 +361,11 @@ export class WorldScene extends Phaser.Scene {
   private renderRegion(regionId: string): void {
     this.destroyRegionViews();
     const region = this.catalog.requireRegion(regionId);
+    // Share the atlas void color directly so finite map edges cannot expose a different camera background.
+    const defaultBackground = this.game.config.backgroundColor.color;
+    this.cameras.main.setBackgroundColor(regionId === "cottage" ? COTTAGE_BACKDROP : defaultBackground);
+    const previewCottage = PASTORAL_PREVIEW && regionId === "farm"
+      && this.textures.exists(PASTORAL_PREVIEW.cottage.key) ? PASTORAL_PREVIEW.cottage : null;
     const map = this.make.tilemap({ key: region.mapKey });
     const tilesets = tilesetBindingsForRegion(regionId).map((binding) => (
       map.addTilesetImage(binding.tiledName, binding.textureKey, 16, 16, 0, 0)
@@ -367,18 +384,46 @@ export class WorldScene extends Phaser.Scene {
         throw new Error(`Tilemap layer ${layerName} did not use the reviewed standard renderer.`);
       }
       layer.setDepth(depths[layerName]!);
+      if (previewCottage && (layerName === "Buildings" || layerName === "AbovePlayer")) {
+        // Hide only the original cottage's pixels; domain collision and door coordinates stay intact.
+        layer.forEachTile((tile) => { tile.alpha = 0; }, undefined, 17, 8, 5, 6);
+      }
       if (layerName === "Water" && regionId !== "farm") {
         this.tweens.add({ targets: layer, alpha: { from: 0.88, to: 1 }, duration: 1100, yoyo: true, repeat: -1 });
       }
       this.tileLayers.push(layer);
     }
     this.entityFactory = new EntityFactory(this, entityMediaForRegion(regionId));
+    if (previewCottage) {
+      this.pastoralCottage = this.add.image(312, 224, previewCottage.key)
+        .setOrigin(0.5, 1).setDisplaySize(88, 100).setDepth(10_000);
+    }
+    this.renderPastoralInteriorPreview(regionId);
     this.activeMap = map;
     this.activeRegionId = regionId;
     this.audioDirector?.setRegion(regionId);
     this.layoutWorldCamera();
     if (this.transitionPhase === "fading-out") {
       this.fadeIntoWorld(TRANSITION_DURATION_MS);
+    }
+  }
+
+  /** Overlays a loaded DEV cottage candidate on its exact 288×176 Tiled room bounds, retaining all domain geometry. */
+  private renderPastoralInteriorPreview(regionId: string): void {
+    if (!PASTORAL_PREVIEW || regionId !== "cottage") return;
+    if (!this.textures.exists(PASTORAL_PREVIEW.interior.key)) {
+      setActionFeedback({
+        tone: "error",
+        code: "pastoral-interior-load-failed",
+        message: "清新田园室内预览未能加载，当前显示原版小屋；请检查候选图片后刷新。",
+      });
+      return;
+    }
+    this.pastoralInterior = this.add.image(176, 256, PASTORAL_PREVIEW.interior.key)
+      .setOrigin(0, 0).setDisplaySize(288, 176).setDepth(8);
+    // The retained ground also supplies the room's surrounding backdrop; every old prop is below the candidate.
+    for (const layer of this.tileLayers) {
+      if (layer.layer.name !== "Ground") layer.setVisible(false);
     }
   }
 
@@ -396,12 +441,11 @@ export class WorldScene extends Phaser.Scene {
 
   /** Creates the saved avatar and its shared production item/action layers. */
   private createPlayerView(): PlayerView {
-    const sprite = this.add.sprite(0, 0, this.playerMedia.textureKey, this.playerMedia.frames.idle.down)
-      .setScale(this.playerMedia.scale)
-      .setOrigin(0.5, this.playerMedia.originY);
-    const container = this.add.container(0, 0, [sprite]);
+    const container = this.add.container(0, 0);
+    const artwork = new LayeredPlayerArtwork(this, container, this.playerMedia);
+    const sprite = artwork.body;
     const actions = new FarmingActionPresenter(this, container, sprite, this.playerMedia);
-    const view = { container, sprite, actions };
+    const view = { container, sprite, actions, artwork };
     this.playerView = view;
     return view;
   }
@@ -776,6 +820,7 @@ export class WorldScene extends Phaser.Scene {
           this.requestSleepConfirmation(entity);
         }));
       }
+      this.bedViews.get(bed.entityId)?.setArtworkVisible(this.pastoralInterior === null);
     }
   }
 
@@ -1453,6 +1498,10 @@ export class WorldScene extends Phaser.Scene {
 
   /** Destroys current map/entity views and cancels ephemeral actions before rendering another region. */
   private destroyRegionViews(): void {
+    this.pastoralCottage?.destroy();
+    this.pastoralCottage = null;
+    this.pastoralInterior?.destroy();
+    this.pastoralInterior = null;
     this.actionTimeline?.cancel();
     setWorldActionBusy(false);
     if (this.playerView) this.resetPlayerActionVisuals(this.playerView);
@@ -1482,6 +1531,7 @@ export class WorldScene extends Phaser.Scene {
   private disposeScene(destroyViews: boolean): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.playerView?.artwork.release();
     cancelSleepConfirmation();
     this.audioDirector?.destroy();
     this.audioDirector = null;

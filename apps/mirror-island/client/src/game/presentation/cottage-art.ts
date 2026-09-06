@@ -3,13 +3,15 @@ import type Phaser from "phaser";
 export const COTTAGE_TEXTURE_KEY = "cottage-woodwork";
 export const COTTAGE_BED_FRAME = "cottage-quilt-bed";
 export const COTTAGE_VIEW_SPAWN = "cottage-room-view";
+export const COTTAGE_BACKDROP = "#405b4d";
 
 const COLORS = {
-  ink: "#493d30", dark: "#5d4632", wood: "#a57748", grain: "#93683e", light: "#cda168",
-  floor: "#b58b56", floorLight: "#bc955f", seam: "#956f43", plaster: "#d7c69b",
-  paper: "#eee0b7", teal: "#668e81", tealLight: "#86a88e", tealDark: "#476b64",
-  rust: "#aa7351", rustDark: "#865c43", leaf: "#73904a", leafLight: "#acc178",
-  glass: "#8aadb0", glassLight: "#c8d8c5", stone: "#8b8871", stoneLight: "#b9ad8b",
+  ink: "#596953", dark: "#866547", wood: "#c7965d", grain: "#b58250", light: "#efc98b",
+  floor: "#e8c48e", floorLight: "#eaca97", seam: "#d6b382", plaster: "#fff1d8",
+  paper: "#fffaf0", teal: "#8dbca3", tealLight: "#c3ddbd", tealDark: "#568b7b",
+  rust: "#e79870", rustDark: "#b86e51", leaf: "#599e5b", leafLight: "#a8cc64",
+  glass: "#80cfe0", glassLight: "#d3f1ed", stone: "#a0b4ac", stoneLight: "#dce3cc",
+  blue: "#81b8d1", blueLight: "#b6dbea", blueDark: "#577f95", shadow: "#d3d2af",
 } as const;
 
 export { COLORS as INTERIOR_PALETTE, block as paintInteriorBlock };
@@ -32,56 +34,60 @@ export function paintCottageAtlas(context: CanvasRenderingContext2D): void {
     context.fillStyle = color;
     context.fillRect(x, y, width, height);
   };
-  fill(0, 0, 16, 16, "#18251f");
+  fill(0, 0, 16, 16, COTTAGE_BACKDROP);
   for (let variant = 0; variant < 3; variant += 1) {
     const x = (variant + 1) * 16;
     fill(x, 0, 16, 16, variant === 1 ? c.floorLight : c.floor);
     for (const y of [0, 8]) {
       fill(x, y, 16, 1, c.seam);
-      fill(x, y + 1, 16, 1, c.light);
-      fill(x + ((variant * 5 + y) % 13), y, 1, 8, c.seam);
-      fill(x + 3 + variant, y + 4, 4, 1, variant === 1 ? c.floor : c.grain);
-      fill(x + 10, y + 6, 3, 1, c.light);
+      fill(x, y + 1, 16, 1, "#eed0a1");
+      if (variant === 0 || (variant === 2 && y === 8)) {
+        fill(x + ((variant * 5 + y) % 13), y, 1, 8, c.seam);
+      }
     }
   }
   fill(64, 0, 16, 16, c.plaster);
-  fill(64, 0, 16, 2, c.dark);
-  fill(64, 2, 16, 1, c.light);
-  fill(64, 13, 16, 3, c.wood);
-  fill(64, 13, 16, 1, c.light);
-  fill(64, 15, 16, 1, c.dark);
+  fill(64, 0, 16, 1, c.wood);
+  fill(64, 1, 16, 1, c.light);
+  fill(64, 11, 16, 5, c.teal);
+  fill(64, 11, 16, 1, c.tealLight);
+  fill(64, 15, 16, 1, c.tealDark);
   fill(80, 0, 16, 16, c.dark);
   fill(80, 2, 16, 8, c.wood);
   fill(80, 2, 16, 1, c.light);
-  fill(80, 11, 16, 2, c.ink);
+  fill(80, 11, 16, 2, c.grain);
   fill(80, 14, 16, 2, c.plaster);
-  fill(96, 0, 16, 16, c.ink);
+  fill(96, 0, 16, 16, c.dark);
   fill(98, 0, 10, 16, c.wood);
   fill(98, 0, 2, 16, c.light);
   fill(106, 0, 2, 16, c.grain);
   fill(112, 0, 16, 16, c.dark);
   fill(112, 2, 16, 8, c.wood);
   fill(112, 2, 16, 2, c.light);
-  fill(112, 11, 16, 3, c.ink);
+  fill(112, 11, 16, 3, c.grain);
   fill(128, 0, 16, 16, c.floor);
   fill(128, 0, 16, 2, c.paper);
   fill(128, 2, 16, 2, c.wood);
   fill(128, 13, 16, 2, c.grain);
   fill(128, 15, 16, 1, c.dark);
 
-  // Nine-slice woven rug tiles stay flat and walkable, including the pet's existing resting route.
+  // A quiet linen center and blue woven edges preserve the existing walkable nine-slice footprint.
   for (let row = 0; row < 3; row += 1) {
     for (let column = 0; column < 3; column += 1) {
       const x = (9 + column) * 16;
       const y = row * 16;
-      fill(x, y, 16, 16, c.tealDark);
-      fill(x + (column === 0 ? 2 : 0), y + (row === 0 ? 2 : 0), column === 1 ? 16 : 14, row === 1 ? 16 : 14, c.paper);
-      fill(x + (column === 0 ? 4 : 0), y + (row === 0 ? 4 : 0), column === 1 ? 16 : 12, row === 1 ? 16 : 12, c.teal);
-      for (let mark = 0; mark < 4; mark += 1) fill(x + 4 * mark, y + 6 + (mark % 2) * 3, 2, 1, c.tealLight);
-      if (column === 1 && row === 1) {
-        fill(x + 7, y + 4, 2, 8, c.paper);
-        fill(x + 4, y + 7, 8, 2, c.paper);
-        fill(x + 6, y + 6, 4, 4, c.tealDark);
+      fill(x, y, 16, 16, c.paper);
+      if (column !== 1) {
+        const edge = column === 0 ? 1 : 12;
+        fill(x + edge, y, 3, 16, c.blue);
+        fill(x + (column === 0 ? 5 : 10), y, 1, 16, c.blueLight);
+        for (let mark = 1; mark < 16; mark += 4) fill(x + edge, y + mark, 1, 2, c.paper);
+      }
+      if (row !== 1) {
+        const edge = row === 0 ? 1 : 12;
+        fill(x, y + edge, 16, 3, c.blue);
+        fill(x, y + (row === 0 ? 5 : 10), 16, 1, c.blueLight);
+        for (let mark = 1; mark < 16; mark += 4) fill(x + mark, y + edge, 2, 1, c.paper);
       }
     }
   }
@@ -100,125 +106,177 @@ function block(context: CanvasRenderingContext2D, x: number, y: number, w: numbe
   context.fillRect(x, y, w, h);
 }
 
-/** Draws a wooden four-pane window with distant greenery at the supplied 32px atlas origin. */
+/** Draws a sunlit four-pane window and linen curtains within the supplied 32px atlas origin. */
 function paintWindow(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const c = COLORS;
-  block(ctx, x, y, 32, 30, c.ink);
-  block(ctx, x + 2, y + 1, 28, 27, c.wood);
-  block(ctx, x + 4, y + 3, 24, 23, c.glass);
-  block(ctx, x + 5, y + 4, 22, 9, c.glassLight);
-  block(ctx, x + 5, y + 20, 7, 5, c.leaf);
-  block(ctx, x + 21, y + 18, 6, 7, c.leaf);
-  block(ctx, x + 6, y + 18, 3, 3, c.leafLight);
+  block(ctx, x + 2, y + 1, 28, 29, c.dark);
+  block(ctx, x + 3, y + 2, 26, 26, c.light);
+  block(ctx, x + 6, y + 3, 20, 24, c.glass);
+  block(ctx, x + 7, y + 4, 18, 8, c.glassLight);
+  block(ctx, x + 8, y + 7, 5, 2, c.paper);
+  block(ctx, x + 9, y + 6, 3, 1, c.paper);
+  block(ctx, x + 6, y + 22, 20, 5, c.leafLight);
+  block(ctx, x + 7, y + 20, 6, 5, c.leaf);
+  block(ctx, x + 21, y + 19, 5, 7, c.leaf);
   block(ctx, x + 15, y + 3, 2, 24, c.wood);
-  block(ctx, x + 4, y + 14, 24, 2, c.wood);
-  block(ctx, x + 3, y + 2, 1, 24, c.light);
-  block(ctx, x, y + 27, 32, 3, c.light);
-  block(ctx, x + 1, y + 30, 30, 2, c.dark);
+  block(ctx, x + 6, y + 14, 20, 2, c.wood);
+  block(ctx, x + 15, y + 3, 1, 24, c.light);
+  block(ctx, x + 1, y + 1, 5, 24, c.paper);
+  block(ctx, x + 26, y + 1, 5, 24, c.paper);
+  block(ctx, x + 2, y + 2, 1, 22, c.stoneLight);
+  block(ctx, x + 28, y + 2, 1, 22, c.stoneLight);
+  block(ctx, x + 3, y + 16, 3, 2, c.blue);
+  block(ctx, x + 26, y + 16, 3, 2, c.blue);
+  block(ctx, x, y, 32, 1, c.dark);
+  block(ctx, x, y + 27, 32, 2, c.light);
+  block(ctx, x + 1, y + 29, 30, 2, c.wood);
+  block(ctx, x + 4, y + 31, 24, 1, c.shadow);
 }
 
 /** Draws a shallow wall shelf with jars and books, keeping its silhouette within a 32px square. */
 function paintShelf(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const c = COLORS;
-  block(ctx, x + 1, y, 30, 30, c.ink);
-  block(ctx, x + 3, y + 2, 26, 25, c.dark);
+  block(ctx, x + 2, y + 2, 28, 29, c.dark);
+  block(ctx, x + 3, y + 3, 26, 25, c.wood);
+  block(ctx, x + 5, y + 4, 22, 23, "#ab8559");
+  block(ctx, x + 1, y, 30, 3, c.wood);
+  block(ctx, x + 2, y, 28, 1, c.light);
+  block(ctx, x + 3, y + 3, 1, 25, c.light);
   for (const shelf of [14, 28]) {
     block(ctx, x, y + shelf, 32, 3, c.wood);
     block(ctx, x, y + shelf, 32, 1, c.light);
   }
-  for (const [offset, color, height] of [[5, c.teal, 9], [10, c.rust, 11], [15, c.paper, 8]] as const) {
+  for (const [offset, color, height] of [[6, c.blue, 8], [10, c.rust, 10], [14, c.paper, 7]] as const) {
     block(ctx, x + offset, y + 14 - height, 4, height, color);
     block(ctx, x + offset, y + 14 - height + 2, 3, 1, c.light);
   }
+  block(ctx, x + 21, y + 8, 5, 5, c.paper);
+  block(ctx, x + 20, y + 7, 7, 2, c.stoneLight);
+  block(ctx, x + 23, y + 5, 1, 3, c.leaf);
+  block(ctx, x + 21, y + 4, 3, 2, c.leafLight);
+  block(ctx, x + 24, y + 3, 3, 3, c.leaf);
   for (const offset of [6, 18]) {
-    block(ctx, x + offset + 1, y + 19, 6, 2, c.paper);
-    block(ctx, x + offset, y + 21, 8, 6, c.teal);
-    block(ctx, x + offset + 2, y + 22, 2, 3, c.tealLight);
+    block(ctx, x + offset + 1, y + 19, 6, 2, c.light);
+    block(ctx, x + offset, y + 21, 8, 5, c.teal);
+    block(ctx, x + offset + 1, y + 26, 6, 1, c.tealDark);
+    block(ctx, x + offset + 1, y + 21, 2, 4, c.glassLight);
+    block(ctx, x + offset + 3, y + 22, 4, 3, c.paper);
   }
 }
 
-/** Draws a small wooden cabinet with two doors and a folded cloth at a 32px atlas origin. */
+/** Draws a mint two-door cabinet with pale worktop and folded linen in the existing 32px cell. */
 function paintCabinet(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const c = COLORS;
-  block(ctx, x + 1, y + 6, 30, 23, c.ink);
-  block(ctx, x + 3, y + 27, 4, 4, c.dark);
-  block(ctx, x + 25, y + 27, 4, 4, c.dark);
-  block(ctx, x, y + 5, 32, 6, c.light);
-  block(ctx, x, y + 10, 32, 2, c.dark);
-  block(ctx, x + 3, y + 13, 12, 13, c.wood);
-  block(ctx, x + 17, y + 13, 12, 13, c.wood);
-  block(ctx, x + 4, y + 14, 1, 11, c.light);
-  block(ctx, x + 18, y + 14, 1, 11, c.light);
-  block(ctx, x + 11, y + 17, 2, 2, c.paper);
-  block(ctx, x + 19, y + 17, 2, 2, c.paper);
-  block(ctx, x + 4, y + 3, 14, 4, c.tealDark);
-  block(ctx, x + 5, y + 2, 12, 3, c.tealLight);
-  block(ctx, x + 24, y + 1, 5, 5, c.rust);
-  block(ctx, x + 24, y, 5, 2, c.paper);
+  block(ctx, x + 3, y + 29, 27, 2, c.shadow);
+  block(ctx, x + 2, y + 8, 28, 21, c.tealDark);
+  block(ctx, x + 3, y + 27, 3, 4, c.tealDark);
+  block(ctx, x + 26, y + 27, 3, 4, c.tealDark);
+  block(ctx, x + 1, y + 5, 30, 6, c.light);
+  block(ctx, x + 1, y + 5, 30, 3, c.paper);
+  block(ctx, x + 2, y + 10, 28, 1, c.grain);
+  for (const left of [4, 17]) {
+    block(ctx, x + left, y + 12, 11, 14, c.teal);
+    block(ctx, x + left, y + 12, 11, 1, c.tealLight);
+    block(ctx, x + left, y + 12, 1, 14, c.tealLight);
+    block(ctx, x + left + 2, y + 14, 7, 10, c.tealLight);
+    block(ctx, x + left + 3, y + 15, 6, 9, c.teal);
+  }
+  block(ctx, x + 12, y + 16, 2, 2, c.light);
+  block(ctx, x + 18, y + 16, 2, 2, c.light);
+  block(ctx, x + 5, y + 3, 12, 3, c.blue);
+  block(ctx, x + 6, y + 2, 10, 2, c.paper);
+  block(ctx, x + 8, y + 2, 1, 4, c.blueLight);
+  block(ctx, x + 13, y + 2, 1, 4, c.blueLight);
+  block(ctx, x + 24, y + 2, 5, 4, c.rust);
+  block(ctx, x + 24, y + 1, 5, 2, c.paper);
 }
 
-/** Draws a compact brick cooking hearth with a kettle; the tilemap owns its solid footprint. */
+/** Draws a pale enamel cooking hearth and steel kettle; its existing solid footprint stays Tiled-owned. */
 function paintHearth(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const c = COLORS;
-  block(ctx, x + 2, y + 9, 28, 21, c.dark);
-  block(ctx, x + 1, y + 9, 30, 4, c.stoneLight);
-  block(ctx, x + 3, y + 14, 26, 14, c.stone);
-  for (const row of [16, 23]) {
-    block(ctx, x + 3, y + row, 26, 1, c.dark);
-    block(ctx, x + (row === 16 ? 8 : 5), y + row - 3, 1, 3, c.dark);
-    block(ctx, x + 23, y + row - 3, 1, 3, c.dark);
-  }
-  block(ctx, x + 10, y + 18, 12, 10, c.ink);
-  block(ctx, x + 12, y + 23, 8, 4, c.rust);
-  block(ctx, x + 14, y + 22, 4, 4, c.light);
-  block(ctx, x + 15, y + 24, 2, 2, c.paper);
-  block(ctx, x + 10, y + 3, 12, 7, c.ink);
-  block(ctx, x + 11, y + 2, 10, 2, c.stone);
-  block(ctx, x + 13, y + 1, 6, 2, c.ink);
-  block(ctx, x + 20, y + 4, 6, 2, c.ink);
-  block(ctx, x, y + 29, 32, 3, c.stoneLight);
+  block(ctx, x + 3, y + 29, 28, 2, c.shadow);
+  block(ctx, x + 2, y + 10, 28, 19, c.tealDark);
+  block(ctx, x + 3, y + 12, 26, 16, c.stoneLight);
+  block(ctx, x + 4, y + 13, 24, 13, c.paper);
+  block(ctx, x + 1, y + 9, 30, 4, c.ink);
+  block(ctx, x + 2, y + 9, 28, 1, c.stoneLight);
+  block(ctx, x + 5, y + 14, 3, 2, c.blueDark);
+  block(ctx, x + 23, y + 14, 3, 2, c.blueDark);
+  block(ctx, x + 10, y + 17, 12, 9, c.tealDark);
+  block(ctx, x + 11, y + 18, 10, 6, c.ink);
+  block(ctx, x + 12, y + 18, 8, 1, c.stone);
+  block(ctx, x + 12, y + 22, 8, 2, c.rustDark);
+  block(ctx, x + 14, y + 22, 2, 1, c.rust);
+  block(ctx, x + 19, y + 23, 1, 1, c.light);
+  block(ctx, x + 10, y + 3, 12, 6, c.blueDark);
+  block(ctx, x + 11, y + 3, 10, 5, c.stone);
+  block(ctx, x + 12, y + 4, 2, 3, c.glassLight);
+  block(ctx, x + 13, y + 1, 6, 1, c.ink);
+  block(ctx, x + 12, y + 2, 1, 2, c.ink);
+  block(ctx, x + 19, y + 2, 1, 2, c.ink);
+  block(ctx, x + 21, y + 5, 3, 2, c.blueDark);
+  block(ctx, x + 23, y + 4, 2, 2, c.stone);
+  block(ctx, x + 5, y + 29, 3, 2, c.tealDark);
+  block(ctx, x + 24, y + 29, 3, 2, c.tealDark);
 }
 
-/** Draws a potted bamboo accent in a 16×32 cell with a readable floor-level pot. */
+/** Draws a broad-leaf houseplant in a warm clay pot, confined to the existing 16×32 accent cell. */
 function paintPlant(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const c = COLORS;
-  block(ctx, x + 6, y + 4, 2, 20, c.leaf);
-  block(ctx, x + 10, y + 9, 1, 14, c.leaf);
-  for (const [dx, dy] of [[2, 8], [8, 4], [8, 14], [1, 17], [11, 10]]) {
-    block(ctx, x + dx!, y + dy!, 4, 2, c.leaf);
-    block(ctx, x + dx! + 1, y + dy! - 1, 3, 1, c.leafLight);
+  block(ctx, x + 4, y + 30, 10, 2, c.shadow);
+  block(ctx, x + 7, y + 6, 2, 20, c.tealDark);
+  for (const [dx, dy, right] of [[1, 8, false], [9, 4, true], [9, 13, true], [0, 16, false]] as const) {
+    block(ctx, x + dx + 1, y + dy, 4, 2, c.leaf);
+    block(ctx, x + dx, y + dy + 2, 6, 3, c.leaf);
+    block(ctx, x + dx + 2, y + dy + 5, 3, 1, c.tealDark);
+    block(ctx, x + dx + 1, y + dy + 1, 3, 2, c.leafLight);
+    block(ctx, x + (right ? 8 : 5), y + dy + 4, 3, 1, c.tealDark);
   }
-  block(ctx, x + 3, y + 23, 11, 3, c.ink);
-  block(ctx, x + 4, y + 26, 9, 5, c.rust);
-  block(ctx, x + 5, y + 26, 2, 4, c.light);
-  block(ctx, x + 5, y + 31, 7, 1, c.dark);
+  block(ctx, x + 3, y + 23, 11, 3, c.rustDark);
+  block(ctx, x + 3, y + 23, 11, 1, c.light);
+  block(ctx, x + 4, y + 26, 9, 3, c.rust);
+  block(ctx, x + 5, y + 29, 7, 2, c.rustDark);
+  block(ctx, x + 5, y + 26, 2, 3, c.light);
 }
 
 /** Draws the 32×48 bed with wooden posts, linen pillow and stitched quilt for the existing bed interaction. */
 function paintBed(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const c = COLORS;
-  block(ctx, x + 2, y + 1, 28, 45, c.ink);
-  block(ctx, x + 1, y, 4, 48, c.dark);
-  block(ctx, x + 27, y, 4, 48, c.dark);
-  block(ctx, x + 2, y + 1, 2, 42, c.light);
-  block(ctx, x + 28, y + 1, 2, 42, c.light);
-  block(ctx, x + 5, y + 2, 22, 7, c.wood);
-  block(ctx, x + 6, y + 3, 20, 1, c.light);
+  block(ctx, x + 3, y + 3, 27, 42, c.dark);
+  block(ctx, x + 2, y + 7, 3, 34, c.wood);
+  block(ctx, x + 27, y + 7, 3, 34, c.grain);
+  for (const left of [1, 27]) {
+    block(ctx, x + left, y + 1, 4, 8, c.dark);
+    block(ctx, x + left, y + 39, 4, 9, c.dark);
+    block(ctx, x + left + 1, y + 1, 2, 7, c.wood);
+    block(ctx, x + left + 1, y + 39, 2, 7, c.wood);
+    block(ctx, x + left + 1, y + 39, 2, 2, c.light);
+  }
+  block(ctx, x + 2, y, 2, 2, c.light);
+  block(ctx, x + 28, y, 2, 2, c.light);
+  block(ctx, x + 5, y + 4, 22, 5, c.wood);
+  block(ctx, x + 8, y + 2, 16, 5, c.wood);
+  block(ctx, x + 10, y + 1, 12, 1, c.light);
+  block(ctx, x + 8, y + 2, 2, 1, c.light);
+  block(ctx, x + 22, y + 2, 2, 1, c.light);
+  block(ctx, x + 5, y + 4, 3, 1, c.light);
+  block(ctx, x + 24, y + 4, 3, 1, c.light);
   block(ctx, x + 5, y + 9, 22, 32, c.paper);
-  block(ctx, x + 7, y + 10, 18, 8, "#c8bd96");
-  block(ctx, x + 8, y + 10, 16, 6, "#f3e9c9");
-  block(ctx, x + 5, y + 19, 22, 22, c.tealDark);
-  block(ctx, x + 6, y + 20, 20, 19, c.teal);
-  block(ctx, x + 6, y + 20, 20, 2, c.tealLight);
-  block(ctx, x + 7, y + 23, 2, 14, c.paper);
-  block(ctx, x + 23, y + 23, 2, 14, c.paper);
-  for (const row of [25, 32]) {
-    for (const col of [12, 18]) {
-      block(ctx, x + col, y + row, 2, 4, c.tealLight);
-      block(ctx, x + col - 1, y + row + 1, 4, 2, c.tealLight);
+  block(ctx, x + 7, y + 11, 18, 7, c.shadow);
+  block(ctx, x + 8, y + 10, 16, 7, c.plaster);
+  block(ctx, x + 9, y + 10, 14, 6, c.paper);
+  block(ctx, x + 5, y + 20, 22, 21, c.blueDark);
+  block(ctx, x + 6, y + 20, 20, 20, c.blueLight);
+  for (let row = 0; row < 4; row += 1) {
+    for (let column = 0; column < 4; column += 1) {
+      block(ctx, x + 6 + column * 5, y + 20 + row * 5, 5, 5, (row + column) % 2 === 0 ? c.blue : c.paper);
     }
   }
+  block(ctx, x + 6, y + 19, 20, 3, c.paper);
+  block(ctx, x + 6, y + 22, 20, 1, c.blueLight);
+  block(ctx, x + 25, y + 23, 1, 17, c.blueDark);
+  block(ctx, x + 6, y + 39, 19, 1, c.blueLight);
   block(ctx, x + 3, y + 41, 26, 4, c.wood);
   block(ctx, x + 3, y + 41, 26, 1, c.light);
-  block(ctx, x + 13, y + 43, 6, 1, c.dark);
+  block(ctx, x + 5, y + 44, 22, 1, c.grain);
 }

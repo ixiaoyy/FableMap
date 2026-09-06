@@ -3,6 +3,7 @@ import { ITEM_ID, getItemDefinition } from "../../../../domain/items/definitions
 import { facingVector, type Facing } from "../../../../domain/world/facing.ts";
 import type { WorldPoint } from "../../../../domain/world/regions.ts";
 import { itemTextureFrame } from "../assets/item-textures.ts";
+import { pastoralToolCell, pastoralToolGrip, pastoralToolScale } from "../assets/pastoral-art-preview.ts";
 import type { PlayerMediaProfile } from "../assets/visual-profile.ts";
 
 export type FarmAction = "axe" | "pickaxe" | "scythe" | "plow" | "plant" | "water" | "harvest";
@@ -22,17 +23,18 @@ const TOOL_POSES: Readonly<Record<Facing, readonly [ToolPose, ToolPose]>> = {
 
 /** Resolves each source icon's actual grip; mirrored tools must mirror the pivot as well as their pixels. */
 function itemGrip(itemId: string, facing: Facing): { x: number; y: number } {
-  const grip = itemId === ITEM_ID.hoe ? { x: 0.68, y: 0.25 }
+  const grip = pastoralToolGrip(itemId) ?? (itemId === ITEM_ID.hoe ? { x: 0.68, y: 0.25 }
     : itemId === ITEM_ID.axe ? { x: 0.25, y: 0.75 }
       : itemId === ITEM_ID.pickaxe ? { x: 0.22, y: 0.82 }
         : itemId === ITEM_ID.scythe ? { x: 0.18, y: 0.82 }
           : itemId === ITEM_ID.wateringCan ? { x: 0.4, y: 0.2 }
-            : { x: 0.5, y: 0.6 };
+            : { x: 0.5, y: 0.6 });
   return { x: facing === "left" ? 1 - grip.x : grip.x, y: grip.y };
 }
 
 /** Maps a hoe's opposite blade/handle orientation to the same directional hand poses as the axe. */
 function hoeAngle(facing: Facing, impact: boolean): number {
+  if (pastoralToolCell(ITEM_ID.hoe)) return TOOL_POSES[facing][impact ? 1 : 0].angle;
   const angles: Readonly<Record<Facing, readonly [number, number]>> = {
     down: [150, 0], up: [0, 180], right: [130, -75], left: [-130, 75],
   };
@@ -55,6 +57,7 @@ export class FarmingActionPresenter {
   private readonly effects = new Set<Phaser.GameObjects.Container>();
   private action: FarmAction = "harvest";
   private facing: Facing = "down";
+  private readonly handY = -8.5;
 
   /** Creates presentation-owned tool/held layers for this exact avatar, without changing its saved appearance. */
   constructor(
@@ -69,14 +72,15 @@ export class FarmingActionPresenter {
     container.add([this.tool, this.held]);
   }
 
-  /** Projects any supported selected item at the avatar's hand, with north-facing items behind the body. */
+  /** Projects items at native y43 hands relative to y60 feet at half scale; side hands stay near the body axis and north props render behind. */
   hold(itemId: string, facing: Facing): void {
     const frame = itemTextureFrame(itemId);
     this.held.setVisible(frame !== null);
     if (!frame) return;
     const grip = itemGrip(itemId, facing);
     this.held.setTexture(frame.texture, frame.frame).setAlpha(1).setFlipX(facing === "left")
-      .setOrigin(grip.x, grip.y).setPosition(facing === "left" ? -5 : 5, facing === "up" ? -5 : 1);
+      .setScale(pastoralToolScale(itemId))
+      .setOrigin(grip.x, grip.y).setPosition(facing === "left" ? 1 : facing === "right" ? -1 : 5, this.handY);
     if (facing === "up") this.container.sendToBack(this.held);
     else this.container.bringToTop(this.held);
   }
@@ -98,13 +102,14 @@ export class FarmingActionPresenter {
     if (frame && action !== "harvest") {
       const grip = itemGrip(itemId, facing);
       this.tool.setTexture(frame.texture, frame.frame).setFlipX(facing === "left")
-        .setOrigin(grip.x, grip.y).setPosition(pose.x, pose.y)
+        .setScale(pastoralToolScale(itemId))
+        .setOrigin(grip.x, grip.y).setPosition(pose.x, pose.y + this.handY - 1)
         .setAngle(action === "water" || action === "plant" ? 0 : action === "plow" ? hoeAngle(facing, false) : pose.angle)
         .setVisible(true).setAlpha(1);
       if (facing === "up") this.container.sendToBack(this.tool);
       else this.container.bringToTop(this.tool);
       if (action === "water" || action === "plant") {
-        this.tool.setPosition(direction.x * 6 + (direction.x === 0 ? 5 : 0), direction.y < 0 ? -6 : 0);
+        this.tool.setPosition(direction.x * 6 + (direction.x === 0 ? 5 : 0), (direction.y < 0 ? -6 : 0) + this.handY - 1);
       }
     }
   }
@@ -122,7 +127,7 @@ export class FarmingActionPresenter {
     this.scene.tweens.add({
       targets: this.tool,
       x: this.action === "plant" ? direction.x * 7 + (direction.x === 0 ? 4 : 0) : pose.x,
-      y: this.action === "water" ? (direction.y < 0 ? -7 : 2) : pose.y,
+      y: (this.action === "water" ? (direction.y < 0 ? -7 : 2) : pose.y) + this.handY - 1,
       angle: this.action === "water" ? (this.facing === "left" ? -25 : 25)
         : this.action === "plant" ? 0 : this.action === "plow" ? hoeAngle(this.facing, true) : pose.angle,
       duration: 100, ease: "Quad.In",

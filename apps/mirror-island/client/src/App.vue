@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import type { PlayerAppearanceId } from "../../domain/player/appearance.ts";
+import type { PlayerAppearance } from "../../domain/player/appearance.ts";
 import PhaserGame from "./PhaserGame.vue";
 import { HOME_HERO_URL } from "./game/assets/media-catalog.ts";
+import { ensureCharacterArtReady } from "./game/assets/character-media.ts";
 import { isToolArtPreviewEnabled } from "./game/assets/tool-art-candidate.ts";
 import { daylightVisualAt } from "./game/presentation/daylight.ts";
 import { loadWorldCatalog } from "./game/world/world-catalog.ts";
@@ -32,6 +33,7 @@ import SocialPanel from "./ui/social/SocialPanel.vue";
 import TouchControls from "./ui/controls/TouchControls.vue";
 import CalendarPanel from "./ui/calendar/CalendarPanel.vue";
 import CharacterCreator from "./ui/character/CharacterCreator.vue";
+import WardrobePanel from "./ui/character/WardrobePanel.vue";
 import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
 import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
 import BackpackUpgradePanel from "./ui/inventory/BackpackUpgradePanel.vue";
@@ -51,6 +53,8 @@ import WeatherLayer from "./game/presentation/WeatherLayer.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
+// Re-enter the loading gate on App remounts as well, before either Vue previews or Phaser can request character pixels.
+setGamePhase("initializing");
 const characterCreationReturnPhase = ref<"menu" | "error">("menu");
 const debugMode = computed(() => new URLSearchParams(window.location.search).get("debug") === "1");
 const toolArtPreviewMode = isToolArtPreviewEnabled();
@@ -84,8 +88,8 @@ async function startNewGame(): Promise<void> {
 }
 
 /** Creates and enters a fresh local world using the appearance confirmed on the creation page. */
-async function confirmCharacterCreation(appearanceId: PlayerAppearanceId): Promise<void> {
-  await enterGame(() => getLocalGameSession().newGame(appearanceId));
+async function confirmCharacterCreation(appearance: PlayerAppearance): Promise<void> {
+  await enterGame(() => getLocalGameSession().newGame(appearance));
 }
 
 /** Leaves character creation without writing or deleting the current browser save. */
@@ -133,6 +137,13 @@ function isolateUiActivationKeys(event: KeyboardEvent): void {
 }
 
 onMounted(async () => {
+  try {
+    await ensureCharacterArtReady();
+  } catch {
+    failureMessage.value = "角色素材暂时没有加载成功，请检查网络后刷新重试。";
+    setGamePhase("error");
+    return;
+  }
   if (toolArtPreviewMode) {
     try {
       removeRetiredLocalStorageSaves();
@@ -214,7 +225,7 @@ onUnmounted(() => {
         v-if="gameUiState.feedback"
         class="action-feedback"
         :data-tone="gameUiState.feedback.tone"
-        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.backpackOpen || gameUiState.craftingOpen || gameUiState.containerId !== null || gameUiState.shippingBinId !== null || gameUiState.buildingServiceId !== null || gameUiState.backpackUpgradeId !== null || gameUiState.worldPlacement !== null || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen || gameUiState.fishing.phase !== 'idle' || gameUiState.giftConfirmation !== null || gameUiState.daySettlement.phase !== 'idle'"
+        :data-modal-open="gameUiState.shopOpen || gameUiState.dialogue !== null || gameUiState.sleepConfirmationOpen || gameUiState.socialOpen || gameUiState.calendarOpen || gameUiState.audioSettingsOpen || gameUiState.wardrobeOpen || gameUiState.backpackOpen || gameUiState.craftingOpen || gameUiState.containerId !== null || gameUiState.shippingBinId !== null || gameUiState.buildingServiceId !== null || gameUiState.backpackUpgradeId !== null || gameUiState.worldPlacement !== null || gameUiState.requestBoardOpen || gameUiState.petAdoptionOpen || gameUiState.fishing.phase !== 'idle' || gameUiState.giftConfirmation !== null || gameUiState.daySettlement.phase !== 'idle'"
         aria-live="polite"
       >
         {{ gameUiState.feedback.message }}
@@ -223,6 +234,7 @@ onUnmounted(() => {
       <TodayHint />
       <SocialPanel />
       <AudioSettingsPanel />
+      <WardrobePanel />
       <BackpackPanel />
       <CraftingPanel />
       <RequestBoardPanel />

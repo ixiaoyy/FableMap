@@ -3,9 +3,9 @@ import { INTERIOR_PALETTE as c, paintCottageAtlas, paintInteriorBlock as block }
 
 export const SHOP_INTERIOR_TEXTURE_KEY = "shop-interiors";
 
-const IRON = { dark: "#3e4947", shade: "#596866", face: "#83918a", edge: "#bac1ae" } as const;
+const IRON = { dark: "#4c6065", shade: "#6c8991", face: "#99b1b6", edge: "#e0ece4" } as const;
 
-/** Registers the two shops' original 256px atlas once, reusing the accepted cottage woodwork unchanged. */
+/** Registers the shops' original 256px atlas once, sharing the cottage's fresh pastoral material palette. */
 export function registerShopInteriorArt(scene: Phaser.Scene): void {
   if (scene.textures.exists(SHOP_INTERIOR_TEXTURE_KEY)) return;
   const texture = scene.textures.createCanvas(SHOP_INTERIOR_TEXTURE_KEY, 256, 256);
@@ -118,22 +118,33 @@ function paintSeedSign(ctx: CanvasRenderingContext2D, x: number, y: number): voi
 
 /** Draws left/middle/right 16px counter segments for a Tiled-owned continuous shop counter. */
 function paintCounter(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-  block(ctx, x, y, 48, 16, c.ink);
-  block(ctx, x + 1, y, 46, 4, c.light);
-  block(ctx, x + 1, y + 4, 46, 2, c.dark);
-  block(ctx, x + 2, y + 6, 44, 8, c.wood);
-  block(ctx, x + 3, y + 7, 42, 1, c.light);
-  for (const offset of [14, 30]) block(ctx, x + offset, y + 6, 2, 9, c.grain);
-  block(ctx, x + 22, y + 9, 4, 1, c.dark);
-  block(ctx, x + 1, y + 14, 46, 1, c.grain);
+  block(ctx, x, y, 48, 16, c.tealDark);
+  block(ctx, x + 1, y, 46, 4, c.paper);
+  block(ctx, x + 1, y + 3, 46, 2, c.light);
+  block(ctx, x + 1, y + 5, 46, 1, c.grain);
+  block(ctx, x + 2, y + 6, 44, 8, c.teal);
+  block(ctx, x + 3, y + 6, 42, 1, c.tealLight);
+  for (const offset of [2, 17, 33]) {
+    block(ctx, x + offset + 1, y + 8, 11, 1, c.tealLight);
+    block(ctx, x + offset + 1, y + 8, 1, 4, c.tealLight);
+    block(ctx, x + offset + 12, y + 8, 1, 5, c.tealDark);
+    block(ctx, x + offset + 1, y + 12, 12, 1, c.tealDark);
+  }
+  block(ctx, x + 22, y + 9, 4, 1, c.light);
 }
 
-/** Draws three flat welcome-mat segments with a quiet green woven border. */
+/** Draws three flat linen welcome-mat segments with the cottage's blue woven border. */
 function paintShopMat(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-  block(ctx, x, y + 2, 48, 12, c.dark);
-  block(ctx, x + 1, y + 3, 46, 10, c.tealDark);
-  block(ctx, x + 3, y + 4, 42, 8, c.teal);
-  for (let offset = 6; offset < 45; offset += 6) block(ctx, x + offset, y + 7, 3, 1, c.tealLight);
+  block(ctx, x, y + 3, 48, 11, c.shadow);
+  block(ctx, x, y + 2, 48, 11, c.paper);
+  block(ctx, x + 2, y + 3, 44, 2, c.blue);
+  block(ctx, x + 2, y + 10, 44, 2, c.blue);
+  block(ctx, x + 2, y + 4, 2, 7, c.blue);
+  block(ctx, x + 44, y + 4, 2, 7, c.blue);
+  for (let offset = 5; offset < 45; offset += 5) {
+    block(ctx, x + offset, y + 3, 2, 1, c.blueLight);
+    block(ctx, x + offset, y + 11, 2, 1, c.blueLight);
+  }
 }
 
 /** Draws a 48px cooling forge with a masonry hood, dark firebox and a few banked coals. */
@@ -251,15 +262,13 @@ function paintLogRack(ctx: CanvasRenderingContext2D, x: number, y: number): void
   block(ctx, x + 1, y + 13, 30, 1, c.wood);
 }
 
-/** Draws one 16px worn stone-floor tile; the second variant changes joints without a new material system. */
+/** Draws one clean pale stone-floor tile; the alternate joint retains the existing two-frame map contract. */
 function paintStoneFloor(ctx: CanvasRenderingContext2D, x: number, y: number, alternate: boolean): void {
-  block(ctx, x, y, 16, 16, "#6f7567");
-  block(ctx, x + 1, y + 1, 15, 14, alternate ? "#969984" : "#a09e87");
-  block(ctx, x + 2, y + 1, 13, 1, c.stoneLight);
-  block(ctx, x + (alternate ? 5 : 11), y + 1, 1, 14, "#858673");
-  block(ctx, x + 2, y + 8, 14, 1, "#858673");
-  block(ctx, x + (alternate ? 10 : 3), y + 5, 3, 1, "#b0ae94");
-  block(ctx, x + 9, y + 12, 2, 1, "#747b6e");
+  block(ctx, x, y, 16, 16, "#a2b3a6");
+  block(ctx, x + 1, y + 1, 15, 14, alternate ? "#c6d1bf" : "#ced6c5");
+  block(ctx, x + 2, y + 1, 13, 1, "#e4e8d8");
+  block(ctx, x + (alternate ? 5 : 11), y + 1, 1, 14, "#afbcad");
+  block(ctx, x + 2, y + 8, 14, 1, "#afbcad");
 }
 
 /** Draws a resting 32×16 leather bellows beside the cooling forge. */

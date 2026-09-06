@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Local development candidates only; not published or registered production media.",
+  "processing": "Tools/cottage: mechanical edge-seeded background alpha removal and atlas/crop normalization. Interior: two ImageGen furniture-alignment edits followed by byte-identical copy; no additional pixel processing.",
+  "backgroundRule": {
+    "minimumChannel": 228,
+    "maximumChannelSpread": 18,
+    "connectivity": 4
+  },
+  "tools": {
+    "source": {
+      "filename": "tools-source.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1143308,
+      "mime": "image/png",
+      "sha256": "482995b2e94c1746664458c59cd73f94df94c2a448002d7489c3fbb7997cb62b",
+      "hasAlpha": false
+    },
+    "output": {
+      "filename": "tools-v1.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 544341,
+      "mime": "image/png",
+      "sha256": "072a373524fce27669b1be2070be063c8e0998c8fd7c6218645c0d1077f0d7db",
+      "hasAlpha": true
+    },
+    "removal": {
+      "removedPixels": 1397333,
+      "retainedPixels": 175531
+    },
+    "handleSeeds": [
+      {
+        "x": 815,
+        "y": 132,
+        "purpose": "upper watering-can handle opening"
+      },
+      {
+        "x": 915,
+        "y": 239,
+        "purpose": "right watering-can handle opening"
+      }
+    ],
+    "normalization": {
+      "cellSize": 512,
+      "maximumObjectDimension": 384,
+      "minimumPadding": 64,
+      "kernel": "nearest",
+      "emptyCell": {
+        "column": 2,
+        "row": 1
+      }
+    },
+    "cells": [
+      {
+        "id": "hoe",
+        "column": 0,
+        "row": 0,
+        "sourceBounds": {
+          "left": 140,
+          "top": 84,
+          "width": 362,
+          "height": 353
+        },
+        "sourceCellBounds": {
+          "left": 140,
+          "top": 84,
+          "width": 362,
+          "height": 353
+        },
+        "targetBounds": {
+          "left": 64,
+          "top": 69,
+          "width": 384,
+          "height": 374
+        },
+        "targetCellBounds": {
+          "left": 64,
+          "top": 69,
+          "width": 384,
+          "height": 374
+        },
+        "scale": 1.0607734806629834,
+        "actualOutputBounds": {
+          "left": 64,
+          "top": 69,
+          "width": 384,
+          "height": 374
+        }
+      },
+      {
+        "id": "wateringCan",
+        "column": 1,
+        "row": 0,
+        "sourceBounds": {
+          "left": 603,
+          "top": 84,
+          "width": 341,
+          "height": 311
+        },
+        "sourceCellBounds": {
+          "left": 91,
+          "top": 84,
+          "width": 341,
+          "height": 311
+        },
+        "targetBounds": {
+          "left": 576,
+          "top": 81,
+          "width": 384,
+          "height": 350
+        },
+        "targetCellBounds": {
+          "left": 64,
+          "top": 81,
+          "width": 384,
+          "height": 350
+        },
+        "scale": 1.1260997067448681,
+        "actualOutputBounds": {
+          "left": 576,
+          "top": 81,
+          "width": 384,
+          "height": 350
+        }
+      },
+      {
+        "id": "axe",
+        "column": 2,
+        "row": 0,
+        "sourceBounds": {
+          "left": 1089,
+          "top": 64,
+          "width": 347,
+          "height": 373
+        },
+        "sourceCellBounds": {
+          "left": 65,
+          "top": 64,
+          "width": 347,
+          "height": 373
+        },
+        "targetBounds": {
+          "left": 1101,
+          "top": 64,
+          "width": 357,
+          "height": 384
+        },
+        "targetCellBounds": {
+          "left": 77,
+          "top": 64,
+          "width": 357,
+          "height": 384
+        },
+        "scale": 1.029490616621984,
+        "actualOutputBounds": {
+          "left": 1101,
+          "top": 64,
+          "width": 357,
+          "height": 384
+        }
+      },
+      {
+        "id": "pickaxe",
+        "column": 0,
+        "row": 1,
+        "sourceBounds": {
+          "left": 140,
+          "top": 552,
+          "width": 323,
+          "height": 375
+        },
+        "sourceCellBounds": {
+          "left": 140,
+          "top": 40,
+          "width": 323,
+          "height": 375
+        },
+        "targetBounds": {
+          "left": 90,
+          "top": 576,
+          "width": 331,
+          "height": 384
+        },
+        "targetCellBounds": {
+          "left": 90,
+          "top": 64,
+          "width": 331,
+          "height": 384
+        },
+        "scale": 1.024,
+        "actualOutputBounds": {
+          "left": 90,
+          "top": 576,
+          "width": 331,
+          "height": 384
+        }
+      },
+      {
+        "id": "scythe",
+        "column": 1,
+        "row": 1,
+        "sourceBounds": {
+          "left": 578,
+          "top": 526,
+          "width": 381,
+          "height": 401
+        },
+        "sourceCellBounds": {
+          "left": 66,
+          "top": 14,
+          "width": 381,
+          "height": 401
+        },
+        "targetBounds": {
+          "left": 585,
+          "top": 576,
+          "width": 365,
+          "height": 384
+        },
+        "targetCellBounds": {
+          "left": 73,
+          "top": 64,
+          "width": 365,
+          "height": 384
+        },
+        "scale": 0.9576059850374065,
+        "actualOutputBounds": {
+          "left": 585,
+          "top": 576,
+          "width": 365,
+          "height": 384
+        }
+      }
+    ]
+  },
+  "cottage": {
+    "source": {
+      "filename": "cottage-source.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1645177,
+      "mime": "image/png",
+      "sha256": "cf2eec7703539aa330ae659bd6b8fc54670db0aa79cabd79f23599466d952217",
+      "hasAlpha": false
+    },
+    "output": {
+      "filename": "cottage-v1.png",
+      "width": 952,
+      "height": 1112,
+      "bytes": 2301749,
+      "mime": "image/png",
+      "sha256": "32f4c21a7c0f3ec5375a752908c1ffe901f79a09286297ddb98cf83ba96819d8",
+      "hasAlpha": true
+    },
+    "removal": {
+      "removedPixels": 699386,
+      "retainedPixels": 873130
+    },
+    "sourceBounds": {
+      "left": 153,
+      "top": 67,
+      "width": 948,
+      "height": 1108
+    },
+    "outputBounds": {
+      "left": 2,
+      "top": 2,
+      "width": 948,
+      "height": 1108
+    },
+    "transparentPadding": 2,
+    "resized": false
+  },
+  "interior": {
+    "source": {
+      "filename": "interior-source.png",
+      "prompt": "interior",
+      "width": 1604,
+      "height": 980,
+      "bytes": 2304748,
+      "mime": "image/png",
+      "sha256": "642eef6cc71f0e6cc8b1c67db76af5e48088babb200fd543919b404c5e80ff4d",
+      "hasAlpha": false,
+      "generationFilename": "exec-f5d59bf8-e909-4386-8b50-56a8a4380f17.png"
+    },
+    "generationChain": [
+      {
+        "filename": "exec-f5d59bf8-e909-4386-8b50-56a8a4380f17.png",
+        "prompt": "interior",
+        "width": 1604,
+        "height": 980,
+        "bytes": 2304748,
+        "mime": "image/png",
+        "sha256": "642eef6cc71f0e6cc8b1c67db76af5e48088babb200fd543919b404c5e80ff4d",
+        "hasAlpha": false
+      },
+      {
+        "filename": "exec-dc3ae242-76ae-4fd8-ba60-56c5a8c94c54.png",
+        "prompt": "interior_correction",
+        "width": 1605,
+        "height": 980,
+        "bytes": 2118979,
+        "mime": "image/png",
+        "sha256": "533caad67f6527de1967053d856bf147c9cbd54d797f9db5a71f480834499d0a",
+        "hasAlpha": false
+      },
+      {
+        "filename": "exec-3cad624d-c538-4592-9c29-d959f211457e.png",
+        "prompt": "interior_bed_correction",
+        "width": 1605,
+        "height": 980,
+        "bytes": 2140005,
+        "mime": "image/png",
+        "sha256": "32386bf2a3d2ca4f137909954f1591badf071a5bbc72c078722da867de3caaae",
+        "hasAlpha": false
+      }
+    ],
+    "output": {
+      "filename": "interior-v1.png",
+      "prompt": "interior_bed_correction",
+      "width": 1605,
+      "height": 980,
+      "bytes": 2140005,
+      "mime": "image/png",
+      "sha256": "32386bf2a3d2ca4f137909954f1591badf071a5bbc72c078722da867de3caaae",
+      "hasAlpha": false,
+      "generationFilename": "exec-3cad624d-c538-4592-9c29-d959f211457e.png"
+    },
+    "processing": "Original generation, first ImageGen geometry correction, second ImageGen bed correction; final PNG copied byte-for-byte with no alpha removal, cropping, resizing or re-encoding.",
+    "runtime": {
+      "x": 176,
+      "y": 256,
+      "width": 288,
+      "height": 176
+    },
+    "bedVisualBoundsApproximate": {
+      "left": 194,
+      "top": 197,
+      "right": 370,
+      "bottom": 454,
+      "note": "Approximate visual bounds in final 1605x980 source, with a small shadow overhang; collision and interactive bed region remain unchanged."
+    },
+    "referenceInputs": [
+      {
+        "filename": "artifacts/pastoral-redesign-2026-09-06/cottage-interior-before.png",
+        "width": 1280,
+        "height": 800,
+        "bytes": 51877,
+        "mime": "image/png",
+        "sha256": "cc5089b16737c9e86bda81262096d726971be89efeec21eee8a61edba3b8257f"
+      },
+      {
+        "filename": "artifacts/visual-directions-2026-09-06/A-fresh-pastoral.png",
+        "width": 1536,
+        "height": 1024,
+        "bytes": 2391327,
+        "mime": "image/png",
+        "sha256": "26cba1531a4dc2ae8a504396f9505b4798cbb09980e1d57cfd79965f307f62c4"
+      }
+    ]
+  }
+}

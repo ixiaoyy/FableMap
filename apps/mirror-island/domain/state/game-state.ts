@@ -15,8 +15,12 @@ import {
   type FriendshipState,
 } from "../social/definitions.ts";
 import {
+  DEFAULT_PLAYER_APPEARANCE,
   DEFAULT_PLAYER_APPEARANCE_ID,
+  decodePlayerAppearance,
   decodePlayerAppearanceId,
+  legacyPlayerAppearance,
+  type PlayerAppearance,
   type PlayerAppearanceId,
 } from "../player/appearance.ts";
 import { activeNpcSpawnsInRegion } from "../world/npc-schedules.ts";
@@ -74,6 +78,7 @@ import {
   type ShippingState,
 } from "../shipping/shipping-state.ts";
 
+// Composition is additive within v13; old records acquire it from their retained legacy appearance ID.
 export const GAME_STATE_VERSION = 13 as const;
 export const TREE_ID = "farm-tree-001";
 export const FARM_TILE_ID = "farm-plot-001";
@@ -88,7 +93,9 @@ export interface PlayerState {
   regionId: string;
   x: number;
   y: number;
+  /** Compatibility metadata for existing v13 saves; rendering uses appearance. */
   appearanceId: PlayerAppearanceId;
+  appearance: PlayerAppearance;
 }
 
 export interface ResourceState {
@@ -146,7 +153,7 @@ export interface GameState extends StorageWorldState, ShippingState {
 /** Creates a deterministic current game state for one validated appearance, seed and Tiled-derived catalog. */
 export function createInitialGameState(
   catalog: WorldCatalog,
-  appearanceId: PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID,
+  appearance: PlayerAppearance | PlayerAppearanceId = DEFAULT_PLAYER_APPEARANCE,
   worldSeed: number = DEFAULT_WORLD_SEED,
 ): GameState {
   const inventory: InventorySlot[] = Array.from(
@@ -168,7 +175,8 @@ export function createInitialGameState(
     player: {
       regionId: catalog.startRegionId,
       ...start,
-      appearanceId: decodePlayerAppearanceId(appearanceId),
+      appearanceId: typeof appearance === "string" ? decodePlayerAppearanceId(appearance) : DEFAULT_PLAYER_APPEARANCE_ID,
+      appearance: typeof appearance === "string" ? legacyPlayerAppearance(appearance) : decodePlayerAppearance(appearance),
     },
     inventory,
     ...retentionDefaults(1),
@@ -263,7 +271,7 @@ export function cloneGameState(state: GameState): GameState {
     lastSurfaceStoneRefreshDay: state.lastSurfaceStoneRefreshDay,
     lastSurfaceWeedRefreshDay: state.lastSurfaceWeedRefreshDay,
     gold: state.gold,
-    player: { ...state.player },
+    player: { ...state.player, appearance: { ...state.player.appearance } },
     inventory: state.inventory.map((slot) => ({ ...slot })),
     inventoryCapacity: state.inventoryCapacity,
     wateringCanLevel: state.wateringCanLevel,
@@ -493,16 +501,20 @@ export function createTilledFarmTile(column: number, row: number): FarmTileState
   };
 }
 
-/** Validates one player position and stable region identifier. */
+/** Validates one player record, adding composition defaults only for older v13 records that omit appearance. */
 function decodePlayerState(value: unknown): PlayerState {
   const player = recordFrom(value, "Player state is invalid.");
   const regionId = stringFrom(player.regionId, "Player region is invalid.");
   assertStableId(regionId, "Player region ID");
+  const appearanceId = decodePlayerAppearanceId(player.appearanceId);
   return {
     regionId,
     x: finiteNumber(player.x, "Player X is invalid."),
     y: finiteNumber(player.y, "Player Y is invalid."),
-    appearanceId: decodePlayerAppearanceId(player.appearanceId),
+    appearanceId,
+    appearance: player.appearance === undefined
+      ? legacyPlayerAppearance(appearanceId)
+      : decodePlayerAppearance(player.appearance),
   };
 }
 

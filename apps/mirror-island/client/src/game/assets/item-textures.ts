@@ -3,6 +3,7 @@ import { ITEM_DEFINITIONS } from "../../../../domain/items/definitions.ts";
 import { GARDENS_ICON_URL, itemIconForItem } from "./item-icons.ts";
 import { paintPixelArt } from "./pixel-art.ts";
 import { VECTORAITH_MEDIA_KEYS, VECTORAITH_MEDIA_URLS } from "./visual-profile.ts";
+import { PASTORAL_PREVIEW } from "./pastoral-art-preview.ts";
 
 export const GARDENS_TEXTURE_KEY = "item-gardens";
 
@@ -37,6 +38,7 @@ export function itemTextureFrame(itemId: string): { texture: string; frame?: str
   const icon = itemIconForItem(itemId);
   if (!icon) return null;
   if (icon.kind === "pixels") return { texture: `item-original-${itemId}` };
-  const texture = ATLAS_KEYS[icon.url];
+  const texture = PASTORAL_PREVIEW && icon.url === PASTORAL_PREVIEW.tools.url
+    ? PASTORAL_PREVIEW.tools.key : ATLAS_KEYS[icon.url];
   return texture ? { texture, frame: `item-${itemId}` } : null;
 }

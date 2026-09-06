@@ -11,9 +11,24 @@ const vectoraithNpcBaseUrl = `${vendorBaseUrl}/vectoraith/top-down-rpg-npc-v1.6-
 const ivoryRedBaseUrl = `${vendorBaseUrl}/ivoryred/gardens-2026-08-27/original`;
 const bluecarrotPetBaseUrl = `${vendorBaseUrl}/bluecarrot16/lpc-cats-and-dogs-2016`;
 const homeArtBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31";
+const characterArtBaseUrl = "https://img.pingxingxian.space/game/media/v1/assets/original/islander/2026-09-07-v3";
 const kenneyAudioBaseUrl = `${vendorBaseUrl}/kenney/rpg-audio-2014`;
 const rubberduckAudioBaseUrl = `${vendorBaseUrl}/rubberduck/100-cc0-sfx-2-2018`;
 const assets = [
+  {
+    name: "Original islander v3 layers",
+    url: `${characterArtBaseUrl}/character-layers-v3.png`,
+    outputs: ["public/game-media/v1/assets/original/islander/2026-09-07-v3/character-layers-v3.png"],
+    bytes: 168215,
+    sha256: "d60a4de60f4fd051d1892ea8f2437b89a1d91cc0401eef67b35352f5633c50e4",
+  },
+  {
+    name: "Original islander v3 material mask",
+    url: `${characterArtBaseUrl}/character-materials-v3.png`,
+    outputs: ["public/game-media/v1/assets/original/islander/2026-09-07-v3/character-materials-v3.png"],
+    bytes: 22698,
+    sha256: "485190d95294ac78b7e8cad6a9bcad5bd482560787f17146f98e957af5a8335d",
+  },
   {
     name: "male player",
     url: `${ninjaBaseUrl}/player.png`,

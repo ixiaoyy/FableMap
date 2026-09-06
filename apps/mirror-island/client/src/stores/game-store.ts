@@ -10,7 +10,9 @@ import type { GameState } from "../../../domain/state/game-state.ts";
 import type { PetState } from "../../../domain/pets/definitions.ts";
 import {
   DEFAULT_PLAYER_APPEARANCE_ID,
+  DEFAULT_PLAYER_APPEARANCE,
   type PlayerAppearanceId,
+  type PlayerAppearance,
 } from "../../../domain/player/appearance.ts";
 import { DAY_START_MINUTE } from "../../../domain/time/game-time.ts";
 import { MAX_STAMINA } from "../../../domain/stamina/definitions.ts";
@@ -93,6 +95,7 @@ const mutableState = reactive({
   playerX: 0,
   playerY: 0,
   playerAppearanceId: DEFAULT_PLAYER_APPEARANCE_ID as PlayerAppearanceId,
+  playerAppearance: { ...DEFAULT_PLAYER_APPEARANCE } as PlayerAppearance,
   gold: 0,
   stamina: MAX_STAMINA,
   maxStamina: MAX_STAMINA,
@@ -126,6 +129,7 @@ const mutableState = reactive({
   socialOpen: false,
   calendarOpen: false,
   audioSettingsOpen: false,
+  wardrobeOpen: false,
   backpackOpen: false,
   craftingOpen: false,
   containerId: null as string | null,
@@ -165,6 +169,7 @@ export function applyGameState(state: GameState): void {
   mutableState.playerX = state.player.x;
   mutableState.playerY = state.player.y;
   mutableState.playerAppearanceId = state.player.appearanceId;
+  mutableState.playerAppearance = { ...state.player.appearance };
   mutableState.gold = state.gold;
   mutableState.stamina = state.stamina;
   mutableState.inventory = state.inventory.map((slot, index) => ({
@@ -375,6 +380,16 @@ export function openAudioSettings(): boolean {
 /** Closes audio preferences without changing gameplay or IndexedDB state. */
 export function closeAudioSettings(): void { mutableState.audioSettingsOpen = false; }
 
+/** Opens the clothing editor only when no other modal or action owns world input; returns whether it opened. */
+export function openWardrobe(): boolean {
+  if (isWorldInputLocked()) return false;
+  mutableState.wardrobeOpen = true;
+  return true;
+}
+
+/** Closes the transient clothing editor; its unsaved appearance draft is owned by the panel, never GameState. */
+export function closeWardrobe(): void { mutableState.wardrobeOpen = false; }
+
 /** Persists one normalized audio channel and projects the resulting immutable preference snapshot. */
 export function setAudioVolume(channel: AudioVolumeChannel, value: number): void {
   mutableState.audioSettings = updateAudioVolume(channel, value);
@@ -548,6 +563,7 @@ export function isGameClockPaused(): boolean {
     || mutableState.socialOpen
     || mutableState.calendarOpen
     || mutableState.audioSettingsOpen
+    || mutableState.wardrobeOpen
     || mutableState.backpackOpen
     || mutableState.craftingOpen
     || mutableState.containerId !== null
@@ -585,6 +601,7 @@ export function applyDaySettlement(state: DaySettlementSnapshot): void {
   mutableState.socialOpen = false;
   mutableState.calendarOpen = false;
   mutableState.audioSettingsOpen = false;
+  mutableState.wardrobeOpen = false;
   mutableState.backpackOpen = false;
   closeStoragePanels();
   mutableState.requestBoardOpen = false;
@@ -600,6 +617,7 @@ export function clearGameState(): void {
   mutableState.playerX = 0;
   mutableState.playerY = 0;
   mutableState.playerAppearanceId = DEFAULT_PLAYER_APPEARANCE_ID;
+  mutableState.playerAppearance = { ...DEFAULT_PLAYER_APPEARANCE };
   mutableState.gold = 0;
   mutableState.stamina = MAX_STAMINA;
   mutableState.inventory = [];
@@ -630,6 +648,7 @@ export function clearGameState(): void {
   mutableState.socialOpen = false;
   mutableState.calendarOpen = false;
   mutableState.audioSettingsOpen = false;
+  mutableState.wardrobeOpen = false;
   mutableState.backpackOpen = false;
   closeStoragePanels();
   mutableState.requestBoardOpen = false;

@@ -3,11 +3,8 @@ import {
   MEDIA_KEYS,
   VILLAGE_FRAMES,
 } from "./media-catalog.ts";
-import {
-  DEFAULT_PLAYER_APPEARANCE_ID,
-  PLAYER_APPEARANCE_IDS,
-  type PlayerAppearanceId,
-} from "../../../../domain/player/appearance.ts";
+import { CHARACTER_LAYER_KEYS } from "../presentation/LayeredPlayerArtwork.ts";
+import { FRAME_WIDTH, FRAME_HEIGHT, FOOT_Y } from "../presentation/character-art.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { ITEM_ID } from "../../../../domain/items/definitions.ts";
 import type { CropId } from "../../../../domain/farming/crops.ts";
@@ -49,7 +46,6 @@ export interface EntityMediaProfile {
 }
 
 export interface PlayerMediaProfile {
-  readonly appearanceId: PlayerAppearanceId;
   readonly textureKey: string;
   readonly frameWidth: number;
   readonly frameHeight: number;
@@ -59,21 +55,6 @@ export interface PlayerMediaProfile {
     readonly idle: Readonly<Record<"down" | "up" | "left" | "right", number>>;
     readonly walk: Readonly<Record<"down" | "up" | "left" | "right", readonly number[]>>;
     readonly attack: Readonly<Record<"down" | "up" | "left" | "right", number>>;
-  };
-}
-
-export interface PlayerAppearanceOption {
-  readonly id: PlayerAppearanceId;
-  readonly label: string;
-  readonly note: string;
-  readonly preview: {
-    readonly url: string;
-    readonly sheetWidth: number;
-    readonly sheetHeight: number;
-    readonly x: number;
-    readonly y: number;
-    readonly width: number;
-    readonly height: number;
   };
 }
 
@@ -155,121 +136,18 @@ const VECTORAITH_ENTITY_MEDIA: EntityMediaProfile = {
   npc: { textureKey: VECTORAITH_MEDIA_KEYS.npcs, frames: VECTORAITH_NPC_FRAMES },
 };
 
-const VECTORAITH_PLAYER_MEDIA: PlayerMediaProfile = {
-  appearanceId: DEFAULT_PLAYER_APPEARANCE_ID,
-  textureKey: VECTORAITH_MEDIA_KEYS.farmer,
-  frameWidth: 16,
-  frameHeight: 32,
-  scale: 1,
-  originY: 0.82,
+const LAYERED_PLAYER_MEDIA: PlayerMediaProfile = {
+  textureKey: CHARACTER_LAYER_KEYS.top,
+  frameWidth: FRAME_WIDTH,
+  frameHeight: FRAME_HEIGHT,
+  scale: 0.5,
+  originY: FOOT_Y / FRAME_HEIGHT,
   frames: {
     idle: { down: 1, left: 4, right: 7, up: 10 },
-    walk: {
-      down: [0, 1, 2, 1],
-      left: [3, 4, 5, 4],
-      right: [6, 7, 8, 7],
-      up: [9, 10, 11, 10],
-    },
+    walk: { down: [0, 1, 2, 1], left: [3, 4, 5, 4], right: [6, 7, 8, 7], up: [9, 10, 11, 10] },
     attack: { down: 1, left: 4, right: 7, up: 10 },
   },
 };
-
-const NPC_APPEARANCE_LABELS = [
-  ["春芽", "轻快明亮"],
-  ["听雨", "沉静柔和"],
-  ["青石", "朴素利落"],
-  ["晚霞", "温暖醒目"],
-  ["松风", "自然清爽"],
-  ["湖光", "安静自在"],
-  ["灯火", "活泼亲切"],
-  ["山茶", "从容明快"],
-] as const;
-
-/** Resolves one RPG Maker-style demo character block into the shared four-direction player contract. */
-function createNpcPlayerMediaProfile(
-  appearanceId: PlayerAppearanceId,
-  characterIndex: number,
-): PlayerMediaProfile {
-  const blockColumn = characterIndex % 4;
-  const blockRow = Math.floor(characterIndex / 4);
-  const baseColumn = blockColumn * 3;
-  const baseRow = blockRow * 4;
-  const frame = (directionRow: number, offset: number) => (
-    (baseRow + directionRow) * 12 + baseColumn + offset
-  );
-  return {
-    appearanceId,
-    textureKey: VECTORAITH_MEDIA_KEYS.npcs,
-    frameWidth: 16,
-    frameHeight: 32,
-    scale: 1,
-    originY: 0.82,
-    frames: {
-      idle: {
-        down: frame(0, 1),
-        left: frame(1, 1),
-        right: frame(2, 1),
-        up: frame(3, 1),
-      },
-      walk: {
-        down: [frame(0, 0), frame(0, 1), frame(0, 2), frame(0, 1)],
-        left: [frame(1, 0), frame(1, 1), frame(1, 2), frame(1, 1)],
-        right: [frame(2, 0), frame(2, 1), frame(2, 2), frame(2, 1)],
-        up: [frame(3, 0), frame(3, 1), frame(3, 2), frame(3, 1)],
-      },
-      attack: {
-        down: frame(0, 1),
-        left: frame(1, 1),
-        right: frame(2, 1),
-        up: frame(3, 1),
-      },
-    },
-  };
-}
-
-const PLAYER_MEDIA_BY_APPEARANCE = new Map<PlayerAppearanceId, PlayerMediaProfile>([
-  [DEFAULT_PLAYER_APPEARANCE_ID, VECTORAITH_PLAYER_MEDIA],
-  ...PLAYER_APPEARANCE_IDS.slice(1).map((appearanceId, index) => [
-    appearanceId,
-    createNpcPlayerMediaProfile(appearanceId, index),
-  ] as const),
-]);
-
-export const PLAYER_APPEARANCE_OPTIONS: readonly PlayerAppearanceOption[] = [
-  {
-    id: DEFAULT_PLAYER_APPEARANCE_ID,
-    label: "田野旅人",
-    note: "熟悉的农场装束",
-    preview: {
-      url: VECTORAITH_MEDIA_URLS.farmer,
-      sheetWidth: 48,
-      sheetHeight: 128,
-      x: 0,
-      y: 0,
-      width: 16,
-      height: 32,
-    },
-  },
-  ...PLAYER_APPEARANCE_IDS.slice(1).map((id, index) => {
-    const blockColumn = index % 4;
-    const blockRow = Math.floor(index / 4);
-    const copy = NPC_APPEARANCE_LABELS[index]!;
-    return {
-      id,
-      label: copy[0],
-      note: copy[1],
-      preview: {
-        url: VECTORAITH_MEDIA_URLS.npcs,
-        sheetWidth: 192,
-        sheetHeight: 256,
-        x: blockColumn * 3 * 16,
-        y: blockRow * 4 * 32,
-        width: 16,
-        height: 32,
-      },
-    };
-  }),
-];
 
 const NINJA_TILESET_BINDINGS: readonly TilesetBinding[] = [
   { tiledName: "floor", textureKey: MEDIA_KEYS.floorTilemap },
@@ -332,11 +210,9 @@ export function entityMediaForRegion(regionId: string): EntityMediaProfile {
     : NINJA_ENTITY_MEDIA;
 }
 
-/** Resolves one saved appearance ID into its formal VectoRaith texture and animation frames. */
-export function playerMediaProfile(appearanceId: PlayerAppearanceId): PlayerMediaProfile {
-  const profile = PLAYER_MEDIA_BY_APPEARANCE.get(appearanceId);
-  if (!profile) throw new Error(`Player appearance media is missing: ${appearanceId}.`);
-  return profile;
+/** Returns the fixed four-direction frame contract shared by all independently painted player layers. */
+export function playerMediaProfile(): PlayerMediaProfile {
+  return LAYERED_PLAYER_MEDIA;
 }
 
 /** Returns every atlas-frame profile that the active client must register before entities render. */

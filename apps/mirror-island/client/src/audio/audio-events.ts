@@ -47,6 +47,7 @@ export function audioCueForCommandResult(
       return null;
     }
     case "move":
+    case "change-appearance":
     case "refill-watering-can":
     case "eat-item":
     case "talk-to-npc":

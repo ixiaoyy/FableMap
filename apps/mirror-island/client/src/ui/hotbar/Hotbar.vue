@@ -6,6 +6,7 @@ import {
   type ItemId,
 } from "../../../../domain/items/definitions.ts";
 import ItemIcon from "../items/ItemIcon.vue";
+import { isToolArtPreviewEnabled } from "../../game/assets/tool-art-candidate.ts";
 import {
   gameUiState,
   selectHotbarSlot,
@@ -31,6 +32,7 @@ const slots = computed(() => Array.from({ length: HOTBAR_SLOT_COUNT }, (_, index
 const heldItem = computed(() => getItemDefinition(gameUiState.selectedItemId));
 const locked = computed(() => isWorldInputLocked());
 const keyLabels = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
+const artPreview = isToolArtPreviewEnabled();
 
 /** Eats one selected edible stack through the GameSession stamina owner. */
 function eat(itemId: ItemId): void {
@@ -54,7 +56,7 @@ function placeChest(): void {
 <template>
   <section class="hotbar-panel" aria-label="快捷背包">
     <div class="hotbar-caption">
-      <span>{{ heldItem?.name ?? '快捷背包' }}</span>
+      <span><small class="hotbar-caption__label">{{ artPreview ? 'A · 美术预览' : heldItem ? '手持' : '随身' }}</small>{{ heldItem?.name ?? '快捷背包' }}</span>
       <small class="hotbar-caption__keyboard">数字键 / 滚轮切换</small>
       <small class="hotbar-caption__touch">左右滑动 · 点选工具</small>
     </div>
@@ -76,7 +78,7 @@ function placeChest(): void {
           @click="selectHotbarSlot(slot.index)"
         >
           <span class="hotbar-slot__index">{{ keyLabels[slot.index] }}</span>
-          <ItemIcon v-if="slot.definition" :item-id="slot.definition.id" class="hotbar-slot__image" />
+          <ItemIcon v-if="slot.definition" :item-id="slot.definition.id" :scale="3" class="hotbar-slot__image" />
           <span v-if="slot.quantity > 1" class="hotbar-slot__quantity">{{ slot.quantity }}</span>
           <span v-if="slot.water" class="hotbar-slot__water">{{ slot.water }}</span>
         </button>

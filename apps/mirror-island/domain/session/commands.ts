@@ -3,9 +3,11 @@ import type { RecipeId } from "../recipes/definitions.ts";
 import type { RetentionEventId } from "../dialogue/definitions.ts";
 import type { Facing } from "../world/facing.ts";
 import type { PetSpecies } from "../pets/definitions.ts";
+import type { PlayerAppearance } from "../player/appearance.ts";
 
 export type GameCommand =
   | StorageCommand
+  | { readonly type: "change-appearance"; readonly appearance: PlayerAppearance }
   | { readonly type: "move"; readonly xAxis: -1 | 0 | 1; readonly yAxis: -1 | 0 | 1; readonly deltaMs: number }
   | { readonly type: "use-item-on-target"; readonly itemId: ItemId | ""; readonly targetId: string; readonly facing?: Facing }
   | { readonly type: "use-item-on-tile"; readonly itemId: ItemId | ""; readonly column: number; readonly row: number; readonly facing?: Facing }

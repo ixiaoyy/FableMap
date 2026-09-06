@@ -78,6 +78,7 @@ onBeforeUnmount(() => { if (props.open) restoreFocus(); });
         <slot name="navigation" />
       </div>
       <div class="storage-dialog__body"><slot /></div>
+      <div v-if="$slots.footer" class="storage-dialog__footer"><slot name="footer" /></div>
     </section>
   </div>
 </template>

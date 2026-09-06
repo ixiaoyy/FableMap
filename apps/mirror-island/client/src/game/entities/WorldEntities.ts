@@ -421,6 +421,7 @@ export class FarmPlotEntity {
 export class BedEntity {
   readonly entityId: string;
   readonly container: Phaser.GameObjects.Container;
+  private readonly artwork: Phaser.GameObjects.Image;
   private readonly prompt: Phaser.GameObjects.Text;
   private hovered = false;
   private nearby = false;
@@ -433,14 +434,15 @@ export class BedEntity {
     onInteract: (entity: BedEntity) => void,
   ) {
     this.entityId = interaction.entityId;
-    const frame = scene.add.image(0, 0, COTTAGE_TEXTURE_KEY, COTTAGE_BED_FRAME)
+    this.artwork = scene.add.image(0, 0, COTTAGE_TEXTURE_KEY, COTTAGE_BED_FRAME);
+    const hitArea = scene.add.zone(0, 0, interaction.width, interaction.height)
       .setInteractive({ useHandCursor: true });
-    frame.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
-    frame.on(Phaser.Input.Events.POINTER_OVER, () => {
+    hitArea.on(Phaser.Input.Events.POINTER_DOWN, () => onInteract(this));
+    hitArea.on(Phaser.Input.Events.POINTER_OVER, () => {
       this.hovered = true;
       this.refreshPrompt();
     });
-    frame.on(Phaser.Input.Events.POINTER_OUT, () => {
+    hitArea.on(Phaser.Input.Events.POINTER_OUT, () => {
       this.hovered = false;
       this.refreshPrompt();
     });
@@ -457,8 +459,13 @@ export class BedEntity {
     this.container = scene.add.container(
       interaction.x + interaction.width / 2,
       interaction.y + interaction.height / 2,
-      [frame],
+      [this.artwork, hitArea],
     ).setDepth(100 + interaction.y + interaction.height);
+  }
+
+  /** Toggles only bed pixels for a composed room preview; its Tiled-sized pointer zone and prompt stay active. */
+  setArtworkVisible(visible: boolean): void {
+    this.artwork.setVisible(visible);
   }
 
   /** Returns Euclidean distance from the bed center to one player position. */
