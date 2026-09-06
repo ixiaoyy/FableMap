@@ -182,7 +182,9 @@ jobs:
                 exit 1
               fi
               ;;
-            assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png)
+            assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png|\
+            assets/original/islander/2026-09-07-v3/character-layers-v3.png|\
+            assets/original/islander/2026-09-07-v3/character-materials-v3.png)
               if [ "${MEDIA_CONTENT_TYPE:-}" != "image/png" ]; then
                 echo "::error::The Mirror Island homepage hero must use image/png"
                 exit 1
