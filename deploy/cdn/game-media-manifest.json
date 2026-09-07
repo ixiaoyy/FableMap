@@ -2,8 +2,8 @@
   "schema_version": 1,
   "generated_at": "2026-09-06T17:01:46.354Z",
   "media_base_url": "https://img.pingxingxian.space/game/media/v1",
-  "tracked_image_count": 19,
-  "tracked_image_bytes": 3082610,
+  "tracked_image_count": 21,
+  "tracked_image_bytes": 3418682,
   "tracked_audio_count": 19,
   "tracked_audio_bytes": 7806934,
   "entries": [
@@ -498,6 +498,36 @@
       "content_type": "image/png",
       "object_key": "assets/original/islander/2026-09-07-v3/character-materials-v3.png",
       "url": "https://img.pingxingxian.space/game/media/v1/assets/original/islander/2026-09-07-v3/character-materials-v3.png"
+    },
+    {
+      "source": "mirror-island-home-hero.png (approved original, 2026-08-31)",
+      "source_url": "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png",
+      "source_sha256": "f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf",
+      "license": "Project-original AI-generated art",
+      "creator": "Mirror Island project; original OpenAI image generation, mechanical WebP encoding",
+      "transformation": "Pillow 11.3.0; RGB; LANCZOS resize 960x540; opaque WebP quality=80 method=6. Original composition and prompt retained.",
+      "width": 960,
+      "height": 540,
+      "bytes": 102226,
+      "sha256": "a310db2133cede0c6b152a79c2a6dc68d7700bcd510b65785d1211053cbc306c",
+      "content_type": "image/webp",
+      "object_key": "assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp"
+    },
+    {
+      "source": "mirror-island-home-hero.png (approved original, 2026-08-31)",
+      "source_url": "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png",
+      "source_sha256": "f1182c1ef76eba8a048dd2f424ed0219c80575629e01f46be8e59519e2fe7adf",
+      "license": "Project-original AI-generated art",
+      "creator": "Mirror Island project; original OpenAI image generation, mechanical WebP encoding",
+      "transformation": "Pillow 11.3.0; RGB; original 1672x941 size; opaque WebP quality=80 method=6. Original composition and prompt retained.",
+      "width": 1672,
+      "height": 941,
+      "bytes": 233846,
+      "sha256": "1bfc3bad03fb5fa969e74feebf68d819ff9a8ca805bfc183431be8c7b2166132",
+      "content_type": "image/webp",
+      "object_key": "assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp",
+      "url": "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp"
     }
   ]
 }

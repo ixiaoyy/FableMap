@@ -46,14 +46,6 @@ export class AudioDirector {
 
   /** Creates the single client audio owner and subscribes to semantic cues and local preferences. */
   constructor(private readonly onPlaybackBlocked: () => void) {
-    for (const definition of [...FOOTSTEP_ASSETS, ...Object.values(ONE_SHOT_ASSETS)]) {
-      this.bases.set(definition.id, createBaseAudio(definition));
-    }
-    for (const group of ["farm", "town", "lakeshore", "interior"] as const) {
-      for (const definition of ambientLayersForGroup(group)) {
-        if (!this.bases.has(definition.id)) this.bases.set(definition.id, createBaseAudio(definition));
-      }
-    }
     this.stopCues = subscribeAudioCues((cue) => this.playCue(cue));
     this.stopSettings = subscribeAudioSettings((settings) => this.applySettings(settings));
   }
@@ -105,8 +97,7 @@ export class AudioDirector {
 
   /** Starts one isolated one-shot clone and removes it after completion or load failure. */
   private playOneShot(definition: AudioAssetDefinition): void {
-    const base = this.bases.get(definition.id);
-    if (!base) return;
+    const base = this.baseAudio(definition);
     const voice: ActiveVoice = { audio: base.cloneNode(true) as HTMLAudioElement, gain: definition.gain };
     voice.audio.volume = this.effectiveVolume(voice.gain);
     this.oneShots.add(voice);
@@ -126,8 +117,7 @@ export class AudioDirector {
   private startCurrentAmbience(): void {
     if (!this.currentGroup || this.disposed) return;
     for (const definition of ambientLayersForGroup(this.currentGroup)) {
-      const base = this.bases.get(definition.id);
-      if (!base) continue;
+      const base = this.baseAudio(definition);
       const voice: AmbientVoice = {
         audio: base.cloneNode(true) as HTMLAudioElement,
         gain: definition.gain,
@@ -151,6 +141,16 @@ export class AudioDirector {
         this.reportPlaybackBlocked();
       });
     }
+  }
+
+  /** 首次播放某个已登记音效时才创建模板；仅当前区域的环境音会被请求。 */
+  private baseAudio(definition: AudioAssetDefinition): HTMLAudioElement {
+    let base = this.bases.get(definition.id);
+    if (!base) {
+      base = createBaseAudio(definition);
+      this.bases.set(definition.id, base);
+    }
+    return base;
   }
 
   /** Restarts a blocked or ended ambience group after a successful direct-user one-shot. */
@@ -213,9 +213,10 @@ export class AudioDirector {
   }
 }
 
-/** Creates one reusable preload source whose clones own actual playback state. */
+/** 创建不预取数据的音频模板；克隆实例播放时才下载实际音频。 */
 function createBaseAudio(definition: AudioAssetDefinition): HTMLAudioElement {
-  const audio = new Audio(definition.url);
-  audio.preload = "auto";
+  const audio = new Audio();
+  audio.preload = "none";
+  audio.src = definition.url;
   return audio;
 }

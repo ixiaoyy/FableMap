@@ -84,7 +84,7 @@ import {
   worldLabelStyle,
 } from "../entities/WorldEntities.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
-import { getWorldCatalog, worldRegionSources } from "../world/world-catalog.ts";
+import { getWorldCatalog, worldRegionMaps } from "../world/world-catalog.ts";
 import { petAnchorsForRegion } from "../pets/pet-presentation.ts";
 import { subscribeWorldAction } from "../world/world-input.ts";
 
@@ -160,7 +160,7 @@ export class WorldScene extends Phaser.Scene {
     super("World");
   }
 
-  /** Queues every reviewed region map under the same keys used by the validated WorldCatalog. */
+  /** 加载场景纹理，并把已校验的地图副本交给 Phaser，地图不再重复下载。 */
   preload(): void {
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
       setActionFeedback({
@@ -191,7 +191,7 @@ export class WorldScene extends Phaser.Scene {
       this.load.image(PASTORAL_PREVIEW.cottage.key, PASTORAL_PREVIEW.cottage.url);
       this.load.image(PASTORAL_PREVIEW.interior.key, PASTORAL_PREVIEW.interior.url);
     }
-    for (const source of worldRegionSources()) this.load.tilemapTiledJSON(source.mapKey, source.url);
+    for (const source of worldRegionMaps()) this.load.tilemapTiledJSON(source.mapKey, source.data);
   }
 
   /** Creates test tiles, input, entity services and the local state subscription. */

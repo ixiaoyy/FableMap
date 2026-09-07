@@ -1,6 +1,6 @@
 const DEFAULT_MEDIA_BASE_URL = "/game-media/v1";
 const VENDOR_PATH = "assets/vendor/ninja-adventure/2024-04-19";
-const HOME_ART_PATH = "assets/original/mirror-island-home/2026-08-31";
+const HOME_ART_PATH = "assets/original/mirror-island-home/2026-09-07";
 
 /** Resolves the reviewed same-origin media namespace or one explicit development override. */
 export function mediaUrl(relativePath: string, version: string): string {
@@ -9,8 +9,12 @@ export function mediaUrl(relativePath: string, version: string): string {
 }
 
 export const HOME_HERO_URL = mediaUrl(
-  `${HOME_ART_PATH}/mirror-island-home-hero.png`,
-  "f1182c1e",
+  `${HOME_ART_PATH}/home-hero-desktop.webp`,
+  "1bfc3bad",
+);
+export const HOME_HERO_MOBILE_URL = mediaUrl(
+  `${HOME_ART_PATH}/home-hero-mobile.webp`,
+  "a310db21",
 );
 
 export const MEDIA_KEYS = {

@@ -21,20 +21,38 @@ const REGION_SOURCES = [
 
 let catalogPromise: Promise<WorldCatalog> | null = null;
 let loadedCatalog: WorldCatalog | null = null;
+let loadedMaps: readonly { readonly mapKey: string; readonly data: object }[] = [];
 
 /** Loads, validates and caches the complete local world catalog before a game can start. */
 export function loadWorldCatalog(): Promise<WorldCatalog> {
   if (catalogPromise) return catalogPromise;
+  const version = import.meta.env?.VITE_MAP_VERSION;
   catalogPromise = Promise.all(REGION_SOURCES.map(async (source) => {
-    const response = await fetch(source.url, { credentials: "same-origin" });
-    if (!response.ok) throw new Error(`Region map failed to load with HTTP ${response.status}.`);
-    return decodeTiledRegion(await response.json() as unknown, source.mapKey);
-  })).then((regions) => {
-    loadedCatalog = createWorldCatalog(regions);
-    validateNpcSchedules(loadedCatalog);
-    validateNpcActivities(loadedCatalog);
-    validatePetAnchors(loadedCatalog);
-    return loadedCatalog;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const response = await fetch(version ? `${source.url}?v=${version}` : source.url, {
+        credentials: "same-origin", signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`Region map failed to load with HTTP ${response.status}.`);
+      const data: unknown = await response.json();
+      const region = decodeTiledRegion(data, source.mapKey);
+      if (!data || typeof data !== "object") throw new Error("Region map is not an object.");
+      return { mapKey: source.mapKey, data, region };
+    } finally {
+      clearTimeout(timeout);
+    }
+  })).then((maps) => {
+    const catalog = createWorldCatalog(maps.map((map) => map.region));
+    validateNpcSchedules(catalog);
+    validateNpcActivities(catalog);
+    validatePetAnchors(catalog);
+    loadedMaps = maps.map(({ mapKey, data }) => ({ mapKey, data }));
+    loadedCatalog = catalog;
+    return catalog;
+  }).catch((error: unknown) => {
+    catalogPromise = null;
+    throw error;
   });
   return catalogPromise;
 }
@@ -45,7 +63,8 @@ export function getWorldCatalog(): WorldCatalog {
   return loadedCatalog;
 }
 
-/** Returns immutable map loader sources so Phaser uses the exact catalog keys and URLs. */
-export function worldRegionSources(): readonly { readonly mapKey: string; readonly url: string }[] {
-  return REGION_SOURCES;
+/** 返回已校验地图的独立副本供 Phaser 使用，避免二次请求或修改规则层持有的原数据。 */
+export function worldRegionMaps(): readonly { readonly mapKey: string; readonly data: object }[] {
+  if (!loadedCatalog) throw new Error("World maps are unavailable.");
+  return loadedMaps.map(({ mapKey, data }) => ({ mapKey, data: structuredClone(data) }));
 }

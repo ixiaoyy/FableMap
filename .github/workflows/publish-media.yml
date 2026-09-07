@@ -30,6 +30,7 @@ jobs:
       MEDIA_SOURCE_URL: ${{ github.event.client_payload.source_url }}
       MEDIA_SOURCE_ENCODING: ${{ github.event.client_payload.source_encoding }}
     steps:
+      - uses: actions/checkout@v4
       - name: Validate and publish immutable object
         shell: bash
         run: |
@@ -182,6 +183,13 @@ jobs:
                 exit 1
               fi
               ;;
+            assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp|\
+            assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp)
+              if [ "${MEDIA_CONTENT_TYPE:-}" != "image/webp" ] || [ "${CDN_S3_PREFIX#/}" != "game" ]; then
+                echo "::error::Homepage WebP must use image/webp and the game prefix"
+                exit 1
+              fi
+              ;;
             assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png|\
             assets/original/islander/2026-09-07-v3/character-layers-v3.png|\
             assets/original/islander/2026-09-07-v3/character-materials-v3.png)
@@ -275,6 +283,8 @@ jobs:
               fi
             else
               case "${MEDIA_OBJECT_KEY}|${MEDIA_SOURCE_URL}" in
+                assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp\|https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png|\
+                assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp\|https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-08-31/mirror-island-home-hero.png|\
                 assets/vendor/peludo/water-splash-2021/watering.wav\|https://opengameart.org/sites/default/files/splash2_0.wav|\
                 assets/vendor/spring-spring/birds-and-wind-2019/farm-ambience.ogg\|https://opengameart.org/sites/default/files/Birds%20and%20Wind%20-%20Ambient_1.ogg|\
                 assets/vendor/bluecarrot16/lpc-cats-and-dogs-2016/cat.png\|https://opengameart.org/sites/default/files/cat_0.png|\
@@ -294,11 +304,23 @@ jobs:
               --show-error \
               --proto '=https' \
               --tlsv1.2 \
+              --connect-timeout 10 \
+              --max-time 60 \
               --output "${SOURCE_FILE}" \
               "${MEDIA_SOURCE_URL}"
             case "${MEDIA_SOURCE_ENCODING:-raw}" in
               raw) mv "${SOURCE_FILE}" "${MEDIA_FILE}" ;;
               base64) base64 --decode "${SOURCE_FILE}" > "${MEDIA_FILE}" ;;
+              home-hero-webp)
+                case "${MEDIA_OBJECT_KEY}" in
+                  assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp|\
+                  assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp) ;;
+                  *) echo "::error::WebP conversion is restricted to the homepage variants"; exit 1 ;;
+                esac
+                python -m pip install --disable-pip-version-check --timeout 30 --retries 2 Pillow==11.3.0
+                python deploy/cdn/prepare_home_hero.py "${SOURCE_FILE}" /tmp/home-hero-variants
+                cp "/tmp/home-hero-variants/${MEDIA_OBJECT_KEY##*/}" "${MEDIA_FILE}"
+                ;;
               *) echo "::error::Unsupported temporary source encoding"; exit 1 ;;
             esac
           fi

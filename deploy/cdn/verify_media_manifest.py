@@ -135,7 +135,7 @@ def _validate_manifest(manifest: dict[str, Any], expected_media_base_url: str) -
         if not re.fullmatch(r"[0-9a-f]{64}", str(raw_entry.get("sha256") or "")):
             raise ValueError(f"media manifest entry {index} has invalid sha256")
         content_type = str(raw_entry.get("content_type") or "")
-        if content_type == "image/png":
+        if content_type in {"image/png", "image/webp"}:
             width = raw_entry.get("width")
             height = raw_entry.get("height")
             if not isinstance(width, int) or width <= 0 or not isinstance(height, int) or height <= 0:

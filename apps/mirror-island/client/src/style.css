@@ -180,7 +180,7 @@ button {
 }
 
 .start-panel--welcome {
-  --home-hero-image: none;
+  --home-hero-image: var(--home-hero-desktop, none);
   position: relative;
   isolation: isolate;
   display: block;
@@ -220,6 +220,10 @@ button {
     linear-gradient(180deg, transparent 70%, rgba(82, 116, 61, 0.1));
   content: "";
   pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .start-panel--welcome { --home-hero-image: var(--home-hero-mobile, none); }
 }
 
 .home-mist {

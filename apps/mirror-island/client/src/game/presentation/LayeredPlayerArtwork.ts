@@ -1,9 +1,7 @@
 import Phaser from "phaser";
 import type { PlayerAppearance } from "../../../../domain/player/appearance.ts";
 import type { PlayerMediaProfile } from "../assets/visual-profile.ts";
-import { FRAME_WIDTH, FRAME_HEIGHT, paintCharacterFrame } from "./character-art.ts";
-
-export const CHARACTER_LAYER_KEYS = { head: "islander-head", top: "islander-top", bottom: "islander-bottom" } as const;
+import { CHARACTER_LAYER_KEYS, FRAME_WIDTH, FRAME_HEIGHT, paintCharacterFrame } from "./character-art.ts";
 const FACINGS = ["down", "left", "right", "up"] as const;
 
 /** Identifies the eight validated visual choices, excluding legacy preset IDs and all gameplay state. */

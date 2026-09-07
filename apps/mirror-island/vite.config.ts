@@ -1,8 +1,16 @@
 import vue from "@vitejs/plugin-vue";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
+
+const mapDirectory = new URL("./public/map/", import.meta.url);
+const mapHash = createHash("sha256");
+for (const name of readdirSync(mapDirectory).filter((name) => name.endsWith(".tmj")).sort()) {
+  mapHash.update(name).update(readFileSync(new URL(name, mapDirectory), "utf8").replace(/\r\n/g, "\n"));
+}
 
 const DEV_ART_PREVIEWS = new Map([
   ["/__dev-art/fresh-pastoral-tools-v1.png", fileURLToPath(new URL("../../artifacts/pastoral-redesign-2026-09-06/tools-v1.png", import.meta.url))],
@@ -57,6 +65,9 @@ function devArtPreviewPlugin(): Plugin {
 export default defineConfig({
   base: process.env.VITE_MIRROR_BASE_PATH || "/",
   plugins: [vue(), devArtPreviewPlugin()],
+  define: {
+    "import.meta.env.VITE_MAP_VERSION": JSON.stringify(mapHash.digest("hex").slice(0, 16)),
+  },
   server: {
     port: 8080,
   },

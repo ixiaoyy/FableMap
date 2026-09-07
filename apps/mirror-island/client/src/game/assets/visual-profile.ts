@@ -3,8 +3,7 @@ import {
   MEDIA_KEYS,
   VILLAGE_FRAMES,
 } from "./media-catalog.ts";
-import { CHARACTER_LAYER_KEYS } from "../presentation/LayeredPlayerArtwork.ts";
-import { FRAME_WIDTH, FRAME_HEIGHT, FOOT_Y } from "../presentation/character-art.ts";
+import { CHARACTER_LAYER_KEYS, FRAME_WIDTH, FRAME_HEIGHT, FOOT_Y } from "../presentation/character-art.ts";
 import { isOutdoorRegion } from "../world/region-environment.ts";
 import { ITEM_ID } from "../../../../domain/items/definitions.ts";
 import type { CropId } from "../../../../domain/farming/crops.ts";

@@ -16,6 +16,20 @@ const kenneyAudioBaseUrl = `${vendorBaseUrl}/kenney/rpg-audio-2014`;
 const rubberduckAudioBaseUrl = `${vendorBaseUrl}/rubberduck/100-cc0-sfx-2-2018`;
 const assets = [
   {
+    name: "Mirror Island mobile homepage WebP",
+    url: "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp",
+    outputs: ["public/game-media/v1/assets/original/mirror-island-home/2026-09-07/home-hero-mobile.webp"],
+    bytes: 102226,
+    sha256: "a310db2133cede0c6b152a79c2a6dc68d7700bcd510b65785d1211053cbc306c",
+  },
+  {
+    name: "Mirror Island desktop homepage WebP",
+    url: "https://img.pingxingxian.space/game/media/v1/assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp",
+    outputs: ["public/game-media/v1/assets/original/mirror-island-home/2026-09-07/home-hero-desktop.webp"],
+    bytes: 233846,
+    sha256: "1bfc3bad03fb5fa969e74feebf68d819ff9a8ca805bfc183431be8c7b2166132",
+  },
+  {
     name: "Original islander v3 layers",
     url: `${characterArtBaseUrl}/character-layers-v3.png`,
     outputs: ["public/game-media/v1/assets/original/islander/2026-09-07-v3/character-layers-v3.png"],
@@ -322,7 +336,7 @@ async function downloadVerifiedAsset(asset) {
     return;
   }
 
-  const response = await fetch(asset.url);
+  const response = await fetch(asset.url, { signal: AbortSignal.timeout(20_000) });
   if (!response.ok) {
     throw new Error(`${asset.name} download failed with HTTP ${response.status}.`);
   }

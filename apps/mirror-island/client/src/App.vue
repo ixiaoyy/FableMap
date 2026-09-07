@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from "vue";
 import type { PlayerAppearance } from "../../domain/player/appearance.ts";
-import PhaserGame from "./PhaserGame.vue";
-import { HOME_HERO_URL } from "./game/assets/media-catalog.ts";
+import { HOME_HERO_URL, HOME_HERO_MOBILE_URL } from "./game/assets/media-catalog.ts";
 import { ensureCharacterArtReady } from "./game/assets/character-media.ts";
 import { isToolArtPreviewEnabled } from "./game/assets/tool-art-candidate.ts";
 import { daylightVisualAt } from "./game/presentation/daylight.ts";
@@ -13,6 +12,7 @@ import {
 import {
   flushLocalGameSession,
   getLocalGameSession,
+  hasLocalPlaytestSave,
   initializeLocalGameSession,
   initializeLocalPlaytestGameSession,
   shutdownLocalGameSession,
@@ -32,7 +32,6 @@ import SleepConfirmationPanel from "./ui/sleep/SleepConfirmationPanel.vue";
 import SocialPanel from "./ui/social/SocialPanel.vue";
 import TouchControls from "./ui/controls/TouchControls.vue";
 import CalendarPanel from "./ui/calendar/CalendarPanel.vue";
-import CharacterCreator from "./ui/character/CharacterCreator.vue";
 import WardrobePanel from "./ui/character/WardrobePanel.vue";
 import AudioSettingsPanel from "./ui/audio/AudioSettingsPanel.vue";
 import BackpackPanel from "./ui/inventory/BackpackPanel.vue";
@@ -53,7 +52,23 @@ import WeatherLayer from "./game/presentation/WeatherLayer.vue";
 
 const failureMessage = ref("");
 const localSessionReady = ref(false);
-// Re-enter the loading gate on App remounts as well, before either Vue previews or Phaser can request character pixels.
+const saveCheckComplete = ref(false);
+const loadingMessage = ref("正在准备游戏资源，首次进入需要下载地图和素材。");
+let disposed = false;
+let phaserComponent: Promise<typeof import("./PhaserGame.vue")> | null = null;
+
+/** 首次进入世界才加载 Phaser；失败时释放 Promise，让下一次显式尝试可以重试。 */
+function loadPhaserComponent(): Promise<typeof import("./PhaserGame.vue")> {
+  phaserComponent ??= import("./PhaserGame.vue").catch((error: unknown) => {
+    phaserComponent = null;
+    throw error;
+  });
+  return phaserComponent;
+}
+
+const PhaserGame = defineAsyncComponent(loadPhaserComponent);
+const CharacterCreator = defineAsyncComponent(() => import("./ui/character/CharacterCreator.vue"));
+// 首页只检查本地存档；角色预览和世界各自在资源就绪后挂载。
 setGamePhase("initializing");
 const characterCreationReturnPhase = ref<"menu" | "error">("menu");
 const debugMode = computed(() => new URLSearchParams(window.location.search).get("debug") === "1");
@@ -64,7 +79,8 @@ const daylightStyle = computed(() => ({
   "--daylight-opacity": daylight.value.opacity.toFixed(3),
 }));
 const homeHeroStyle = {
-  "--home-hero-image": `url("${HOME_HERO_URL}")`,
+  "--home-hero-desktop": `url("${HOME_HERO_URL}")`,
+  "--home-hero-mobile": `url("${HOME_HERO_MOBILE_URL}")`,
 };
 const petAdoptionPending = computed(() => (
   gameUiState.day >= 2
@@ -82,9 +98,19 @@ const phaseLabel = computed(() => ({
 
 /** Opens character creation after protecting an existing save from an accidental overwrite. */
 async function startNewGame(): Promise<void> {
+  if (gameUiState.phase !== "menu" && gameUiState.phase !== "error") return;
   if (gameUiState.saveAvailable && !window.confirm("新游戏会覆盖当前本地存档，确定继续吗？")) return;
   characterCreationReturnPhase.value = gameUiState.phase === "error" ? "error" : "menu";
-  setGamePhase("character-creation");
+  loadingMessage.value = "正在准备角色外观，首次加载需要下载角色素材。";
+  setGamePhase("loading");
+  try {
+    await Promise.all([ensureCharacterArtReady(), import("./ui/character/CharacterCreator.vue")]);
+    if (!disposed) setGamePhase("character-creation");
+  } catch {
+    if (disposed) return;
+    failureMessage.value = "角色素材暂时无法加载，请检查网络后刷新重试。";
+    setGamePhase("error");
+  }
 }
 
 /** Creates and enters a fresh local world using the appearance confirmed on the creation page. */
@@ -99,19 +125,42 @@ function cancelCharacterCreation(): void {
 
 /** Loads the validated anonymous playtest slot from this browser. */
 async function continueGame(): Promise<void> {
-  if (!gameUiState.saveAvailable) return;
+  if (gameUiState.phase !== "menu" || !gameUiState.saveAvailable) return;
   await enterGame(() => getLocalGameSession().continueGame());
+}
+
+/** 并行准备地图、角色和引擎；全部成功后才创建本地会话，卸载后不发布旧结果。 */
+async function prepareLocalWorld(): Promise<void> {
+  const [catalog] = await Promise.all([loadWorldCatalog(), ensureCharacterArtReady(), loadPhaserComponent()]);
+  if (disposed || localSessionReady.value) return;
+  if (toolArtPreviewMode) initializeLocalGameSession("tool-art-preview", catalog);
+  else initializeLocalPlaytestGameSession(catalog);
+  localSessionReady.value = true;
 }
 
 /** Runs one menu transition and exposes a recoverable error without mounting Phaser early. */
 async function enterGame(start: () => Promise<unknown>): Promise<void> {
+  if (gameUiState.phase === "loading") return;
   failureMessage.value = "";
+  loadingMessage.value = "正在准备地图和游戏素材，首次进入需要稍等片刻。";
   setGamePhase("loading");
   try {
+    await prepareLocalWorld();
+  } catch {
+    if (disposed) return;
+    failureMessage.value = "游戏资源暂时无法加载，请检查网络后刷新重试。本地存档没有被改写。";
+    setGamePhase("error");
+    return;
+  }
+  if (disposed) return;
+  try {
+    loadingMessage.value = "正在读取和保存这台浏览器里的小院。";
     await start();
+    if (disposed) return;
     setSaveAvailable(true);
     setGamePhase("playing");
   } catch {
+    if (disposed) return;
     failureMessage.value = "本地存档无法读取或写入，请刷新后重试。";
     setGamePhase("error");
   }
@@ -137,24 +186,13 @@ function isolateUiActivationKeys(event: KeyboardEvent): void {
 }
 
 onMounted(async () => {
-  try {
-    await ensureCharacterArtReady();
-  } catch {
-    failureMessage.value = "角色素材暂时没有加载成功，请检查网络后刷新重试。";
-    setGamePhase("error");
-    return;
-  }
+  window.addEventListener("pagehide", checkpointOnPageHide);
   if (toolArtPreviewMode) {
     try {
       removeRetiredLocalStorageSaves();
-      const catalog = await loadWorldCatalog();
-      initializeLocalGameSession("tool-art-preview", catalog);
-      localSessionReady.value = true;
-      window.addEventListener("pagehide", checkpointOnPageHide);
-      await getLocalGameSession().newGame();
-      setSaveAvailable(true);
-      setGamePhase("playing");
+      await enterGame(() => getLocalGameSession().newGame());
     } catch {
+      if (disposed) return;
       failureMessage.value = "工具美术本地预览无法启动，请确认候选原图和 IndexedDB 可用。";
       setGamePhase("error");
     }
@@ -162,25 +200,23 @@ onMounted(async () => {
   }
   try {
     removeRetiredLocalStorageSaves();
-    const catalog = await loadWorldCatalog();
-    initializeLocalPlaytestGameSession(catalog);
-    localSessionReady.value = true;
-    window.addEventListener("pagehide", checkpointOnPageHide);
-  } catch {
-    failureMessage.value = "本地世界或存储暂时不可用，请刷新后重试。";
-    setGamePhase("error");
-    return;
-  }
-  try {
-    setSaveAvailable(await getLocalGameSession().hasSave());
+    const available = await hasLocalPlaytestSave();
+    if (disposed) return;
+    saveCheckComplete.value = true;
+    setSaveAvailable(available);
     setGamePhase("menu");
   } catch {
+    if (disposed) return;
+    saveCheckComplete.value = true;
+    // 读取失败时按可能存在旧档处理，新游戏仍需用户确认覆盖。
+    setSaveAvailable(true);
     failureMessage.value = "检测到无法读取的本地存档。你可以覆盖为新游戏，旧内容不会被静默恢复。";
     setGamePhase("error");
   }
 });
 
 onUnmounted(() => {
+  disposed = true;
   window.removeEventListener("pagehide", checkpointOnPageHide);
   void shutdownLocalGameSession().catch(() => undefined);
 });
@@ -313,7 +349,7 @@ onUnmounted(() => {
             >
               <p class="start-panel__kicker">归园途中</p>
               <h2>{{ gameUiState.phase === 'initializing' ? '正在备好小院' : '正在推开院门' }}</h2>
-              <p>世界状态正在从这台浏览器的本地存档中读取，请稍候片刻。</p>
+              <p>{{ gameUiState.phase === 'initializing' ? '正在检查这台浏览器里的本地存档。' : loadingMessage }}</p>
               <span class="home-loading" aria-hidden="true"><i /><i /><i /></span>
             </div>
 
@@ -347,12 +383,12 @@ onUnmounted(() => {
               <p>{{ failureMessage }}</p>
               <div class="start-actions">
                 <button
-                  v-if="localSessionReady"
+                  v-if="saveCheckComplete"
                   type="button"
                   class="primary-action"
                   @click="startNewGame"
                 >
-                  覆盖为新游戏
+                  {{ gameUiState.saveAvailable ? '覆盖为新游戏' : '重试新游戏' }}
                 </button>
                 <button type="button" class="secondary-action" @click="reloadPage">刷新重试</button>
               </div>

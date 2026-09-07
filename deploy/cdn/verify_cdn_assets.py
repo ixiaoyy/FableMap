@@ -77,10 +77,10 @@ def _verify_entry(entry: dict[str, Any], timeout_seconds: int, attempts: int) ->
     if not EXPECTED_CACHE_DIRECTIVES.issubset(cache_directives):
         raise ValueError(f"CDN Cache-Control is not immutable for {entry['object_key']}")
 
-    if content_type == "image/png":
-        width, height = _png_dimensions(body)
+    if content_type in {"image/png", "image/webp"}:
+        width, height = _png_dimensions(body) if content_type == "image/png" else _webp_dimensions(body)
         if width != int(entry["width"]) or height != int(entry["height"]):
-            raise ValueError(f"CDN PNG dimensions mismatch for {entry['object_key']}")
+            raise ValueError(f"CDN image dimensions mismatch for {entry['object_key']}")
 
 
 def _download(url: str, timeout_seconds: int, attempts: int) -> tuple[bytes, Any]:
@@ -104,6 +104,19 @@ def _png_dimensions(content: bytes) -> tuple[int, int]:
     if len(content) < 24 or content[:8] != PNG_SIGNATURE or content[12:16] != b"IHDR":
         raise ValueError("CDN asset is not a valid PNG with an IHDR header")
     return struct.unpack(">II", content[16:24])
+
+
+def _webp_dimensions(content: bytes) -> tuple[int, int]:
+    """读取首页生成器输出的不透明 VP8 WebP 尺寸；其他编码明确拒绝，不跳过校验。"""
+    if (len(content) < 30 or content[:4] != b"RIFF" or content[8:16] != b"WEBPVP8 "
+            or int.from_bytes(content[4:8], "little") + 8 != len(content)
+            or content[23:26] != b"\x9d\x01\x2a"):
+        raise ValueError("CDN asset is not a supported opaque VP8 WebP.")
+    chunk_bytes = int.from_bytes(content[16:20], "little")
+    if chunk_bytes < 10 or 20 + chunk_bytes + chunk_bytes % 2 != len(content):
+        raise ValueError("CDN WebP chunk is incomplete.")
+    width, height = struct.unpack("<HH", content[26:30])
+    return width & 0x3FFF, height & 0x3FFF
 
 
 if __name__ == "__main__":

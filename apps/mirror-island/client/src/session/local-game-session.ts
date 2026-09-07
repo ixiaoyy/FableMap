@@ -1,4 +1,5 @@
 import { GameSession } from "../../../domain/session/GameSession.ts";
+import { MAIN_SAVE_SLOT } from "../../../domain/persistence/SaveRepository.ts";
 import type {
   ActionFeedback,
   GameCommand,
@@ -30,6 +31,16 @@ let stopFishingProjection: (() => void) | null = null;
 let stopDayProjection: (() => void) | null = null;
 let stopStorageProjection: (() => void) | null = null;
 let stopVisibilityTracking: (() => void) | null = null;
+
+/** 检查唯一试玩槽的有效存档；首页无需地图或 GameSession，检查结束即关闭临时连接。 */
+export async function hasLocalPlaytestSave(): Promise<boolean> {
+  const probe = new IndexedDbSaveRepository();
+  try {
+    return await probe.has(LOCAL_PLAYTEST_OWNER_KEY, MAIN_SAVE_SLOT);
+  } finally {
+    probe.close();
+  }
+}
 
 /** Initializes the single anonymous playtest slot without creating a user or device identity. */
 export function initializeLocalPlaytestGameSession(catalog: WorldCatalog): GameSession {

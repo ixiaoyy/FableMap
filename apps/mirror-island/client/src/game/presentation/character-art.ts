@@ -4,6 +4,7 @@ import { getCharacterArtSources } from "../assets/character-media.ts";
 export const FRAME_WIDTH = 48;
 export const FRAME_HEIGHT = 64;
 export const FOOT_Y = 60;
+export const CHARACTER_LAYER_KEYS = { head: "islander-head", top: "islander-top", bottom: "islander-bottom" } as const;
 export type CharacterFacing = "down" | "left" | "right" | "up";
 export type CharacterLayer = "head" | "top" | "bottom";
 
