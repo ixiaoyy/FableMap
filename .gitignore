@@ -9,6 +9,13 @@ apps/mirror-island/src/generated/prisma/
 apps/mirror-island/public/game-media/
 apps/mirror-island/src/tiled/*.png
 
+# Godot imports, verified source assets and export outputs
+apps/mirror-island/godot/.godot/
+apps/mirror-island/godot/generated/
+apps/mirror-island/godot/media/
+apps/mirror-island/godot/exports/
+apps/mirror-island/godot/addons/YATI/
+
 # Python / verification
 .pytest_cache/
 tmp_pytest/

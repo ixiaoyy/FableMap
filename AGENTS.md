@@ -1,10 +1,17 @@
 # 镜像岛 AI 协作约束
 
+## 2026-09-07 引擎迁移决定
+
+- 用户已明确批准迁移到 Godot + GDScript：桌面正式版优先，Web 保留试玩；当前任务为 `.trellis/tasks/09-07-godot-engine-migration/`。
+- 当前开发和构建入口已切换到 `apps/mirror-island/godot/`，现有玩法已接入 GDScript；旧 Phaser/Vue 源文件只作内容转换和规则对照，不是备用运行时。代码迁移、真人验收和公开部署必须分别报告，不能据自动检查代签真人通过。
+- 当前名称不变；真实城市/路网设想尚未进入实现，禁止在引擎任务中自动接入 OSM 或定位。
+- 数据库、论坛、身份、媒体授权和远程操作边界继续有效。引擎迁移不授权提交、推送或部署。
+
 适用于整个仓库；更近层级的 `AGENTS.md` 优先。
 
 ## 产品主线
 
-- 当前唯一产品是“镜像岛”单人 Web 像素农场/生活世界，公开入口为 `/`；新主线固定采用 Phaser 4 + Vue 3 + 本地 GameSession + IndexedDB。
+- 当前唯一产品是镜像岛单人像素农场/生活世界，采用 Godot 4.7.2 + GDScript + 本地 GameSession；桌面正式版优先，Web 试玩入口为 `/`。
 - 旧 React/Phaser 原型、RPGJS 运行时和 Phaser/Colyseus 多人技术切片均已退役或冻结；多人切片只通过 `phaser-colyseus-checkpoint-2026-08-24` 保留，不建立双运行时或备用路由。
 - Stardew Core 第一阶段只交付本地采集、背包、制作、种田和存档恢复；随后固定扩展“玩家农场向右连接小镇、北侧山地/矿区、南侧河流/湖泊”，再加入时间、商店和少量 NPC。
 - 《聊斋》是未来书库中的一本书；书屋、异闻世界和具体故事不进入 Stardew Core 当前阶段。
@@ -13,9 +20,9 @@
 
 ## 技术边界
 
-- 唯一应用目录是 `apps/mirror-island/`；客户端固定 `phaser@4.2.1` + Vue 3 + TypeScript + Vite，Stardew Core 成立前不追版本。
-- 代码边界固定为 `domain/`、`client/`、`server/`：domain 拥有 GameSession、物品、配方、Inventory/Gathering/Crafting/Farming 和 SaveRepository 合同；Phaser/Vue 只发送本地命令并渲染只读 snapshot。
-- 实时玩法不得依赖 Colyseus、WebSocket、matchmaking、Prisma 或服务端 tick；浏览器使用版本化 IndexedDB adapter 保存本地存档，后端只保留论坛 SSO 及未来云存档/成就/排行榜接口。
+- 唯一应用目录是 `apps/mirror-island/`；游戏工程位于 `godot/`，使用 engine-lock.json 固定的 Godot 标准版和 GDScript，不追逐漂移版本。
+- 运行时代码边界为 `godot/domain/`、`godot/persistence/`、`godot/presentation/` 与 `godot/ui/`：GameSession 拥有唯一玩法状态，界面和场景只发送命令并投影 snapshot；`server/` 继续是独立 TypeScript 服务端。
+- 实时玩法不得依赖 Colyseus、WebSocket、matchmaking、Prisma 或服务端 tick；Web 使用独立版本 IndexedDB 事务，Windows 使用原子文件保存。后端只保留论坛 SSO 及未来云能力。
 - Keycloak `26.7.1` 与 `oidc-provider` `9.11.1` 作为未启用的身份/论坛 OIDC 基础设施保留；当前客户端不加载 `keycloak-js`，Keycloak 关闭独立注册。
 - 镜像岛游戏数据使用 Prisma `7.9.1` + 独立 PostgreSQL 17；Keycloak 和游戏分库、分凭据、分 volume。
 - 已评审的九表范围只允许一个基线 migration。应用启动不建表；生产使用一次性 migration 镜像执行 `prisma migrate deploy`。
@@ -63,6 +70,7 @@
 npm --prefix .\apps\mirror-island run prisma:validate
 npm --prefix .\apps\mirror-island run typecheck
 npm --prefix .\apps\mirror-island run build:client
+npm --prefix .\apps\mirror-island run build:windows
 npm --prefix .\apps\mirror-island run build:server
 docker compose -f docker-compose.yml -f deploy/docker-compose.mirror-island.yml config
 ```

@@ -1,0 +1,1519 @@
+{
+  "sourceVersion": 13,
+  "initial": {
+    "version": 13,
+    "day": 1,
+    "minuteOfDay": 360,
+    "worldSeed": 1296650834,
+    "lateWarningDay": 0,
+    "stamina": 100,
+    "fishingCastCount": 0,
+    "lastSurfaceStoneRefreshDay": 1,
+    "lastSurfaceWeedRefreshDay": 1,
+    "wateringCanWater": 20,
+    "weather": {
+      "day": 1,
+      "current": "sunny",
+      "next": "sunny"
+    },
+    "gold": 100,
+    "player": {
+      "regionId": "farm",
+      "x": 304,
+      "y": 256,
+      "appearanceId": "farmer-original",
+      "appearance": {
+        "gender": "female",
+        "head": "bob",
+        "top": "overalls",
+        "bottom": "trousers",
+        "skinTone": "peach",
+        "hairColor": "chestnut",
+        "topColor": "mint",
+        "bottomColor": "denim"
+      }
+    },
+    "inventory": [
+      {
+        "itemId": "hoe",
+        "quantity": 1
+      },
+      {
+        "itemId": "watering-can",
+        "quantity": 1
+      },
+      {
+        "itemId": "axe",
+        "quantity": 1
+      },
+      {
+        "itemId": "pickaxe",
+        "quantity": 1
+      },
+      {
+        "itemId": "scythe",
+        "quantity": 1
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      },
+      {
+        "itemId": "",
+        "quantity": 0
+      }
+    ],
+    "inventoryCapacity": 12,
+    "wateringCanLevel": 1,
+    "dailyRequest": null,
+    "npcDialogue": {
+      "seed-keeper": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-resident-xiangzi": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-resident-haonan": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-resident-haomeili": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-resident-mozi": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-resident-alan": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-resident-01": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      },
+      "town-blacksmith": {
+        "recent": [],
+        "acknowledgedStage": "stranger"
+      }
+    },
+    "seenEventIds": [],
+    "pet": null,
+    "resources": {
+      "farm-tree-001": {
+        "id": "farm-tree-001",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-002": {
+        "id": "farm-tree-002",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-003": {
+        "id": "farm-tree-003",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-004": {
+        "id": "farm-tree-004",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-005": {
+        "id": "farm-tree-005",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-006": {
+        "id": "farm-tree-006",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-007": {
+        "id": "farm-tree-007",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-tree-008": {
+        "id": "farm-tree-008",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-rock-001": {
+        "id": "farm-rock-001",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-weed-001": {
+        "id": "farm-weed-001",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-weed-002": {
+        "id": "farm-weed-002",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-weed-003": {
+        "id": "farm-weed-003",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-weed-004": {
+        "id": "farm-weed-004",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-weed-005": {
+        "id": "farm-weed-005",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "farm-weed-006": {
+        "id": "farm-weed-006",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-001": {
+        "id": "foothills-tree-001",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-002": {
+        "id": "foothills-tree-002",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-003": {
+        "id": "foothills-tree-003",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-004": {
+        "id": "foothills-tree-004",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-005": {
+        "id": "foothills-tree-005",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-006": {
+        "id": "foothills-tree-006",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-007": {
+        "id": "foothills-tree-007",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-008": {
+        "id": "foothills-tree-008",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-009": {
+        "id": "foothills-tree-009",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-rock-001": {
+        "id": "foothills-rock-001",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-rock-002": {
+        "id": "foothills-rock-002",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-rock-003": {
+        "id": "foothills-rock-003",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-rock-004": {
+        "id": "foothills-rock-004",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-010": {
+        "id": "foothills-tree-010",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-011": {
+        "id": "foothills-tree-011",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-012": {
+        "id": "foothills-tree-012",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-013": {
+        "id": "foothills-tree-013",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-014": {
+        "id": "foothills-tree-014",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-015": {
+        "id": "foothills-tree-015",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-016": {
+        "id": "foothills-tree-016",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-017": {
+        "id": "foothills-tree-017",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-tree-018": {
+        "id": "foothills-tree-018",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-weed-001": {
+        "id": "foothills-weed-001",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-weed-002": {
+        "id": "foothills-weed-002",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-weed-003": {
+        "id": "foothills-weed-003",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-weed-004": {
+        "id": "foothills-weed-004",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "foothills-weed-005": {
+        "id": "foothills-weed-005",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-001": {
+        "id": "lakeshore-tree-001",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-002": {
+        "id": "lakeshore-tree-002",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-003": {
+        "id": "lakeshore-tree-003",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-004": {
+        "id": "lakeshore-tree-004",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-005": {
+        "id": "lakeshore-tree-005",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-006": {
+        "id": "lakeshore-tree-006",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-rock-001": {
+        "id": "lakeshore-rock-001",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-rock-002": {
+        "id": "lakeshore-rock-002",
+        "kind": "stone",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-007": {
+        "id": "lakeshore-tree-007",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-008": {
+        "id": "lakeshore-tree-008",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-009": {
+        "id": "lakeshore-tree-009",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-010": {
+        "id": "lakeshore-tree-010",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-011": {
+        "id": "lakeshore-tree-011",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-tree-012": {
+        "id": "lakeshore-tree-012",
+        "kind": "tree",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-weed-001": {
+        "id": "lakeshore-weed-001",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-weed-002": {
+        "id": "lakeshore-weed-002",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-weed-003": {
+        "id": "lakeshore-weed-003",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      },
+      "lakeshore-weed-004": {
+        "id": "lakeshore-weed-004",
+        "kind": "weed",
+        "phase": "standing",
+        "regrowOnDay": null
+      }
+    },
+    "farmTiles": {},
+    "friendships": {
+      "seed-keeper": {
+        "npcId": "seed-keeper",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-resident-xiangzi": {
+        "npcId": "town-resident-xiangzi",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-resident-haonan": {
+        "npcId": "town-resident-haonan",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-resident-haomeili": {
+        "npcId": "town-resident-haomeili",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-resident-mozi": {
+        "npcId": "town-resident-mozi",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-resident-alan": {
+        "npcId": "town-resident-alan",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-resident-01": {
+        "npcId": "town-resident-01",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      },
+      "town-blacksmith": {
+        "npcId": "town-blacksmith",
+        "points": 0,
+        "lastTalkedDay": 0,
+        "lastGiftDay": 0,
+        "giftWeekIndex": 0,
+        "giftsThisWeek": 0
+      }
+    },
+    "dailyForage": {
+      "day": 1,
+      "collectedIds": []
+    },
+    "worldObjects": [
+      {
+        "id": "farm-shipping-bin-default",
+        "kind": "shipping-bin",
+        "regionId": "farm",
+        "column": 23,
+        "row": 14
+      }
+    ],
+    "worldDrops": [],
+    "nextWorldEntitySequence": 1,
+    "shippingQueue": [],
+    "unacknowledgedShippingReport": null
+  },
+  "items": {
+    "wood": {
+      "id": "wood",
+      "name": "异星木材",
+      "category": "resource",
+      "maxStack": 999,
+      "inventorySortOrder": 0,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "木"
+    },
+    "axe": {
+      "id": "axe",
+      "name": "木斧",
+      "category": "tool",
+      "maxStack": 1,
+      "inventorySortOrder": 1,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "斧"
+    },
+    "hoe": {
+      "id": "hoe",
+      "name": "锄头",
+      "category": "tool",
+      "maxStack": 1,
+      "inventorySortOrder": 2,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "锄"
+    },
+    "pickaxe": {
+      "id": "pickaxe",
+      "name": "基础镐",
+      "category": "tool",
+      "maxStack": 1,
+      "inventorySortOrder": 3,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "镐"
+    },
+    "scythe": {
+      "id": "scythe",
+      "name": "基础镰刀",
+      "category": "tool",
+      "maxStack": 1,
+      "inventorySortOrder": 4,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "镰"
+    },
+    "stone": {
+      "id": "stone",
+      "name": "石料",
+      "category": "resource",
+      "maxStack": 999,
+      "inventorySortOrder": 5,
+      "canShip": true,
+      "shippingCategory": "mining",
+      "hotbarMark": "石"
+    },
+    "fiber": {
+      "id": "fiber",
+      "name": "植物纤维",
+      "category": "resource",
+      "maxStack": 999,
+      "inventorySortOrder": 6,
+      "canShip": true,
+      "shippingCategory": "foraging",
+      "hotbarMark": "纤"
+    },
+    "turnip-seed": {
+      "id": "turnip-seed",
+      "name": "萝卜种子",
+      "category": "seed",
+      "maxStack": 999,
+      "inventorySortOrder": 7,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "种"
+    },
+    "watering-can": {
+      "id": "watering-can",
+      "name": "浇水壶",
+      "category": "tool",
+      "maxStack": 1,
+      "inventorySortOrder": 8,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "水"
+    },
+    "turnip": {
+      "id": "turnip",
+      "name": "萝卜",
+      "category": "crop",
+      "maxStack": 999,
+      "inventorySortOrder": 9,
+      "canShip": true,
+      "shippingCategory": "farming",
+      "hotbarMark": "萝",
+      "staminaRestore": 12
+    },
+    "bok-choy-seed": {
+      "id": "bok-choy-seed",
+      "name": "小白菜种子",
+      "category": "seed",
+      "maxStack": 999,
+      "inventorySortOrder": 10,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "菜"
+    },
+    "bok-choy": {
+      "id": "bok-choy",
+      "name": "小白菜",
+      "category": "crop",
+      "maxStack": 999,
+      "inventorySortOrder": 11,
+      "canShip": true,
+      "shippingCategory": "farming",
+      "hotbarMark": "青",
+      "staminaRestore": 16
+    },
+    "cauliflower-seed": {
+      "id": "cauliflower-seed",
+      "name": "花椰菜种子",
+      "category": "seed",
+      "maxStack": 999,
+      "inventorySortOrder": 12,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "花"
+    },
+    "cauliflower": {
+      "id": "cauliflower",
+      "name": "花椰菜",
+      "category": "crop",
+      "maxStack": 999,
+      "inventorySortOrder": 13,
+      "canShip": true,
+      "shippingCategory": "farming",
+      "hotbarMark": "椰",
+      "staminaRestore": 24
+    },
+    "spring-wildflower": {
+      "id": "spring-wildflower",
+      "name": "春日野花",
+      "category": "resource",
+      "maxStack": 999,
+      "inventorySortOrder": 14,
+      "canShip": true,
+      "shippingCategory": "foraging",
+      "hotbarMark": "花",
+      "staminaRestore": 6
+    },
+    "bamboo-shoot": {
+      "id": "bamboo-shoot",
+      "name": "春笋",
+      "category": "resource",
+      "maxStack": 999,
+      "inventorySortOrder": 15,
+      "canShip": true,
+      "shippingCategory": "foraging",
+      "hotbarMark": "笋",
+      "staminaRestore": 10
+    },
+    "green-pea-seed": {
+      "id": "green-pea-seed",
+      "name": "青豌豆种子",
+      "category": "seed",
+      "maxStack": 999,
+      "inventorySortOrder": 16,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "豆"
+    },
+    "green-pea": {
+      "id": "green-pea",
+      "name": "青豌豆",
+      "category": "crop",
+      "maxStack": 999,
+      "inventorySortOrder": 17,
+      "canShip": true,
+      "shippingCategory": "farming",
+      "hotbarMark": "豆",
+      "staminaRestore": 14
+    },
+    "spring-potato-seed": {
+      "id": "spring-potato-seed",
+      "name": "春土豆种子",
+      "category": "seed",
+      "maxStack": 999,
+      "inventorySortOrder": 18,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "薯"
+    },
+    "spring-potato": {
+      "id": "spring-potato",
+      "name": "春土豆",
+      "category": "crop",
+      "maxStack": 999,
+      "inventorySortOrder": 19,
+      "canShip": true,
+      "shippingCategory": "farming",
+      "hotbarMark": "薯",
+      "staminaRestore": 18
+    },
+    "rapeseed-seed": {
+      "id": "rapeseed-seed",
+      "name": "油菜花种子",
+      "category": "seed",
+      "maxStack": 999,
+      "inventorySortOrder": 20,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "籽"
+    },
+    "rapeseed-flower": {
+      "id": "rapeseed-flower",
+      "name": "油菜花",
+      "category": "crop",
+      "maxStack": 999,
+      "inventorySortOrder": 21,
+      "canShip": true,
+      "shippingCategory": "farming",
+      "hotbarMark": "油",
+      "staminaRestore": 8
+    },
+    "fishing-rod": {
+      "id": "fishing-rod",
+      "name": "竹制鱼竿",
+      "category": "tool",
+      "maxStack": 1,
+      "inventorySortOrder": 22,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "竿"
+    },
+    "lake-carp": {
+      "id": "lake-carp",
+      "name": "湖鲫",
+      "category": "fish",
+      "maxStack": 999,
+      "inventorySortOrder": 23,
+      "canShip": true,
+      "shippingCategory": "fishing",
+      "hotbarMark": "鲫",
+      "staminaRestore": 16
+    },
+    "silver-minnow": {
+      "id": "silver-minnow",
+      "name": "银鲦",
+      "category": "fish",
+      "maxStack": 999,
+      "inventorySortOrder": 24,
+      "canShip": true,
+      "shippingCategory": "fishing",
+      "hotbarMark": "鲦",
+      "staminaRestore": 12
+    },
+    "rain-loach": {
+      "id": "rain-loach",
+      "name": "雨鳅",
+      "category": "fish",
+      "maxStack": 999,
+      "inventorySortOrder": 25,
+      "canShip": true,
+      "shippingCategory": "fishing",
+      "hotbarMark": "鳅",
+      "staminaRestore": 18
+    },
+    "wind-dace": {
+      "id": "wind-dace",
+      "name": "风鲌",
+      "category": "fish",
+      "maxStack": 999,
+      "inventorySortOrder": 26,
+      "canShip": true,
+      "shippingCategory": "fishing",
+      "hotbarMark": "鲌",
+      "staminaRestore": 17
+    },
+    "dusk-perch": {
+      "id": "dusk-perch",
+      "name": "暮鲈",
+      "category": "fish",
+      "maxStack": 999,
+      "inventorySortOrder": 27,
+      "canShip": true,
+      "shippingCategory": "fishing",
+      "hotbarMark": "鲈",
+      "staminaRestore": 22
+    },
+    "jade-bream": {
+      "id": "jade-bream",
+      "name": "青鳞鱼",
+      "category": "fish",
+      "maxStack": 999,
+      "inventorySortOrder": 28,
+      "canShip": true,
+      "shippingCategory": "fishing",
+      "hotbarMark": "鳞",
+      "staminaRestore": 28
+    },
+    "chest": {
+      "id": "chest",
+      "name": "普通箱",
+      "category": "placeable",
+      "maxStack": 999,
+      "inventorySortOrder": 29,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "箱",
+      "placement": {
+        "kind": "chest",
+        "footprint": {
+          "width": 1,
+          "height": 1
+        },
+        "allowedRegions": [
+          "farm",
+          "town",
+          "cottage",
+          "seed-shop",
+          "blacksmith",
+          "town-house-west",
+          "town-house-north",
+          "town-house",
+          "town-house-southwest",
+          "town-house-east",
+          "foothills",
+          "lakeshore"
+        ]
+      }
+    }
+  },
+  "crops": [
+    {
+      "cropId": "turnip",
+      "seedId": "turnip-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 3,
+      "seedPrice": 20,
+      "sellPrice": 35
+    },
+    {
+      "cropId": "bok-choy",
+      "seedId": "bok-choy-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 5,
+      "seedPrice": 45,
+      "sellPrice": 80
+    },
+    {
+      "cropId": "cauliflower",
+      "seedId": "cauliflower-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 8,
+      "seedPrice": 80,
+      "sellPrice": 170
+    },
+    {
+      "cropId": "green-pea",
+      "seedId": "green-pea-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 7,
+      "regrowDays": 3,
+      "seedPrice": 70,
+      "sellPrice": 48
+    },
+    {
+      "cropId": "spring-potato",
+      "seedId": "spring-potato-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 5,
+      "yieldKind": "spring-potato",
+      "seedPrice": 50,
+      "sellPrice": 72
+    },
+    {
+      "cropId": "rapeseed-flower",
+      "seedId": "rapeseed-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 6,
+      "seedPrice": 35,
+      "sellPrice": 68
+    }
+  ],
+  "recipes": {
+    "wooden-axe": {
+      "id": "wooden-axe",
+      "name": "制作木斧",
+      "ingredients": [
+        {
+          "itemId": "wood",
+          "quantity": 3
+        }
+      ],
+      "output": {
+        "itemId": "axe",
+        "quantity": 1
+      },
+      "knownByDefault": true
+    },
+    "chest": {
+      "id": "chest",
+      "name": "普通箱",
+      "ingredients": [
+        {
+          "itemId": "wood",
+          "quantity": 50
+        }
+      ],
+      "output": {
+        "itemId": "chest",
+        "quantity": 1
+      },
+      "knownByDefault": true
+    }
+  },
+  "prices": {
+    "wood": null,
+    "axe": null,
+    "hoe": null,
+    "pickaxe": null,
+    "scythe": null,
+    "stone": 2,
+    "fiber": 1,
+    "turnip-seed": null,
+    "watering-can": null,
+    "turnip": 35,
+    "bok-choy-seed": null,
+    "bok-choy": 80,
+    "cauliflower-seed": null,
+    "cauliflower": 170,
+    "spring-wildflower": 25,
+    "bamboo-shoot": 40,
+    "green-pea-seed": null,
+    "green-pea": 48,
+    "spring-potato-seed": null,
+    "spring-potato": 72,
+    "rapeseed-seed": null,
+    "rapeseed-flower": 68,
+    "fishing-rod": null,
+    "lake-carp": 45,
+    "silver-minnow": 35,
+    "rain-loach": 70,
+    "wind-dace": 65,
+    "dusk-perch": 85,
+    "jade-bream": 140,
+    "chest": null
+  },
+  "fish": [
+    {
+      "itemId": "lake-carp",
+      "minMinute": 360,
+      "maxMinute": 1560,
+      "minCast": 0,
+      "pull": 8
+    },
+    {
+      "itemId": "silver-minnow",
+      "minMinute": 360,
+      "maxMinute": 720,
+      "minCast": 15,
+      "pull": 12
+    },
+    {
+      "itemId": "rain-loach",
+      "minMinute": 360,
+      "maxMinute": 1560,
+      "weather": "rain",
+      "minCast": 20,
+      "pull": 14
+    },
+    {
+      "itemId": "wind-dace",
+      "minMinute": 540,
+      "maxMinute": 1200,
+      "weather": "wind",
+      "minCast": 35,
+      "pull": 17
+    },
+    {
+      "itemId": "dusk-perch",
+      "minMinute": 1020,
+      "maxMinute": 1560,
+      "minCast": 45,
+      "pull": 20
+    },
+    {
+      "itemId": "jade-bream",
+      "minMinute": 360,
+      "maxMinute": 1560,
+      "minCast": 75,
+      "pull": 24
+    }
+  ],
+  "profiles": [
+    {
+      "npcId": "seed-keeper",
+      "baseDialogueId": "seed-keeper-welcome"
+    },
+    {
+      "npcId": "town-blacksmith",
+      "baseDialogueId": "blacksmith-intro"
+    },
+    {
+      "npcId": "town-resident-01",
+      "baseDialogueId": "town-resident-pink-tree"
+    },
+    {
+      "npcId": "town-resident-mozi",
+      "baseDialogueId": "resident-mozi-home"
+    },
+    {
+      "npcId": "town-resident-haonan",
+      "baseDialogueId": "resident-haonan-home"
+    },
+    {
+      "npcId": "town-resident-alan",
+      "baseDialogueId": "resident-alan-home"
+    },
+    {
+      "npcId": "town-resident-haomeili",
+      "baseDialogueId": "resident-haomeili-home"
+    },
+    {
+      "npcId": "town-resident-xiangzi",
+      "baseDialogueId": "resident-xiangzi-home"
+    }
+  ],
+  "requests": [
+    {
+      "requestId": "seed-rack-repair",
+      "npcId": "seed-keeper",
+      "itemId": "wood",
+      "quantity": 6,
+      "goldReward": 100,
+      "friendshipReward": 170
+    },
+    {
+      "requestId": "shore-color-study",
+      "npcId": "town-resident-alan",
+      "itemId": "spring-wildflower",
+      "quantity": 2,
+      "goldReward": 110,
+      "friendshipReward": 70
+    },
+    {
+      "requestId": "west-street-repair",
+      "npcId": "town-resident-mozi",
+      "itemId": "wood",
+      "quantity": 9,
+      "goldReward": 160,
+      "friendshipReward": 80
+    },
+    {
+      "requestId": "pink-tree-lunch",
+      "npcId": "town-resident-01",
+      "itemId": "turnip",
+      "quantity": 2,
+      "goldReward": 150,
+      "friendshipReward": 80
+    },
+    {
+      "requestId": "forge-handle-stock",
+      "npcId": "town-blacksmith",
+      "itemId": "wood",
+      "quantity": 15,
+      "goldReward": 320,
+      "friendshipReward": 100
+    },
+    {
+      "requestId": "dock-supper",
+      "npcId": "town-resident-xiangzi",
+      "itemId": "bamboo-shoot",
+      "quantity": 2,
+      "goldReward": 180,
+      "friendshipReward": 80
+    },
+    {
+      "requestId": "dye-swatch",
+      "npcId": "town-resident-haomeili",
+      "itemId": "spring-wildflower",
+      "quantity": 2,
+      "goldReward": 120,
+      "friendshipReward": 80
+    },
+    {
+      "requestId": "trail-marker-repair",
+      "npcId": "town-resident-haonan",
+      "itemId": "wood",
+      "quantity": 12,
+      "goldReward": 220,
+      "friendshipReward": 90
+    },
+    {
+      "requestId": "fresh-catch-supper",
+      "npcId": "town-resident-xiangzi",
+      "itemId": "lake-carp",
+      "quantity": 2,
+      "goldReward": 160,
+      "friendshipReward": 70
+    },
+    {
+      "requestId": "spring-pea-basket",
+      "npcId": "seed-keeper",
+      "itemId": "green-pea",
+      "quantity": 2,
+      "goldReward": 170,
+      "friendshipReward": 70
+    },
+    {
+      "requestId": "potato-work-lunch",
+      "npcId": "town-blacksmith",
+      "itemId": "spring-potato",
+      "quantity": 2,
+      "goldReward": 200,
+      "friendshipReward": 80
+    },
+    {
+      "requestId": "golden-flower-vase",
+      "npcId": "town-resident-alan",
+      "itemId": "rapeseed-flower",
+      "quantity": 2,
+      "goldReward": 190,
+      "friendshipReward": 80
+    }
+  ],
+  "milestones": [
+    {
+      "eventId": "day-3-watering-intro",
+      "unlockDay": 3,
+      "message": "昊天提起：水壶可以升级，一次浇三格。去小镇或铁匠铺找他。"
+    },
+    {
+      "eventId": "day-5-backpack-intro",
+      "unlockDay": 5,
+      "message": "别忘了种子店柜台旁的背包陈列：2000g 升到 24 格，再花 10000g 升到 36 格。"
+    },
+    {
+      "eventId": "day-7-fishing-intro",
+      "unlockDay": 7,
+      "message": "从今天起可以向祥子领取竹制鱼竿，再到湖岸旧码头试钓。雨天可以去东岸民宅找他。"
+    }
+  ],
+  "events": [
+    "seed-keeper-two-heart",
+    "blacksmith-two-heart",
+    "day-3-watering-intro",
+    "day-5-backpack-intro",
+    "day-7-fishing-intro"
+  ],
+  "petAnchors": {
+    "farm": [
+      "pet-farm-yard-west",
+      "pet-farm-yard-east",
+      "pet-farm-yard-rest"
+    ],
+    "cottage": [
+      "pet-cottage-hearth",
+      "pet-cottage-window",
+      "pet-cottage-rug"
+    ]
+  },
+  "giftPreferences": {
+    "seed-keeper": {
+      "wood": "neutral",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "liked",
+      "spring-wildflower": "neutral",
+      "bamboo-shoot": "neutral",
+      "green-pea-seed": "neutral",
+      "green-pea": "liked",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "neutral",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "liked",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "neutral",
+      "rain-loach": "disliked",
+      "wind-dace": "neutral",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-blacksmith": {
+      "wood": "neutral",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "neutral",
+      "spring-wildflower": "disliked",
+      "bamboo-shoot": "liked",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "liked",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "neutral",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "neutral",
+      "rain-loach": "neutral",
+      "wind-dace": "neutral",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-resident-01": {
+      "wood": "disliked",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "liked",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "neutral",
+      "spring-wildflower": "neutral",
+      "bamboo-shoot": "neutral",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "neutral",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "liked",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "neutral",
+      "rain-loach": "neutral",
+      "wind-dace": "neutral",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-resident-mozi": {
+      "wood": "liked",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "neutral",
+      "spring-wildflower": "neutral",
+      "bamboo-shoot": "neutral",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "liked",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "neutral",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "disliked",
+      "rain-loach": "neutral",
+      "wind-dace": "neutral",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-resident-haonan": {
+      "wood": "neutral",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "disliked",
+      "spring-wildflower": "neutral",
+      "bamboo-shoot": "liked",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "neutral",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "neutral",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "neutral",
+      "rain-loach": "neutral",
+      "wind-dace": "liked",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-resident-alan": {
+      "wood": "disliked",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "neutral",
+      "spring-wildflower": "liked",
+      "bamboo-shoot": "neutral",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "neutral",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "liked",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "neutral",
+      "rain-loach": "neutral",
+      "wind-dace": "neutral",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-resident-haomeili": {
+      "wood": "neutral",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "neutral",
+      "spring-wildflower": "liked",
+      "bamboo-shoot": "neutral",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "neutral",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "liked",
+      "fishing-rod": "neutral",
+      "lake-carp": "neutral",
+      "silver-minnow": "neutral",
+      "rain-loach": "disliked",
+      "wind-dace": "neutral",
+      "dusk-perch": "neutral",
+      "jade-bream": "neutral",
+      "chest": "neutral"
+    },
+    "town-resident-xiangzi": {
+      "wood": "disliked",
+      "axe": "neutral",
+      "hoe": "neutral",
+      "pickaxe": "neutral",
+      "scythe": "neutral",
+      "stone": "neutral",
+      "fiber": "neutral",
+      "turnip-seed": "neutral",
+      "watering-can": "neutral",
+      "turnip": "neutral",
+      "bok-choy-seed": "neutral",
+      "bok-choy": "neutral",
+      "cauliflower-seed": "neutral",
+      "cauliflower": "neutral",
+      "spring-wildflower": "neutral",
+      "bamboo-shoot": "neutral",
+      "green-pea-seed": "neutral",
+      "green-pea": "neutral",
+      "spring-potato-seed": "neutral",
+      "spring-potato": "neutral",
+      "rapeseed-seed": "neutral",
+      "rapeseed-flower": "neutral",
+      "fishing-rod": "neutral",
+      "lake-carp": "liked",
+      "silver-minnow": "neutral",
+      "rain-loach": "neutral",
+      "wind-dace": "neutral",
+      "dusk-perch": "liked",
+      "jade-bream": "liked",
+      "chest": "neutral"
+    }
+  },
+  "restDays": {
+    "seed-keeper": "wednesday",
+    "town-blacksmith": "sunday",
+    "town-resident-01": "sunday",
+    "town-resident-mozi": "tuesday",
+    "town-resident-haonan": "friday",
+    "town-resident-alan": "monday",
+    "town-resident-haomeili": "sunday",
+    "town-resident-xiangzi": "monday"
+  }
+}

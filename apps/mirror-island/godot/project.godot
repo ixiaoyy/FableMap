@@ -1,0 +1,27 @@
+; Godot 4.7.2 标准版；运行资源由 scripts/prepare-godot.mjs 准备。
+config_version=5
+
+[application]
+config/name="镜像岛"
+run/main_scene="res://scenes/game.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/use_custom_user_dir=true
+config/custom_user_dir_name="mirror-island-godot-development"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="disabled"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0.24, 0.35, 0.27, 1)
+
+[editor]
+import/use_multiple_threads=false
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/YATI/plugin.cfg")

@@ -1,20 +1,23 @@
 # 镜像岛
 
-镜像岛是一款东方风格、未来拥有独立剧情的星露谷式单人 Web 像素生活 RPG。当前只做正常种田、采集、钓鱼与日常社交，不做剧情、节庆或远征；主线由 Phaser/Vue、GameSession、纯 TypeScript 规则和 IndexedDB 本地存档组成。
+当前客户端为 **Godot 4.7.2 + GDScript**，正式产品面向原生桌面版，保留同工程 Web 试玩。本次迁移已接入原有玩法并切换默认开发/构建入口，按用户要求纳入 `main`；完整真人验收与线上发布结果仍需分别核验。操作与验证范围见 [Godot 工程说明](apps/mirror-island/godot/README.md)。
+
+镜像岛是一款东方风格的单人像素生活 RPG。当前保留种田、采集、钓鱼和日常社交，玩法由本地 GDScript GameSession 统一处理；不依赖账号、游戏服务器或数据库。真实城市生成、改名及新玩法没有在这次迁移中实施。
 
 RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行时。公开根入口 `/` 只服务镜像岛单人主线。
 
-当前工作区为 **v13 仓储与出货切片**，位于 `codex/storage-shipping-v1`：在 12 个区域、六种春作、时间/体力/天气、钓鱼、NPC 与宠物、地表工具基础上，接入 12→24→36 背包、12 格活动快捷栏、制作入口、箱子存取与摆放、隔夜出货和墨子木匠服务。当前实现待浏览器与真人完整路线验收；技能、矿洞和真实四季仍待开发。
+已迁移内容包括 12 个区域、六种春作、五件基础工具、12/24/36 格背包与快捷行、制作、箱子存取/摆放/推移、共享出货与日结报告、木匠服务、买卖与升级、时间/体力/天气、钓鱼、八名 NPC 日程/对话/送礼/委托、猫狗与分层角色外观。
 
 地表工具、小屋与两处商店精修均已提交并进入本地 `main`。春季 v10 有历史真人通过记录；后续批次的真人反馈和当前部署需分别核验，详见 [当前状态](docs/CURRENT_STATE.md)。
 
-**当前：完成农场仓储与出货 v1 的验证和验收**。本 child 已单独启动；下一阶段固定为技能与配方，再按矿洞/冶炼/工具 → 完整矿洞战斗 → 四季 → 自动化 → 鸡舍 → 加工 → 烹饪 → 小镇共建推进。后续 child 仍为规划，详细顺序与验收见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+**当前：完成 Godot 迁移的真人验收与发布准备。** 旧阶段验收不代替新引擎验收，后续功能不在本轮自动启动。历史基础盘规划见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 ## 新主线底座
 
-- Phaser `4.2.1` + Vue 3 + TypeScript + Vite：地图、角色表现、输入和 Web UI。
-- GameSession + 纯 TypeScript domain：背包、采集、制作、种田和本地状态 owner。
-- 原生 IndexedDB：版本化单人存档；不使用 localStorage 保存玩法状态。
+- Godot `4.7.2` 标准版 + GDScript：原生场景、界面、输入、声音和游戏规则。
+- `godot/domain` 的 GameSession：唯一可变状态所有者，关键操作先保存候选再发布。
+- Web 使用独立 IndexedDB 槽，Windows 使用原子文件保存；不迁移或覆盖旧 Phaser 开发档。
+- Node.js/TypeScript 保留为构建工具和独立服务端；旧 `client/`、`domain/` 是内容转换与规则对照来源，不再作为游戏运行入口。
 - Keycloak `26.7.1`：保留的身份与论坛 OIDC 代理基础设施；当前试玩客户端不接入。
 - `oidc-provider` `9.11.1`：将 ParallelLines 现有一次性票据适配为标准 OIDC。
 - Prisma `7.9.1` + PostgreSQL 17：保留已评审的后端数据基础设施，未来云能力另行评审；当前本地玩法不接入。
@@ -23,18 +26,19 @@ RPGJS 和 Phaser/Colyseus 多人技术切片均已封存，不再是活跃运行
 ## 本地开发
 
 ```powershell
-npm --prefix .\apps\mirror-island install
-Copy-Item .\apps\mirror-island\.env.example .\apps\mirror-island\.env
+npm --prefix .\apps\mirror-island ci --ignore-scripts
+npm --prefix .\apps\mirror-island run godot:setup
 npm --prefix .\apps\mirror-island run dev:client
 ```
 
-公开 `/` 直接进入无账号本地试玩，不需要启动 Keycloak、游戏服务端或 PostgreSQL。单人实时玩法不读取 `MIRROR_ISLAND_DATABASE_URL`；Prisma/PostgreSQL 只为未来云存档等后端能力保留，实际接入需要单独评审和授权。不要将生产连接串、Keycloak 管理密码、论坛 SSO secret 或 OIDC cookie key 写入仓库。
+本地 Web 默认地址为 `http://127.0.0.1:8080/`，开发命令先准备素材并导出 Web。需要 Node.js 22 和 Python 3；Windows/Linux x86_64 的引擎与模板按锁文件下载到忽略的 `artifacts/`。原生编辑器使用 `godot:editor`，Windows 导出使用 `build:windows`。不需要启动 Keycloak、游戏服务端或 PostgreSQL，也不需要复制任何数据库凭据。
 
 ## 最小检查
 
 ```powershell
 npm --prefix .\apps\mirror-island run typecheck
 npm --prefix .\apps\mirror-island run build:client
+npm --prefix .\apps\mirror-island run build:windows
 npm --prefix .\apps\mirror-island run build:server
 ```
 
@@ -54,4 +58,5 @@ npm --prefix .\apps\mirror-island run build:server
 - [Town 后续开发路线图](docs/TOWN_ROADMAP.md)
 - [现阶段精细化验收门禁](docs/CURRENT_SLICE_POLISH_GATE.md)
 - [生产部署](docs/DEPLOYMENT.md)
-- [Phaser 单人运行时规范](.trellis/spec/frontend/mirror-island-phaser-singleplayer.md)
+- [Godot 单人运行时规范](.trellis/spec/frontend/godot-singleplayer-migration.md)
+- [Phaser 历史规则来源](.trellis/spec/frontend/mirror-island-phaser-singleplayer.md)

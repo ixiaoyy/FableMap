@@ -1,0 +1,688 @@
+class_name FarmGameUI
+extends CanvasLayer
+## Godot 原生游戏界面；显示防御性快照，所有库存、交易和存档操作只发会话命令。
+
+signal selected(index: int)
+signal action_requested(tool: bool)
+signal movement_requested(direction: Vector2)
+signal placement_requested(request: Dictionary)
+signal placement_cancelled
+signal placement_confirmed
+var session: FarmGameSession
+var assets: FarmAssets
+var audio: FarmAudio
+var mode: String="start"
+var selected_index: int=-1
+var container_id: String=""
+var selected_source: Dictionary={}
+var transfer_amount: String="stack"
+var recipe_id: String=""
+var craft_amount: int=1
+var dialogue_result: Dictionary={}
+var inspect_id: String=""
+var appearance_value: Dictionary={}
+var placement_request: Dictionary={}
+var demolish_id: String=""
+var save_exists:=false
+var root: Control
+var header: HBoxContainer
+var status: Label
+var toolbar: ScrollContainer
+var hotbar: HBoxContainer
+var touch: HBoxContainer
+var actions: VBoxContainer
+var message: Label
+var dialog: PanelContainer
+var body: VBoxContainer
+var title: Label
+var close_button: Button
+var saving: PanelContainer
+var placement_controls: HBoxContainer
+var theme: Theme
+var fish_progress: ProgressBar
+var fish_tension: ProgressBar
+var fish_label: Label
+var character_preview: Node2D
+var preview_direction: String="down"
+var preview_walking:=false
+var _inventory_key: String=""
+var message_lifetime:=0.0
+
+## 组合原生控件和统一主题，绑定会话信号后检查唯一新引擎存档。
+func configure(owner_session: FarmGameSession, asset_library: FarmAssets, sound: FarmAudio) -> void:
+	layer=2
+	session=owner_session; assets=asset_library; audio=sound
+	theme=_theme()
+	root=Control.new(); root.mouse_filter=Control.MOUSE_FILTER_IGNORE; root.theme=theme; add_child(root)
+	header=HBoxContainer.new(); root.add_child(header); header.position=Vector2(12,12)
+	var status_panel:=PanelContainer.new(); header.add_child(status_panel)
+	status=_label("",status_panel)
+	var spacer:=Control.new(); spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(spacer)
+	_button("背包 E",header,_open.bind("inventory")); _button("制作",header,_open.bind("crafting")); _button("菜单",header,_open.bind("menu"))
+	toolbar=ScrollContainer.new(); toolbar.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO; toolbar.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; toolbar.follow_focus=true; toolbar.add_theme_stylebox_override("panel",theme.get_stylebox("panel","PanelContainer")); root.add_child(toolbar)
+	hotbar=HBoxContainer.new(); toolbar.add_child(hotbar)
+	touch=HBoxContainer.new(); root.add_child(touch)
+	for pair in [["←",Vector2.LEFT],["↑",Vector2.UP],["↓",Vector2.DOWN],["→",Vector2.RIGHT]]:
+		var button:=_button(pair[0],touch,func():pass)
+		button.custom_minimum_size=Vector2(44,48)
+		button.button_down.connect(_move.bind(pair[1])); button.button_up.connect(_move.bind(Vector2.ZERO)); button.mouse_exited.connect(_move.bind(Vector2.ZERO))
+	actions=VBoxContainer.new(); root.add_child(actions)
+	_button("使用 C",actions,_action.bind(true)); _button("交互 X",actions,_action.bind(false))
+	message=_label("",root); message.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	dialog=PanelContainer.new(); root.add_child(dialog)
+	var margin:=MarginContainer.new(); margin.add_theme_constant_override("margin_left",16); margin.add_theme_constant_override("margin_right",16); margin.add_theme_constant_override("margin_top",12); margin.add_theme_constant_override("margin_bottom",12); dialog.add_child(margin)
+	var content:=VBoxContainer.new(); content.add_theme_constant_override("separation",10); margin.add_child(content)
+	var heading:=HBoxContainer.new(); content.add_child(heading)
+	title=_label("",heading); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	close_button=_button("返回 Esc",heading,close)
+	var scroll:=ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; content.add_child(scroll)
+	body=VBoxContainer.new(); body.size_flags_horizontal=Control.SIZE_EXPAND_FILL; body.add_theme_constant_override("separation",10); scroll.add_child(body)
+	saving=PanelContainer.new(); root.add_child(saving); saving.visible=false
+	placement_controls=HBoxContainer.new(); root.add_child(placement_controls); placement_controls.visible=false
+	_button("确认摆放",placement_controls,func():placement_confirmed.emit()); _button("取消摆放",placement_controls,close)
+	session.changed.connect(_changed); session.feedback.connect(_feedback); session.save_changed.connect(_save_changed)
+	get_viewport().size_changed.connect(_resize)
+	_resize(); _changed()
+	var information:=await session.inspect_save()
+	save_exists=information.exists
+	if information.error!="": session.error=information.error
+	_render()
+
+## 判断普通菜单是否暂停世界时间；钓鱼等待单独遵循其状态机。
+func pauses_clock() -> bool:
+	return mode!="" and mode!="fishing"
+
+## 返回世界输入是否被界面或保存状态占用。
+func locks_world() -> bool:
+	return mode!="" or session.world_locked()
+
+## 每帧仅更新钓鱼动态数值，不重建按钮或丢失按住状态。
+func _process(_delta: float) -> void:
+	if session==null: return
+	if message_lifetime>0:
+		message_lifetime=maxf(0,message_lifetime-_delta)
+		if message_lifetime==0 and mode!="placement": message.text=""
+	if is_instance_valid(character_preview):
+		character_preview.facing=FarmWorldRules.VECTORS[preview_direction]
+		character_preview.animate_movement(FarmWorldRules.VECTORS[preview_direction] if preview_walking else Vector2.ZERO,_delta)
+	if mode=="fishing" and not session.fishing.runtime.is_empty() and is_instance_valid(fish_progress):
+		var fishing: Dictionary=session.fishing.runtime
+		fish_progress.value=fishing.castPower if fishing.phase=="casting" else fishing.progress
+		fish_tension.value=clampf(fishing.tension,0,100)
+		var caught_id: String=fishing.fish.itemId if fishing.fish!=null else ""
+		var texts: Dictionary={"casting":"按住蓄力，松手抛竿。","waiting":"等待浮漂动静……","reeling":"按住收线，松手降张力；保持在 22–78。","caught":"钓到了 %s。"%session.rules.items.get(caught_id,{}).get("name","鱼"),"escaped":"鱼跑掉了。","inventory-full":"背包已满，没能装下鱼获。"}
+		fish_label.text="咬钩了，按下收线！" if session.fishing.bite() else texts[fishing.phase]
+
+## 将暂停之外的方向按钮送入同一世界输入路径。
+func _move(direction: Vector2) -> void:
+	if not locks_world() or direction==Vector2.ZERO: movement_requested.emit(direction)
+
+## 分离工具与交互意图，避免拿着工具时无法开箱。
+func _action(tool: bool) -> void:
+	if not locks_world(): action_requested.emit(tool)
+
+## 打开指定界面并清除短暂选择，不修改世界进度。
+func _open(next_mode: String) -> void:
+	if session.busy or session.save_phase=="failed": return
+	mode=next_mode; selected_source={}; _render(); _resize()
+
+## 关闭前先取消暂存选择；报告与失败保存不能用 Esc 跳过。
+func close() -> void:
+	if session.busy or session.save_phase=="failed" or mode=="report": return
+	if not selected_source.is_empty(): selected_source={}; _render(); return
+	if mode=="appearance-new" or mode=="confirm-new": mode="start"
+	elif mode=="fishing":
+		await session.dispatch({"type":"dismiss-fishing"}); mode=""
+	elif mode=="placement": placement_request={}; placement_cancelled.emit(); mode=""
+	elif not session.active: mode="start"
+	else: mode=""
+	_render(); get_viewport().gui_release_focus()
+
+## 打开经世界层距离检查后的箱子或出货箱。
+func open_container(id: String) -> void:
+	container_id=id
+	var object:=FarmWorldRules.object_by_id(session.snapshot(),id)
+	_open("shipping" if object.get("kind")=="shipping-bin" else "chest")
+
+## 展示已经执行过交谈的结果，不再重复发交谈命令。
+func show_dialogue(result: Dictionary) -> void:
+	dialogue_result=result.duplicate(true); inspect_id=""; _open("dialogue")
+
+## 展示固定查看点，公告板同时提供当日委托内容。
+func inspect(id: String) -> void:
+	inspect_id=id; dialogue_result={}; _open("dialogue")
+
+## 请求睡眠确认，确认按钮才会提交日结命令。
+func sleep_at(id: String) -> void:
+	inspect_id=id; _open("sleep")
+
+## 木匠建筑预览保留实际角色在柜台的状态，临时切换显示地图由世界层完成。
+func request_placement(request: Dictionary) -> void:
+	placement_request=request.duplicate(true); mode="placement"; _render(); placement_requested.emit(placement_request)
+
+## 用屏幕选中的合法格确认一次摆放，失败仍留在预览中。
+func confirm_placement(column: int, row: int) -> void:
+	if mode!="placement" or session.busy: return
+	var command:=placement_request.duplicate(true)
+	command.column=column; command.row=row
+	var result:=await session.dispatch(command)
+	if result.get("tone")=="success": mode=""; placement_request={}; placement_cancelled.emit(); _render()
+
+## 开始钓鱼后显示唯一收线按钮，按下与释放均交给领域状态机。
+func show_fishing() -> void:
+	_open("fishing")
+
+## 监听关键状态更新并刷新可见投影，移动存档检查点不重建无关界面。
+func _changed() -> void:
+	if session==null or root==null: return
+	var state:=session.snapshot()
+	header.visible=session.active; toolbar.visible=session.active; actions.visible=session.active; touch.visible=session.active
+	if session.active:
+		if mode in ["start","appearance-new","confirm-new"]: mode=""
+		if state.unacknowledgedShippingReport!=null: mode="report"
+		elif mode=="report": mode=""
+		var minute:=int(state.minuteOfDay)
+		status.text="第 %d 天 · 周%s  %02d:%02d\n%s · %dg · 体力 %d/100"%[state.day,["一","二","三","四","五","六","日"][(int(state.day)-1)%7],floori(minute/60.0)%24,minute%60,{"sunny":"晴","rain":"雨","wind":"风"}[state.weather.current],state.gold,state.stamina]
+		var key:=JSON.stringify(state.inventory)+str(selected_index)+str(state.wateringCanWater)+str(state.wateringCanLevel)
+		if key!=_inventory_key:
+			_inventory_key=key; _render_hotbar(state)
+	_render(); _resize()
+	if session.active and mode=="" and not session.busy: _mark_milestone.call_deferred()
+
+## 按旧首周提示自动记录最新已解锁提示；无奖励，重复刷新不重复写入。
+func _mark_milestone() -> void:
+	if not session.active or session.busy or mode!="": return
+	var state:=session.snapshot()
+	var available: Dictionary={}
+	for milestone: Dictionary in session.rules.milestones:
+		if milestone.unlockDay<=state.day: available=milestone
+	if not available.is_empty() and available.eventId not in state.seenEventIds:
+		await session.dispatch({"type":"acknowledge-retention-event","eventId":available.eventId})
+
+## 保存中只禁用操作，失败显示独立重试框；不丢弃候选或跳转到新游戏。
+func _save_changed() -> void:
+	if saving==null: return
+	saving.visible=session.save_phase=="failed"
+	_clear(saving)
+	if saving.visible:
+		var box:=VBoxContainer.new(); saving.add_child(box)
+		_label(session.error,box)
+		var retry:=_button("重试保存",box,_retry); retry.grab_focus.call_deferred()
+	for button: Node in dialog.find_children("*","Button",true,false): button.disabled=session.busy or session.save_phase=="failed"
+	for field: Node in dialog.find_children("*","LineEdit",true,false): field.editable=not session.busy and session.save_phase!="failed"; field.focus_mode=Control.FOCUS_ALL if field.editable else Control.FOCUS_NONE
+	for area: Node in [header,toolbar,touch,actions]:
+		for button: Node in area.find_children("*","Button",true,false): button.disabled=session.busy or session.save_phase=="failed" or mode!=""
+	_resize()
+
+## 重试会话已保留的候选，不重新执行消费、日结或鱼获逻辑。
+func _retry() -> void:
+	await session.dispatch({"type":"retry-storage-save"})
+
+## 显示短反馈，状态和详细失败原因仍由对应面板负责。
+func _feedback(result: Dictionary) -> void:
+	message.text=result.get("message","")
+	message_lifetime=3.0
+	message.modulate=Color("ffd1aa") if result.get("tone")=="error" else Color.WHITE
+
+## 重建十二格快捷栏，保留原数字键、工具顺序和行轮换。
+func _render_hotbar(state: Dictionary) -> void:
+	_clear(hotbar)
+	for index in range(12):
+		var slot: Dictionary=state.inventory[index]
+		var button:=Button.new(); button.custom_minimum_size=Vector2(48,54); button.icon=assets.icon(slot.itemId); button.expand_icon=true; button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.add_theme_constant_override("icon_max_width",32)
+		button.tooltip_text=session.rules.items.get(slot.itemId,{}).get("name","空槽")
+		button.toggle_mode=true; button.button_pressed=index==selected_index
+		hotbar.add_child(button); button.pressed.connect(_select.bind(index))
+		_slot_labels(button,index,slot.quantity,"%d/%d"%[state.wateringCanWater,20 if state.wateringCanLevel==1 else 40] if slot.itemId=="watering-can" else "",slot.itemId)
+	if state.inventoryCapacity>12:
+		_command_button("换行 Tab",hotbar,{"type":"rotate-hotbar-row","direction":1})
+
+## 选择活动行槽位，再次选择同一格收起手持物，不移动库存。
+func _select(index: int) -> void:
+	if session.busy: return
+	selected_index=-1 if selected_index==index else index
+	selected.emit(selected_index); _inventory_key=""; _changed()
+	get_viewport().gui_release_focus()
+
+## 根据模式构建原生菜单，不创建无动作的演示按钮。
+func _render() -> void:
+	if dialog==null: return
+	for area: Node in [header,toolbar,touch,actions]:
+		for button: Node in area.find_children("*","Button",true,false): button.disabled=mode!="" or session.busy or session.save_phase=="failed"
+	placement_controls.visible=mode=="placement"
+	dialog.visible=mode!="" and mode!="placement"
+	if not dialog.visible: return
+	if mode=="fishing" and is_instance_valid(fish_progress): return
+	_clear(body); fish_progress=null; character_preview=null
+	close_button.visible=session.active and mode!="report" or mode in ["appearance-new","confirm-new"]
+	var state:=session.snapshot()
+	match mode:
+		"start":
+			title.text="镜像岛"
+			_label("从一方小院开始\n播种、收获、采集，慢慢经营岛上生活。",body)
+			_button("开始新生活",body,_begin_new)
+			var button:=_button("继续游戏",body,_continue); button.disabled=not save_exists or session.error!=""
+			_label("新版试玩使用独立存档，旧开发档不会迁移。\n清除站点数据会丢失网页进度，存档不会自动同步到其他设备。",body)
+			if session.error!="": _label(session.error,body)
+		"confirm-new":
+			title.text="开始新的农场？"
+			_label("确认后将替换这台设备的 Godot 本地农场，旧进度无法恢复。",body)
+			_button("确认重新开始",body,_appearance_new)
+		"appearance-new","appearance": _appearance_menu()
+		"inventory","chest","shipping","crafting": _inventory_menu(state)
+		"menu":
+			title.text="岛上生活"
+			for pair in [["背包","inventory"],["制作","crafting"],["日历","calendar"],["居民名册","social"],["今日目标 / 委托","requests"],["外观","appearance"],["声音","audio"],["鸣谢与许可证","credits"]]: _button(pair[0],body,_open.bind(pair[1]))
+			if state.day>=2 and state.pet==null: _button("领养伙伴",body,_open.bind("adoption"))
+			_label("当前进度自动保存在本机。",body)
+		"report": _report(state)
+		"dialogue": _dialogue_menu(state)
+		"sleep":
+			title.text="今天就休息了吗？"; _label("睡觉后作物生长、资源恢复，出货收入在次日结算。",body)
+			_command_button("睡到明天",body,{"type":"sleep","bedId":inspect_id})
+		"social":
+			title.text="居民名册"
+			for profile: Dictionary in session.rules.profiles:
+				var friendship: Dictionary=state.friendships[profile.npcId]
+				var name: String=session.dialogues[profile.baseDialogueId].speaker
+				_label("%s · 好感 %.1f / 10 · 本周礼物 %d / 2"%[name,friendship.points/250.0,friendship.giftsThisWeek if friendship.giftWeekIndex==floorf(state.day/7.0) else 0],body)
+		"calendar":
+			title.text="日历"
+			_label("第 %d 天 · 周%s\n当前可玩内容为春季，Day 28 后可以继续。\n明日天气：%s"%[state.day,["一","二","三","四","五","六","日"][(int(state.day)-1)%7],{"sunny":"晴","rain":"雨","wind":"风"}[state.weather.next]],body)
+			var grid:=GridContainer.new(); grid.columns=7; body.add_child(grid)
+			for day in range(1,29): _label(str(day)+(" · 今天" if day==(int(state.day)-1)%28+1 else ""),grid)
+		"requests": _requests(state)
+		"adoption": _adoption()
+		"fishing": _fishing_menu()
+		"building": _building_menu(state)
+		"confirm-demolish":
+			title.text="拆除此出货箱？"
+			_label("拆除不退还建造材料，共享出货队列会保留。农场至少要留一个出货箱。",body)
+			_button("确认拆除",body,_demolish)
+		"backpack-upgrade":
+			title.text="背包升级"
+			if state.inventoryCapacity>=36: _label("已经拥有 36 格背包。",body)
+			else:
+				var cost:=2000 if state.inventoryCapacity==12 else 10000
+				_label("%d → %d 格 · %dg"%[state.inventoryCapacity,state.inventoryCapacity+12,cost],body)
+				_command_button("购买升级",body,{"type":"buy-backpack-upgrade","interactionId":inspect_id})
+		"gift":
+			title.text="送出礼物？"
+			var item_id: String=state.inventory[selected_index].itemId if selected_index>=0 else ""
+			_label("送出 1 件 %s，每人每天一份、每周两份。"%session.rules.items.get(item_id,{}).get("name","物品"),body)
+			_button("确认送出",body,_gift.bind(item_id))
+		"audio":
+			title.text="声音"
+			for entry in [["总音量","master"],["环境音","music"],["效果音","sfx"]]:
+				_label(entry[0],body)
+				var slider:=HSlider.new(); slider.min_value=0; slider.max_value=100; slider.value=audio.settings[entry[1]]*100; body.add_child(slider)
+				slider.value_changed.connect(_volume.bind(entry[1]))
+			_button("测试声音",body,audio.cue.bind("pickup"))
+		"credits":
+			title.text="鸣谢与许可证"
+			_label(FileAccess.get_file_as_string("res://generated/THIRD_PARTY_NOTICES.txt"),body)
+			_label("Godot Engine\n"+Engine.get_license_text(),body)
+			_label("Noto Sans CJK SC Sans2.004\n"+FileAccess.get_file_as_string("res://generated/NotoSansCJK-LICENSE.txt"),body)
+			_label("引擎依赖版权\n"+JSON.stringify(Engine.get_copyright_info(),"  "),body)
+			var licenses:=Engine.get_license_info()
+			for name: String in licenses: _label(name+"\n"+str(licenses[name]),body)
+	_resize()
+
+## 新游戏已有存档时先确认覆盖，首次新建直接进入外观选择。
+func _begin_new() -> void:
+	if save_exists: _open("confirm-new")
+	else: _appearance_new()
+
+## 初始化新角色的独立外观选择，尚不创建世界。
+func _appearance_new() -> void:
+	appearance_value=session.rules.initial.player.appearance.duplicate(true); _open("appearance-new")
+
+## 继续游戏仅在仓库与完整 decoder 成功后关闭启动界面。
+func _continue() -> void:
+	if await session.continue_game(): mode=""; _changed()
+	else: _render()
+
+## 创建独立三层角色预览与全部已发布外观选项。
+func _appearance_menu() -> void:
+	title.text="创建岛民" if mode=="appearance-new" else "更换外观"
+	if mode=="appearance": appearance_value=session.snapshot().player.appearance.duplicate(true)
+	var row:=HBoxContainer.new(); body.add_child(row)
+	var preview:=Control.new(); preview.custom_minimum_size=Vector2(108,170); row.add_child(preview)
+	character_preview=load("res://scenes/islander.tscn").instantiate(); character_preview.position=Vector2(54,140); character_preview.scale=Vector2(3,3); character_preview.collision_layer=0; character_preview.collision_mask=0; preview.add_child(character_preview)
+	var options:=GridContainer.new(); options.columns=2; options.size_flags_horizontal=Control.SIZE_EXPAND_FILL; options.add_theme_constant_override("v_separation",8); row.add_child(options)
+	var choices: Dictionary={"gender":["性别",["male","female"],["男","女"]],"head":["发型",["short","bob","ponytail"],["清爽短发","柔软短波波","轻快马尾"]],"top":["上装",["shirt","overalls","jacket"],["日常衬衫","农场背带装","轻便外套"]],"bottom":["下装",["trousers","shorts","skirt"],["直筒长裤","夏日短裤","田园短裙"]],"skinTone":["肤色",["peach","tan","umber"],["浅桃","暖棕","深褐"]],"hairColor":["发色",["chestnut","black","gold"],["栗棕","墨黑","亚麻金"]],"topColor":["衣服颜色",["cream","mint","coral","sky"],["暖白","薄荷绿","珊瑚橙","晴空蓝"]],"bottomColor":["下装颜色",["denim","sand","forest"],["牛仔蓝","浅沙色","森林绿"]]}
+	for key: String in choices:
+		var label:=_label(choices[key][0],options); label.size_flags_horizontal=Control.SIZE_SHRINK_BEGIN; label.custom_minimum_size.x=68
+		var picker:=OptionButton.new(); picker.custom_minimum_size.y=40; picker.size_flags_horizontal=Control.SIZE_EXPAND_FILL; options.add_child(picker)
+		for name: String in choices[key][2]: picker.add_item(name)
+		picker.select(choices[key][1].find(appearance_value[key])); picker.item_selected.connect(_appearance_select.bind(key,choices[key][1]))
+	_apply_preview()
+	var directions:=HBoxContainer.new(); body.add_child(directions)
+	for direction in [["正面","down"],["左侧","left"],["右侧","right"],["背面","up"]]: _button(direction[0],directions,_preview_face.bind(direction[1]))
+	var walking:=CheckButton.new(); walking.text="看看走路"; walking.button_pressed=preview_walking; directions.add_child(walking); walking.toggled.connect(_preview_walk)
+	_button("开始新生活" if mode=="appearance-new" else "保存外观",body,_save_appearance)
+
+## 切换外观预览方向，不改变农场角色的真实位置。
+func _preview_face(direction: String) -> void:
+	preview_direction=direction
+
+## 预览行走只推进三层动画，不产生移动或存档。
+func _preview_walk(enabled: bool) -> void:
+	preview_walking=enabled
+
+## 修改本次外观草稿并更新预览，不触发库存或世界状态变更。
+func _appearance_select(index: int, key: String, values: Array) -> void:
+	appearance_value[key]=values[index]; _apply_preview()
+
+## 将原外观枚举映射到可编辑角色组件的检查器参数。
+func _apply_preview() -> void:
+	if not is_instance_valid(character_preview): return
+	var mapping: Dictionary={"gender":["gender",["male","female"]],"head":["head",["short","bob","ponytail"]],"top":["top",["shirt","overalls","jacket"]],"bottom":["bottom",["trousers","shorts","skirt"]],"skinTone":["skin_tone",["peach","tan","umber"]],"hairColor":["hair_color",["chestnut","black","gold"]],"topColor":["top_color",["cream","mint","coral","sky"]],"bottomColor":["bottom_color",["denim","sand","forest"]]}
+	for key: String in mapping: character_preview.set(mapping[key][0],mapping[key][1].find(appearance_value[key]))
+
+## 新游戏与游戏中换装分别调用对应保存路径，失败不关闭编辑界面。
+func _save_appearance() -> void:
+	var success:=false
+	if mode=="appearance-new": success=await session.new_game(appearance_value)
+	else:
+		var result:=await session.dispatch({"type":"change-appearance","appearance":appearance_value})
+		success=result.get("tone")=="success"
+	if success: mode=""; save_exists=true; _changed()
+
+## 构建背包、容器、出货和制作菜单，共用同一槽位控件和数量选择。
+func _inventory_menu(state: Dictionary) -> void:
+	title.text={"inventory":"随身背包","chest":"普通箱","shipping":"出货箱","crafting":"制作"}[mode]
+	var options:=HBoxContainer.new(); body.add_child(options)
+	for pair in [["整组","stack"],["单件","one"],["半组","half"]]: _button(pair[0],options,_amount.bind(pair[1]))
+	_command_button("整理背包",options,{"type":"sort-inventory"})
+	if mode=="crafting":
+		var quantities:=HBoxContainer.new(); body.add_child(quantities)
+		for amount in [1,5,25]: _button("×%d"%amount,quantities,_craft_amount.bind(amount))
+		for recipe: Dictionary in session.rules.recipes.values():
+			var requirements: Array[String]=[]
+			for ingredient: Dictionary in recipe.ingredients: requirements.append("%s %d/%d"%[session.rules.items[ingredient.itemId].name,session.inventory.quantity(state.inventory,ingredient.itemId),int(ingredient.quantity)*craft_amount])
+			_button("%s ×%d · %s"%[recipe.name,craft_amount," / ".join(requirements)],body,_choose_recipe.bind(recipe.id))
+		_label("已选 %s，点背包目标格完成制作。"%session.rules.recipes[recipe_id].name if recipe_id!="" else "先选配方，再选背包目标格。",body)
+	if mode=="chest":
+		var chest:=FarmWorldRules.object_by_id(state,container_id)
+		if chest.is_empty(): return
+		var controls:=HFlowContainer.new(); body.add_child(controls)
+		_command_button("放入已有堆叠",controls,{"type":"add-to-existing-stacks","objectId":container_id})
+		_command_button("整理箱子",controls,{"type":"sort-container","objectId":container_id})
+		var colors:=OptionButton.new(); controls.add_child(colors)
+		var color_names: Array[String]=["原木","红","橙","黄","黄绿","绿","青绿","青","天蓝","蓝","靛蓝","紫","紫罗兰","洋红","粉","玫瑰","浅棕","棕","灰","黑","白"]
+		for color: String in color_names: colors.add_item(color)
+		colors.select(FarmStorageRules.COLORS.find(chest.colorId)); colors.item_selected.connect(_chest_color)
+		_label("箱内物品 · 36 格",body); _grid(chest.slots,"chest")
+	if mode=="shipping":
+		_label("投入后明早结算，只能取回最后一次投入。",body)
+		if not state.shippingQueue.is_empty():
+			var last: Dictionary=state.shippingQueue.back()
+			_label("最后投入：%s ×%d"%[session.rules.items[last.itemId].name,last.quantity],body)
+			_command_button("取回最后一笔",body,{"type":"reclaim-last-shipment","objectId":container_id})
+	_label("随身物品 · %d 格"%state.inventoryCapacity,body); _grid(state.inventory,"inventory")
+	if not selected_source.is_empty() and mode=="inventory":
+		var slot: Dictionary=state.inventory[selected_source.index]
+		_label("%s ×%d"%[session.rules.items.get(slot.itemId,{}).get("name","空槽"),slot.quantity],body)
+		if selected_source.index<12: _button("拿在手上",body,_hold_selected)
+		if session.rules.items.get(slot.itemId,{}).get("staminaRestore",0)>0: _command_button("食用 · 恢复 %d 体力"%session.rules.items[slot.itemId].staminaRestore,body,{"type":"eat-item","itemId":slot.itemId})
+		if slot.itemId=="chest": _button("摆放普通箱",body,request_placement.bind({"type":"place-world-object","inventoryIndex":selected_source.index}))
+	_label("已选物品，再点目标格放入；也可以拖动。右键单件，Shift+右键半组。",body)
+
+## 创建响应式槽位列表，保持槽位编号和当前容量。
+func _grid(slots: Array, grid_id: String) -> void:
+	var grid:=GridContainer.new(); grid.set_meta("slot_grid",true); grid.columns=12 if root.size.x>=800 else 6; body.add_child(grid)
+	for index in range(slots.size()):
+		var slot: Dictionary=slots[index]
+		var button:=FarmSlotButton.new(); button.grid_id=grid_id; button.slot_index=index; button.item_id=slot.itemId; button.amount_mode=transfer_amount; button.transfer_enabled=mode in ["inventory","chest"]
+		button.custom_minimum_size=Vector2(46,52); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.icon=assets.icon(slot.itemId); button.expand_icon=true; button.add_theme_constant_override("icon_max_width",28)
+		button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.tooltip_text=session.rules.items.get(slot.itemId,{}).get("name","空格")
+		button.toggle_mode=true; button.button_pressed=selected_source.get("grid")==grid_id and selected_source.get("index")==index
+		grid.add_child(button); button.picked.connect(_pick_slot); button.moved.connect(_drop_slot)
+		_slot_labels(button,index,slot.quantity,"",slot.itemId)
+
+## 将槽号与数量放在图标角落，避免文字占掉图标宽度；标签不抢输入。
+func _slot_labels(button: Button, index: int, count: int, extra: String = "", item_id: String = "") -> void:
+	var badge_texture:=assets.badge(item_id)
+	if badge_texture!=null:
+		var badge:=TextureRect.new(); badge.texture=badge_texture; badge.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; badge.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(badge); badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT); badge.offset_left=-21; badge.offset_top=-21; badge.offset_right=-3; badge.offset_bottom=-3
+	var number:=Label.new(); number.text=str(index+1); number.position=Vector2(4,0); number.add_theme_font_size_override("font_size",10); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(number)
+	if count>1 or extra!="":
+		var quantity:=Label.new(); quantity.text=extra if extra!="" else str(count); quantity.add_theme_font_size_override("font_size",10); quantity.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(quantity); quantity.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT); quantity.grow_horizontal=Control.GROW_DIRECTION_BEGIN; quantity.grow_vertical=Control.GROW_DIRECTION_BEGIN; quantity.position+=Vector2(-3,-2)
+
+## 设置明确数量模式，不改变已选物品。
+func _amount(value: String) -> void:
+	transfer_amount=value; _render()
+
+## 选择原制作批次数量，不引入任意输入或无限循环制作。
+func _craft_amount(value: int) -> void:
+	craft_amount=value; _render()
+
+## 选择配方只显示预览，点目标格之前不消耗材料。
+func _choose_recipe(id: String) -> void:
+	recipe_id=id; _render()
+
+## 依据当前面板决定点选、转移、出货或制作，全部走领域命令。
+func _pick_slot(grid_id: String, index: int, amount: String) -> void:
+	if session.busy: return
+	transfer_amount=amount
+	if mode=="shipping": await _command({"type":"ship-item","objectId":container_id,"sourceIndex":index,"quantity":"one" if amount=="one" else "stack"}); return
+	if mode=="crafting":
+		if recipe_id!="": await _command({"type":"craft-item","recipeId":recipe_id,"quantity":craft_amount,"targetIndex":index})
+		return
+	var state:=session.snapshot()
+	var slots: Array=state.inventory if grid_id=="inventory" else FarmWorldRules.object_by_id(state,container_id).get("slots",[])
+	if selected_source.is_empty():
+		if index<slots.size() and slots[index].itemId!="": selected_source={"grid":grid_id,"index":index}
+	elif selected_source.grid==grid_id and selected_source.index==index: selected_source={}
+	else: await _transfer(selected_source,grid_id,index,amount)
+	_render()
+
+## 拖放完成只提交一次转移，失败保留源物品。
+func _drop_slot(data: Dictionary, grid_id: String, index: int) -> void:
+	await _transfer(data,grid_id,index,data.amount)
+	_render()
+
+## 按源目标容器选择原命令，禁止 UI 直接修改两个数组。
+func _transfer(source: Dictionary, grid_id: String, index: int, amount: String) -> void:
+	var command: Dictionary={"sourceIndex":source.index,"targetIndex":index,"amount":amount}
+	if source.grid==grid_id:
+		command.type="move-inventory" if grid_id=="inventory" else "move-container-item"
+		if grid_id=="chest": command.objectId=container_id
+	else: command.merge({"type":"transfer-container-item","objectId":container_id,"direction":"to-chest" if source.grid=="inventory" else "from-chest"})
+	var result:=await session.dispatch(command)
+	if result.get("tone")=="success": selected_source={}
+
+## 将背包中当前活动行的物品拿到手上，保留非活动行限制。
+func _hold_selected() -> void:
+	selected_index=selected_source.index; selected.emit(selected_index); selected_source={}; mode=""; _inventory_key=""; _changed()
+
+## 保存箱子颜色，仍使用原二十一色封闭列表。
+func _chest_color(index: int) -> void:
+	await _command({"type":"set-chest-color","objectId":container_id,"colorId":FarmStorageRules.COLORS[index]})
+
+## 展示原对话文本和实际可用服务，商店内容与离柜检查由领域重复验证。
+func _dialogue_menu(state: Dictionary) -> void:
+	var definition: Dictionary={}
+	if inspect_id!="":
+		var point: Dictionary=session.world.interactions.get(inspect_id,{})
+		definition=session.dialogues.get(point.get("dialogueId",""),{})
+	else: definition=session.dialogues.get(dialogue_result.get("dialogueId",""),{})
+	title.text=definition.get("speaker","交谈")
+	for line: String in definition.get("lines",[]): _label(line,body)
+	if inspect_id.contains("notice") or inspect_id.contains("board"): _requests(state)
+	if dialogue_result.get("requestResult")=="request-completed": _label("今日委托已完成，报酬与好感已到账。",body)
+	if dialogue_result.get("shopAvailable",false):
+		_label("种子与收购",body)
+		for crop: Dictionary in session.rules.crops: _command_button("买 %s · %dg"%[session.rules.items[crop.seedId].name,crop.seedPrice],body,{"type":"buy-item","itemId":crop.seedId,"quantity":1})
+		for slot: Dictionary in state.inventory:
+			var price: Variant=session.rules.prices.get(slot.itemId)
+			if price!=null: _command_button("卖 %s · %dg"%[session.rules.items[slot.itemId].name,price],body,{"type":"sell-item","itemId":slot.itemId,"quantity":1})
+	if dialogue_result.get("wateringServiceAvailable",false): _command_button("升级水壶 · 900g + 15 木材",body,{"type":"upgrade-watering-can"})
+	if dialogue_result.get("npcId")=="town-resident-xiangzi" and state.day>=7: _command_button("领取竹制鱼竿",body,{"type":"claim-fishing-rod","npcId":"town-resident-xiangzi"})
+	if dialogue_result.get("npcId")=="town-resident-mozi" and session.storage.carpenter_available(state,session.npcs.snapshot(),"town-house-west-carpenter-counter"): _button("木匠服务",body,_open.bind("building"))
+	if dialogue_result.has("npcId") and selected_index>=0:
+		var item: Dictionary=session.rules.items.get(state.inventory[selected_index].itemId,{})
+		if not item.is_empty() and item.category not in ["tool","seed"]: _button("赠送手持物品",body,_open.bind("gift"))
+
+## 确认后送出一件手持物品；失败保留礼物确认界面。
+func _gift(item_id: String) -> void:
+	var result:=await session.dispatch({"type":"gift-item-to-npc","npcId":dialogue_result.npcId,"itemId":item_id})
+	if result.get("tone")=="success": _open("dialogue")
+
+## 以真实柜台身份进入整图建筑预览，拆除保持二次明确按钮。
+func _building_menu(state: Dictionary) -> void:
+	title.text="墨子的木匠服务"
+	_button("建造出货箱 · 250g + 150 木材",body,request_placement.bind({"type":"build-shipping-bin","interactionId":"town-house-west-carpenter-counter"}))
+	for object: Dictionary in state.worldObjects:
+		if object.kind!="shipping-bin": continue
+		var row:=HBoxContainer.new(); body.add_child(row)
+		_label("出货箱 · (%d, %d)"%[object.column,object.row],row)
+		_button("移动",row,request_placement.bind({"type":"move-farm-building","interactionId":"town-house-west-carpenter-counter","objectId":object.id}))
+		_button("拆除",row,_confirm_demolish.bind(object.id))
+
+## 拆除先进入确认，保存完成前不删除场景物件。
+func _confirm_demolish(id: String) -> void:
+	demolish_id=id; _open("confirm-demolish")
+
+## 确认后提交原木匠命令，失败留在当前界面显示原因。
+func _demolish() -> void:
+	var result:=await session.dispatch({"type":"demolish-farm-building","interactionId":"town-house-west-carpenter-counter","objectId":demolish_id})
+	if result.get("tone")=="success": _open("building")
+
+## 显示出货分类与总额，确认动作也必须先持久化。
+func _report(state: Dictionary) -> void:
+	title.text="第 %d 天出货收入"%state.unacknowledgedShippingReport.settledDay
+	if not session.day_summary.is_empty():
+		var summary: Dictionary=session.day_summary
+		_label(("02:00 已被送回家。" if summary.reason=="passed-out" else "睡醒了，新的一天开始。")+" 体力 %d/100。"%summary.nextStamina,body)
+		if summary.goldLost>0: _label("送回家花费 %dg。"%summary.goldLost,body)
+	var names: Dictionary={"farming":"农产","foraging":"采集","fishing":"渔获","mining":"矿产","other":"其他"}
+	for category: Dictionary in state.unacknowledgedShippingReport.categories:
+		_label("%s · %dg"%[names[category.category],category.totalGold],body)
+		for entry: Dictionary in category.entries: _label("%s ×%d  %dg"%[session.rules.items[entry.itemId].name,entry.quantity,entry.totalGold],body)
+	_label("合计 %dg · 当前金币 %dg"%[state.unacknowledgedShippingReport.totalGold,state.gold],body)
+	_command_button("开始新的一天",body,{"type":"dismiss-day-settlement"})
+
+## 展示当前确定性委托与首周提示；领取奖励仍发生在目标居民交谈时。
+func _requests(state: Dictionary) -> void:
+	if mode=="requests": title.text="今日目标与委托"
+	var hints: Array[String]=["打理农田，去小镇认识居民，到华强的店里看看种子。","粉树广场委托板已开放，将今日物品交给指定居民。","攒下 900g 和 15 木材，找昊天升级水壶。","完成委托并坚持交谈，居民会逐渐熟悉你。","到种子店柜台旁购买背包升级，Tab 可以轮换快捷行。","今日可准备高投入委托，先查看所需物品。","向祥子领取竹制鱼竿，到湖岸旧码头试钓。"]
+	if state.wateringCanLevel==2: hints[2]="Lv2 水壶已能朝面向方向一次浇三格。"
+	if state.friendships.values().any(func(friend:Dictionary)->bool:return friend.points>=250): hints[3]="有人已经把你当成熟悉的邻居，再交谈会听见新的话。"
+	hints[4]="背包已扩至 36 格，可以轮换三行快捷栏。" if state.inventoryCapacity==36 else "种子店背包陈列可花 %dg 扩到 %d 格，Tab 可以轮换快捷行。"%[2000 if state.inventoryCapacity==12 else 10000,state.inventoryCapacity+12]
+	_label(hints[state.day-1] if state.day<=7 else "继续经营农场、完成每日委托，为下一次升级储蓄。",body)
+	var request:=session.social.request_for_day(state.day)
+	if request.is_empty(): return
+	var name: String=request.npcId
+	for profile: Dictionary in session.rules.profiles:
+		if profile.npcId==request.npcId: name=session.dialogues[profile.baseDialogueId].speaker
+	_label("%s需要 %s ×%d\n报酬 %dg · 好感 +%d\n%s"%[name,session.rules.items[request.itemId].name,request.quantity,request.goldReward,request.friendshipReward,"已完成" if state.dailyRequest.completed else "与目标居民交谈即可提交"],body)
+
+## 使用真实宠物图集展示选项，领养确认后不可替换伙伴。
+func _adoption() -> void:
+	title.text="领养伙伴"
+	var species:=OptionButton.new(); species.add_item("猫"); species.add_item("狗"); body.add_child(species)
+	var name:=LineEdit.new(); name.placeholder_text="伙伴名字（1–12 个字符）"; name.text="团子"; name.max_length=12; body.add_child(name)
+	_button("确认领养",body,_adopt.bind(species,name))
+
+## 读取当前控件值发出唯一领养命令，不以界面选项替代领域验证。
+func _adopt(species: OptionButton, name: LineEdit) -> void:
+	var result:=await session.dispatch({"type":"adopt-pet","species":"cat" if species.selected==0 else "dog","name":name.text})
+	if result.get("tone")=="success": close()
+
+## 构建钓鱼控制，按钮释放与失焦都停止收线输入。
+func _fishing_menu() -> void:
+	title.text="湖岸垂钓"
+	fish_label=_label("按住蓄力，松手抛竿。",body)
+	fish_progress=ProgressBar.new(); fish_progress.custom_minimum_size.y=24; body.add_child(fish_progress)
+	_label("鱼线张力 · 安全范围 22–78",body)
+	fish_tension=ProgressBar.new(); fish_tension.custom_minimum_size.y=24; body.add_child(fish_tension)
+	var button:=_button("按住 / 松开",body,func():pass)
+	button.custom_minimum_size.y=64
+	button.button_down.connect(_fish_held.bind(true)); button.button_up.connect(_fish_held.bind(false)); button.focus_exited.connect(_fish_held.bind(false))
+
+## 钓鱼按住状态只进入临时状态机，不触发多次扣体力。
+func _fish_held(held: bool) -> void:
+	await session.dispatch({"type":"set-fishing-input","held":held})
+
+## 修改本机总音量；声音设置独立于游戏进度。
+func _volume(value: float, channel: String) -> void:
+	audio.volume(channel,value/100.0)
+
+## 创建执行命令的真实按钮，业务结果通过会话反馈返回。
+func _command_button(text: String, parent: Node, command: Dictionary) -> Button:
+	return _button(text,parent,_command.bind(command))
+
+## 通用按钮命令回调，不吞掉错误或自行补发奖励。
+func _command(command: Dictionary) -> void:
+	await session.dispatch(command)
+
+## 创建可键盘聚焦的文字按钮；回调必须由调用方明确提供。
+func _button(text: String, parent: Node, callback: Callable) -> Button:
+	var button:=Button.new(); button.text=text; button.custom_minimum_size.y=42; button.size_flags_vertical=Control.SIZE_SHRINK_CENTER; parent.add_child(button); button.pressed.connect(callback)
+	return button
+
+## 创建可换行标签，避免手机长文本撑宽弹窗。
+func _label(text: String, parent: Node) -> Label:
+	var label:=Label.new(); label.text=text; label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.custom_minimum_size.x=1; parent.add_child(label)
+	return label
+
+## 移除本次动态列表节点，先脱离布局再排队释放。
+func _clear(parent: Node) -> void:
+	for child: Node in parent.get_children(): parent.remove_child(child); child.queue_free()
+
+## 统一清新田园主题，图标仍使用原素材；中文明确绑定字体。
+func _theme() -> Theme:
+	var result:=Theme.new(); result.default_font=load("res://media/NotoSansCJKsc-Regular.otf"); result.default_font_size=16
+	var paper:=StyleBoxFlat.new(); paper.bg_color=Color("fffdf4"); paper.border_color=Color("a6bc92"); paper.set_border_width_all(2); paper.set_corner_radius_all(5); paper.content_margin_left=8; paper.content_margin_right=8; paper.content_margin_top=6; paper.content_margin_bottom=6
+	result.set_stylebox("panel","PanelContainer",paper)
+	result.set_stylebox("normal","Button",paper)
+	var hover:=paper.duplicate(); hover.bg_color=Color("e8f1de"); result.set_stylebox("hover","Button",hover)
+	var pressed:=paper.duplicate(); pressed.bg_color=Color("467d5e"); result.set_stylebox("pressed","Button",pressed)
+	for type in ["Label","Button","OptionButton","LineEdit"]: result.set_color("font_color",type,Color("304d3f"))
+	result.set_color("font_pressed_color","Button",Color("fffdf4"))
+	return result
+
+## 在桌面和手机保留可点击区域与独立滚动，不缩小整个游戏画布。
+func _resize() -> void:
+	if root==null: return
+	root.size=get_viewport().get_visible_rect().size
+	var size:=root.size
+	for grid: Node in body.find_children("*","GridContainer",true,false):
+		if grid.has_meta("slot_grid"): grid.columns=12 if size.x>=800 else 6
+	header.size=Vector2(size.x-24,64); status.custom_minimum_size.x=160 if size.x>=800 else 100
+	var bar_width:=minf(730,size.x-24)
+	toolbar.position=Vector2((size.x-bar_width)/2,size.y-84); toolbar.size=Vector2(bar_width,72)
+	touch.position=Vector2(12,size.y-150); actions.position=Vector2(size.x-106,size.y-188)
+	message.position=Vector2(12,size.y-228); message.size=Vector2(size.x-24,40)
+	var preferred_width:=1000.0
+	var preferred_height:=620.0
+	if mode in ["start","confirm-new","confirm-demolish","sleep","gift","adoption","backpack-upgrade","audio"]: preferred_width=640; preferred_height=360
+	elif mode in ["appearance-new","appearance"]: preferred_width=760; preferred_height=560
+	elif mode=="inventory":
+		var columns:=12 if size.x>=800 else 6
+		preferred_height=250+ceili(float(session.snapshot().get("inventoryCapacity",12))/columns)*58+(120 if not selected_source.is_empty() else 0)
+	elif mode=="report":
+		var report: Dictionary=session.snapshot().get("unacknowledgedShippingReport",{})
+		var lines:=0
+		for category: Dictionary in report.get("categories",[]): lines+=category.entries.size()+1
+		preferred_width=760; preferred_height=minf(620,220+lines*28)
+	var dialog_size:=Vector2(minf(preferred_width,size.x-20),minf(preferred_height,size.y-24))
+	dialog.size=dialog_size; dialog.position=(size-dialog_size)/2
+	# 等待网格最小尺寸更新后再次应用目标宽度，避免横屏切竖屏时保留旧的宽面板。
+	dialog.set_deferred("size",dialog_size); dialog.set_deferred("position",(size-dialog_size)/2)
+	saving.size=Vector2(minf(420,size.x-24),140); saving.position=(size-saving.size)/2
+	placement_controls.position=Vector2(12,size.y-140)
+
+## Esc/E 保持菜单取消与关闭顺序，Tab 留给弹窗内正常键盘导航。
+func _unhandled_key_input(event: InputEvent) -> void:
+	if session==null or not event is InputEventKey or not event.pressed or event.echo: return
+	if event.keycode==KEY_ESCAPE:
+		if mode=="" and session.active: _open("menu")
+		else: close()
+		get_viewport().set_input_as_handled()
+	elif event.keycode==KEY_E and session.active:
+		if mode=="": _open("inventory")
+		elif mode=="inventory": close()
+		get_viewport().set_input_as_handled()

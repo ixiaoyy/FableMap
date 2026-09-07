@@ -1,5 +1,11 @@
 # 镜像岛生产部署
 
+## 2026-09-07 Godot 构建切换
+
+`Dockerfile.web` 已改为固定 Linux x86_64 Godot 工具链导出，再由 Nginx 提供单份 Web 文件；默认 npm 开发/构建同样使用 Godot。WASM/PCK/JS 配置正确 MIME、压缩和缓存再验证，避免固定文件名混用旧包。以下服务/数据保护和授权边界继续有效。
+
+本轮未部署，Docker Desktop daemon 未运行，因此 Linux 容器构建与 Nginx 容器启动尚未实测。已验证 Windows 工具链的 Web/Windows 导出与原生 headless 启动。新增中文字体在公开发布前仍需完成媒体上传登记；不得把本地候选包视作已发布版本。
+
 ## 公开路由
 
 - 游戏：`https://fable.pingxingxian.space/`
@@ -14,7 +20,7 @@
 
 | 服务 | 职责 | 持久化 |
 |---|---|---|
-| `frontend` | Nginx 和单份 Phaser/Vue client | 无 |
+| `frontend` | Nginx 和单份 Godot Web 导出 | 浏览器独立 IndexedDB 槽 |
 | `keycloak` | 保留的身份与论坛 Identity Broker；当前试玩客户端不接入 | `mirror_identity_db` |
 | `mirror-identity-db` | Keycloak PostgreSQL 17 | `mirror_identity_db` volume |
 | `mirror-game` | 论坛 OIDC 桥、health 与未来云存档/成就/排行榜 API；不参与实时玩法 | `mirror-game-db` |

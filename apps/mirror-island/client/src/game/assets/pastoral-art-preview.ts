@@ -2,7 +2,7 @@ import { ITEM_ID } from "../../../../domain/items/definitions.ts";
 import { isToolArtPreviewEnabled } from "./tool-art-candidate.ts";
 
 /** Keeps unpublished art inside the existing isolated development farm; production has no candidate URLs. */
-export const PASTORAL_PREVIEW = import.meta.env.DEV && isToolArtPreviewEnabled() ? {
+export const PASTORAL_PREVIEW = import.meta.env?.DEV && isToolArtPreviewEnabled() ? {
   tools: { key: "pastoral-tools-preview", url: "/__dev-art/fresh-pastoral-tools-v1.png" },
   cottage: { key: "pastoral-cottage-preview", url: "/__dev-art/fresh-pastoral-cottage-v1.png" },
   interior: { key: "pastoral-interior-preview", url: "/__dev-art/fresh-pastoral-interior-v1.png" },

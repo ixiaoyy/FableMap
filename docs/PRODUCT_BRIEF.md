@@ -1,5 +1,9 @@
 # 镜像岛产品简报
 
+## 最新引擎决定（2026-09-07）
+
+用户已明确要求完整迁移到 Godot + GDScript，以原生桌面版为正式产品方向、同工程 Web 为试玩入口。现有玩法、原生界面与独立存档已接入，默认本地运行/构建已切换；真人完整验收和公开部署仍未完成。下文 Phaser/Vue/Tauri 描述仅是旧实现来源，不再约束新引擎。名称、真实城市生成及新玩法未在本轮改变，实施与限制见 [Godot 工程说明](../apps/mirror-island/godot/README.md)。
+
 ## 一句话定位
 
 一款东方风格、未来拥有独立世界观与剧情的星露谷式单人像素生活 RPG。当前先补齐已选定的成熟生活模拟基础系统，完成后停止横向仿照并进入镜像岛原创转型；普通主矿洞战斗属于基础盘，节庆内容、婚恋与镜门远征不在当前范围。
@@ -7,13 +11,13 @@
 ## 核心合同
 
 - 第一张正式地图结构固定：玩家农场向右连接小镇，北侧预留山地/矿区，南侧连接河流/湖泊；不再反复调整总体布局。
-- 玩家、资源、背包、制作和农田由本地 GameSession 唯一处理；Phaser/Vue 发送命令并渲染 snapshot，不经过实时后端。
+- 玩家、资源、背包、制作和农田由本地 GDScript GameSession 唯一处理；Godot 场景/界面发送命令并渲染 snapshot，不经过实时后端。
 - 第一阶段已经完成并生产验收：World Foundation、Farm Showcase、`life-loop-v1`、Town Gate A/B/C 与 Town Population MVP。玩家可以在正式 Farm/Town/Cottage/Seed Shop 间移动，完成三日萝卜生活循环，并与华强、昊天、阿禾交互。
 - 房屋、伙伴工作和基地权限保留为后续主线能力，不进入首个纵向切片。
 - 当前托管 Web 入口是纯本地无账号试玩；不显示或调用注册、登录、论坛账号、账号设置或云存档入口。
 - 玩家存档、背包和世界状态由本地 GameSession 处理并写入 IndexedDB；实时玩法不经过服务端。
 - `One Beautiful Slice` 已在真实生产浏览器通过验收并冻结为 Farm v1；除明确碰撞缺陷外，不再重排构图或继续添加装饰。
-- 客户端技术栈固定为 Phaser 4 + Vue 3 + TypeScript + Vite + Tiled。未来桌面版与 Steam 目标采用 Tauri 2，但当前不引入 Tauri/Rust/Steam；GameSession 通过 SaveRepository 与当前 IndexedDB、未来 FileSystem adapter 解耦。
+- 客户端固定为 Godot 4.7.2 + GDScript；Windows 原生与 Web 由同工程导出，Tiled 作为当前地图来源。SaveRepository 隔离 Web IndexedDB 与桌面原子文件；Steam SDK 仍未接入。
 - Ninja Adventure 只保留室内技术占位；VectoRaith Farming Sim Gate C 已冻结并正式成为 Farm v1 美术底座，Town Gate A 也已按同一完整图集正式化。生产直接加载 6 张官方 Original/16×16 图集。
 
 ## 长期玩法方向

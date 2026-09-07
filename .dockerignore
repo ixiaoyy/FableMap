@@ -26,6 +26,11 @@ venv
 apps/mirror-island/node_modules
 apps/mirror-island/dist
 apps/mirror-island/lib
+apps/mirror-island/godot/.godot
+apps/mirror-island/godot/generated
+apps/mirror-island/godot/media
+apps/mirror-island/godot/exports
+apps/mirror-island/godot/addons
 apps/mirror-island/public/**/*.png
 apps/mirror-island/public/**/*.webp
 apps/mirror-island/src/**/*.png

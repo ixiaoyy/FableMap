@@ -67,10 +67,6 @@ jobs:
           set -euo pipefail
           docker build \
             -f apps/mirror-island/Dockerfile.web \
-            --build-arg VITE_KEYCLOAK_URL=https://fable.pingxingxian.space/identity \
-            --build-arg VITE_KEYCLOAK_REALM=mirror-island \
-            --build-arg VITE_KEYCLOAK_CLIENT_ID=mirror-island-web \
-            --build-arg VITE_MIRROR_BASE_PATH=/ \
             -t "${FRONTEND_IMAGE}" .
           docker build -f apps/mirror-island/Dockerfile.server -t "${GAME_IMAGE}" .
           docker build -f apps/mirror-island/Dockerfile.migrate -t "${MIGRATION_IMAGE}" .
