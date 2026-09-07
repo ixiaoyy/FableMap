@@ -49,6 +49,9 @@ function createPetCatalog() {
     tileHeight: 16,
     blocked: Array.from({ length: 100 }, () => false),
   };
+  const buildableTiles = Array.from({ length: 100 }, () => false);
+  buildableTiles[7 * 10 + 7] = true;
+  buildableTiles[7 * 10 + 8] = true;
   return new WorldCatalog([
     {
       id: "farm",
@@ -59,11 +62,13 @@ function createPetCatalog() {
       widthPixels: 160,
       heightPixels: 160,
       collision,
+      buildableTiles,
       spawns: {
         "home-yard": { x: 24, y: 24 },
         "pet-farm-yard-west": { x: 48, y: 48 },
         "pet-farm-yard-east": { x: 96, y: 48 },
         "pet-farm-yard-rest": { x: 72, y: 88 },
+        "farm-shipping-bin-default": { x: 120, y: 120 },
       },
       exits: [],
       resources: [],
@@ -116,8 +121,8 @@ function createDayTwoState(catalog) {
 test("current pet state round-trips and corrupt pet fields fail closed", () => {
   const catalog = createPetCatalog();
   const current = decodeStoredGame(createStoredGame(createDayTwoState(catalog), 800));
-  assert.equal(current.version, 12);
-  assert.equal(current.state.version, 12);
+  assert.equal(current.version, 13);
+  assert.equal(current.state.version, 13);
   assert.equal(current.state.pet, null);
 
   const state = current.state;
@@ -168,6 +173,13 @@ test("pet names count Unicode code points and adoption persists exactly once", a
     adoptedDay: 2,
     bond: 0,
     lastPettedDay: 0,
+    regionId: "farm",
+    x: 96,
+    y: 48,
+    facing: "down",
+    motion: "idle",
+    anchorIndex: 1,
+    pauseRemainingMs: 1_400,
   });
   assert.equal(session.dispatch({ type: "adopt-pet", species: "dog", name: "来福" })?.code, "already-adopted");
   await session.flush();

@@ -156,10 +156,10 @@ test("spring catalog and formal Tiled masks remain finite while Day 29 keeps spr
   assert.notEqual(findNpcPath(catalog.requireRegion("lakeshore").collision, catalog.requireSpawn("lakeshore", "town-gate"), state.player), null);
 });
 
-test("current v12 saves round-trip while every older development version is unsupported", async () => {
+test("current v13 saves round-trip while every older development version is unsupported", async () => {
   const stored = createStoredGame(stateAt(), 123);
-  assert.equal(stored.version, 12);
-  assert.equal(stored.state.version, 12);
+  assert.equal(stored.version, 13);
+  assert.equal(stored.state.version, 13);
   assert.deepEqual(stored.state.inventory[3], { itemId: ITEM_ID.pickaxe, quantity: 1 });
   assert.deepEqual(stored.state.inventory[4], { itemId: ITEM_ID.scythe, quantity: 1 });
   assert.deepEqual(decodeStoredGame(stored), stored);
@@ -169,10 +169,10 @@ test("current v12 saves round-trip while every older development version is unsu
     { lastSurfaceWeedRefreshDay: 2 },
     { weather: { day: 2, current: "rain", next: "sunny" } }, { seenEventIds: ["day-7-mirror-teaser"] },
   ]) assert.throws(() => decodeStoredGame({ ...stored, state: { ...stored.state, ...fields } }));
-  for (let version = 1; version <= 11; version += 1) {
+  for (let version = 1; version <= 12; version += 1) {
     assert.throws(() => decodeStoredGame({ ...stored, version, state: { ...stored.state, version } }), /unsupported/i);
   }
-  assert.throws(() => decodeStoredGame({ ...stored, version: 13 }), /unsupported/i);
+  assert.throws(() => decodeStoredGame({ ...stored, version: 14 }), /unsupported/i);
   const unknownCrop = { ...createTilledFarmTile(27, 18), cropId: "unknown-crop" };
   assert.throws(() => decodeStoredGame({ ...stored, state: { ...stored.state, farmTiles: { [unknownCrop.id]: unknownCrop } } }), /farm/i);
   const repository = new MemorySaveRepository();
@@ -181,7 +181,7 @@ test("current v12 saves round-trip while every older development version is unsu
   await assert.rejects(session.continueGame(), /unsupported/i);
   await session.newGame();
   assert.equal(session.snapshot().day, 1);
-  assert.equal(repository.game.version, 12);
+  assert.equal(repository.game.version, 13);
 });
 
 test("free tilling, actual watered-cell costs and replenishment are atomic", () => {
@@ -477,7 +477,7 @@ test("midnight warns once, hidden time is discarded and 02:00 settlement retries
   await session.flush();
   assert.deepEqual([session.snapshot().day, session.snapshot().gold, session.snapshot().stamina], [7, 14000, 50]);
   assert.equal(session.snapshot().player.regionId, "cottage");
-  assert.equal(phases.at(-1), "idle");
+  assert.equal(phases.at(-1), "report");
   session.tick(1);
   assert.equal(session.snapshot().day, 7);
 });
