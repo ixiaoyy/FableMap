@@ -1,0 +1,239 @@
+{
+  "version": "pastoral-tools-2026-09-08-v1",
+  "source": "artifacts/tool-materials-2026-09-08/tools-candidate-v2.png",
+  "sourceSha256": "6fa232dc5e6b55f75272b4adcd4c0e0ff8d4e01cfc99a35e16a45483da712330",
+  "path": "artifacts/tool-materials-2026-09-08/tools-runtime-v1.png",
+  "bytes": 15770,
+  "sha256": "367ed6a3d822a2e652a46ac5e595aefa344d3828976568b500c8efc1cda4f55b",
+  "width": 320,
+  "height": 64,
+  "mime": "image/png",
+  "mode": "RGBA",
+  "key": "local-tool-art/pastoral-2026-09-08-v1",
+  "items": {
+    "hoe": {
+      "kind": "atlas",
+      "url": "local-tool-art/pastoral-2026-09-08-v1",
+      "sourceWidth": 320,
+      "sourceHeight": 64,
+      "x": 0,
+      "y": 0,
+      "width": 64,
+      "height": 64,
+      "grip": {
+        "x": 8,
+        "y": 52
+      },
+      "heldSize": 18
+    },
+    "watering-can": {
+      "kind": "atlas",
+      "url": "local-tool-art/pastoral-2026-09-08-v1",
+      "sourceWidth": 320,
+      "sourceHeight": 64,
+      "x": 64,
+      "y": 0,
+      "width": 64,
+      "height": 64,
+      "grip": {
+        "x": 26,
+        "y": 18
+      },
+      "heldSize": 14
+    },
+    "axe": {
+      "kind": "atlas",
+      "url": "local-tool-art/pastoral-2026-09-08-v1",
+      "sourceWidth": 320,
+      "sourceHeight": 64,
+      "x": 128,
+      "y": 0,
+      "width": 64,
+      "height": 64,
+      "grip": {
+        "x": 11,
+        "y": 50
+      },
+      "heldSize": 18
+    },
+    "pickaxe": {
+      "kind": "atlas",
+      "url": "local-tool-art/pastoral-2026-09-08-v1",
+      "sourceWidth": 320,
+      "sourceHeight": 64,
+      "x": 192,
+      "y": 0,
+      "width": 64,
+      "height": 64,
+      "grip": {
+        "x": 10,
+        "y": 53
+      },
+      "heldSize": 18
+    },
+    "scythe": {
+      "kind": "atlas",
+      "url": "local-tool-art/pastoral-2026-09-08-v1",
+      "sourceWidth": 320,
+      "sourceHeight": 64,
+      "x": 256,
+      "y": 0,
+      "width": 64,
+      "height": 64,
+      "grip": {
+        "x": 18,
+        "y": 50
+      },
+      "heldSize": 16
+    }
+  },
+  "processing": {
+    "method": "边缘四连通去除浅色中性棋盘背景；水壶两个开口额外设种子；裁取 alpha 包围盒，以最近邻缩放到最长边 56，再居中放入 64 像素格。未重绘工具。",
+    "threshold": {
+      "minChannel": 218,
+      "maxChannelDifference": 25
+    },
+    "cells": [
+      {
+        "id": "hoe",
+        "sourceCell": [
+          0,
+          0,
+          512,
+          512
+        ],
+        "alphaBounds": [
+          113,
+          66,
+          480,
+          418
+        ],
+        "resizedTo": [
+          56,
+          54
+        ],
+        "offset": [
+          4,
+          5
+        ],
+        "grip": [
+          8,
+          52
+        ],
+        "gripAlpha": 255
+      },
+      {
+        "id": "watering-can",
+        "sourceCell": [
+          512,
+          0,
+          512,
+          512
+        ],
+        "alphaBounds": [
+          77,
+          99,
+          482,
+          390
+        ],
+        "resizedTo": [
+          56,
+          40
+        ],
+        "offset": [
+          4,
+          12
+        ],
+        "grip": [
+          26,
+          18
+        ],
+        "gripAlpha": 255
+      },
+      {
+        "id": "axe",
+        "sourceCell": [
+          1024,
+          0,
+          512,
+          512
+        ],
+        "alphaBounds": [
+          25,
+          66,
+          412,
+          421
+        ],
+        "resizedTo": [
+          56,
+          51
+        ],
+        "offset": [
+          4,
+          6
+        ],
+        "grip": [
+          11,
+          50
+        ],
+        "gripAlpha": 255
+      },
+      {
+        "id": "pickaxe",
+        "sourceCell": [
+          0,
+          512,
+          512,
+          512
+        ],
+        "alphaBounds": [
+          98,
+          14,
+          439,
+          377
+        ],
+        "resizedTo": [
+          53,
+          56
+        ],
+        "offset": [
+          5,
+          4
+        ],
+        "grip": [
+          10,
+          53
+        ],
+        "gripAlpha": 255
+      },
+      {
+        "id": "scythe",
+        "sourceCell": [
+          512,
+          512,
+          512,
+          512
+        ],
+        "alphaBounds": [
+          85,
+          18,
+          373,
+          363
+        ],
+        "resizedTo": [
+          47,
+          56
+        ],
+        "offset": [
+          8,
+          4
+        ],
+        "grip": [
+          18,
+          50
+        ],
+        "gripAlpha": 255
+      }
+    ]
+  }
+}

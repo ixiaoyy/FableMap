@@ -1,5 +1,5 @@
 extends SceneTree
-## 窄迁移检查：对照旧 TS 的状态结果，并在隔离文件验证保存失败重试；不接触玩家存档。
+## 窄迁移检查：对照已冻结的迁移基线结果，并在隔离文件验证保存失败重试；不接触玩家存档。
 
 class FailOnceRepository extends FarmSaveRepository:
 	var fail_next:=false
@@ -19,7 +19,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var session:=FarmGameSession.new(); root.add_child(session)
 	print("INITIAL VALIDATION: ",session.codec.validate(session.rules.initial))
-	var path:=ProjectSettings.globalize_path("res://../../../artifacts/godot-migration-2026-09-07/parity.json")
+	var path:=ProjectSettings.globalize_path("res://../test/fixtures/godot-migration.json")
 	var data: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(path))
 	var failures: Array[String]=[]
 	for test: Dictionary in data.cases:
@@ -51,6 +51,8 @@ func _run() -> void:
 				if state[field]!=test.after.get(field): print("DIFF ",test.name," / ",field," actual=",JSON.stringify(state[field])," expected=",JSON.stringify(test.after.get(field)))
 	for value: Dictionary in data.hashes:
 		if FarmWorldRules.stable_hash(value.seed,value.day,value.key)!=value.expected: failures.append("确定性哈希")
+	var diagnostic_directory:=ProjectSettings.globalize_path("res://../../../artifacts/godot-migration-2026-09-07")
+	DirAccess.make_dir_recursive_absolute(diagnostic_directory)
 	var repository:=FailOnceRepository.new(ProjectSettings.globalize_path("res://../../../artifacts/godot-migration-2026-09-07/native-test-save.json"))
 	session.repository=repository
 	repository.fail_next=true

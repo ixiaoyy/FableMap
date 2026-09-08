@@ -30,8 +30,7 @@ func farm(state: Dictionary, column: int, row: int, item_id: String, direction: 
 		if not world.mask("farm","tillableTiles",column,row): return "missing-tile"
 		for spawn: Dictionary in world.regions.farm.resources:
 			if floori(spawn.x/16.0)==column and floori(spawn.y/16.0)==row and state.resources.has(spawn.entityId) and state.resources[spawn.entityId].phase!="cleared": return "missing-tile"
-		if state.stamina<2: return "insufficient-stamina"
-		state.stamina-=2
+		if not FarmEnergyRules.spend(state,"hoe"): return "insufficient-stamina"
 		state.farmTiles[id]={"id":id,"column":column,"row":row,"phase":"tilled","cropId":"","growthDays":0,"watered":state.weather.current=="rain","plantedDay":0,"harvestCount":0}
 		return "tilled"
 	var tile: Dictionary=state.farmTiles[id]
@@ -50,11 +49,13 @@ func farm(state: Dictionary, column: int, row: int, item_id: String, direction: 
 			var candidate: Dictionary=state.farmTiles[key]
 			if candidate.phase!="mature" and not candidate.watered: eligible.append(candidate)
 		if eligible.is_empty(): return "waiting"
-		var affordable := mini(eligible.size(),mini(int(state.wateringCanWater),int(state.stamina)))
+		var energy_uses:=floori(float(state.stamina)/FarmEnergyRules.TOOL_COSTS["watering-can"])
+		var affordable := mini(eligible.size(),mini(int(state.wateringCanWater),energy_uses))
 		if affordable<=0: return "empty-watering-can" if state.wateringCanWater<=0 else "insufficient-stamina"
+		# Lv2 仍是现有逐格浇水；每格单独计水和体力，不能当作原作铜壶蓄力。
+		if not FarmEnergyRules.spend(state,"watering-can",affordable): return "insufficient-stamina"
 		for index in range(affordable): eligible[index].watered=true
 		state.wateringCanWater-=affordable
-		state.stamina-=affordable
 		return "watered"
 	if item_id=="" and tile.phase=="mature":
 		var crop: Dictionary=crops[tile.cropId]
@@ -116,8 +117,7 @@ func gather(state: Dictionary, target_id: String, item_id: String, direction: St
 	var amount := 3 if spawn.kind=="tree" and resource.phase=="standing" else 1
 	var output := "wood" if spawn.kind=="tree" else "stone"
 	if not inventory.can_add(state.inventory,output,amount): return "inventory-full"
-	if state.stamina<2: return "insufficient-stamina"
-	state.stamina-=2
+	if not FarmEnergyRules.spend(state,tool): return "insufficient-stamina"
 	resource.phase="stump" if spawn.kind=="tree" and resource.phase=="standing" else "cleared"
 	resource.regrowOnDay=state.day+7 if spawn.kind=="tree" and resource.phase=="cleared" and spawn.regionId!="farm" else null
 	inventory.add(state.inventory,output,amount)

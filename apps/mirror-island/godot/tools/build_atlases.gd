@@ -1,9 +1,9 @@
 extends SceneTree
-## 迁移工具：使用原 TS 绘制函数导出的矩形指令重建两张代码内景图，不属于游戏运行时。
+## 内容构建工具：从固定矩形绘图数据重建两张内景图，不依赖浏览器或旧引擎。
 
 ## 读取固定绘图文件并写入固定 media 路径；无网络、无递归遍历，失败以非零退出。
 func _initialize() -> void:
-	var paintings: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://generated/interior-atlases.json"))
+	var paintings: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tools/interior-atlases.json"))
 	if not paintings is Array or paintings.size() != 2:
 		quit(1)
 		return

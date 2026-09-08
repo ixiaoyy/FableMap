@@ -11,7 +11,7 @@ var fish: Array
 func _init(items: FarmInventory, catalog: FarmWorldRules, definitions: Array) -> void:
 	inventory=items; world=catalog; fish=definitions
 
-## 开始一次消耗六体力的抛竿，按已保存尝试次数决定后续鱼种。
+## 按统一基础耗能开始抛竿，保留小数余量；仍按已保存尝试次数决定后续鱼种。
 func start(state: Dictionary, zone_id: String) -> String:
 	if not runtime.is_empty(): return "already-fishing"
 	if state.day<7 or state.minuteOfDay>=1560: return "not-ready"
@@ -19,9 +19,10 @@ func start(state: Dictionary, zone_id: String) -> String:
 	var zone: Dictionary=world.zones.get(zone_id,{})
 	if zone.is_empty() or zone.regionId!=state.player.regionId: return "missing-zone"
 	if FarmWorldRules.point(state.player).distance_to(Vector2(zone.x+zone.width/2.0,zone.y+zone.height/2.0))>52: return "too-far"
-	if state.stamina<6: return "insufficient-stamina"
+	if state.stamina<FarmEnergyRules.TOOL_COSTS["fishing-rod"]: return "insufficient-stamina"
 	if state.fishingCastCount>=FarmWorldRules.LIMIT: return "not-ready"
-	state.stamina-=6; state.fishingCastCount+=1
+	if not FarmEnergyRules.spend(state,"fishing-rod"): return "insufficient-stamina"
+	state.fishingCastCount+=1
 	runtime={"phase":"casting","zoneId":zone_id,"held":false,"elapsedMs":0.0,"biteAtMs":0,"castPower":0.0,"tension":50.0,"progress":0.0,"fish":null,"attempt":state.fishingCastCount,"failureReason":null}
 	return "started"
 

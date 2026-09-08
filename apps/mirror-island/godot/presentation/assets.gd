@@ -11,6 +11,11 @@ var textures: Dictionary={}
 func _init() -> void:
 	media=JSON.parse_string(FileAccess.get_file_as_string("res://data/media.json"))
 	paths=JSON.parse_string(FileAccess.get_file_as_string("res://generated/asset-paths.json"))
+	# 该文件只由显式本地美术构建生成；普通构建会移除它和对应 PNG。
+	if FileAccess.file_exists("res://generated/tool-art-preview.json"):
+		var preview: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://generated/tool-art-preview.json"))
+		paths[preview.key]=preview.path
+		for id: String in preview.items: media.items[id]=preview.items[id]
 
 ## 从原同源 URL 解析已登记对象，版本查询串只用于源记录，不参与本地路径。
 func path_for(url: String) -> String:
@@ -39,7 +44,7 @@ func frame(url: String, rectangle: Dictionary) -> Texture2D:
 	textures[key]=atlas
 	return atlas
 
-## 返回物品原图标；旧代码像素图按原矩阵和调色板重建，避免混入新美术。
+## 按当前媒体定义返回共用物品图标；像素矩阵物品仍按既有调色板重建。
 func icon(id: String) -> Texture2D:
 	if icons.has(id): return icons[id]
 	var definition: Variant=media.items.get(id)

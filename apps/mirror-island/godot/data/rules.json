@@ -1,12 +1,12 @@
 {
   "sourceVersion": 13,
   "initial": {
-    "version": 13,
+    "version": 14,
     "day": 1,
     "minuteOfDay": 360,
     "worldSeed": 1296650834,
     "lateWarningDay": 0,
-    "stamina": 100,
+    "stamina": 270,
     "fishingCastCount": 0,
     "lastSurfaceStoneRefreshDay": 1,
     "lastSurfaceWeedRefreshDay": 1,

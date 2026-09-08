@@ -19,6 +19,7 @@ var facing: String="down"
 var aim:=Vector2.ZERO
 var pointer_aim:=false
 var action_busy:=false
+var active_tool_action: FarmToolAction
 var transition_cooldown:=0.0
 var elapsed:=0.0
 var step_distance:=0.0
@@ -133,6 +134,7 @@ func _load_region(id: String) -> void:
 	if id==display_region: return
 	var packed:=load("res://scenes/regions/%s.tscn"%id) as PackedScene
 	if packed==null: push_error("地图不可用："+id); return
+	_cancel_tool_action()
 	for child in region_root.get_children(): region_root.remove_child(child); child.queue_free()
 	for node: Node in dynamic.values(): node.get_parent().remove_child(node); node.queue_free()
 	dynamic.clear(); region_root.add_child(packed.instantiate()); display_region=id
@@ -285,17 +287,43 @@ func _perform(tool: bool, target: Vector2) -> void:
 		return
 	await _tool_command({"type":"use-item-on-tile","itemId":item,"column":cell.x,"row":cell.y,"facing":facing},target)
 
-## 原图工具在短动作命中后执行领域命令，收尾前锁定重复输入。
+## 原时刻只派发一次领域命令；人物、工具和成功反馈由同一动作进度驱动。
 func _tool_command(command: Dictionary, target: Vector2) -> void:
+	if action_busy: return
 	action_busy=true
-	var tool:=Sprite2D.new(); tool.texture=assets.icon(_held()); tool.position=Vector2(8,-12); tool.scale=Vector2.ONE*0.45; player.add_child(tool)
-	var tween:=create_tween(); tween.tween_property(tool,"rotation",1.2,0.12); await tween.finished
+	var action:=FarmToolAction.new(); player.add_child(action); active_tool_action=action
+	action.configure(player,assets,command.get("itemId",_held()),facing)
+	await action.windup()
+	if not is_instance_valid(action): return
+	if action.cancelled or ui.locks_world(): _finish_tool_action(action); return
 	var result:=await session.dispatch(command)
+	if not is_instance_valid(action): return
+	if action.cancelled: _finish_tool_action(action); return
 	if result.get("tone")=="success":
-		var flash:=Label.new(); flash.text="+"; flash.position=target+Vector2(-2,-14); flash.z_index=30; add_child(flash)
-		var effect:=create_tween(); effect.tween_property(flash,"position:y",flash.position.y-12,0.3); effect.tween_callback(flash.queue_free)
-	var recovery:=create_tween(); recovery.tween_property(tool,"rotation",0.0,0.16); await recovery.finished
-	tool.queue_free(); action_busy=false
+		var contact:=target
+		if command.has("targetId") and session.world.resources.has(command.targetId): contact=FarmWorldRules.point(session.world.resources[command.targetId])
+		elif command.has("column"): contact=Vector2(command.column*16+8,command.row*16+8)
+		if not FarmToolAction.impact(region_root,contact,result.get("code","")):
+			var flash:=Label.new(); flash.text="+"; flash.position=contact+Vector2(-2,-14); flash.z_index=30; region_root.add_child(flash)
+			var effect:=flash.create_tween(); effect.tween_property(flash,"position:y",flash.position.y-12,0.3); effect.tween_callback(flash.queue_free)
+	await action.recover()
+	if is_instance_valid(action): _finish_tool_action(action)
+
+## 回收本次动作；旧协程结束时不得清除后续动作的互斥状态。
+func _finish_tool_action(action: FarmToolAction) -> void:
+	if active_tool_action==action: active_tool_action=null; action_busy=false
+	action.cancel(); action.queue_free()
+
+## 切图或退出时先取消表现并唤醒等待者，命中前取消不再提交命令。
+func _cancel_tool_action() -> void:
+	if not is_instance_valid(active_tool_action): return
+	var action:=active_tool_action; active_tool_action=null; action_busy=false
+	action.cancel()
+	if is_instance_valid(action) and not action.is_queued_for_deletion(): action.queue_free()
+
+## 世界销毁时同步释放人物动作，不留下 Tween 或抬手姿势。
+func _exit_tree() -> void:
+	_cancel_tool_action()
 
 ## 纯交互依次检查箱子、成熟作物、居民、伙伴、野采和设施，不受手持工具误导。
 func _interact(target: Vector2) -> void:
@@ -388,7 +416,7 @@ func _punch() -> void:
 ## 将成功反馈映射到原音效，失败不播放获得物品的声音。
 func _feedback(result: Dictionary) -> void:
 	if result.get("tone")!="success": return
-	var mapping: Dictionary={"tilled":"hoe","watered":"watering","refilled":"watering","chopped":"axe","stump-cleared":"axe","mined":"stone","harvested":"harvest","collected":"pickup","caught":"pickup","bought":"buy","sold":"sell","talked":"dialogue-page","transitioned":"door","slept":"sleep"}
+	var mapping: Dictionary={"tilled":"hoe","watered":"watering","refilled":"watering","chopped":"axe","stump-cleared":"axe","mined":"stone","cut":"harvest","harvested":"harvest","collected":"pickup","caught":"pickup","bought":"buy","sold":"sell","talked":"dialogue-page","transitioned":"door","slept":"sleep"}
 	if mapping.has(result.code): audio.cue(mapping[result.code])
 
 ## 从原昼夜关键帧表读取颜色和透明度，区分室内外。

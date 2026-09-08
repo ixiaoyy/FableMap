@@ -2,7 +2,9 @@
 
 1. [README](../README.md) — 仓库入口、技术栈、本地命令和最小验证。
 2. [CURRENT_STATE](CURRENT_STATE.md) — 当前代码、提交、验收、验证与任务状态。
-3. [DEVELOPMENT_PLAN](DEVELOPMENT_PLAN.md) — 星露谷式开发目标、唯一下个任务、六个内部批次与十阶段顺序。
+3. [DEVELOPMENT_PLAN](DEVELOPMENT_PLAN.md) — 当前执行安排与先行批次；阶段范围见 [PHASE_PLAN](PHASE_PLAN.md)。
+
+   [REPLICA_COVERAGE](REPLICA_COVERAGE.md) — 当前复刻差异与待展开清单，不把已有部分实现视为完整对齐。
 4. [PRODUCT_BRIEF](PRODUCT_BRIEF.md) — 单人世界目标、玩法合同和成功标准。
 5. [镜像岛探索设计原则](EXPLORATION_DESIGN_PRINCIPLES.md) — 手工微发现、环境线索、已有动作、反馈、奖励和范围约束。
 6. [WHAT_NOT_TO_BUILD](WHAT_NOT_TO_BUILD.md) — 永久禁区与当前范围边界。

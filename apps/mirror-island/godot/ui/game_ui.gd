@@ -25,14 +25,30 @@ var placement_request: Dictionary={}
 var demolish_id: String=""
 var save_exists:=false
 var root: Control
-var header: HBoxContainer
+var header: Control
+var hud_menu: GridContainer
+var status_panel: PanelContainer
 var status: Label
-var toolbar: ScrollContainer
-var hotbar: HBoxContainer
-var touch: HBoxContainer
+var clock_label: Label
+var weather_label: Label
+var gold_label: Label
+var stamina_label: Label
+var stamina_bar: ProgressBar
+var stamina_fill: StyleBoxFlat
+var energy_panel: PanelContainer
+var toolbar: PanelContainer
+var hotbar: GridContainer
+var hotbar_slots: Array[Dictionary]=[]
+var held_label: Label
+var hotbar_hint: Label
+var hotbar_row_button: Button
+var touch: GridContainer
 var actions: VBoxContainer
 var message: Label
+var message_panel: PanelContainer
 var dialog: PanelContainer
+var dialog_margin: MarginContainer
+var slot_styles: Dictionary={}
 var body: VBoxContainer
 var title: Label
 var close_button: Button
@@ -54,23 +70,29 @@ func configure(owner_session: FarmGameSession, asset_library: FarmAssets, sound:
 	session=owner_session; assets=asset_library; audio=sound
 	theme=_theme()
 	root=Control.new(); root.mouse_filter=Control.MOUSE_FILTER_IGNORE; root.theme=theme; add_child(root)
-	header=HBoxContainer.new(); root.add_child(header); header.position=Vector2(12,12)
-	var status_panel:=PanelContainer.new(); header.add_child(status_panel)
-	status=_label("",status_panel)
-	var spacer:=Control.new(); spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(spacer)
-	_button("背包 E",header,_open.bind("inventory")); _button("制作",header,_open.bind("crafting")); _button("菜单",header,_open.bind("menu"))
-	toolbar=ScrollContainer.new(); toolbar.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO; toolbar.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; toolbar.follow_focus=true; toolbar.add_theme_stylebox_override("panel",theme.get_stylebox("panel","PanelContainer")); root.add_child(toolbar)
-	hotbar=HBoxContainer.new(); toolbar.add_child(hotbar)
-	touch=HBoxContainer.new(); root.add_child(touch)
-	for pair in [["←",Vector2.LEFT],["↑",Vector2.UP],["↓",Vector2.DOWN],["→",Vector2.RIGHT]]:
+	_build_hotbar()
+	_build_hud()
+	touch=GridContainer.new(); touch.columns=3; touch.add_theme_constant_override("h_separation",3); touch.add_theme_constant_override("v_separation",3); root.add_child(touch)
+	for pair in [["",Vector2.ZERO],["↑",Vector2.UP],["",Vector2.ZERO],["←",Vector2.LEFT],["↓",Vector2.DOWN],["→",Vector2.RIGHT]]:
+		if pair[0]=="":
+			var space:=Control.new(); space.custom_minimum_size=Vector2(44,44); space.mouse_filter=Control.MOUSE_FILTER_IGNORE; touch.add_child(space); continue
 		var button:=_button(pair[0],touch,func():pass)
-		button.custom_minimum_size=Vector2(44,48)
+		button.custom_minimum_size=Vector2(44,44)
 		button.button_down.connect(_move.bind(pair[1])); button.button_up.connect(_move.bind(Vector2.ZERO)); button.mouse_exited.connect(_move.bind(Vector2.ZERO))
 	actions=VBoxContainer.new(); root.add_child(actions)
 	_button("使用 C",actions,_action.bind(true)); _button("交互 X",actions,_action.bind(false))
-	message=_label("",root); message.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	for area in [hud_menu,touch,actions]:
+		for child: Node in area.get_children():
+			if not child is Button: continue
+			var button:=child as Button
+			for style_name: String in slot_styles: button.add_theme_stylebox_override(style_name,slot_styles[style_name])
+			button.add_theme_color_override("font_pressed_color",Color("493b2b")); button.add_theme_color_override("font_hover_pressed_color",Color("493b2b")); button.add_theme_font_size_override("font_size",14); button.custom_minimum_size.y=44
+			if area==actions: button.custom_minimum_size.x=80
+	message_panel=PanelContainer.new(); message_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE; message_panel.add_theme_stylebox_override("panel",_hotbar_style("fff8e8","aa8559",2)); root.add_child(message_panel); message_panel.visible=false
+	message=_label("",message_panel); message.mouse_filter=Control.MOUSE_FILTER_IGNORE; message.add_theme_font_size_override("font_size",14)
 	dialog=PanelContainer.new(); root.add_child(dialog)
 	var margin:=MarginContainer.new(); margin.add_theme_constant_override("margin_left",16); margin.add_theme_constant_override("margin_right",16); margin.add_theme_constant_override("margin_top",12); margin.add_theme_constant_override("margin_bottom",12); dialog.add_child(margin)
+	dialog_margin=margin
 	var content:=VBoxContainer.new(); content.add_theme_constant_override("separation",10); margin.add_child(content)
 	var heading:=HBoxContainer.new(); content.add_child(heading)
 	title=_label("",heading); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -101,7 +123,7 @@ func _process(_delta: float) -> void:
 	if session==null: return
 	if message_lifetime>0:
 		message_lifetime=maxf(0,message_lifetime-_delta)
-		if message_lifetime==0 and mode!="placement": message.text=""
+	if message_lifetime==0 and mode!="placement" and message.text!="": message.text=""; message_panel.visible=false
 	if is_instance_valid(character_preview):
 		character_preview.facing=FarmWorldRules.VECTORS[preview_direction]
 		character_preview.animate_movement(FarmWorldRules.VECTORS[preview_direction] if preview_walking else Vector2.ZERO,_delta)
@@ -124,6 +146,7 @@ func _action(tool: bool) -> void:
 ## 打开指定界面并清除短暂选择，不修改世界进度。
 func _open(next_mode: String) -> void:
 	if session.busy or session.save_phase=="failed": return
+	if next_mode=="shipping" and transfer_amount=="half": transfer_amount="stack"
 	mode=next_mode; selected_source={}; _render(); _resize()
 
 ## 关闭前先取消暂存选择；报告与失败保存不能用 Esc 跳过。
@@ -176,13 +199,20 @@ func show_fishing() -> void:
 func _changed() -> void:
 	if session==null or root==null: return
 	var state:=session.snapshot()
-	header.visible=session.active; toolbar.visible=session.active; actions.visible=session.active; touch.visible=session.active
+	header.visible=session.active; toolbar.visible=session.active; energy_panel.visible=session.active
 	if session.active:
 		if mode in ["start","appearance-new","confirm-new"]: mode=""
 		if state.unacknowledgedShippingReport!=null: mode="report"
 		elif mode=="report": mode=""
 		var minute:=int(state.minuteOfDay)
-		status.text="第 %d 天 · 周%s  %02d:%02d\n%s · %dg · 体力 %d/100"%[state.day,["一","二","三","四","五","六","日"][(int(state.day)-1)%7],floori(minute/60.0)%24,minute%60,{"sunny":"晴","rain":"雨","wind":"风"}[state.weather.current],state.gold,state.stamina]
+		status.text="第 %d 天 · 周%s"%[state.day,["一","二","三","四","五","六","日"][(int(state.day)-1)%7]]
+		clock_label.text="%02d:%02d"%[floori(minute/60.0)%24,minute%60]
+		clock_label.add_theme_color_override("font_color",Color("9c522d") if minute>=1440 else Color("304d3f"))
+		weather_label.text={"sunny":"晴天","rain":"下雨","wind":"有风"}[state.weather.current]
+		gold_label.text=str(int(state.gold)); gold_label.tooltip_text="金币 %d"%state.gold
+		stamina_bar.value=state.stamina; stamina_label.text=str(roundi(state.stamina))
+		stamina_fill.bg_color=Color("c5794c") if state.stamina<FarmEnergyRules.LOW_STAMINA else Color("76a078")
+		stamina_bar.tooltip_text="体力 %d/%d"%[roundi(state.stamina),int(FarmEnergyRules.MAX_STAMINA)]
 		var key:=JSON.stringify(state.inventory)+str(selected_index)+str(state.wateringCanWater)+str(state.wateringCanLevel)
 		if key!=_inventory_key:
 			_inventory_key=key; _render_hotbar(state)
@@ -222,31 +252,113 @@ func _retry() -> void:
 func _feedback(result: Dictionary) -> void:
 	message.text=result.get("message","")
 	message_lifetime=3.0
-	message.modulate=Color("ffd1aa") if result.get("tone")=="error" else Color.WHITE
+	message.modulate=Color.WHITE
+	message.add_theme_color_override("font_color",Color("934927") if result.get("tone")=="error" else Color("304d3f"))
+	message_panel.visible=message.text!="" and mode in ["","placement"]
 
-## 重建十二格快捷栏，保留原数字键、工具顺序和行轮换。
+## 创建只读状态面板和原有菜单入口；字体层级区分时间、资源与辅助信息。
+func _build_hud() -> void:
+	header=Control.new(); header.mouse_filter=Control.MOUSE_FILTER_IGNORE; root.add_child(header)
+	hud_menu=GridContainer.new(); hud_menu.columns=3; hud_menu.add_theme_constant_override("h_separation",5); hud_menu.add_theme_constant_override("v_separation",5); header.add_child(hud_menu)
+	_button("背包 E",hud_menu,_open.bind("inventory")); _button("制作",hud_menu,_open.bind("crafting")); _button("菜单 Esc",hud_menu,_open.bind("menu"))
+	status_panel=PanelContainer.new(); status_panel.add_theme_stylebox_override("panel",_hotbar_style("fff8e8","aa8559",2)); header.add_child(status_panel)
+	var content:=VBoxContainer.new(); content.add_theme_constant_override("separation",3); status_panel.add_child(content)
+	var calendar:=HBoxContainer.new(); content.add_child(calendar)
+	status=_label("",calendar); status.add_theme_font_size_override("font_size",12); status.autowrap_mode=TextServer.AUTOWRAP_OFF; status.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	weather_label=Label.new(); weather_label.add_theme_font_size_override("font_size",12); calendar.add_child(weather_label)
+	var numbers:=HBoxContainer.new(); numbers.add_theme_constant_override("separation",12); content.add_child(numbers)
+	clock_label=_label("06:00",numbers); clock_label.autowrap_mode=TextServer.AUTOWRAP_OFF; clock_label.add_theme_font_size_override("font_size",28)
+	var wallet:=VBoxContainer.new(); wallet.custom_minimum_size.x=74; wallet.size_flags_horizontal=Control.SIZE_EXPAND_FILL; numbers.add_child(wallet)
+	var caption:=_label("金币",wallet); caption.autowrap_mode=TextServer.AUTOWRAP_OFF; caption.add_theme_font_size_override("font_size",10)
+	gold_label=_label("0",wallet); gold_label.autowrap_mode=TextServer.AUTOWRAP_OFF; gold_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; gold_label.add_theme_font_size_override("font_size",17); gold_label.add_theme_color_override("font_color",Color("916037"))
+	energy_panel=PanelContainer.new(); root.add_child(energy_panel)
+	var meter_style:=_hotbar_style("fff8e8","aa8559",2); meter_style.content_margin_left=4; meter_style.content_margin_right=4; meter_style.content_margin_top=4; meter_style.content_margin_bottom=4; energy_panel.add_theme_stylebox_override("panel",meter_style)
+	var energy:=VBoxContainer.new(); energy.add_theme_constant_override("separation",3); energy_panel.add_child(energy)
+	var energy_caption:=Label.new(); energy_caption.text="体力"; energy_caption.add_theme_font_size_override("font_size",11); energy.add_child(energy_caption)
+	stamina_bar=ProgressBar.new(); stamina_bar.show_percentage=false; stamina_bar.max_value=FarmEnergyRules.MAX_STAMINA; stamina_bar.fill_mode=ProgressBar.FILL_BOTTOM_TO_TOP; stamina_bar.size_flags_horizontal=Control.SIZE_SHRINK_CENTER; stamina_bar.custom_minimum_size=Vector2(10,62); stamina_bar.size_flags_vertical=Control.SIZE_EXPAND_FILL; energy.add_child(stamina_bar)
+	var track:=StyleBoxFlat.new(); track.bg_color=Color("dae1cb"); track.content_margin_top=0; track.content_margin_bottom=0; stamina_bar.add_theme_stylebox_override("background",track)
+	stamina_fill=StyleBoxFlat.new(); stamina_fill.bg_color=Color("76a078"); stamina_bar.add_theme_stylebox_override("fill",stamina_fill)
+	stamina_label=Label.new(); stamina_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; stamina_label.add_theme_font_size_override("font_size",11); energy.add_child(stamina_label)
+
+## 创建工具栏与背包共用的直角样式；固定留白避免选中时挤动图标。
+func _hotbar_style(background: String, border: String, border_width: int=2) -> StyleBoxFlat:
+	var style:=StyleBoxFlat.new()
+	style.bg_color=Color(background); style.border_color=Color(border); style.set_border_width_all(border_width)
+	style.content_margin_left=6; style.content_margin_right=6; style.content_margin_top=6; style.content_margin_bottom=6
+	return style
+
+## 一次创建十二个原生槽位及状态标签；此后只更新内容，保留节点、焦点与输入连接。
+func _build_hotbar() -> void:
+	toolbar=PanelContainer.new(); root.add_child(toolbar)
+	var frame:=_hotbar_style("e7c99a","99734c",3)
+	frame.content_margin_left=8; frame.content_margin_right=8; frame.content_margin_top=8; frame.content_margin_bottom=8
+	toolbar.add_theme_stylebox_override("panel",frame)
+	var content:=VBoxContainer.new(); content.add_theme_constant_override("separation",4); toolbar.add_child(content)
+	var heading:=HBoxContainer.new(); heading.add_theme_constant_override("separation",8); content.add_child(heading)
+	held_label=_label("选择工具",heading); held_label.autowrap_mode=TextServer.AUTOWRAP_OFF; held_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; held_label.add_theme_font_size_override("font_size",14); held_label.add_theme_color_override("font_color",Color("493b2b"))
+	hotbar_hint=Label.new(); hotbar_hint.text="数字键 / 滚轮"; hotbar_hint.add_theme_font_size_override("font_size",12); hotbar_hint.add_theme_color_override("font_color",Color("665039")); heading.add_child(hotbar_hint)
+	hotbar_row_button=Button.new(); hotbar_row_button.text="换排 Tab"; hotbar_row_button.custom_minimum_size=Vector2(80,24); hotbar_row_button.add_theme_font_size_override("font_size",12); hotbar_row_button.tooltip_text="切换背包工具排 · Tab；Shift+Tab 反向切换"; heading.add_child(hotbar_row_button)
+	hotbar_row_button.pressed.connect(_command.bind({"type":"rotate-hotbar-row","direction":1}))
+	hotbar=GridContainer.new(); hotbar.columns=12; hotbar.add_theme_constant_override("h_separation",3); hotbar.add_theme_constant_override("v_separation",3); content.add_child(hotbar)
+	var styles: Dictionary={"normal":_hotbar_style("f5e4c6","b99565"),"hover":_hotbar_style("fff2d8","95754f"),"pressed":_hotbar_style("fff3d6","c66b3e",3),"disabled":_hotbar_style("e4d5ba","b3a181")}
+	styles.hover_pressed=styles.pressed
+	var focus:=_hotbar_style("00000000","446d60",2)
+	focus.expand_margin_left=2; focus.expand_margin_right=2; focus.expand_margin_top=2; focus.expand_margin_bottom=2
+	styles.focus=focus
+	slot_styles=styles
+	for style_name: String in styles:
+		var row_style:=styles[style_name].duplicate() as StyleBoxFlat
+		row_style.content_margin_top=1; row_style.content_margin_bottom=1; hotbar_row_button.add_theme_stylebox_override(style_name,row_style)
+	hotbar_row_button.add_theme_color_override("font_pressed_color",Color("493b2b"))
+	hotbar_row_button.add_theme_color_override("font_hover_pressed_color",Color("493b2b"))
+	for index in range(12):
+		var button:=Button.new(); button.custom_minimum_size=Vector2(44,52); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.toggle_mode=true; button.expand_icon=true; button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.add_theme_constant_override("icon_max_width",32)
+		for style_name: String in styles: button.add_theme_stylebox_override(style_name,styles[style_name])
+		hotbar.add_child(button); button.pressed.connect(_select.bind(index))
+		var key:=Label.new(); key.text=["1","2","3","4","5","6","7","8","9","0","-","="][index]; key.position=Vector2(4,1); key.add_theme_font_size_override("font_size",10); key.add_theme_color_override("font_color",Color("735633")); key.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(key)
+		var quantity:=Label.new(); quantity.add_theme_font_size_override("font_size",12); quantity.add_theme_color_override("font_color",Color("493523")); quantity.add_theme_color_override("font_outline_color",Color("fff8e6")); quantity.add_theme_constant_override("outline_size",3); quantity.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT; quantity.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(quantity); quantity.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE); quantity.offset_left=4; quantity.offset_right=-4; quantity.offset_top=-19; quantity.offset_bottom=-2
+		var badge:=TextureRect.new(); badge.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; badge.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(badge); badge.set_anchors_and_offsets_preset(Control.PRESET_CENTER); badge.offset_left=1; badge.offset_top=0; badge.offset_right=13; badge.offset_bottom=12
+		var water:=ProgressBar.new(); water.show_percentage=false; water.mouse_filter=Control.MOUSE_FILTER_IGNORE; water.add_theme_stylebox_override("background",_hotbar_style("c4d6cf","66897c",1)); water.add_theme_stylebox_override("fill",_hotbar_style("4fa7b0","4fa7b0",0)); button.add_child(water)
+		# 细条不继承槽位留白，否则最小高度会盖住工具图标。
+		for style_name: String in ["background","fill"]:
+			var style:=water.get_theme_stylebox(style_name).duplicate() as StyleBoxFlat
+			style.content_margin_left=0; style.content_margin_right=0; style.content_margin_top=0; style.content_margin_bottom=0; water.add_theme_stylebox_override(style_name,style)
+		water.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE); water.offset_left=5; water.offset_right=-5; water.offset_top=-7; water.offset_bottom=-3
+		hotbar_slots.append({"button":button,"quantity":quantity,"badge":badge,"water":water})
+
+## 将当前背包首排投影到既有槽位，显示数量、水量与所选名称，不重建控件或写入库存。
 func _render_hotbar(state: Dictionary) -> void:
-	_clear(hotbar)
 	for index in range(12):
 		var slot: Dictionary=state.inventory[index]
-		var button:=Button.new(); button.custom_minimum_size=Vector2(48,54); button.icon=assets.icon(slot.itemId); button.expand_icon=true; button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.add_theme_constant_override("icon_max_width",32)
+		var controls: Dictionary=hotbar_slots[index]
+		var button: Button=controls.button
+		button.icon=assets.icon(slot.itemId); button.set_pressed_no_signal(index==selected_index)
+		button.add_theme_constant_override("icon_max_width",40 if assets.media.items.get(slot.itemId,{}).has("grip") else 32)
 		button.tooltip_text=session.rules.items.get(slot.itemId,{}).get("name","空槽")
-		button.toggle_mode=true; button.button_pressed=index==selected_index
-		hotbar.add_child(button); button.pressed.connect(_select.bind(index))
-		_slot_labels(button,index,slot.quantity,"%d/%d"%[state.wateringCanWater,20 if state.wateringCanLevel==1 else 40] if slot.itemId=="watering-can" else "",slot.itemId)
-	if state.inventoryCapacity>12:
-		_command_button("换行 Tab",hotbar,{"type":"rotate-hotbar-row","direction":1})
+		controls.quantity.text=str(slot.quantity) if slot.quantity>1 else ""
+		controls.badge.texture=assets.badge(slot.itemId); controls.badge.visible=controls.badge.texture!=null
+		controls.water.visible=slot.itemId=="watering-can"
+		if controls.water.visible:
+			controls.water.max_value=20 if state.wateringCanLevel==1 else 40; controls.water.value=state.wateringCanWater
+			button.tooltip_text+=" · 水量 %d/%d"%[state.wateringCanWater,int(controls.water.max_value)]
+		if index==selected_index: held_label.text=button.tooltip_text
+	if selected_index<0: held_label.text="选择工具"
+	held_label.tooltip_text=held_label.text
+	hotbar_row_button.visible=state.inventoryCapacity>12
 
 ## 选择活动行槽位，再次选择同一格收起手持物，不移动库存。
 func _select(index: int) -> void:
 	if session.busy: return
 	selected_index=-1 if selected_index==index else index
-	selected.emit(selected_index); _inventory_key=""; _changed()
+	selected.emit(selected_index); _inventory_key=""; _render_hotbar(session.snapshot())
 	get_viewport().gui_release_focus()
 
 ## 根据模式构建原生菜单，不创建无动作的演示按钮。
 func _render() -> void:
 	if dialog==null: return
+	if touch.visible and mode!="": movement_requested.emit(Vector2.ZERO)
+	touch.visible=session.active and mode==""; actions.visible=session.active and mode==""
+	message_panel.visible=message.text!="" and mode in ["","placement"]
 	for area: Node in [header,toolbar,touch,actions]:
 		for button: Node in area.find_children("*","Button",true,false): button.disabled=mode!="" or session.busy or session.save_phase=="failed"
 	placement_controls.visible=mode=="placement"
@@ -256,6 +368,8 @@ func _render() -> void:
 	_clear(body); fish_progress=null; character_preview=null
 	close_button.visible=session.active and mode!="report" or mode in ["appearance-new","confirm-new"]
 	var state:=session.snapshot()
+	if mode in ["inventory","chest","shipping","crafting"]: dialog.add_theme_stylebox_override("panel",_hotbar_style("fff8e8","aa8559",3))
+	else: dialog.remove_theme_stylebox_override("panel")
 	match mode:
 		"start":
 			title.text="镜像岛"
@@ -392,8 +506,11 @@ func _save_appearance() -> void:
 ## 构建背包、容器、出货和制作菜单，共用同一槽位控件和数量选择。
 func _inventory_menu(state: Dictionary) -> void:
 	title.text={"inventory":"随身背包","chest":"普通箱","shipping":"出货箱","crafting":"制作"}[mode]
-	var options:=HBoxContainer.new(); body.add_child(options)
-	for pair in [["整组","stack"],["单件","one"],["半组","half"]]: _button(pair[0],options,_amount.bind(pair[1]))
+	var options:=HFlowContainer.new(); body.add_child(options)
+	for pair in [["整组","stack"],["单件","one"],["半组","half"]]:
+		if mode=="crafting" or (mode=="shipping" and pair[1]=="half"): continue
+		var button:=_button(pair[0],options,_amount.bind(pair[1])); button.toggle_mode=true; button.button_pressed=transfer_amount==pair[1]
+		button.tooltip_text="选择本次移动的数量"
 	_command_button("整理背包",options,{"type":"sort-inventory"})
 	if mode=="crafting":
 		var quantities:=HBoxContainer.new(); body.add_child(quantities)
@@ -420,35 +537,59 @@ func _inventory_menu(state: Dictionary) -> void:
 			var last: Dictionary=state.shippingQueue.back()
 			_label("最后投入：%s ×%d"%[session.rules.items[last.itemId].name,last.quantity],body)
 			_command_button("取回最后一笔",body,{"type":"reclaim-last-shipment","objectId":container_id})
-	_label("随身物品 · %d 格"%state.inventoryCapacity,body); _grid(state.inventory,"inventory")
-	if not selected_source.is_empty() and mode=="inventory":
-		var slot: Dictionary=state.inventory[selected_source.index]
-		_label("%s ×%d"%[session.rules.items.get(slot.itemId,{}).get("name","空槽"),slot.quantity],body)
-		if selected_source.index<12: _button("拿在手上",body,_hold_selected)
-		if session.rules.items.get(slot.itemId,{}).get("staminaRestore",0)>0: _command_button("食用 · 恢复 %d 体力"%session.rules.items[slot.itemId].staminaRestore,body,{"type":"eat-item","itemId":slot.itemId})
-		if slot.itemId=="chest": _button("摆放普通箱",body,request_placement.bind({"type":"place-world-object","inventoryIndex":selected_source.index}))
-	_label("已选物品，再点目标格放入；也可以拖动。右键单件，Shift+右键半组。",body)
+	var occupied:=0
+	for slot: Dictionary in state.inventory:
+		if slot.itemId!="": occupied+=1
+	_label("随身物品 · %d / %d 格"%[occupied,state.inventoryCapacity],body); _grid(state.inventory,"inventory")
+	if mode=="inventory": _inventory_details(state)
+	elif mode=="chest": _label("点选来源，再点目标格存取；也可以直接拖动。",body)
+
+## 集中显示当前物品和原有操作；只读取定义与快照，不复制消费、售价或放置规则。
+func _inventory_details(state: Dictionary) -> void:
+	var panel:=PanelContainer.new(); panel.custom_minimum_size.y=108; panel.add_theme_stylebox_override("panel",_hotbar_style("f4e6cd","d4bb94",1)); body.add_child(panel)
+	if selected_source.is_empty():
+		_label("点选物品查看详情，拖动或再点目标格移动。\n右键移动单件，Shift+右键移动半组。",panel)
+		return
+	var slot: Dictionary=state.inventory[selected_source.index]
+	var item: Dictionary=session.rules.items[slot.itemId]
+	var row:=HBoxContainer.new(); row.add_theme_constant_override("separation",12); panel.add_child(row)
+	var icon:=TextureRect.new(); icon.texture=assets.icon(slot.itemId); icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(52,52); icon.size_flags_vertical=Control.SIZE_SHRINK_CENTER; row.add_child(icon)
+	var details:=VBoxContainer.new(); details.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(details)
+	var name_label:=_label("%s ×%d"%[item.name,slot.quantity] if slot.quantity>1 else item.name,details); name_label.add_theme_font_size_override("font_size",18)
+	var information: Array[String]=[]
+	if item.category=="tool": information.append("工具")
+	if not item.get("canShip",false): information.append("不可出货")
+	if slot.itemId=="watering-can": information.append("水量 %d/%d"%[state.wateringCanWater,20 if state.wateringCanLevel==1 else 40])
+	var price: Variant=session.rules.prices.get(slot.itemId)
+	if item.get("canShip",false) and price!=null: information.append("出货单价 %dg"%int(price))
+	if not information.is_empty(): _label(" · ".join(information),details)
+	var controls:=HFlowContainer.new(); details.add_child(controls)
+	if selected_source.index<12: _button("拿在手上",controls,_hold_selected)
+	if item.get("staminaRestore",0)>0: _command_button("食用 +%d 体力"%item.staminaRestore,controls,{"type":"eat-item","itemId":slot.itemId})
+	if slot.itemId=="chest": _button("摆放普通箱",controls,request_placement.bind({"type":"place-world-object","inventoryIndex":selected_source.index}))
 
 ## 创建响应式槽位列表，保持槽位编号和当前容量。
 func _grid(slots: Array, grid_id: String) -> void:
 	var grid:=GridContainer.new(); grid.set_meta("slot_grid",true); grid.columns=12 if root.size.x>=800 else 6; body.add_child(grid)
+	grid.add_theme_constant_override("h_separation",3); grid.add_theme_constant_override("v_separation",3)
 	for index in range(slots.size()):
 		var slot: Dictionary=slots[index]
 		var button:=FarmSlotButton.new(); button.grid_id=grid_id; button.slot_index=index; button.item_id=slot.itemId; button.amount_mode=transfer_amount; button.transfer_enabled=mode in ["inventory","chest"]
-		button.custom_minimum_size=Vector2(46,52); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.icon=assets.icon(slot.itemId); button.expand_icon=true; button.add_theme_constant_override("icon_max_width",28)
+		button.custom_minimum_size=Vector2(44,52); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.icon=assets.icon(slot.itemId); button.expand_icon=true; button.add_theme_constant_override("icon_max_width",40 if assets.media.items.get(slot.itemId,{}).has("grip") else 28)
+		for style_name: String in slot_styles: button.add_theme_stylebox_override(style_name,slot_styles[style_name])
 		button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER; button.tooltip_text=session.rules.items.get(slot.itemId,{}).get("name","空格")
 		button.toggle_mode=true; button.button_pressed=selected_source.get("grid")==grid_id and selected_source.get("index")==index
 		grid.add_child(button); button.picked.connect(_pick_slot); button.moved.connect(_drop_slot)
-		_slot_labels(button,index,slot.quantity,"",slot.itemId)
+		_slot_labels(button,index,slot.quantity,slot.itemId)
 
 ## 将槽号与数量放在图标角落，避免文字占掉图标宽度；标签不抢输入。
-func _slot_labels(button: Button, index: int, count: int, extra: String = "", item_id: String = "") -> void:
+func _slot_labels(button: Button, index: int, count: int, item_id: String) -> void:
 	var badge_texture:=assets.badge(item_id)
 	if badge_texture!=null:
-		var badge:=TextureRect.new(); badge.texture=badge_texture; badge.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; badge.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(badge); badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT); badge.offset_left=-21; badge.offset_top=-21; badge.offset_right=-3; badge.offset_bottom=-3
+		var badge:=TextureRect.new(); badge.texture=badge_texture; badge.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; badge.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; badge.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(badge); badge.set_anchors_and_offsets_preset(Control.PRESET_CENTER); badge.offset_left=1; badge.offset_top=0; badge.offset_right=13; badge.offset_bottom=12
 	var number:=Label.new(); number.text=str(index+1); number.position=Vector2(4,0); number.add_theme_font_size_override("font_size",10); number.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(number)
-	if count>1 or extra!="":
-		var quantity:=Label.new(); quantity.text=extra if extra!="" else str(count); quantity.add_theme_font_size_override("font_size",10); quantity.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(quantity); quantity.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT); quantity.grow_horizontal=Control.GROW_DIRECTION_BEGIN; quantity.grow_vertical=Control.GROW_DIRECTION_BEGIN; quantity.position+=Vector2(-3,-2)
+	if count>1:
+		var quantity:=Label.new(); quantity.text=str(count); quantity.add_theme_font_size_override("font_size",12); quantity.add_theme_color_override("font_outline_color",Color("fff8e6")); quantity.add_theme_constant_override("outline_size",3); quantity.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT; quantity.mouse_filter=Control.MOUSE_FILTER_IGNORE; button.add_child(quantity); quantity.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE); quantity.offset_left=3; quantity.offset_right=-3; quantity.offset_top=-19; quantity.offset_bottom=-2
 
 ## 设置明确数量模式，不改变已选物品。
 func _amount(value: String) -> void:
@@ -555,7 +696,7 @@ func _report(state: Dictionary) -> void:
 	title.text="第 %d 天出货收入"%state.unacknowledgedShippingReport.settledDay
 	if not session.day_summary.is_empty():
 		var summary: Dictionary=session.day_summary
-		_label(("02:00 已被送回家。" if summary.reason=="passed-out" else "睡醒了，新的一天开始。")+" 体力 %d/100。"%summary.nextStamina,body)
+		_label(("02:00 已被送回家。" if summary.reason=="passed-out" else "睡醒了，新的一天开始。")+" 体力 %d/%d。"%[roundi(summary.nextStamina),int(FarmEnergyRules.MAX_STAMINA)],body)
 		if summary.goldLost>0: _label("送回家花费 %dg。"%summary.goldLost,body)
 	var names: Dictionary={"farming":"农产","foraging":"采集","fishing":"渔获","mining":"矿产","other":"其他"}
 	for category: Dictionary in state.unacknowledgedShippingReport.categories:
@@ -640,8 +781,11 @@ func _theme() -> Theme:
 	result.set_stylebox("normal","Button",paper)
 	var hover:=paper.duplicate(); hover.bg_color=Color("e8f1de"); result.set_stylebox("hover","Button",hover)
 	var pressed:=paper.duplicate(); pressed.bg_color=Color("467d5e"); result.set_stylebox("pressed","Button",pressed)
+	result.set_stylebox("hover_pressed","Button",pressed)
 	for type in ["Label","Button","OptionButton","LineEdit"]: result.set_color("font_color",type,Color("304d3f"))
+	result.set_color("font_hover_color","Button",Color("304d3f")); result.set_color("font_focus_color","Button",Color("304d3f"))
 	result.set_color("font_pressed_color","Button",Color("fffdf4"))
+	result.set_color("font_hover_pressed_color","Button",Color("fffdf4"))
 	return result
 
 ## 在桌面和手机保留可点击区域与独立滚动，不缩小整个游戏画布。
@@ -649,31 +793,50 @@ func _resize() -> void:
 	if root==null: return
 	root.size=get_viewport().get_visible_rect().size
 	var size:=root.size
+	var inventory_surface:=mode in ["inventory","chest","shipping","crafting"]
+	var side_margin:=4 if inventory_surface and size.x<360 else 8 if inventory_surface and size.x<800 else 16
+	dialog_margin.add_theme_constant_override("margin_left",side_margin); dialog_margin.add_theme_constant_override("margin_right",side_margin)
 	for grid: Node in body.find_children("*","GridContainer",true,false):
 		if grid.has_meta("slot_grid"): grid.columns=12 if size.x>=800 else 6
-	header.size=Vector2(size.x-24,64); status.custom_minimum_size.x=160 if size.x>=800 else 100
-	var bar_width:=minf(730,size.x-24)
-	toolbar.position=Vector2((size.x-bar_width)/2,size.y-84); toolbar.size=Vector2(bar_width,72)
-	touch.position=Vector2(12,size.y-150); actions.position=Vector2(size.x-106,size.y-188)
-	message.position=Vector2(12,size.y-228); message.size=Vector2(size.x-24,40)
+	header.size=Vector2(size.x,112)
+	var compact_hud:=size.x<680
+	var status_width:=minf(220,size.x-110) if compact_hud else 220.0
+	status_panel.position=Vector2(size.x-status_width-12,12)
+	status_panel.size=Vector2(status_width,84)
+	status_panel.set_deferred("size",Vector2(status_width,84))
+	hud_menu.position=Vector2(12,12); hud_menu.columns=1 if compact_hud else 3; hud_menu.get_child(1).visible=not compact_hud
+	hud_menu.set_deferred("size",Vector2.ZERO)
+	var compact:=size.x<680
+	hotbar.columns=6 if compact else 12; hotbar_hint.visible=not compact
+	var bar_width:=minf(366 if compact else 676,size.x-24)
+	var bar_height:=151.0 if compact else 96.0
+	toolbar.position=Vector2((size.x-bar_width)/2,size.y-bar_height-12); toolbar.size=Vector2(bar_width,bar_height)
+	# 网格换列后再应用目标尺寸，避免横竖屏切换遗留旧的最小宽度。
+	toolbar.set_deferred("size",Vector2(bar_width,bar_height))
+	touch.position=Vector2(12,toolbar.position.y-96); actions.position=Vector2(size.x-140,toolbar.position.y-96)
+	energy_panel.position=Vector2(size.x-44,toolbar.position.y-116); energy_panel.size=Vector2(32,112)
+	message_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM); message_panel.grow_vertical=Control.GROW_DIRECTION_BEGIN
+	var message_width:=minf(320,size.x-24)
+	message_panel.offset_left=-message_width/2.0; message_panel.offset_right=message_width/2.0
+	message_panel.offset_bottom=-(bar_height+(24 if size.x>=640 else 128)); message_panel.offset_top=message_panel.offset_bottom-32
 	var preferred_width:=1000.0
 	var preferred_height:=620.0
 	if mode in ["start","confirm-new","confirm-demolish","sleep","gift","adoption","backpack-upgrade","audio"]: preferred_width=640; preferred_height=360
 	elif mode in ["appearance-new","appearance"]: preferred_width=760; preferred_height=560
 	elif mode=="inventory":
 		var columns:=12 if size.x>=800 else 6
-		preferred_height=250+ceili(float(session.snapshot().get("inventoryCapacity",12))/columns)*58+(120 if not selected_source.is_empty() else 0)
+		preferred_width=760; preferred_height=310+ceili(float(session.snapshot().get("inventoryCapacity",12))/columns)*55
 	elif mode=="report":
 		var report: Dictionary=session.snapshot().get("unacknowledgedShippingReport",{})
 		var lines:=0
 		for category: Dictionary in report.get("categories",[]): lines+=category.entries.size()+1
 		preferred_width=760; preferred_height=minf(620,220+lines*28)
-	var dialog_size:=Vector2(minf(preferred_width,size.x-20),minf(preferred_height,size.y-24))
+	var dialog_size:=Vector2(minf(preferred_width,size.x-(12 if inventory_surface else 20)),minf(preferred_height,size.y-24))
 	dialog.size=dialog_size; dialog.position=(size-dialog_size)/2
 	# 等待网格最小尺寸更新后再次应用目标宽度，避免横屏切竖屏时保留旧的宽面板。
 	dialog.set_deferred("size",dialog_size); dialog.set_deferred("position",(size-dialog_size)/2)
 	saving.size=Vector2(minf(420,size.x-24),140); saving.position=(size-saving.size)/2
-	placement_controls.position=Vector2(12,size.y-140)
+	placement_controls.position=Vector2(12,toolbar.position.y-56)
 
 ## Esc/E 保持菜单取消与关闭顺序，Tab 留给弹窗内正常键盘导航。
 func _unhandled_key_input(event: InputEvent) -> void:

@@ -41,7 +41,7 @@ func _run() -> void:
 		await process_frame
 		if not scene.ui.dialog.visible: print("VIEW CHECK FAILED: menu ",mode); quit(1); return
 		count+=1
-	var fixture_path:=ProjectSettings.globalize_path("res://../../../artifacts/godot-migration-2026-09-07/parity.json")
+	var fixture_path:=ProjectSettings.globalize_path("res://../test/fixtures/godot-migration.json")
 	var fixtures: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(fixture_path))
 	for fixture: Dictionary in fixtures.cases:
 		if fixture.name=="摆放普通箱":

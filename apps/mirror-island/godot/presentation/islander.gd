@@ -47,6 +47,11 @@ const BOTTOM := [Color8(42, 104, 129), Color8(186, 157, 111), Color8(90, 120, 65
 var facing := Vector2.DOWN
 var animation_time := 0.0
 var refresh_queued := false
+var tool_pose_active := false
+var normal_top_texture: Texture2D
+var tool_pose_frames: Dictionary = {}
+var tool_arms: Array[Sprite2D] = []
+var active_arm_data: Array = []
 
 ## 初始化可编辑角色图层；素材必须由项目准备脚本校验后提供。
 func _ready() -> void:
@@ -61,6 +66,7 @@ func _refresh_later() -> void:
 
 ## 按原素材遮罩换色并投影头、上装、下装；不生成新轮廓或修改源 PNG。
 func _refresh_art() -> void:
+	if tool_pose_active: end_tool_pose()
 	refresh_queued = false
 	if not FileAccess.file_exists("res://generated/catalog.json") or not has_node("Head"):
 		return
@@ -88,10 +94,14 @@ func _refresh_art() -> void:
 					image.set_pixel(x, y, Color(minf(pixel.r * ratio.r, 1), minf(pixel.g * ratio.g, 1), minf(pixel.b * ratio.b, 1), pixel.a))
 		var sprite := get_node(names[part]) as Sprite2D
 		sprite.texture = ImageTexture.create_from_image(image)
+		if part == 1:
+			normal_top_texture = sprite.texture
+			_prepare_tool_poses(image)
 	_update_frame(1)
 
 ## 用当前移动向量更新四向行走帧；停止时保持最后朝向，不改变游戏坐标。
 func animate_movement(direction: Vector2, delta: float) -> void:
+	if tool_pose_active: return
 	if not direction.is_zero_approx():
 		facing = Vector2(signf(direction.x), 0) if absf(direction.x) >= absf(direction.y) else Vector2(0, signf(direction.y))
 		animation_time += delta
@@ -105,3 +115,66 @@ func _update_frame(column: int) -> void:
 	var row: int = DIRECTION_ROWS.get(facing, 0)
 	for name in ["Head", "Top", "Bottom"]:
 		(get_node(name) as Sprite2D).frame = row * 3 + column
+
+## 从已换色的上装拆出四向站立手臂；仅重排原像素，缓存结果且不写入源图。
+func _prepare_tool_poses(image: Image) -> void:
+	tool_pose_frames.clear()
+	var definitions: Array = [
+		[[Rect2i(30,28,8,21),Vector2(2,2),Vector2(3,16)],[Rect2i(11,28,7,21),Vector2(5,2),Vector2(3,16)]],
+		[[Rect2i(24,28,9,21),Vector2(4,2),Vector2(3,16)]],
+		[[Rect2i(16,28,9,21),Vector2(5,2),Vector2(4,16)]],
+		[[Rect2i(12,28,7,21),Vector2(5,2),Vector2(2,16)],[Rect2i(30,28,7,21),Vector2(1,2),Vector2(3,16)]]
+	]
+	for row in range(4):
+		var torso := image.get_region(Rect2i(48,row*64,48,64))
+		var arms: Array = []
+		for definition: Array in definitions[row]:
+			var rectangle: Rect2i = definition[0]
+			arms.append({"texture":ImageTexture.create_from_image(torso.get_region(rectangle)),"origin":Vector2(rectangle.position),"pivot":definition[1],"hand":definition[2]})
+			torso.fill_rect(rectangle,Color.TRANSPARENT)
+		tool_pose_frames[row] = {"torso":ImageTexture.create_from_image(torso),"arms":arms}
+	if tool_arms.is_empty():
+		for index in range(2):
+			var arm := Sprite2D.new(); arm.name="ToolArm%d"%index; arm.centered=false; arm.scale=Vector2(0.5,0.5); arm.visible=false
+			add_child(arm); tool_arms.append(arm)
+
+## 切入指定朝向的工具姿势；保留外观和脚底坐标，返回值无。
+func begin_tool_pose(direction: Vector2) -> void:
+	facing=direction; _update_frame(1); tool_pose_active=true
+	var pose: Dictionary=tool_pose_frames[DIRECTION_ROWS.get(facing,0)]
+	active_arm_data=pose.arms
+	var torso := get_node("Top") as Sprite2D
+	torso.hframes=1; torso.vframes=1; torso.frame=0; torso.texture=pose.torso
+	for index in range(tool_arms.size()):
+		tool_arms[index].visible=index<active_arm_data.size()
+		if tool_arms[index].visible:
+			tool_arms[index].texture=active_arm_data[index].texture
+			tool_arms[index].offset=-active_arm_data[index].pivot
+			tool_arms[index].z_index=-1 if facing==Vector2.UP else 2
+
+## 按手臂角度、上身倾角和下压量投影动作；返回主手握点，供工具逐帧跟随。
+func apply_tool_pose(arm_angle: float, lean: float, crouch: float) -> Vector2:
+	var waist := Vector2(0,-10)
+	var shift := Vector2(0,crouch)
+	for part in ["Head","Top"]:
+		var sprite := get_node(part) as Sprite2D
+		sprite.position=waist+shift; sprite.offset=Vector2(-24,-40); sprite.rotation=lean
+	for index in range(active_arm_data.size()):
+		var data: Dictionary=active_arm_data[index]
+		var shoulder: Vector2 = Vector2(-12,-30)+(data.origin+data.pivot)*0.5
+		tool_arms[index].position=waist+(shoulder-waist).rotated(lean)+shift
+		tool_arms[index].rotation=arm_angle if index==0 else -arm_angle*0.65
+	var primary: Dictionary=active_arm_data[0]
+	return tool_arms[0].position+((primary.hand-primary.pivot)*0.5).rotated(arm_angle)
+
+## 恢复完整上装和站立帧；可重复调用，取消与正常恢复走同一路径。
+func end_tool_pose() -> void:
+	if not tool_pose_active: return
+	tool_pose_active=false
+	var torso := get_node("Top") as Sprite2D
+	torso.texture=normal_top_texture; torso.hframes=3; torso.vframes=4
+	for part in ["Head","Top"]:
+		var sprite := get_node(part) as Sprite2D
+		sprite.position=Vector2(-12,-30); sprite.offset=Vector2.ZERO; sprite.rotation=0
+	for arm in tool_arms: arm.visible=false
+	_update_frame(1)

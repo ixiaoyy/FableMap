@@ -18,9 +18,11 @@
 | 小镇 | 八名居民、日程/休息日/雨天/柜台服务、对话、送礼、委托、背包陈列和木匠建造/移动/拆除 |
 | 时间与伙伴 | 06:00–02:00、午夜提示、睡眠与昏倒、确定性天气、钓鱼、猫狗领养/漫步/抚摸 |
 | 表现与界面 | 原地图/素材、分层外观、昼夜/雨风/声音、原生菜单、角色预览、鸣谢与许可证 |
-| 保存 | 独立 Godot v1 封套；关键候选原子保存、失败重试、浏览器事务完成确认、桌面临时文件替换 |
+| 保存 | Godot v2 封套、状态版本 14；关键候选原子保存、失败重试、浏览器事务完成确认、桌面临时文件替换 |
 
 不读取、覆盖或迁移旧 Phaser 开发档。Web JavaScript 仅作引擎宿主、IndexedDB 和音量偏好适配，玩法不通过 JS 执行。
+
+S0 体力批次使用 270 点基础上限并保留小数；基础单格浇水耗能 2、抛竿耗能 8，食用与正常/晚睡恢复不丢弃小数。旧 Godot v1 封套会明确拒绝，不自动迁移或覆盖；验收使用新开发档。现有 Lv2 水壶仍是最多三格的中间实现，每格扣 1 水和 2 体力，完整金属升级、疲劳与技能效果尚待后续批次。
 
 ## 本地准备
 
@@ -35,7 +37,7 @@ npm --prefix .\apps\mirror-island run typecheck:client
 npm --prefix .\apps\mirror-island run godot:editor
 ```
 
-准备阶段保留旧客户端的纯地图 decoder 和内景绘制函数，避免重录地图和美术。`data/*.json` 是原静态内容的已迁移快照；旧 TS 规则和 EasyStar 开发依赖只供迁移对照，不打入游戏包。Phaser、Vue 及 Vue 编译插件依赖已移除。
+旧客户端、旧 TypeScript 玩法、Vite 客户端入口和 EasyStar 依赖已清理。准备阶段仅使用 `scripts/content/` 的独立 Tiled 解析与校验；两张室内图由原生工具读取 `tools/interior-atlases.json` 重建。`data/*.json` 直接作为当前内容源维护，不再运行旧玩法生成快照。`test:godot` 使用固定迁移基线，不执行旧引擎代码。
 
 ## 导出与查看
 
@@ -47,6 +49,8 @@ npm --prefix .\apps\mirror-island run build:windows
 默认 Web 地址为 `http://127.0.0.1:8080/`；本轮临时验收服务使用 5183。Windows 输出为 `exports/windows/mirror-island.exe`，必须与同目录 `.pck` 一起保留。本地 Python 服务不配置压缩，不代表 CDN 或真实手机网络性能；Nginx 构建配置已包含 WASM/PCK 压缩与缓存再验证。
 
 ## 素材编辑
+
+五件清新田园工具已提供显式本地构建：在应用目录运行 `npm run dev:tool-art`，或仅运行 `npm run build:tool-art` 后使用 Web/Windows 产物。它们尚未发布至 CDN；普通构建会清除候选并使用正式媒体。来源、尺寸与运行边界见 [工具素材接入记录](../../../docs/assets/pastoral-tools-local-2026-09-08.md)。
 
 - 人物：打开 `scenes/islander.tscn`，检查器参数对应旧版相同的三层图集和遮罩颜色。
 - 地图：打开 `scenes/regions/farm.tscn` 等继承场景做额外调整；`generated/` 是再生成结果，不直接手改。

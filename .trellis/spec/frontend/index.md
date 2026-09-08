@@ -2,7 +2,7 @@
 
 ## Scope
 
-当前唯一游戏运行时是 `apps/mirror-island/godot/` 的 Godot/GDScript 单人世界，使用本地 GameSession 和版本化存档。Phaser/Vue 仅保留源内容对照，RPGJS 和 Colyseus 均已退役。
+当前唯一游戏运行时是 `apps/mirror-island/godot/` 的 Godot/GDScript 单人世界，使用本地 GameSession 和版本化存档。Phaser/Vue 客户端和旧 TS 玩法已清理；历史规则保留在文档与固定测试数据中。RPGJS 和 Colyseus 均已退役。
 
 开发阶段的浏览器本地 gameplay save 只保证 current schema；新增状态不为此前开发版本增加 migration、回填或备份。该约定不适用于数据库、论坛、身份、媒体或部署数据，完整合同见主规范顶部的 `Active development save reset policy`。
 

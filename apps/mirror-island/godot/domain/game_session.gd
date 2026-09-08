@@ -140,9 +140,9 @@ func dispatch(command: Dictionary) -> Dictionary:
 		"eat-item":
 			var item: Dictionary=rules.items.get(command.itemId,{})
 			if item.get("staminaRestore",0)<=0: code="not-edible"
-			elif candidate.stamina>=100: code="stamina-full"
+			elif candidate.stamina>=FarmEnergyRules.MAX_STAMINA: code="stamina-full"
 			elif not inventory.consume(candidate.inventory,command.itemId,1): code="missing-item"
-			else: candidate.stamina=mini(100,int(candidate.stamina+item.staminaRestore)); code="ate"
+			else: candidate.stamina=minf(FarmEnergyRules.MAX_STAMINA,float(candidate.stamina)+float(item.staminaRestore)); code="ate"
 		"buy-item","sell-item": code=_shop(candidate,actors,command)
 		"upgrade-watering-can":
 			var smith:=_npc(actors,"town-blacksmith")
@@ -275,8 +275,7 @@ func _settle_day(reason: String) -> Dictionary:
 	var loss:=mini(1000,floori(candidate.gold*0.1)) if reason=="passed-out" and candidate.player.regionId!="cottage" else 0
 	candidate.gold-=loss
 	if not storage.settle_shipping(candidate): return _result("gold-limit")
-	var late: int=clampi(ceili((float(candidate.minuteOfDay)-1440.0)/10.0),0,12)
-	candidate.stamina=[100,98,95,93,90,88,75,73,70,68,65,63,50][late]
+	candidate.stamina=FarmEnergyRules.after_sleep(float(candidate.stamina),int(candidate.minuteOfDay))
 	for friend: Dictionary in candidate.friendships.values():
 		if friend.lastTalkedDay!=candidate.day and friend.points>0 and friend.points<2500: friend.points=maxi(0,int(friend.points)-2)
 	resource_rules.settle_crops(candidate)
@@ -294,7 +293,7 @@ func _settle_day(reason: String) -> Dictionary:
 	candidate.player.regionId="cottage"; candidate.player.x=spawn.x; candidate.player.y=spawn.y
 	fishing.runtime.clear()
 	var result:=_result(reason)
-	result.message="新的一天开始了，体力 %d。%s"%[candidate.stamina,"送回家花费 %dg。"%loss if loss>0 else ""]
+	result.message="新的一天开始了，体力 %d。%s"%[roundi(candidate.stamina),"送回家花费 %dg。"%loss if loss>0 else ""]
 	result.daySummary={"reason":reason,"goldLost":loss,"nextStamina":candidate.stamina}
 	return result if await _commit(candidate,result) else _result("save-failed")
 

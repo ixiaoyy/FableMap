@@ -1,5 +1,21 @@
 # 实施清单
 
+## 2026-09-08 旧引擎源码清理
+
+用户确认继续完成迁移后，已完成当前仓库的源码与构建依赖收尾：
+
+- 迁出 Tiled 解析和跨地图校验到 `scripts/content/`，移除旧运行期查询接口。室内绘图指令提升为 `godot/tools/interior-atlases.json`，由原生工具直接读取。
+- 精确清理 144 个旧文件，包括旧客户端、TypeScript 玩法、Vue/Vite 客户端入口、旧快照生成和对照脚本、四个退役客户端测试。没有递归删除未跟踪文件。
+- 移除 EasyStar 及仅由其引入的 heap，保留独立服务端的 TypeScript/Vite/tsx。
+- 既有 34 个规则案例与 5 个哈希结果冻结到 `test/fixtures/godot-migration.json`，原有保存失败/重试检查继续执行，不依赖旧引擎或本机历史文件。
+- `typecheck:client`（含地图准备类型、Godot 导入与 headless 启动）、服务端 `tsc`、`test:godot`、Web 与 Windows 导出通过；最终导出日志未发现 SCRIPT ERROR/ERROR。
+- 清理前后 31 项生成地图、区域包装场景、内容数据与室内图像 SHA-256 全部一致。旧绘图生成副本已由准备脚本清除，工具源数据和测试 fixture 不随游戏导出。
+- 生产代码/配置暂存；测试、说明和任务文档不自动暂存。没有 commit、push、媒体上传、部署或数据库连接；其他任务的未跟踪内容保留。
+
+证据在 `artifacts/godot-retirement-2026-09-08/`。本轮完成源码依赖清理，不代签完整真人玩法、真机/长期存档、Linux 容器或线上发布验收，任务继续保持 in_progress。
+
+回退必须按本轮 diff 精确恢复被删除的源码与构建引用，并同时还原 package.json/lockfile，不能只恢复旧文件或整仓库 restore；无数据库或存档迁移要回滚。以下是此前迁移阶段记录，旧源码保留与 EasyStar 说明已被本节取代。
+
 - [x] 读取当前规范、检查干净工作区与迁移基线。
 - [x] 明确用户授权为 Godot/GDScript 引擎迁移，真实城市方向暂不实施。
 - [x] 获取并校验 Godot 4.7.2 标准版与 Web/Windows 导出模板。

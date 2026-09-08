@@ -3,9 +3,9 @@
   "name": "skills-recipe-unlocks-v1",
   "title": "技能与配方解锁 v1",
   "description": "为种田、采集、钓鱼、采矿建立 0–10 级、熟练度、配方解锁与 5/10 级职业选择。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "feature",
-  "scope": "frontend",
+  "scope": "godot",
   "package": null,
   "priority": "P1",
   "creator": "fable",
@@ -21,6 +21,10 @@
   "children": [],
   "parent": "09-04-pre-pivot-life-sim-foundation",
   "relatedFiles": [],
-  "notes": "",
-  "meta": {}
+  "notes": "2026-09-08 用户确认实施 S0：统一体力基准、小数精度、基础耗能、正常/晚睡恢复与界面校验。仅该前置批次进入实施，完整技能、职业与配方要求继续保留。",
+  "meta": {
+    "currentBatch": "S0-energy-baseline",
+    "batchStatus": "implemented-awaiting-user-validation",
+    "verification": "verification-s0.md"
+  }
 }

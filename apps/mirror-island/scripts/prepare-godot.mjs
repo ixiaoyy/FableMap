@@ -1,12 +1,9 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { decodeTiledRegion, createWorldCatalog } from '../client/src/game/world/tiled-region-decoder.ts';
-import { paintCottageAtlas } from '../client/src/game/presentation/cottage-art.ts';
-import { paintShopInteriorAtlas } from '../client/src/game/presentation/shop-interiors-art.ts';
-import { fixedInteriorViewAnchorForRegion } from '../client/src/game/assets/visual-profile.ts';
+import { decodeTiledRegion, createWorldCatalog } from './content/tiled-region-decoder.ts';
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = path.resolve(app, '../..');
@@ -14,6 +11,7 @@ const output = path.join(app, 'godot');
 const manifest = JSON.parse(await readFile(path.join(root, 'deploy/cdn/game-media-manifest.json'), 'utf8'));
 const lock = JSON.parse(await readFile(path.join(output, 'engine-lock.json'), 'utf8'));
 const sourceMaps = path.join(app, 'public/map');
+const cameraAnchors = JSON.parse(await readFile(new URL('./content/camera-anchors.json', import.meta.url), 'utf8'));
 const records = [];
 const assetPaths = {};
 
@@ -27,7 +25,7 @@ async function media(source) {
     const name = path.basename(absolute);
     const bytes = await readFile(path.join(output, 'media', name));
     if (!records.some(record => record.name === name)) records.push({ name, sha256: sha256(bytes), bytes: bytes.length,
-      source: 'client/src/game/presentation/*-art.ts', provenance: { kind: 'existing-runtime-atlas', processing: '原绘制函数的矩形指令由 Godot Image 执行，不修改美术' } });
+      source: 'godot/tools/interior-atlases.json', provenance: { kind: 'existing-runtime-atlas', processing: '固定矩形指令由 Godot Image 执行，不修改美术' } });
     return `res://media/${name}`;
   }
   const allowed = [path.join(app, 'src/tiled') + path.sep, path.join(app, 'public/game-media/v1') + path.sep];
@@ -67,19 +65,9 @@ function regionScene(region, mapFile) {
 }
 
 for (const directory of ['generated/maps', 'generated/regions', 'scenes/regions', 'media', 'addons/YATI']) await mkdir(path.join(output, directory), { recursive: true });
-// 执行已有绘图函数而非依赖某台电脑遗留 PNG，保持干净检出也可重建。
-const paintings = [];
-for (const [name, height, paint] of [['cottage-woodwork.runtime.png', 128, paintCottageAtlas], ['shop-interiors.runtime.png', 256, paintShopInteriorAtlas]]) {
-  const operations = [];
-  const context = {
-    fillStyle: '#000000',
-    /** 记录原绘图函数的整数矩形；未知绘制 API 会直接报错，不静默省略。 */
-    fillRect(x, y, width, height) { operations.push([x, y, width, height, this.fillStyle]); },
-  };
-  paint(context);
-  paintings.push({ name, width: 256, height, operations });
-}
-await writeFile(path.join(output, 'generated/interior-atlases.json'), JSON.stringify(paintings));
+// 清除已提升为 tools 源内容的旧生成副本，避免被 generated/*.json 重复打包。
+await rm(path.join(output, 'generated/interior-atlases.json'), { force: true });
+// 原生工具读取已版本化的矩形绘图内容，干净检出可以重建相同内景。
 const executable = path.join(root, `artifacts/godot-runtime/${lock.version.replace('-stable', '')}/Godot_v${lock.version}_${process.platform === 'win32' ? 'win64_console.exe' : 'linux.x86_64'}`);
 const painted = spawnSync(executable, ['--headless', '--path', output, '--script', 'res://tools/build_atlases.gd'], { encoding: 'utf8', timeout: 30000 });
 if (painted.error || painted.status !== 0 || /SCRIPT ERROR|^ERROR:/m.test(painted.stderr ?? '')) throw new Error(`内景导出失败：${painted.stderr ?? painted.error}`);
@@ -104,7 +92,7 @@ const regions = [];
 for (const name of (await readdir(sourceMaps)).filter(name => name.endsWith('.tmj')).sort()) {
   const map = JSON.parse(await readFile(path.join(sourceMaps, name), 'utf8'));
   const region = decodeTiledRegion(map, `region-${name.slice(0, -4)}`);
-  regions.push({ ...region, cameraAnchorId: fixedInteriorViewAnchorForRegion(region.id) });
+  regions.push({ ...region, cameraAnchorId: cameraAnchors[region.id] ?? null });
   for (const tileset of map.tilesets) tileset.image = (await media(path.resolve(sourceMaps, tileset.image))).replace('res://', '../../');
   // 非可见规则层保留在 catalog；避免 YATI 把碰撞掩码当成贴图渲染。
   map.layers = map.layers.filter(layer => ['Ground', 'GroundDetail', 'Water', 'Buildings', 'AbovePlayer'].includes(layer.name));
@@ -147,4 +135,22 @@ for (const entry of manifest.entries) {
 }
 await writeFile(path.join(output,'generated/asset-paths.json'), JSON.stringify(assetPaths,null,2));
 await writeFile(path.join(output,'generated/media-provenance.json'), JSON.stringify(records,null,2));
+// 仅显式本地美术构建采用未发布候选；普通构建清理候选，不能冒用正式 CDN 登记。
+const toolPreviewPath = path.join(output, 'generated/tool-art-preview.json');
+const toolPreviewImage = path.join(output, 'media/tools-pastoral-preview-v1.png');
+if (process.argv.includes('--tool-art-preview')) {
+  const preview = JSON.parse(await readFile(new URL('./content/tool-art-preview.json', import.meta.url), 'utf8'));
+  const bytes = await readFile(path.join(root, preview.path));
+  if (bytes.length !== preview.bytes || sha256(bytes) !== preview.sha256
+      || bytes.readUInt32BE(16) !== preview.width || bytes.readUInt32BE(20) !== preview.height) throw new Error('本地工具图集尺寸或哈希不匹配');
+  await writeFile(toolPreviewImage, bytes);
+  await writeFile(toolPreviewPath, JSON.stringify({items: preview.items, key: preview.key, path: 'res://media/tools-pastoral-preview-v1.png', sha256: preview.sha256}, null, 2));
+  records.push({name:'tools-pastoral-preview-v1.png', sha256:preview.sha256, bytes:bytes.length, source:preview.path, provenance:{kind:'local-original-preview', version:preview.version}});
+  await writeFile(path.join(output,'generated/media-provenance.json'), JSON.stringify(records,null,2));
+  console.log('本地工具美术已接入：五件基础工具，未发布到 CDN。');
+} else {
+  await rm(toolPreviewPath, {force:true});
+  await rm(toolPreviewImage, {force:true});
+  await rm(toolPreviewImage + '.import', {force:true});
+}
 console.log(`Godot 已准备 ${regions.length} 张地图、${records.length} 张源图；YATI ${lock.yati.version} 已校验。`);

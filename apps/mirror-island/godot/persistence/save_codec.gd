@@ -2,7 +2,8 @@ class_name FarmSaveCodec
 extends RefCounted
 ## 独立 Godot 存档合同，严格拒绝旧版本、坏字段与不一致世界，不回填或静默覆盖。
 
-const VERSION := 1
+const VERSION := 2
+const STATE_VERSION := 14
 const MAX_BYTES := 8 * 1024 * 1024
 var rules: Dictionary
 var dialogues: Dictionary
@@ -81,11 +82,11 @@ func validate(raw: Variant) -> String:
 	var state: Dictionary=raw
 	for key: String in rules.initial:
 		if not state.has(key): return "存档缺少字段："+key
-	if state.version!=13 or not number(state.day,1,FarmWorldRules.LIMIT-2): return "存档日期或规则版本无效。"
+	if state.version!=STATE_VERSION or not number(state.day,1,FarmWorldRules.LIMIT-2): return "存档日期或规则版本无效。"
 	if not number(state.minuteOfDay,360,1560) or int(state.minuteOfDay)%10!=0: return "存档时间无效。"
 	for key: String in ["gold","fishingCastCount","nextWorldEntitySequence"]:
 		if not number(state[key],1 if key=="nextWorldEntitySequence" else 0,FarmWorldRules.LIMIT): return "存档计数无效："+key
-	if not number(state.worldSeed,0,4294967295) or not number(state.stamina,0,100): return "世界种子或体力无效。"
+	if not number(state.worldSeed,0,4294967295) or not number(state.stamina,0,FarmEnergyRules.MAX_STAMINA,false): return "世界种子或体力无效。"
 	for key: String in ["lateWarningDay","lastSurfaceStoneRefreshDay","lastSurfaceWeedRefreshDay"]:
 		if not number(state[key],0 if key=="lateWarningDay" else 1,state.day): return "资源日期标记无效。"
 	if state.inventoryCapacity not in [12,24,36] or state.wateringCanLevel not in [1,2] or not slots(state.inventory,int(state.inventoryCapacity)): return "背包或工具等级无效。"
