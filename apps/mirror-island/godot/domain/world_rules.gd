@@ -8,9 +8,11 @@ var regions: Dictionary = {}
 var resources: Dictionary = {}
 var interactions: Dictionary = {}
 var zones: Dictionary = {}
+var crops: Dictionary = {}
 
-## 索引已校验的地图记录，保留全部稳定 ID；不从场景推断业务权限。
-func _init(catalog: Dictionary) -> void:
+## 索引地图与作物定义，供农田和碰撞共用；保留地图稳定 ID，不从场景推断权限。
+func _init(catalog: Dictionary, crop_definitions: Array) -> void:
+	for crop: Dictionary in crop_definitions: crops[crop.cropId]=crop
 	for region: Dictionary in catalog.regions:
 		regions[region.id] = region
 		for resource: Dictionary in region.resources: resources[resource.entityId] = resource
@@ -88,6 +90,9 @@ func blocked(state: Dictionary, region_id: String, position: Vector2, half_size:
 	for row in range(floori((position.y-half_size.y)/16), floori((position.y+half_size.y)/16)+1):
 		for column in range(floori((position.x-half_size.x)/16), floori((position.x+half_size.x)/16)+1):
 			if mask(region_id,"blocked",column,row) or covers(state,region_id,column,row,ignored): return true
+			if region_id=="farm":
+				var tile: Dictionary=state.farmTiles.get("farm:%d:%d"%[column,row],{})
+				if crops.get(tile.get("cropId",""),{}).get("isRaised",false): return true
 			for spawn: Dictionary in region.resources:
 				if floori(spawn.x/16.0) == column and floori(spawn.y/16.0) == row and state.resources.has(spawn.entityId) and state.resources[spawn.entityId].phase != "cleared": return true
 	for npc: Dictionary in npcs:
@@ -123,7 +128,7 @@ static func feet_overlap(position: Vector2, tile: Vector2i, half_size: Vector2) 
 ## 预检整块摆放位置，返回待清空地与宠物迁移；没有写入副作用。
 func placement(state: Dictionary, kind: String, region_id: String, column: int, row: int, ignored: String = "", npcs: Array = []) -> Dictionary:
 	var result := {"allowed":false,"clear":[],"pet":null,"message":"这个位置有阻挡。"}
-	if not regions.has(region_id) or (kind == "shipping-bin" and region_id != "farm"): return result
+	if not regions.has(region_id) or (kind in ["shipping-bin","scarecrow"] and region_id != "farm"): return result
 	var width := 2 if kind == "shipping-bin" else 1
 	var needs_pet := false
 	var forage := active_forage(state,region_id)
@@ -141,7 +146,7 @@ func placement(state: Dictionary, kind: String, region_id: String, column: int, 
 		for npc: Dictionary in npcs:
 			if npc.regionId==region_id and feet_overlap(point(npc),Vector2i(x,row),Vector2(5,3)): return result
 		if state.pet!=null and state.pet.regionId==region_id and feet_overlap(point(state.pet),Vector2i(x,row),Vector2(4,3)):
-			if kind=="chest": return result
+			if kind in ["chest","scarecrow"]: return result
 			needs_pet=true
 	if needs_pet:
 		var best := INF

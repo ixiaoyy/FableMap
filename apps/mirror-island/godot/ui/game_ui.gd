@@ -58,6 +58,7 @@ var theme: Theme
 var fish_progress: ProgressBar
 var fish_tension: ProgressBar
 var fish_label: Label
+var dialog_feedback: Label
 var character_preview: Node2D
 var preview_direction: String="down"
 var preview_walking:=false
@@ -97,7 +98,8 @@ func configure(owner_session: FarmGameSession, asset_library: FarmAssets, sound:
 	var heading:=HBoxContainer.new(); content.add_child(heading)
 	title=_label("",heading); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	close_button=_button("返回 Esc",heading,close)
-	var scroll:=ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; content.add_child(scroll)
+	dialog_feedback=_label("",content); dialog_feedback.add_theme_font_size_override("font_size",14); dialog_feedback.visible=false
+	var scroll:=ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; scroll.follow_focus=true; content.add_child(scroll)
 	body=VBoxContainer.new(); body.size_flags_horizontal=Control.SIZE_EXPAND_FILL; body.add_theme_constant_override("separation",10); scroll.add_child(body)
 	saving=PanelContainer.new(); root.add_child(saving); saving.visible=false
 	placement_controls=HBoxContainer.new(); root.add_child(placement_controls); placement_controls.visible=false
@@ -134,6 +136,7 @@ func _process(_delta: float) -> void:
 		var caught_id: String=fishing.fish.itemId if fishing.fish!=null else ""
 		var texts: Dictionary={"casting":"按住蓄力，松手抛竿。","waiting":"等待浮漂动静……","reeling":"按住收线，松手降张力；保持在 22–78。","caught":"钓到了 %s。"%session.rules.items.get(caught_id,{}).get("name","鱼"),"escaped":"鱼跑掉了。","inventory-full":"背包已满，没能装下鱼获。"}
 		fish_label.text="咬钩了，按下收线！" if session.fishing.bite() else texts[fishing.phase]
+		if fishing.phase=="caught" and (session.busy or session.save_phase!="idle"): fish_label.text="鱼获尚未保存，请等待或完成保存重试。"
 
 ## 将暂停之外的方向按钮送入同一世界输入路径。
 func _move(direction: Vector2) -> void:
@@ -147,6 +150,7 @@ func _action(tool: bool) -> void:
 func _open(next_mode: String) -> void:
 	if session.busy or session.save_phase=="failed": return
 	if next_mode=="shipping" and transfer_amount=="half": transfer_amount="stack"
+	dialog_feedback.visible=false
 	mode=next_mode; selected_source={}; _render(); _resize()
 
 ## 关闭前先取消暂存选择；报告与失败保存不能用 Esc 跳过。
@@ -159,13 +163,13 @@ func close() -> void:
 	elif mode=="placement": placement_request={}; placement_cancelled.emit(); mode=""
 	elif not session.active: mode="start"
 	else: mode=""
-	_render(); get_viewport().gui_release_focus()
+	_render(); _resize(); get_viewport().gui_release_focus()
 
-## 打开经世界层距离检查后的箱子或出货箱。
+## 打开经世界层距离检查后的物件面板；稻草人只显示驱赶计数，不作为容器。
 func open_container(id: String) -> void:
 	container_id=id
 	var object:=FarmWorldRules.object_by_id(session.snapshot(),id)
-	_open("shipping" if object.get("kind")=="shipping-bin" else "chest")
+	_open("scarecrow" if object.get("kind")=="scarecrow" else "shipping" if object.get("kind")=="shipping-bin" else "chest")
 
 ## 展示已经执行过交谈的结果，不再重复发交谈命令。
 func show_dialogue(result: Dictionary) -> void:
@@ -255,6 +259,10 @@ func _feedback(result: Dictionary) -> void:
 	message.modulate=Color.WHITE
 	message.add_theme_color_override("font_color",Color("934927") if result.get("tone")=="error" else Color("304d3f"))
 	message_panel.visible=message.text!="" and mode in ["","placement"]
+	if dialog_feedback!=null:
+		dialog_feedback.text=message.text
+		dialog_feedback.add_theme_color_override("font_color",Color("934927") if result.get("tone")=="error" else Color("416b50"))
+		dialog_feedback.visible=message.text!="" and mode not in ["","placement"]
 
 ## 创建只读状态面板和原有菜单入口；字体层级区分时间、资源与辅助信息。
 func _build_hud() -> void:
@@ -358,6 +366,8 @@ func _render() -> void:
 	if dialog==null: return
 	if touch.visible and mode!="": movement_requested.emit(Vector2.ZERO)
 	touch.visible=session.active and mode==""; actions.visible=session.active and mode==""
+	hud_menu.visible=mode!="fishing"
+	toolbar.visible=session.active and mode!="fishing"; energy_panel.visible=toolbar.visible
 	message_panel.visible=message.text!="" and mode in ["","placement"]
 	for area: Node in [header,toolbar,touch,actions]:
 		for button: Node in area.find_children("*","Button",true,false): button.disabled=mode!="" or session.busy or session.save_phase=="failed"
@@ -366,6 +376,7 @@ func _render() -> void:
 	if not dialog.visible: return
 	if mode=="fishing" and is_instance_valid(fish_progress): return
 	_clear(body); fish_progress=null; character_preview=null
+	body.add_theme_constant_override("separation",6 if mode=="fishing" else 10)
 	close_button.visible=session.active and mode!="report" or mode in ["appearance-new","confirm-new"]
 	var state:=session.snapshot()
 	if mode in ["inventory","chest","shipping","crafting"]: dialog.add_theme_stylebox_override("panel",_hotbar_style("fff8e8","aa8559",3))
@@ -386,10 +397,15 @@ func _render() -> void:
 		"inventory","chest","shipping","crafting": _inventory_menu(state)
 		"menu":
 			title.text="岛上生活"
-			for pair in [["背包","inventory"],["制作","crafting"],["日历","calendar"],["居民名册","social"],["今日目标 / 委托","requests"],["外观","appearance"],["声音","audio"],["鸣谢与许可证","credits"]]: _button(pair[0],body,_open.bind(pair[1]))
+			for pair in [["背包","inventory"],["制作","crafting"],["日历","calendar"],["生活技能","skills"],["居民名册","social"],["今日目标 / 委托","requests"],["外观","appearance"],["声音","audio"],["鸣谢与许可证","credits"]]: _button(pair[0],body,_open.bind(pair[1]))
 			if state.day>=2 and state.pet==null: _button("领养伙伴",body,_open.bind("adoption"))
 			_label("当前进度自动保存在本机。",body)
 		"report": _report(state)
+		"skills": _skills_menu(state)
+		"scarecrow":
+			title.text="稻草人"
+			var object:=FarmWorldRules.object_by_id(state,container_id)
+			if not object.is_empty(): _label("已驱赶 %d 只乌鸦。\n可用工具收回，回收后计数重置。"%object.scaredCount,body)
 		"dialogue": _dialogue_menu(state)
 		"sleep":
 			title.text="今天就休息了吗？"; _label("睡觉后作物生长、资源恢复，出货收入在次日结算。",body)
@@ -513,12 +529,27 @@ func _inventory_menu(state: Dictionary) -> void:
 		button.tooltip_text="选择本次移动的数量"
 	_command_button("整理背包",options,{"type":"sort-inventory"})
 	if mode=="crafting":
+		if recipe_id not in state.knownRecipes: recipe_id=""
 		var quantities:=HBoxContainer.new(); body.add_child(quantities)
-		for amount in [1,5,25]: _button("×%d"%amount,quantities,_craft_amount.bind(amount))
+		_label("制作数量",quantities)
+		for amount in [1,5,25]:
+			var amount_button:=_button("×%d"%amount,quantities,_craft_amount.bind(amount)); amount_button.toggle_mode=true; amount_button.button_pressed=craft_amount==amount
 		for recipe: Dictionary in session.rules.recipes.values():
-			var requirements: Array[String]=[]
-			for ingredient: Dictionary in recipe.ingredients: requirements.append("%s %d/%d"%[session.rules.items[ingredient.itemId].name,session.inventory.quantity(state.inventory,ingredient.itemId),int(ingredient.quantity)*craft_amount])
-			_button("%s ×%d · %s"%[recipe.name,craft_amount," / ".join(requirements)],body,_choose_recipe.bind(recipe.id))
+			if recipe.id not in state.knownRecipes: continue
+			var card:=_information_card(body)
+			var recipe_button:=_button("%s ×%d%s"%[recipe.name,craft_amount*int(recipe.output.quantity)," · 已选" if recipe_id==recipe.id else ""],card,_choose_recipe.bind(recipe.id))
+			recipe_button.icon=assets.icon(recipe.output.itemId); recipe_button.expand_icon=true; recipe_button.add_theme_constant_override("icon_max_width",28)
+			recipe_button.toggle_mode=true; recipe_button.button_pressed=recipe_id==recipe.id
+			var materials:=HFlowContainer.new(); materials.add_theme_constant_override("h_separation",12); card.add_child(materials)
+			for ingredient: Dictionary in recipe.ingredients:
+				var row:=HBoxContainer.new(); materials.add_child(row)
+				var icon:=TextureRect.new(); icon.texture=assets.icon(ingredient.itemId); icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(20,20); row.add_child(icon)
+				var owned:=session.inventory.quantity(state.inventory,ingredient.itemId)
+				var required:=int(ingredient.quantity)*craft_amount
+				var material:=_label("%s %d/%d%s"%[session.rules.items[ingredient.itemId].name,owned,required," · 缺 %d"%(required-owned) if owned<required else ""],row)
+				material.autowrap_mode=TextServer.AUTOWRAP_OFF; material.add_theme_font_size_override("font_size",14)
+				material.add_theme_color_override("font_color",Color("a3543c") if owned<required else Color("416b50"))
+		_label("材料数量：持有 / 需要",body).add_theme_font_size_override("font_size",12)
 		_label("已选 %s，点背包目标格完成制作。"%session.rules.recipes[recipe_id].name if recipe_id!="" else "先选配方，再选背包目标格。",body)
 	if mode=="chest":
 		var chest:=FarmWorldRules.object_by_id(state,container_id)
@@ -566,7 +597,7 @@ func _inventory_details(state: Dictionary) -> void:
 	var controls:=HFlowContainer.new(); details.add_child(controls)
 	if selected_source.index<12: _button("拿在手上",controls,_hold_selected)
 	if item.get("staminaRestore",0)>0: _command_button("食用 +%d 体力"%item.staminaRestore,controls,{"type":"eat-item","itemId":slot.itemId})
-	if slot.itemId=="chest": _button("摆放普通箱",controls,request_placement.bind({"type":"place-world-object","inventoryIndex":selected_source.index}))
+	if slot.itemId in ["chest","scarecrow"]: _button("摆放"+item.name,controls,request_placement.bind({"type":"place-world-object","inventoryIndex":selected_source.index}))
 
 ## 创建响应式槽位列表，保持槽位编号和当前容量。
 func _grid(slots: Array, grid_id: String) -> void:
@@ -654,17 +685,41 @@ func _dialogue_menu(state: Dictionary) -> void:
 	if inspect_id.contains("notice") or inspect_id.contains("board"): _requests(state)
 	if dialogue_result.get("requestResult")=="request-completed": _label("今日委托已完成，报酬与好感已到账。",body)
 	if dialogue_result.get("shopAvailable",false):
-		_label("种子与收购",body)
-		for crop: Dictionary in session.rules.crops: _command_button("买 %s · %dg"%[session.rules.items[crop.seedId].name,crop.seedPrice],body,{"type":"buy-item","itemId":crop.seedId,"quantity":1})
+		_label("可用金币 %dg · 每次交易 1 件"%state.gold,body)
+		_label("购买种子",body)
+		for crop: Dictionary in session.rules.crops: _shop_item_row(crop.seedId,int(crop.seedPrice),true,state,{"type":"buy-item","itemId":crop.seedId,"quantity":1})
+		var listed: Dictionary={}
 		for slot: Dictionary in state.inventory:
 			var price: Variant=session.rules.prices.get(slot.itemId)
-			if price!=null: _command_button("卖 %s · %dg"%[session.rules.items[slot.itemId].name,price],body,{"type":"sell-item","itemId":slot.itemId,"quantity":1})
+			if price!=null and session.rules.items[slot.itemId].get("seedShopBuyback",true) and not listed.has(slot.itemId):
+				if listed.is_empty(): _label("出售随身物品",body)
+				listed[slot.itemId]=true
+				_shop_item_row(slot.itemId,int(price),false,state,{"type":"sell-item","itemId":slot.itemId,"quantity":1})
+	if inspect_id=="blacksmith-tool-rack":
+		_label("可用金币 %dg"%state.gold,body)
+		_shop_item_row("coal",session.coal_price(state.day),true,state,{"type":"buy-coal"})
 	if dialogue_result.get("wateringServiceAvailable",false): _command_button("升级水壶 · 900g + 15 木材",body,{"type":"upgrade-watering-can"})
 	if dialogue_result.get("npcId")=="town-resident-xiangzi" and state.day>=7: _command_button("领取竹制鱼竿",body,{"type":"claim-fishing-rod","npcId":"town-resident-xiangzi"})
 	if dialogue_result.get("npcId")=="town-resident-mozi" and session.storage.carpenter_available(state,session.npcs.snapshot(),"town-house-west-carpenter-counter"): _button("木匠服务",body,_open.bind("building"))
 	if dialogue_result.has("npcId") and selected_index>=0:
 		var item: Dictionary=session.rules.items.get(state.inventory[selected_index].itemId,{})
 		if not item.is_empty() and item.category not in ["tool","seed"]: _button("赠送手持物品",body,_open.bind("gift"))
+
+## 展示一件商品的图标、持有量和本次价格；按钮只发送原交易命令，购买资格由领域判定。
+func _shop_item_row(item_id: String, price: int, buying: bool, state: Dictionary, command: Dictionary) -> void:
+	var card:=_information_card(body)
+	var row:=HBoxContainer.new(); row.add_theme_constant_override("separation",10); card.add_child(row)
+	var icon:=TextureRect.new(); icon.texture=assets.icon(item_id); icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(32,32); icon.size_flags_vertical=Control.SIZE_SHRINK_CENTER; row.add_child(icon)
+	var badge_texture:=assets.badge(item_id)
+	if badge_texture!=null:
+		var badge:=TextureRect.new(); badge.texture=badge_texture; badge.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; badge.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; badge.position=Vector2(16,16); badge.size=Vector2(14,14); icon.add_child(badge)
+	var details:=VBoxContainer.new(); details.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(details)
+	_label(session.rules.items[item_id].name,details)
+	var shortage: bool=buying and state.gold<price
+	var hint:=_label("持有 %d%s"%[session.inventory.quantity(state.inventory,item_id)," · 金币不足" if shortage else ""],details)
+	hint.add_theme_font_size_override("font_size",12); hint.add_theme_color_override("font_color",Color("934927") if shortage else Color("64745e"))
+	var button:=_command_button("%s · %dg"%["买 1" if buying else "卖 1",price],row,command)
+	button.add_theme_font_size_override("font_size",14); button.custom_minimum_size.x=100
 
 ## 确认后送出一件手持物品；失败保留礼物确认界面。
 func _gift(item_id: String) -> void:
@@ -693,7 +748,7 @@ func _demolish() -> void:
 
 ## 显示出货分类与总额，确认动作也必须先持久化。
 func _report(state: Dictionary) -> void:
-	title.text="第 %d 天出货收入"%state.unacknowledgedShippingReport.settledDay
+	title.text="第 %d 天日结"%state.unacknowledgedShippingReport.settledDay
 	if not session.day_summary.is_empty():
 		var summary: Dictionary=session.day_summary
 		_label(("02:00 已被送回家。" if summary.reason=="passed-out" else "睡醒了，新的一天开始。")+" 体力 %d/%d。"%[roundi(summary.nextStamina),int(FarmEnergyRules.MAX_STAMINA)],body)
@@ -703,7 +758,40 @@ func _report(state: Dictionary) -> void:
 		_label("%s · %dg"%[names[category.category],category.totalGold],body)
 		for entry: Dictionary in category.entries: _label("%s ×%d  %dg"%[session.rules.items[entry.itemId].name,entry.quantity,entry.totalGold],body)
 	_label("合计 %dg · 当前金币 %dg"%[state.unacknowledgedShippingReport.totalGold,state.gold],body)
+	for upgrade: Dictionary in state.unacknowledgedShippingReport.skillUpgrades:
+		_label("%s提升：%d → %d 级"%[FarmSkillRules.NAMES[upgrade.skill],upgrade.from,upgrade.to],body)
+	for id: String in state.unacknowledgedShippingReport.recipeUnlocks: _label("新配方："+session.rules.recipes[id].name,body)
+	var crows: Dictionary=state.unacknowledgedShippingReport.crows
+	if crows.scared>0: _label("稻草人驱赶了 %d 只乌鸦。"%crows.scared,body)
+	if not crows.lost.is_empty(): _label("乌鸦吃掉了 %d 株作物。"%crows.lost.size(),body)
 	_command_button("开始新的一天",body,{"type":"dismiss-day-settlement"})
+
+## 展示当前已接入技能的真实等级、经验和来源；界面不修改成长或展示无实际效果的奖励。
+func _skills_menu(state: Dictionary) -> void:
+	title.text="生活技能"
+	var sources: Dictionary={"farming":"收获作物 · 提高锄头与水壶熟练度","foraging":"伐木、清理树桩 · 提高斧头熟练度","mining":"开采地表石块 · 提高镐熟练度"}
+	for id: String in FarmSkillRules.NAMES:
+		var skill: Dictionary=state.skills[id]
+		var card:=_information_card(body)
+		var heading:=HBoxContainer.new(); card.add_child(heading)
+		var icon:=TextureRect.new(); icon.texture=assets.icon({"farming":"watering-can","foraging":"axe","mining":"pickaxe"}[id]); icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; icon.custom_minimum_size=Vector2(28,28); heading.add_child(icon)
+		_label("%s · %d 级"%[FarmSkillRules.NAMES[id],skill.level],heading).add_theme_font_size_override("font_size",18)
+		var base:=0 if skill.level==0 else int(FarmSkillRules.THRESHOLDS[skill.level-1])
+		var target:=int(FarmSkillRules.THRESHOLDS[skill.level]) if skill.level<10 else base
+		var progress:=ProgressBar.new(); progress.custom_minimum_size.y=12; progress.show_percentage=false
+		progress.max_value=maxi(1,target-base); progress.value=int(skill.xp)-base if skill.level<10 else progress.max_value
+		progress.add_theme_stylebox_override("background",_hotbar_style("e5dbc5","d4c4a4",1)); progress.add_theme_stylebox_override("fill",_hotbar_style("8ab58d","6f9973",1)); card.add_child(progress)
+		_label("本级经验 %d / %d · 还需 %d"%[int(skill.xp)-base,target-base,target-int(skill.xp)] if skill.level<10 else "已达 10 级 · 累计经验 %d"%skill.xp,card).add_theme_font_size_override("font_size",14)
+		_label(sources[id],card).add_theme_font_size_override("font_size",14)
+
+## 为配方材料和技能进度提供一致的浅木色信息块，返回可添加原生控件的内容列。
+func _information_card(parent: Control) -> VBoxContainer:
+	var panel:=PanelContainer.new()
+	var style:=_hotbar_style("f6ecd8","d4bc95",1)
+	style.content_margin_left=10; style.content_margin_right=10; style.content_margin_top=8; style.content_margin_bottom=8
+	panel.add_theme_stylebox_override("panel",style); parent.add_child(panel)
+	var content:=VBoxContainer.new(); content.add_theme_constant_override("separation",6); panel.add_child(content)
+	return content
 
 ## 展示当前确定性委托与首周提示；领取奖励仍发生在目标居民交谈时。
 func _requests(state: Dictionary) -> void:
@@ -736,11 +824,11 @@ func _adopt(species: OptionButton, name: LineEdit) -> void:
 func _fishing_menu() -> void:
 	title.text="湖岸垂钓"
 	fish_label=_label("按住蓄力，松手抛竿。",body)
-	fish_progress=ProgressBar.new(); fish_progress.custom_minimum_size.y=24; body.add_child(fish_progress)
+	fish_progress=ProgressBar.new(); fish_progress.custom_minimum_size.y=18; body.add_child(fish_progress)
 	_label("鱼线张力 · 安全范围 22–78",body)
-	fish_tension=ProgressBar.new(); fish_tension.custom_minimum_size.y=24; body.add_child(fish_tension)
+	fish_tension=ProgressBar.new(); fish_tension.custom_minimum_size.y=18; body.add_child(fish_tension)
 	var button:=_button("按住 / 松开",body,func():pass)
-	button.custom_minimum_size.y=64
+	button.custom_minimum_size.y=48
 	button.button_down.connect(_fish_held.bind(true)); button.button_up.connect(_fish_held.bind(false)); button.focus_exited.connect(_fish_held.bind(false))
 
 ## 钓鱼按住状态只进入临时状态机，不触发多次扣体力。
@@ -802,6 +890,7 @@ func _resize() -> void:
 	var compact_hud:=size.x<680
 	var status_width:=minf(220,size.x-110) if compact_hud else 220.0
 	status_panel.position=Vector2(size.x-status_width-12,12)
+	if mode=="fishing" and size.x>=800 and size.y<560: status_panel.position=Vector2(12,12)
 	status_panel.size=Vector2(status_width,84)
 	status_panel.set_deferred("size",Vector2(status_width,84))
 	hud_menu.position=Vector2(12,12); hud_menu.columns=1 if compact_hud else 3; hud_menu.get_child(1).visible=not compact_hud
@@ -823,6 +912,15 @@ func _resize() -> void:
 	var preferred_height:=620.0
 	if mode in ["start","confirm-new","confirm-demolish","sleep","gift","adoption","backpack-upgrade","audio"]: preferred_width=640; preferred_height=360
 	elif mode in ["appearance-new","appearance"]: preferred_width=760; preferred_height=560
+	elif mode=="scarecrow": preferred_width=460; preferred_height=220
+	elif mode=="skills": preferred_width=620; preferred_height=500
+	elif mode=="dialogue":
+		preferred_width=680
+		preferred_height=620 if dialogue_result.get("shopAvailable",false) else 520 if inspect_id.contains("notice") or inspect_id.contains("board") else 300
+	elif mode=="crafting":
+		preferred_width=760
+		preferred_height=minf(660,280+session.snapshot().knownRecipes.size()*100+ceili(float(session.snapshot().inventoryCapacity)/(12 if size.x>=800 else 6))*55)
+	elif mode=="fishing": preferred_width=330 if size.x>=800 and size.y<560 else 520; preferred_height=300
 	elif mode=="inventory":
 		var columns:=12 if size.x>=800 else 6
 		preferred_width=760; preferred_height=310+ceili(float(session.snapshot().get("inventoryCapacity",12))/columns)*55
@@ -830,13 +928,39 @@ func _resize() -> void:
 		var report: Dictionary=session.snapshot().get("unacknowledgedShippingReport",{})
 		var lines:=0
 		for category: Dictionary in report.get("categories",[]): lines+=category.entries.size()+1
+		lines+=report.get("skillUpgrades",[]).size()+report.get("recipeUnlocks",[]).size()
+		var crow_report: Dictionary=report.get("crows",{})
+		lines+=int(crow_report.get("scared",0)>0)+int(not crow_report.get("lost",[]).is_empty())
 		preferred_width=760; preferred_height=minf(620,220+lines*28)
 	var dialog_size:=Vector2(minf(preferred_width,size.x-(12 if inventory_surface else 20)),minf(preferred_height,size.y-24))
-	dialog.size=dialog_size; dialog.position=(size-dialog_size)/2
+	var dialog_position: Vector2=(size-dialog_size)/2
+	if mode=="fishing": dialog_position=Vector2(size.x-dialog_size.x-12,12) if size.x>=800 and size.y<560 else Vector2((size.x-dialog_size.x)/2,size.y-dialog_size.y-12)
+	dialog.size=dialog_size; dialog.position=dialog_position
 	# 等待网格最小尺寸更新后再次应用目标宽度，避免横屏切竖屏时保留旧的宽面板。
-	dialog.set_deferred("size",dialog_size); dialog.set_deferred("position",(size-dialog_size)/2)
-	saving.size=Vector2(minf(420,size.x-24),140); saving.position=(size-saving.size)/2
+	dialog.set_deferred("size",dialog_size); dialog.set_deferred("position",dialog_position)
+	var saving_size:=Vector2(minf(420,size.x-24),140)
+	saving.size=saving_size; saving.position=(size-saving_size)/2
+	# 错误文本初次换行会暂时撑高容器；布局完成后恢复目标尺寸，保证重试按钮留在屏内。
+	saving.set_deferred("size",saving_size); saving.set_deferred("position",(size-saving_size)/2)
 	placement_controls.position=Vector2(12,toolbar.position.y-56)
+
+## 返回钓鱼面板之外的人物与水面展示区；矮横屏用左侧，其它尺寸用面板上方。
+func fishing_view_rect() -> Rect2:
+	var top:=maxf(status_panel.get_rect().end.y,hud_menu.get_rect().end.y)+8
+	if root.size.x>=800 and root.size.y<560: return Rect2(12,top,maxf(1,dialog.position.x-24),maxf(1,root.size.y-top-12))
+	return Rect2(12,top,root.size.x-24,maxf(1,dialog.position.y-top-12))
+
+## 返回容纳指定房间尺寸的可用屏幕矩形；横屏可利用两侧操作键之间的空间，不包含临时提示或弹窗。
+func room_view_rect(room_size: Vector2) -> Rect2:
+	var top:=maxf(status_panel.get_rect().end.y,hud_menu.get_rect().end.y)+8
+	var controls_top:=minf(touch.position.y,energy_panel.position.y)-8
+	var above:=Rect2(Vector2(12,top),Vector2(root.size.x-24,maxf(1,controls_top-top)))
+	var left:=touch.get_rect().end.x+12
+	var right:=minf(actions.position.x,energy_panel.position.x)-12
+	var between:=Rect2(Vector2(left,top),Vector2(maxf(1,right-left),maxf(1,toolbar.position.y-8-top)))
+	var above_scale:=minf(above.size.x/room_size.x,above.size.y/room_size.y)
+	var between_scale:=minf(between.size.x/room_size.x,between.size.y/room_size.y)
+	return between if between_scale>above_scale else above
 
 ## Esc/E 保持菜单取消与关闭顺序，Tab 留给弹窗内正常键盘导航。
 func _unhandled_key_input(event: InputEvent) -> void:

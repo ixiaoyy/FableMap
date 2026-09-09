@@ -7,20 +7,20 @@ var inventory: FarmInventory
 var crops: Dictionary = {}
 var seeds: Dictionary = {}
 
-## 绑定共享库存与地图，并索引六种原春作。
-func _init(world_rules: FarmWorldRules, inventory_rules: FarmInventory, definitions: Array) -> void:
+## 绑定共享库存与地图，复用世界的作物定义并索引种子；不复制另一份内容规则。
+func _init(world_rules: FarmWorldRules, inventory_rules: FarmInventory) -> void:
 	world=world_rules
 	inventory=inventory_rules
-	for crop: Dictionary in definitions:
-		crops[crop.cropId]=crop
+	crops=world.crops
+	for crop: Dictionary in crops.values():
 		seeds[crop.seedId]=crop
 
 ## 判断当前角色是否位于相邻格且处于四十二像素范围内。
 func near_tile(state: Dictionary, column: int, row: int) -> bool:
 	return column>=0 and row>=0 and absi(floori(state.player.x/16.0)-column)<=1 and absi(floori(state.player.y/16.0)-row)<=1 and FarmWorldRules.point(state.player).distance_to(Vector2(column*16+8,row*16+8))<=42
 
-## 使用工具、种子或空手作用于农田；保持旧作物生长与水壶等级语义。
-func farm(state: Dictionary, column: int, row: int, item_id: String, direction: String) -> String:
+## 对候选农田使用工具、种子或空手，返回结果码；actors 为当前居民，架子不得种在角色脚下。
+func farm(state: Dictionary, column: int, row: int, item_id: String, direction: String, actors: Array = []) -> String:
 	if state.player.regionId!="farm" or not near_tile(state,column,row): return "too-far"
 	if item_id!="" and inventory.quantity(state.inventory,item_id)<1: return "no-effect"
 	if FarmWorldRules.covers(state,"farm",column,row): return "no-effect"
@@ -35,9 +35,18 @@ func farm(state: Dictionary, column: int, row: int, item_id: String, direction: 
 		return "tilled"
 	var tile: Dictionary=state.farmTiles[id]
 	if seeds.has(item_id) and tile.phase=="tilled":
+		if seeds[item_id].get("isRaised",false):
+			var cell:=Vector2i(column,row)
+			if FarmWorldRules.feet_overlap(FarmWorldRules.point(state.player),cell,Vector2(5,4)): return "trellis-occupied"
+			for actor: Dictionary in actors:
+				if actor.regionId=="farm" and FarmWorldRules.feet_overlap(FarmWorldRules.point(actor),cell,Vector2(5,3)): return "trellis-occupied"
 		if not inventory.consume(state.inventory,item_id,1): return "no-effect"
 		tile.merge({"phase":"growing","cropId":seeds[item_id].cropId,"growthDays":0,"watered":tile.watered or state.weather.current=="rain","plantedDay":state.day,"harvestCount":0},true)
 		return "planted"
+	if item_id=="axe" and crops.get(tile.cropId,{}).get("isRaised",false):
+		if not FarmEnergyRules.spend(state,"axe"): return "insufficient-stamina"
+		tile.merge({"phase":"tilled","cropId":"","growthDays":0,"plantedDay":0,"harvestCount":0},true)
+		return "crop-cleared"
 	if item_id=="watering-can" and tile.phase in ["growing","tilled"]:
 		var eligible: Array=[]
 		var vector: Vector2=FarmWorldRules.VECTORS.get(direction,Vector2.DOWN)
@@ -49,30 +58,81 @@ func farm(state: Dictionary, column: int, row: int, item_id: String, direction: 
 			var candidate: Dictionary=state.farmTiles[key]
 			if candidate.phase!="mature" and not candidate.watered: eligible.append(candidate)
 		if eligible.is_empty(): return "waiting"
-		var energy_uses:=floori(float(state.stamina)/FarmEnergyRules.TOOL_COSTS["watering-can"])
+		var energy_uses:=floori(float(state.stamina)/FarmEnergyRules.unit_cost(state,"watering-can"))
 		var affordable := mini(eligible.size(),mini(int(state.wateringCanWater),energy_uses))
 		if affordable<=0: return "empty-watering-can" if state.wateringCanWater<=0 else "insufficient-stamina"
-		# Lv2 仍是现有逐格浇水；每格单独计水和体力，不能当作原作铜壶蓄力。
+		# Lv2 仍逐格计水和熟练度耗能，不能当作原作铜壶蓄力。
 		if not FarmEnergyRules.spend(state,"watering-can",affordable): return "insufficient-stamina"
 		for index in range(affordable): eligible[index].watered=true
 		state.wateringCanWater-=affordable
 		return "watered"
 	if item_id=="" and tile.phase=="mature":
 		var crop: Dictionary=crops[tile.cropId]
-		var amount := 1
-		if crop.get("yieldKind")=="spring-potato":
-			var roll := FarmWorldRules.stable_hash(state.worldSeed,tile.plantedDay,"%s:%d:%d:spring-potato"%[id,tile.plantedDay,tile.harvestCount])%100
-			amount+=int(roll<55)+int(roll<15)
+		if crop.get("harvestTool","")=="scythe": return "requires-scythe"
+		var amount:=harvest_amount(state,tile,crop)
 		if not inventory.add(state.inventory,tile.cropId,amount): return "inventory-full"
-		if crop.get("regrowDays",0)>0:
-			tile.harvestCount+=1
-			tile.phase="growing"
-			tile.growthDays=maxi(0,int(crop.growthDays)-int(crop.regrowDays))
-		else:
-			tile.merge({"phase":"tilled","cropId":"","growthDays":0,"plantedDay":0,"harvestCount":0},true)
-		tile.watered=tile.watered or state.weather.current=="rain"
+		_finish_harvest(state,tile,crop)
 		return "harvested"
 	return "no-effect"
+
+## 返回同一地块本次基础产量；几何分布反函数替代无界连抽，稳定键确保满包或保存重试不重抽。
+func harvest_amount(state: Dictionary, tile: Dictionary, crop: Dictionary) -> int:
+	var chance: float=crop.get("extraHarvestChance",0.0)
+	if chance==0.0: return 1
+	var key: String="%s:%d:%d:crop-extra"%[tile.id,tile.plantedDay,tile.harvestCount]
+	var value: int=FarmWorldRules.stable_hash(state.worldSeed,tile.plantedDay,key)
+	# 半个步长使均匀值严格位于 (0,1)，避免 log(0)；当前可信内容仅有土豆 0.2。
+	var uniform: float=(float(value)+0.5)/4294967296.0
+	return 1+floori(log(uniform)/log(chance))
+
+## 产物完整入包后授予一次收获经验并更新地块，保留复收与雨天浇水；不保存或重复发放产物。
+func _finish_harvest(state: Dictionary, tile: Dictionary, crop: Dictionary) -> void:
+	FarmSkillRules.gain(state,"farming",int(crop.harvestXp))
+	if crop.get("regrowDays",0)>0:
+		tile.harvestCount+=1
+		tile.phase="growing"
+		tile.growthDays=maxi(0,int(crop.growthDays)-int(crop.regrowDays))
+	else:
+		tile.merge({"phase":"tilled","cropId":"","growthDays":0,"plantedDay":0,"harvestCount":0},true)
+	tile.watered=tile.watered or state.weather.current=="rain"
+
+## 按朝向挥镰刀并返回结果码；暂用四十二像素、混合目标合计三个，满包整次无变化且不耗体力。
+func sweep_scythe(state: Dictionary, direction: String) -> String:
+	if inventory.quantity(state.inventory,"scythe")<1: return "wrong-tool"
+	if not FarmWorldRules.VECTORS.has(direction): return "wrong-direction"
+	var origin:=FarmWorldRules.point(state.player)
+	var targets: Array[Dictionary]=[]
+	for spawn: Dictionary in world.regions[state.player.regionId].resources:
+		if spawn.kind=="weed" and state.resources[spawn.entityId].phase=="standing":
+			var position:=FarmWorldRules.point(spawn)
+			if origin.distance_to(position)<=42 and FarmWorldRules.in_sector(origin,position,direction):
+				targets.append({"id":spawn.entityId,"position":position,"crop":false})
+	if state.player.regionId=="farm":
+		for tile: Dictionary in state.farmTiles.values():
+			if tile.phase!="mature" or crops.get(tile.cropId,{}).get("harvestTool","")!="scythe": continue
+			var position:=Vector2(tile.column*16+8,tile.row*16+8)
+			if origin.distance_to(position)<=42 and FarmWorldRules.in_sector(origin,position,direction) and not FarmWorldRules.covers(state,"farm",tile.column,tile.row):
+				targets.append({"id":tile.id,"position":position,"crop":true})
+	targets.sort_custom(func(a: Dictionary,b: Dictionary)->bool:
+		var da:=origin.distance_squared_to(a.position); var db:=origin.distance_squared_to(b.position)
+		return a.id<b.id if is_equal_approx(da,db) else da<db)
+	targets=targets.slice(0,3)
+	if targets.is_empty(): return "no-effect"
+	var slots: Array=state.inventory.duplicate(true)
+	var harvested:=false
+	for target: Dictionary in targets:
+		if target.crop:
+			if not inventory.add(slots,state.farmTiles[target.id].cropId,1): return "inventory-full"
+			harvested=true
+		elif FarmWorldRules.stable_hash(state.worldSeed,state.day,"weed-fiber:"+target.id)%2==0:
+			if not inventory.add(slots,"fiber",1): return "inventory-full"
+	state.inventory=slots
+	for target: Dictionary in targets:
+		if target.crop:
+			var tile: Dictionary=state.farmTiles[target.id]
+			_finish_harvest(state,tile,crops[tile.cropId])
+		else: state.resources[target.id].phase="cleared"
+	return "harvested" if harvested else "cut"
 
 ## 水源补水无体力消耗，仍要求拥有水壶和相邻范围。
 func refill(state: Dictionary, column: int, row: int) -> String:
@@ -100,24 +160,12 @@ func gather(state: Dictionary, target_id: String, item_id: String, direction: St
 	if item_id!=tool or inventory.quantity(state.inventory,tool)<1: return "wrong-tool"
 	if spawn.kind=="weed":
 		if not FarmWorldRules.in_sector(FarmWorldRules.point(state.player),FarmWorldRules.point(spawn),direction): return "wrong-direction"
-		var targets: Array=[]
-		for entry: Dictionary in world.regions[spawn.regionId].resources:
-			if entry.kind=="weed" and state.resources[entry.entityId].phase=="standing" and FarmWorldRules.point(state.player).distance_to(FarmWorldRules.point(entry))<=42 and FarmWorldRules.in_sector(FarmWorldRules.point(state.player),FarmWorldRules.point(entry),direction): targets.append(entry)
-		var origin := FarmWorldRules.point(state.player)
-		targets.sort_custom(func(a: Dictionary,b: Dictionary)->bool:
-			var da := origin.distance_squared_to(FarmWorldRules.point(a)); var db := origin.distance_squared_to(FarmWorldRules.point(b))
-			return a.entityId<b.entityId if is_equal_approx(da,db) else da<db)
-		targets=targets.slice(0,3)
-		var fiber := 0
-		for entry: Dictionary in targets: fiber+=int(FarmWorldRules.stable_hash(state.worldSeed,state.day,"weed-fiber:"+entry.entityId)%2==0)
-		if fiber>0 and not inventory.can_add(state.inventory,"fiber",fiber): return "inventory-full"
-		for entry: Dictionary in targets: state.resources[entry.entityId].phase="cleared"
-		if fiber>0: inventory.add(state.inventory,"fiber",fiber)
-		return "cut"
+		return sweep_scythe(state,direction)
 	var amount := 3 if spawn.kind=="tree" and resource.phase=="standing" else 1
 	var output := "wood" if spawn.kind=="tree" else "stone"
 	if not inventory.can_add(state.inventory,output,amount): return "inventory-full"
 	if not FarmEnergyRules.spend(state,tool): return "insufficient-stamina"
+	FarmSkillRules.gain(state,"mining" if spawn.kind=="stone" else "foraging",1 if spawn.kind=="stone" else 14 if resource.phase=="standing" else 2)
 	resource.phase="stump" if spawn.kind=="tree" and resource.phase=="standing" else "cleared"
 	resource.regrowOnDay=state.day+7 if spawn.kind=="tree" and resource.phase=="cleared" and spawn.regionId!="farm" else null
 	inventory.add(state.inventory,output,amount)

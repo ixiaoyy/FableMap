@@ -92,7 +92,18 @@ const regions = [];
 for (const name of (await readdir(sourceMaps)).filter(name => name.endsWith('.tmj')).sort()) {
   const map = JSON.parse(await readFile(path.join(sourceMaps, name), 'utf8'));
   const region = decodeTiledRegion(map, `region-${name.slice(0, -4)}`);
-  regions.push({ ...region, cameraAnchorId: cameraAnchors[region.id] ?? null });
+  const cameraAnchorId = cameraAnchors[region.id] ?? null;
+  // 固定室内按墙体与家具层取景，不把 Ground 中整图填充的背景算进房间。
+  let cameraBounds = null;
+  if (cameraAnchorId) {
+    const buildings = map.layers.find(layer => layer.name === 'Buildings');
+    const cells = buildings.data.flatMap((gid, index) => gid ? [{ x: index % map.width, y: Math.floor(index / map.width) }] : []);
+    if (cells.length === 0) throw new Error(`固定室内缺少可取景的 Buildings 图块：${region.id}`);
+    const left = Math.min(...cells.map(cell => cell.x));
+    const top = Math.min(...cells.map(cell => cell.y));
+    cameraBounds = { x: left * map.tilewidth, y: top * map.tileheight, width: (Math.max(...cells.map(cell => cell.x)) - left + 1) * map.tilewidth, height: (Math.max(...cells.map(cell => cell.y)) - top + 1) * map.tileheight };
+  }
+  regions.push({ ...region, cameraAnchorId, cameraBounds });
   for (const tileset of map.tilesets) tileset.image = (await media(path.resolve(sourceMaps, tileset.image))).replace('res://', '../../');
   // 非可见规则层保留在 catalog；避免 YATI 把碰撞掩码当成贴图渲染。
   map.layers = map.layers.filter(layer => ['Ground', 'GroundDetail', 'Water', 'Buildings', 'AbovePlayer'].includes(layer.name));

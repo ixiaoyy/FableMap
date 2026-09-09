@@ -1,7 +1,7 @@
 {
   "sourceVersion": 13,
   "initial": {
-    "version": 14,
+    "version": 20,
     "day": 1,
     "minuteOfDay": 360,
     "worldSeed": 1296650834,
@@ -567,7 +567,27 @@
     "worldDrops": [],
     "nextWorldEntitySequence": 1,
     "shippingQueue": [],
-    "unacknowledgedShippingReport": null
+    "unacknowledgedShippingReport": null,
+    "skills": {
+      "farming": {
+        "xp": 0,
+        "level": 0,
+        "reportedLevel": 0
+      },
+      "foraging": {
+        "xp": 0,
+        "level": 0,
+        "reportedLevel": 0
+      },
+      "mining": {
+        "xp": 0,
+        "level": 0,
+        "reportedLevel": 0
+      }
+    },
+    "knownRecipes": [
+      "chest"
+    ]
   },
   "items": {
     "wood": {
@@ -640,9 +660,9 @@
       "shippingCategory": "foraging",
       "hotbarMark": "纤"
     },
-    "turnip-seed": {
-      "id": "turnip-seed",
-      "name": "萝卜种子",
+    "parsnip-seed": {
+      "id": "parsnip-seed",
+      "name": "防风草种子",
       "category": "seed",
       "maxStack": 999,
       "inventorySortOrder": 7,
@@ -660,20 +680,20 @@
       "shippingCategory": null,
       "hotbarMark": "水"
     },
-    "turnip": {
-      "id": "turnip",
-      "name": "萝卜",
+    "parsnip": {
+      "id": "parsnip",
+      "name": "防风草",
       "category": "crop",
       "maxStack": 999,
       "inventorySortOrder": 9,
       "canShip": true,
       "shippingCategory": "farming",
-      "hotbarMark": "萝",
-      "staminaRestore": 12
+      "hotbarMark": "防",
+      "staminaRestore": 25
     },
-    "bok-choy-seed": {
-      "id": "bok-choy-seed",
-      "name": "小白菜种子",
+    "kale-seed": {
+      "id": "kale-seed",
+      "name": "羽衣甘蓝种子",
       "category": "seed",
       "maxStack": 999,
       "inventorySortOrder": 10,
@@ -681,16 +701,16 @@
       "shippingCategory": null,
       "hotbarMark": "菜"
     },
-    "bok-choy": {
-      "id": "bok-choy",
-      "name": "小白菜",
+    "kale": {
+      "id": "kale",
+      "name": "羽衣甘蓝",
       "category": "crop",
       "maxStack": 999,
       "inventorySortOrder": 11,
       "canShip": true,
       "shippingCategory": "farming",
-      "hotbarMark": "青",
-      "staminaRestore": 16
+      "hotbarMark": "甘",
+      "staminaRestore": 50
     },
     "cauliflower-seed": {
       "id": "cauliflower-seed",
@@ -711,7 +731,7 @@
       "canShip": true,
       "shippingCategory": "farming",
       "hotbarMark": "椰",
-      "staminaRestore": 24
+      "staminaRestore": 75
     },
     "spring-wildflower": {
       "id": "spring-wildflower",
@@ -735,9 +755,9 @@
       "hotbarMark": "笋",
       "staminaRestore": 10
     },
-    "green-pea-seed": {
-      "id": "green-pea-seed",
-      "name": "青豌豆种子",
+    "bean-starter": {
+      "id": "bean-starter",
+      "name": "豆苗",
       "category": "seed",
       "maxStack": 999,
       "inventorySortOrder": 16,
@@ -745,20 +765,20 @@
       "shippingCategory": null,
       "hotbarMark": "豆"
     },
-    "green-pea": {
-      "id": "green-pea",
-      "name": "青豌豆",
+    "green-bean": {
+      "id": "green-bean",
+      "name": "青豆",
       "category": "crop",
       "maxStack": 999,
       "inventorySortOrder": 17,
       "canShip": true,
       "shippingCategory": "farming",
       "hotbarMark": "豆",
-      "staminaRestore": 14
+      "staminaRestore": 25
     },
-    "spring-potato-seed": {
-      "id": "spring-potato-seed",
-      "name": "春土豆种子",
+    "potato-seed": {
+      "id": "potato-seed",
+      "name": "土豆种子",
       "category": "seed",
       "maxStack": 999,
       "inventorySortOrder": 18,
@@ -766,20 +786,20 @@
       "shippingCategory": null,
       "hotbarMark": "薯"
     },
-    "spring-potato": {
-      "id": "spring-potato",
-      "name": "春土豆",
+    "potato": {
+      "id": "potato",
+      "name": "土豆",
       "category": "crop",
       "maxStack": 999,
       "inventorySortOrder": 19,
       "canShip": true,
       "shippingCategory": "farming",
       "hotbarMark": "薯",
-      "staminaRestore": 18
+      "staminaRestore": 25
     },
-    "rapeseed-seed": {
-      "id": "rapeseed-seed",
-      "name": "油菜花种子",
+    "jazz-seed": {
+      "id": "jazz-seed",
+      "name": "爵士种子",
       "category": "seed",
       "maxStack": 999,
       "inventorySortOrder": 20,
@@ -787,16 +807,16 @@
       "shippingCategory": null,
       "hotbarMark": "籽"
     },
-    "rapeseed-flower": {
-      "id": "rapeseed-flower",
-      "name": "油菜花",
+    "blue-jazz": {
+      "id": "blue-jazz",
+      "name": "蓝爵士",
       "category": "crop",
       "maxStack": 999,
       "inventorySortOrder": 21,
       "canShip": true,
       "shippingCategory": "farming",
-      "hotbarMark": "油",
-      "staminaRestore": 8
+      "hotbarMark": "爵",
+      "staminaRestore": 45
     },
     "fishing-rod": {
       "id": "fishing-rod",
@@ -904,28 +924,64 @@
           "lakeshore"
         ]
       }
+    },
+    "coal": {
+      "id": "coal",
+      "name": "煤炭",
+      "category": "resource",
+      "maxStack": 999,
+      "inventorySortOrder": 30,
+      "canShip": true,
+      "shippingCategory": "mining",
+      "hotbarMark": "煤",
+      "seedShopBuyback": false
+    },
+    "scarecrow": {
+      "id": "scarecrow",
+      "name": "稻草人",
+      "category": "placeable",
+      "maxStack": 999,
+      "inventorySortOrder": 31,
+      "canShip": false,
+      "shippingCategory": null,
+      "hotbarMark": "稻",
+      "placement": {
+        "kind": "scarecrow",
+        "footprint": {
+          "width": 1,
+          "height": 1
+        },
+        "allowedRegions": [
+          "farm"
+        ]
+      }
     }
   },
   "crops": [
     {
-      "cropId": "turnip",
-      "seedId": "turnip-seed",
+      "cropId": "parsnip",
+      "seedId": "parsnip-seed",
       "seasons": [
         "spring"
       ],
-      "growthDays": 3,
+      "growthDays": 4,
       "seedPrice": 20,
-      "sellPrice": 35
+      "sellPrice": 35,
+      "harvestXp": 8,
+      "crowEdibleAfterDays": 2
     },
     {
-      "cropId": "bok-choy",
-      "seedId": "bok-choy-seed",
+      "cropId": "kale",
+      "seedId": "kale-seed",
       "seasons": [
         "spring"
       ],
-      "growthDays": 5,
-      "seedPrice": 45,
-      "sellPrice": 80
+      "growthDays": 6,
+      "seedPrice": 70,
+      "sellPrice": 110,
+      "harvestTool": "scythe",
+      "harvestXp": 17,
+      "crowEdibleAfterDays": 3
     },
     {
       "cropId": "cauliflower",
@@ -933,59 +989,53 @@
       "seasons": [
         "spring"
       ],
-      "growthDays": 8,
+      "growthDays": 12,
       "seedPrice": 80,
-      "sellPrice": 170
+      "sellPrice": 175,
+      "harvestXp": 23,
+      "crowEdibleAfterDays": 3
     },
     {
-      "cropId": "green-pea",
-      "seedId": "green-pea-seed",
+      "cropId": "green-bean",
+      "seedId": "bean-starter",
       "seasons": [
         "spring"
       ],
-      "growthDays": 7,
+      "growthDays": 10,
       "regrowDays": 3,
-      "seedPrice": 70,
-      "sellPrice": 48
+      "seedPrice": 60,
+      "sellPrice": 40,
+      "isRaised": true,
+      "harvestXp": 9,
+      "crowEdibleAfterDays": 2
     },
     {
-      "cropId": "spring-potato",
-      "seedId": "spring-potato-seed",
-      "seasons": [
-        "spring"
-      ],
-      "growthDays": 5,
-      "yieldKind": "spring-potato",
-      "seedPrice": 50,
-      "sellPrice": 72
-    },
-    {
-      "cropId": "rapeseed-flower",
-      "seedId": "rapeseed-seed",
+      "cropId": "potato",
+      "seedId": "potato-seed",
       "seasons": [
         "spring"
       ],
       "growthDays": 6,
-      "seedPrice": 35,
-      "sellPrice": 68
+      "seedPrice": 50,
+      "sellPrice": 80,
+      "extraHarvestChance": 0.2,
+      "harvestXp": 14,
+      "crowEdibleAfterDays": 2
+    },
+    {
+      "cropId": "blue-jazz",
+      "seedId": "jazz-seed",
+      "seasons": [
+        "spring"
+      ],
+      "growthDays": 7,
+      "seedPrice": 30,
+      "sellPrice": 50,
+      "harvestXp": 10,
+      "crowEdibleAfterDays": 3
     }
   ],
   "recipes": {
-    "wooden-axe": {
-      "id": "wooden-axe",
-      "name": "制作木斧",
-      "ingredients": [
-        {
-          "itemId": "wood",
-          "quantity": 3
-        }
-      ],
-      "output": {
-        "itemId": "axe",
-        "quantity": 1
-      },
-      "knownByDefault": true
-    },
     "chest": {
       "id": "chest",
       "name": "普通箱",
@@ -1000,6 +1050,31 @@
         "quantity": 1
       },
       "knownByDefault": true
+    },
+    "scarecrow": {
+      "id": "scarecrow",
+      "name": "稻草人",
+      "ingredients": [
+        {
+          "itemId": "wood",
+          "quantity": 50
+        },
+        {
+          "itemId": "coal",
+          "quantity": 1
+        },
+        {
+          "itemId": "fiber",
+          "quantity": 20
+        }
+      ],
+      "output": {
+        "itemId": "scarecrow",
+        "quantity": 1
+      },
+      "knownByDefault": false,
+      "skill": "farming",
+      "level": 1
     }
   },
   "prices": {
@@ -1010,21 +1085,21 @@
     "scythe": null,
     "stone": 2,
     "fiber": 1,
-    "turnip-seed": null,
+    "parsnip-seed": null,
     "watering-can": null,
-    "turnip": 35,
-    "bok-choy-seed": null,
-    "bok-choy": 80,
+    "parsnip": 35,
+    "kale-seed": null,
+    "kale": 110,
     "cauliflower-seed": null,
-    "cauliflower": 170,
+    "cauliflower": 175,
     "spring-wildflower": 25,
     "bamboo-shoot": 40,
-    "green-pea-seed": null,
-    "green-pea": 48,
-    "spring-potato-seed": null,
-    "spring-potato": 72,
-    "rapeseed-seed": null,
-    "rapeseed-flower": 68,
+    "bean-starter": null,
+    "green-bean": 40,
+    "potato-seed": null,
+    "potato": 80,
+    "jazz-seed": null,
+    "blue-jazz": 50,
     "fishing-rod": null,
     "lake-carp": 45,
     "silver-minnow": 35,
@@ -1032,7 +1107,9 @@
     "wind-dace": 65,
     "dusk-perch": 85,
     "jade-bream": 140,
-    "chest": null
+    "chest": null,
+    "coal": 15,
+    "scarecrow": null
   },
   "fish": [
     {
@@ -1142,7 +1219,7 @@
     {
       "requestId": "pink-tree-lunch",
       "npcId": "town-resident-01",
-      "itemId": "turnip",
+      "itemId": "parsnip",
       "quantity": 2,
       "goldReward": 150,
       "friendshipReward": 80
@@ -1190,7 +1267,7 @@
     {
       "requestId": "spring-pea-basket",
       "npcId": "seed-keeper",
-      "itemId": "green-pea",
+      "itemId": "green-bean",
       "quantity": 2,
       "goldReward": 170,
       "friendshipReward": 70
@@ -1198,7 +1275,7 @@
     {
       "requestId": "potato-work-lunch",
       "npcId": "town-blacksmith",
-      "itemId": "spring-potato",
+      "itemId": "potato",
       "quantity": 2,
       "goldReward": 200,
       "friendshipReward": 80
@@ -1206,7 +1283,7 @@
     {
       "requestId": "golden-flower-vase",
       "npcId": "town-resident-alan",
-      "itemId": "rapeseed-flower",
+      "itemId": "blue-jazz",
       "quantity": 2,
       "goldReward": 190,
       "friendshipReward": 80
@@ -1257,21 +1334,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "liked",
       "spring-wildflower": "neutral",
       "bamboo-shoot": "neutral",
-      "green-pea-seed": "neutral",
-      "green-pea": "liked",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "neutral",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "liked",
+      "bean-starter": "neutral",
+      "green-bean": "liked",
+      "potato-seed": "neutral",
+      "potato": "neutral",
+      "jazz-seed": "neutral",
+      "blue-jazz": "liked",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "neutral",
@@ -1289,21 +1366,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "neutral",
       "spring-wildflower": "disliked",
       "bamboo-shoot": "liked",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "liked",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "neutral",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "liked",
+      "jazz-seed": "neutral",
+      "blue-jazz": "neutral",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "neutral",
@@ -1321,21 +1398,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "liked",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "liked",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "neutral",
       "spring-wildflower": "neutral",
       "bamboo-shoot": "neutral",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "neutral",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "liked",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "neutral",
+      "jazz-seed": "neutral",
+      "blue-jazz": "liked",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "neutral",
@@ -1353,21 +1430,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "neutral",
       "spring-wildflower": "neutral",
       "bamboo-shoot": "neutral",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "liked",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "neutral",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "liked",
+      "jazz-seed": "neutral",
+      "blue-jazz": "neutral",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "disliked",
@@ -1385,21 +1462,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "disliked",
       "spring-wildflower": "neutral",
       "bamboo-shoot": "liked",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "neutral",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "neutral",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "neutral",
+      "jazz-seed": "neutral",
+      "blue-jazz": "neutral",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "neutral",
@@ -1417,21 +1494,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "neutral",
       "spring-wildflower": "liked",
       "bamboo-shoot": "neutral",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "neutral",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "liked",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "neutral",
+      "jazz-seed": "neutral",
+      "blue-jazz": "liked",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "neutral",
@@ -1449,21 +1526,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "neutral",
       "spring-wildflower": "liked",
       "bamboo-shoot": "neutral",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "neutral",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "liked",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "neutral",
+      "jazz-seed": "neutral",
+      "blue-jazz": "liked",
       "fishing-rod": "neutral",
       "lake-carp": "neutral",
       "silver-minnow": "neutral",
@@ -1481,21 +1558,21 @@
       "scythe": "neutral",
       "stone": "neutral",
       "fiber": "neutral",
-      "turnip-seed": "neutral",
+      "parsnip-seed": "neutral",
       "watering-can": "neutral",
-      "turnip": "neutral",
-      "bok-choy-seed": "neutral",
-      "bok-choy": "neutral",
+      "parsnip": "neutral",
+      "kale-seed": "neutral",
+      "kale": "neutral",
       "cauliflower-seed": "neutral",
       "cauliflower": "neutral",
       "spring-wildflower": "neutral",
       "bamboo-shoot": "neutral",
-      "green-pea-seed": "neutral",
-      "green-pea": "neutral",
-      "spring-potato-seed": "neutral",
-      "spring-potato": "neutral",
-      "rapeseed-seed": "neutral",
-      "rapeseed-flower": "neutral",
+      "bean-starter": "neutral",
+      "green-bean": "neutral",
+      "potato-seed": "neutral",
+      "potato": "neutral",
+      "jazz-seed": "neutral",
+      "blue-jazz": "neutral",
       "fishing-rod": "neutral",
       "lake-carp": "liked",
       "silver-minnow": "neutral",
@@ -1515,5 +1592,9 @@
     "town-resident-alan": "monday",
     "town-resident-haomeili": "sunday",
     "town-resident-xiangzi": "monday"
-  }
+  },
+  "coalBuyPrices": [
+    150,
+    250
+  ]
 }

@@ -37,15 +37,15 @@ func _run() -> void:
 	root.add_child(scene); await process_frame; session.rules.milestones.clear()
 	_expect(await session.new_game(session.rules.initial.player.appearance),"新建")
 	scene.set_process(false); scene.set_physics_process(false)
-	_expect(session.snapshot().stamina==270 and session.snapshot().version==14,"新档体力与状态版本")
+	_expect(session.snapshot().stamina==270 and session.snapshot().version==20,"新档体力与状态版本")
 	var base:=session.snapshot(); base.stamina=37.75
 	var decoded:=session.codec.decode(FarmSaveCodec.encode(base))
 	_expect(not decoded.has("error") and decoded.state.stamina==37.75,"小数封套往返")
 	for bad in [-0.01,270.01,INF,NAN,"37.75",null]:
 		var invalid:=base.duplicate(true); invalid.stamina=bad
 		_expect(session.codec.validate(invalid)!="","拒绝非法体力 "+str(bad))
-	var old:=base.duplicate(true); old.version=13
-	var old_payload:=JSON.stringify({"engine":"godot","version":1,"updatedAt":1,"state":old})
+	var old:=base.duplicate(true); old.version=19
+	var old_payload:=JSON.stringify({"engine":"godot","version":7,"updatedAt":1,"state":old})
 	repository.payload=old_payload
 	var writes_before:=repository.writes
 	_expect(not await session.continue_game(),"旧版本拒绝")
@@ -55,7 +55,7 @@ func _run() -> void:
 	for fixture: Dictionary in fixtures.cases:
 		if fixture.name=="锄地": tilling=fixture
 		if fixture.kind=="fishing": casting=fixture
-	var state: Dictionary=FarmSaveCodec.normalize_numbers(tilling.before); state.stamina=4.75
+	var state: Dictionary=FarmSaveCodec.normalize_numbers(tilling.before); state.version=FarmSaveCodec.STATE_VERSION; state.skills=base.skills.duplicate(true); state.knownRecipes=base.knownRecipes.duplicate(); state.stamina=4.75
 	_reset(session,state); repository.fail_next=true
 	var command: Dictionary={"type":"use-item-on-tile","itemId":"hoe","column":26,"row":17,"facing":"up"}
 	await session.dispatch(command)
@@ -89,12 +89,12 @@ func _run() -> void:
 	var cast_count: int=session.snapshot().fishingCastCount
 	await session.dispatch({"type":"start-fishing","zoneId":casting.args.zoneId})
 	_expect(session.snapshot().stamina==0.5 and session.snapshot().fishingCastCount==cast_count,"重复抛竿不再扣费")
-	state=base.duplicate(true); state.stamina=37.75; state.inventory[5]={"itemId":"turnip","quantity":3}; _reset(session,state)
-	await session.dispatch({"type":"eat-item","itemId":"turnip"})
-	_expect(session.snapshot().stamina==49.75 and session.snapshot().inventory[5].quantity==2,"食用保留小数")
-	session._state.stamina=269.75; await session.dispatch({"type":"eat-item","itemId":"turnip"})
+	state=base.duplicate(true); state.stamina=37.75; state.inventory[5]={"itemId":"parsnip","quantity":3}; _reset(session,state)
+	await session.dispatch({"type":"eat-item","itemId":"parsnip"})
+	_expect(session.snapshot().stamina==62.75 and session.snapshot().inventory[5].quantity==2,"食用保留小数")
+	session._state.stamina=269.75; await session.dispatch({"type":"eat-item","itemId":"parsnip"})
 	_expect(session.snapshot().stamina==270 and session.snapshot().inventory[5].quantity==1,"食用上限")
-	await session.dispatch({"type":"eat-item","itemId":"turnip"})
+	await session.dispatch({"type":"eat-item","itemId":"parsnip"})
 	_expect(session.snapshot().inventory[5].quantity==1,"满体力不消费")
 	for sample in [[100.0,1440,270.0],[100.0,1450,263.25],[100.0,1460,256.5],[100.0,1500,202.5],[100.0,1560,135.0],[260.75,1560,260.75]]:
 		_expect(is_equal_approx(FarmEnergyRules.after_sleep(sample[0],sample[1]),sample[2]),"睡眠公式 "+str(sample))
@@ -111,6 +111,9 @@ func _run() -> void:
 	_expect(session.snapshot().day==2 and session.snapshot().stamina==263.25,"日结重试恢复一次")
 	scene.ui._changed()
 	_expect(scene.ui.stamina_bar.max_value==270 and scene.ui.stamina_label.text=="263","HUD 仅显示取整")
+	await session.dispatch({"type":"dismiss-day-settlement"})
+	scene.ui._open("skills")
+	_expect(scene.ui.title.text=="生活技能" and scene.ui.body.get_children().any(func(node:Node)->bool:return node is Label and node.text.begins_with("种植")),"技能页实际实例化")
 	var directory:=ProjectSettings.globalize_path("res://../../../artifacts/energy-s0-2026-09-08")
 	DirAccess.make_dir_recursive_absolute(directory)
 	var file:=FarmSaveRepository.new(directory+"/roundtrip.json")

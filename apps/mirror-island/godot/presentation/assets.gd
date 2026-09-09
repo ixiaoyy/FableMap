@@ -51,22 +51,45 @@ func icon(id: String) -> Texture2D:
 	if definition==null: return null
 	var result: Texture2D
 	if definition.kind=="atlas": result=frame(definition.url,definition)
-	else:
-		var art: Dictionary=definition.art
-		var image:=Image.create(art.rows[0].length(),art.rows.size(),false,Image.FORMAT_RGBA8)
-		image.fill(Color.TRANSPARENT)
-		for y in range(art.rows.size()):
-			for x in range(art.rows[y].length()):
-				var symbol: String=art.rows[y][x]
-				if art.palette.has(symbol): image.set_pixel(x,y,Color.html(art.palette[symbol]))
-		result=ImageTexture.create_from_image(image)
+	else: result=_pixel_texture(definition.art.rows,definition.art.palette)
 	icons[id]=result
 	return result
 
-## 种子袋上的作物徽记复用原独立图集帧，不新增或重编码图片。
+## 将等宽像素行和调色板转换为透明纹理；调用方负责缓存，未知符号保持透明。
+func _pixel_texture(rows: Array, palette: Dictionary) -> Texture2D:
+	var image:=Image.create(rows[0].length(),rows.size(),false,Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for y in range(rows.size()):
+		for x in range(rows[y].length()):
+			var symbol: String=rows[y][x]
+			if palette.has(symbol): image.set_pixel(x,y,Color.html(palette[symbol]))
+	return ImageTexture.create_from_image(image)
+
+## 根据已完成的生长天数选取植株纹理；成熟与复收优先读取真实状态，不据外观推断收获资格。
+func crop_texture(tile: Dictionary) -> Texture2D:
+	var definition: Dictionary=media.crops[tile.cropId]
+	var stage:=0
+	var days:=int(tile.growthDays)
+	while stage<definition.stageDays.size() and days>=int(definition.stageDays[stage]):
+		days-=int(definition.stageDays[stage]); stage+=1
+	if tile.phase=="mature": stage=definition.stages.size()-1
+	else: stage=mini(stage,definition.stages.size()-2)
+	var regrowing: bool=tile.phase!="mature" and tile.harvestCount>0 and definition.has("regrowing")
+	var key: String="crop:%s:%s"%[tile.cropId,"regrowing" if regrowing else str(stage)]
+	if not textures.has(key): textures[key]=_pixel_texture(definition.regrowing if regrowing else definition.stages[stage],media.cropPalette)
+	return textures[key]
+
+## 返回乌鸦指定姿态的原生像素纹理；姿态由临时动画选择，缓存不包含任何玩法状态。
+func crow_texture(pose: String) -> Texture2D:
+	var key: String="crow:"+pose
+	if not textures.has(key): textures[key]=_pixel_texture(media.wildlife.crow.frames[pose],media.wildlife.crow.palette)
+	return textures[key]
+
+## 种子袋徽记复用对应收获物图标；其它既有徽记继续使用登记的图集帧。
 func badge(id: String) -> Texture2D:
 	var definition: Variant=media.badges.get(id)
-	if definition==null or definition.kind!="atlas": return null
+	if definition==null: return null
+	if definition.kind=="item": return icon(definition.itemId)
 	return frame(definition.url,definition)
 
 ## 将旧纹理 key 转为图集 URL；只接受明确映射的 VectoRaith 键。
@@ -77,10 +100,13 @@ func entity_frame(texture_key: String, rectangle: Dictionary) -> Texture2D:
 	push_error("实体纹理未迁移："+texture_key)
 	return null
 
-## 从八名居民的原帧构建显示，所有住宅居民继续使用同风格图集。
-func npc_texture(id: String) -> Texture2D:
+## 从既有角色所在的三列四向图块选择帧；保留角色映射，方向顺序为下、左、右、上。
+func npc_texture(id: String, facing: String="down", column: int=1) -> Texture2D:
 	var definition: Dictionary=media.regions.farm.npc
-	return entity_frame(definition.textureKey,definition.frames[id])
+	var original: Dictionary=definition.frames[id]
+	var width:=int(original.width); var height:=int(original.height)
+	var rectangle: Dictionary={"x":floori(float(original.x)/(width*3))*width*3+clampi(column,0,2)*width,"y":floori(float(original.y)/(height*4))*height*4+int({"down":0,"left":1,"right":2,"up":3}[facing])*height,"width":width,"height":height}
+	return entity_frame(definition.textureKey,rectangle)
 
 ## 按原宠物四向帧和休息帧返回纹理，动画索引始终在已登记图集内。
 func pet_texture(pet: Dictionary, elapsed: float) -> Texture2D:

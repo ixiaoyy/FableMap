@@ -172,7 +172,7 @@
     "id": "seed-keeper-welcome",
     "speaker": "华强",
     "lines": [
-      "萝卜种子还压着半箱。今天种下的话，别忘了浇水。"
+      "防风草种子还压着半箱。今天种下的话，别忘了浇水。"
     ]
   },
   "activity:seed-keeper:morning:0": {
@@ -187,7 +187,7 @@
     "id": "activity:seed-keeper:morning:1",
     "speaker": "华强",
     "lines": [
-      "今早的清单比昨天短，萝卜种子还够。",
+      "今早的清单比昨天短，防风草种子还够。",
       "等我把木牌翻到营业那面，再进来慢慢挑。"
     ]
   },
@@ -195,14 +195,14 @@
     "id": "activity:seed-keeper:day:0",
     "speaker": "华强",
     "lines": [
-      "萝卜种子还压着半箱。今天种下的话，别忘了浇水。"
+      "防风草种子还压着半箱。今天种下的话，别忘了浇水。"
     ]
   },
   "activity:seed-keeper:day:1": {
     "id": "activity:seed-keeper:day:1",
     "speaker": "华强",
     "lines": [
-      "今天新拆了一捆萝卜种子，二十金一袋，还是老价钱。"
+      "今天新拆了一捆防风草种子，二十金一袋，还是老价钱。"
     ]
   },
   "activity:seed-keeper:evening:0": {
@@ -1186,14 +1186,14 @@
     "id": "request:pink-tree-lunch:missing",
     "speaker": "阿禾",
     "lines": [
-      "还差 2 份萝卜，不用着急，今天带来就好。"
+      "还差 2 份防风草，不用着急，今天带来就好。"
     ]
   },
   "request:pink-tree-lunch:thanks": {
     "id": "request:pink-tree-lunch:thanks",
     "speaker": "阿禾",
     "lines": [
-      "正是我需要的萝卜，这些帮了大忙。"
+      "正是我需要的防风草，这些帮了大忙。"
     ]
   },
   "request:forge-handle-stock:missing": {
@@ -1270,42 +1270,42 @@
     "id": "request:spring-pea-basket:missing",
     "speaker": "华强",
     "lines": [
-      "还差 2 份青豌豆，不用着急，今天带来就好。"
+      "还差 2 份青豆，不用着急，今天带来就好。"
     ]
   },
   "request:spring-pea-basket:thanks": {
     "id": "request:spring-pea-basket:thanks",
     "speaker": "华强",
     "lines": [
-      "正是我需要的青豌豆，这些帮了大忙。"
+      "正是我需要的青豆，这些帮了大忙。"
     ]
   },
   "request:potato-work-lunch:missing": {
     "id": "request:potato-work-lunch:missing",
     "speaker": "昊天",
     "lines": [
-      "还差 2 份春土豆，不用着急，今天带来就好。"
+      "还差 2 份土豆，不用着急，今天带来就好。"
     ]
   },
   "request:potato-work-lunch:thanks": {
     "id": "request:potato-work-lunch:thanks",
     "speaker": "昊天",
     "lines": [
-      "正是我需要的春土豆，这些帮了大忙。"
+      "正是我需要的土豆，这些帮了大忙。"
     ]
   },
   "request:golden-flower-vase:missing": {
     "id": "request:golden-flower-vase:missing",
     "speaker": "阿澜",
     "lines": [
-      "还差 2 份油菜花，不用着急，今天带来就好。"
+      "还差 2 份蓝爵士，不用着急，今天带来就好。"
     ]
   },
   "request:golden-flower-vase:thanks": {
     "id": "request:golden-flower-vase:thanks",
     "speaker": "阿澜",
     "lines": [
-      "正是我需要的油菜花，这些帮了大忙。"
+      "正是我需要的蓝爵士，这些帮了大忙。"
     ]
   },
   "event:seed-keeper-two-heart": {

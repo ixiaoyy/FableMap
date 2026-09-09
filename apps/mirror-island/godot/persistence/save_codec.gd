@@ -2,8 +2,8 @@ class_name FarmSaveCodec
 extends RefCounted
 ## 独立 Godot 存档合同，严格拒绝旧版本、坏字段与不一致世界，不回填或静默覆盖。
 
-const VERSION := 2
-const STATE_VERSION := 14
+const VERSION := 8
+const STATE_VERSION := 20
 const MAX_BYTES := 8 * 1024 * 1024
 var rules: Dictionary
 var dialogues: Dictionary
@@ -87,6 +87,19 @@ func validate(raw: Variant) -> String:
 	for key: String in ["gold","fishingCastCount","nextWorldEntitySequence"]:
 		if not number(state[key],1 if key=="nextWorldEntitySequence" else 0,FarmWorldRules.LIMIT): return "存档计数无效："+key
 	if not number(state.worldSeed,0,4294967295) or not number(state.stamina,0,FarmEnergyRules.MAX_STAMINA,false): return "世界种子或体力无效。"
+	if not state.skills is Dictionary or state.skills.size()!=FarmSkillRules.NAMES.size(): return "技能集合无效。"
+	for id: String in FarmSkillRules.NAMES:
+		var skill: Variant=state.skills.get(id)
+		if not skill is Dictionary or not number(skill.get("xp"),0,FarmWorldRules.LIMIT) or not number(skill.get("level"),0,10) or skill.level!=FarmSkillRules.level_for(int(skill.xp)) or not number(skill.get("reportedLevel"),0,skill.level): return "技能经验与等级不一致。"
+	if not state.knownRecipes is Array or state.knownRecipes.size()>rules.recipes.size(): return "已知配方集合无效。"
+	var known: Dictionary={}
+	for id: Variant in state.knownRecipes:
+		if not id is String or not rules.recipes.has(id) or known.has(id): return "配方重复或未知。"
+		var recipe: Dictionary=rules.recipes[id]
+		if not recipe.knownByDefault and state.skills[recipe.skill].level<recipe.level: return "配方技能条件不满足。"
+		known[id]=true
+	for id: String in rules.recipes:
+		if rules.recipes[id].knownByDefault and not known.has(id): return "默认配方缺失。"
 	for key: String in ["lateWarningDay","lastSurfaceStoneRefreshDay","lastSurfaceWeedRefreshDay"]:
 		if not number(state[key],0 if key=="lateWarningDay" else 1,state.day): return "资源日期标记无效。"
 	if state.inventoryCapacity not in [12,24,36] or state.wateringCanLevel not in [1,2] or not slots(state.inventory,int(state.inventoryCapacity)): return "背包或工具等级无效。"
@@ -109,6 +122,7 @@ func validate(raw: Variant) -> String:
 		var crop: Dictionary={}
 		for definition: Dictionary in rules.crops:
 			if definition.cropId==tile.get("cropId"): crop=definition; break
+		if crop.get("isRaised",false) and state.player.regionId=="farm" and FarmWorldRules.feet_overlap(FarmWorldRules.point(state.player),Vector2i(tile.column,tile.row),Vector2(5,4)): return "角色与作物架子重叠。"
 		if tile.phase=="tilled":
 			if tile.get("cropId")!="" or tile.growthDays!=0 or tile.plantedDay!=0 or tile.harvestCount!=0: return "空耕地含有作物数据。"
 		elif crop.is_empty() or tile.plantedDay<1 or tile.growthDays>crop.growthDays or (tile.phase=="growing" and tile.growthDays>=crop.growthDays) or (tile.phase=="mature" and tile.growthDays!=crop.growthDays) or (not crop.has("regrowDays") and tile.harvestCount!=0): return "作物生长状态不一致。"
@@ -169,7 +183,8 @@ func _storage(state: Dictionary) -> String:
 		elif entity.get("kind")!="shipping-bin": return "默认出货箱标识无效。"
 		ids[entity.id]=true
 	for object: Variant in state.worldObjects:
-		if object.get("kind") not in ["chest","shipping-bin"] or not number(object.get("column"),0,world.regions[object.regionId].collision.columns-1) or not number(object.get("row"),0,world.regions[object.regionId].collision.rows-1): return "世界物件位置无效。"
+		if object.get("kind") not in ["chest","shipping-bin","scarecrow"] or not number(object.get("column"),0,world.regions[object.regionId].collision.columns-1) or not number(object.get("row"),0,world.regions[object.regionId].collision.rows-1): return "世界物件位置无效。"
+		if object.kind=="scarecrow" and (object.regionId!="farm" or not number(object.get("scaredCount"),0,FarmWorldRules.LIMIT)): return "稻草人状态无效。"
 		if object.kind=="chest" and (object.get("colorId") not in FarmStorageRules.COLORS or not slots(object.get("slots"),36)): return "箱子内容无效。"
 		if object.kind=="shipping-bin":
 			if object.regionId!="farm": return "出货箱区域无效。"
@@ -187,6 +202,26 @@ func _storage(state: Dictionary) -> String:
 	var report: Variant=state.unacknowledgedShippingReport
 	if report==null: return ""
 	if not report is Dictionary or not number(report.get("settledDay"),1,state.day-1) or not number(report.get("totalGold"),0,FarmWorldRules.LIMIT) or not report.get("categories") is Array: return "出货报告无效。"
+	if not report.get("skillUpgrades") is Array or report.skillUpgrades.size()>FarmSkillRules.NAMES.size(): return "技能升级报告无效。"
+	var skill_ids: Dictionary={}
+	for upgrade: Variant in report.skillUpgrades:
+		if not upgrade is Dictionary or not FarmSkillRules.NAMES.has(upgrade.get("skill")) or skill_ids.has(upgrade.skill): return "技能升级记录重复或未知。"
+		if not number(upgrade.get("from"),0,9) or not number(upgrade.get("to"),1,10) or upgrade.from>=upgrade.to or upgrade.to!=state.skills[upgrade.skill].level or upgrade.to!=state.skills[upgrade.skill].reportedLevel: return "技能升级记录不一致。"
+		skill_ids[upgrade.skill]=true
+	if not report.get("recipeUnlocks") is Array or report.recipeUnlocks.size()>rules.recipes.size(): return "配方报告无效。"
+	var recipe_ids: Dictionary={}
+	for id: Variant in report.recipeUnlocks:
+		if not id is String or not rules.recipes.has(id) or id in state.knownRecipes or recipe_ids.has(id): return "待学配方重复或未知。"
+		var recipe: Dictionary=rules.recipes[id]
+		if recipe.knownByDefault or state.skills[recipe.skill].level<recipe.level: return "待学配方条件不满足。"
+		recipe_ids[id]=true
+	var crows: Variant=report.get("crows")
+	if not crows is Dictionary or not crows.get("lost") is Array or crows.lost.size()>4 or not number(crows.get("scared"),0,4-crows.lost.size()): return "乌鸦报告无效。"
+	var lost_ids: Dictionary={}
+	for lost: Variant in crows.lost:
+		if not lost is Dictionary or not state.farmTiles.has(lost.get("tileId")) or not world.crops.has(lost.get("cropId")) or lost_ids.has(lost.tileId): return "作物损失记录无效。"
+		if state.farmTiles[lost.tileId].phase!="tilled": return "损失地块状态不一致。"
+		lost_ids[lost.tileId]=true
 	var total:=0; var category_ids: Dictionary={}; var item_ids: Dictionary={}
 	for category: Variant in report.categories:
 		if not category is Dictionary or category.get("category") not in ["farming","foraging","fishing","mining","other"] or category_ids.has(category.category) or not category.get("entries") is Array: return "出货分类无效。"

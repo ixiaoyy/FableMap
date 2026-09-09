@@ -28,11 +28,17 @@ var last_hit_id: String=""
 var last_hit_time:=0.0
 var shade: ColorRect
 var weather_effect: Node2D
+var crow_events: Array=[]
+var crow_day:=0
+var crow_seed:=0
+var crow_actors: Node2D
+var fishing_view: FarmFishingView
 
 ## 建立原生界面、声音和资源，启动页不创建世界或覆盖存档。
 func _ready() -> void:
 	_sync_display_scale(); get_window().size_changed.connect(_sync_display_scale)
 	assets=FarmAssets.new()
+	crow_actors=Node2D.new(); crow_actors.z_index=1; actors.add_child(crow_actors)
 	audio=FarmAudio.new(); add_child(audio); audio.configure(assets)
 	ui=FarmGameUI.new(); add_child(ui)
 	ui.selected.connect(_selected); ui.action_requested.connect(_button_action); ui.movement_requested.connect(_touch)
@@ -56,6 +62,8 @@ func _process(delta: float) -> void:
 		player.visible=true; player.position=FarmWorldRules.point(state.player); _sync_camera()
 	else: player.visible=false
 	_project_dynamic()
+	_start_crow_departures()
+	_sync_fishing_view(delta)
 	if not pointer_aim: aim=_facing_point()
 	_lighting(); queue_redraw()
 
@@ -135,6 +143,9 @@ func _load_region(id: String) -> void:
 	var packed:=load("res://scenes/regions/%s.tscn"%id) as PackedScene
 	if packed==null: push_error("地图不可用："+id); return
 	_cancel_tool_action()
+	if is_instance_valid(fishing_view): fishing_view.get_parent().remove_child(fishing_view); fishing_view.queue_free(); fishing_view=null
+	if crow_actors!=null:
+		for crow: Node in crow_actors.get_children(): crow_actors.remove_child(crow); crow.queue_free()
 	for child in region_root.get_children(): region_root.remove_child(child); child.queue_free()
 	for node: Node in dynamic.values(): node.get_parent().remove_child(node); node.queue_free()
 	dynamic.clear(); region_root.add_child(packed.instantiate()); display_region=id
@@ -171,26 +182,27 @@ func _project_dynamic() -> void:
 			var soil:=_sprite(tile.id,assets.entity_frame(profile.farmSoil.textureKey,profile.farmSoil.frame),Vector2(0.5,0.5))
 			soil.position=Vector2(tile.column*16+8,tile.row*16+8); soil.modulate=Color("ad9a81") if tile.watered else Color.WHITE; keep[tile.id]=true
 			if tile.cropId!="":
-				var crop_profile: Dictionary=profile.farmCrops[tile.cropId]
-				var crop:=_sprite(tile.id+":crop",assets.entity_frame(crop_profile.textureKey,crop_profile.matureFrame if tile.phase=="mature" else crop_profile.growingFrame),Vector2(0.5,1))
-				crop.position=soil.position+Vector2(0,3); crop.scale=Vector2.ONE*(1.0 if tile.phase=="mature" else 0.65+0.25*float(tile.growthDays)/session.resource_rules.crops[tile.cropId].growthDays); keep[tile.id+":crop"]=true
+				var crop:=_sprite(tile.id+":crop",assets.crop_texture(tile),Vector2(0.5,1))
+				crop.position=soil.position+Vector2(0,3); keep[tile.id+":crop"]=true
 	for object: Dictionary in state.worldObjects:
 		if object.regionId!=display_region: continue
-		var image: Texture2D=assets.icon("chest")
+		var image: Texture2D=assets.icon("scarecrow" if object.kind=="scarecrow" else "chest")
 		if object.kind=="shipping-bin":
 			var nearby: bool=state.player.regionId==display_region and session.storage.reachable(state,object)
 			image=assets.frame(assets.media.textures.buildings,{"x":80,"y":32 if nearby else 0,"width":32,"height":32})
 		var node:=_sprite(object.id,image,Vector2(0.5,0.75 if object.kind=="chest" else 0.875))
-		node.scale=Vector2.ONE*(16.0 if object.kind=="chest" else 32.0)/image.get_width()
-		node.position=Vector2(object.column*16+(8 if object.kind=="chest" else 16),object.row*16+12)
+		node.scale=Vector2.ONE*(32.0 if object.kind=="shipping-bin" else 16.0)/image.get_width()
+		node.position=Vector2(object.column*16+(16 if object.kind=="shipping-bin" else 8),object.row*16+12)
 		node.modulate=Color(COLORS[object.colorId]) if object.kind=="chest" else Color.WHITE; keep[object.id]=true
 	for drop: Dictionary in state.worldDrops:
 		if drop.regionId!=display_region: continue
 		var node:=_sprite(drop.id,assets.icon(drop.stack.itemId),Vector2(0.5,1)); node.position=Vector2(drop.originX,drop.originY); node.scale=Vector2.ONE*16.0/maxi(1,node.texture.get_width()); keep[drop.id]=true
 	for npc: Dictionary in session.npcs.snapshot():
 		if npc.regionId!=display_region: continue
-		var node:=_sprite(npc.entityId,assets.npc_texture(npc.npcId),Vector2(0.5,0.82)); node.position=FarmWorldRules.point(npc); node.modulate.a=npc.opacity
-		node.flip_h=npc.facing=="left"; node.rotation=sin(elapsed*5)*0.015 if npc.motion=="walking" else 0.0; keep[npc.entityId]=true
+		var node: FarmNpcSprite
+		if dynamic.has(npc.entityId): node=dynamic[npc.entityId]
+		else: node=FarmNpcSprite.new(); actors.add_child(node); dynamic[npc.entityId]=node
+		node.project(npc,assets,ui.pauses_clock() or session.busy); keep[npc.entityId]=true
 		var label:=_world_label(npc.entityId+":label",_npc_name(npc.npcId)); label.position=node.position+Vector2(-18,-39); label.visible=state.player.regionId==display_region and FarmWorldRules.point(state.player).distance_to(node.position)<=48; keep[npc.entityId+":label"]=true
 		if npc.activity!=null:
 			var activity:=_world_label(npc.entityId+":activity",{"serve":"迎","forge":"锻","tend":"护","repair":"修","mountain-patrol":"巡","observe":"望","organize":"理","dock-watch":"守","stock":"备","close":"收","prepare":"备","tea":"茶","record":"记","sew":"缝","rope-check":"绳"}.get(npc.activity,""))
@@ -203,9 +215,9 @@ func _project_dynamic() -> void:
 		var text: String={"bed":"休息","backpack-display":"背包升级","building-service":"木匠服务","inspect":"查看"}.get(interaction.kind,"")
 		if text=="": continue
 		var label:=_world_label(interaction.entityId+":hint",text); label.position=Vector2(interaction.x+interaction.width/2.0-12,interaction.y-12)
-		label.visible=state.player.regionId==display_region and FarmWorldRules.point(state.player).distance_to(Vector2(interaction.x+interaction.width/2.0,interaction.y+interaction.height/2.0))<=42; keep[interaction.entityId+":hint"]=true
+		label.visible=ui.mode!="fishing" and state.player.regionId==display_region and FarmWorldRules.point(state.player).distance_to(Vector2(interaction.x+interaction.width/2.0,interaction.y+interaction.height/2.0))<=42; keep[interaction.entityId+":hint"]=true
 	for zone: Dictionary in region.fishingZones:
-		var label:=_world_label(zone.id+":hint","钓鱼"); label.position=Vector2(zone.x+zone.width/2.0-10,zone.y-10); label.visible=true; keep[zone.id+":hint"]=true
+		var label:=_world_label(zone.id+":hint","钓鱼"); label.position=Vector2(zone.x+zone.width/2.0-10,zone.y-10); label.visible=ui.mode!="fishing"; keep[zone.id+":hint"]=true
 	for id: String in dynamic.keys():
 		if not keep.has(id):
 			var node: Node=dynamic[id]; node.get_parent().remove_child(node); node.queue_free(); dynamic.erase(id)
@@ -228,7 +240,7 @@ func _world_label(id: String, text: String) -> Label:
 	label.text=text
 	return label
 
-## 原精修室内使用固定锚点，建筑预览显示整图，其余场景跟随角色。
+## 室内按实际房间边界避让 HUD 并适配缩放；建筑预览显示整图，其余场景跟随角色。
 func _sync_camera() -> void:
 	var region: Dictionary=session.world.regions[display_region]
 	if ui!=null and ui.mode=="placement" and display_region!=state.player.regionId:
@@ -236,6 +248,23 @@ func _sync_camera() -> void:
 	camera.zoom=Vector2(2,2)
 	var anchor_id: Variant=region.get("cameraAnchorId")
 	camera.position=FarmWorldRules.point(region.spawns[anchor_id]) if anchor_id!=null else player.position
+	if ui!=null and ui.mode=="fishing" and not session.fishing.runtime.is_empty():
+		var zone: Dictionary=session.world.zones[session.fishing.runtime.zoneId]
+		var water: Vector2=fishing_view.water if is_instance_valid(fishing_view) else Vector2(zone.x+zone.width/2,zone.y+zone.height/2)
+		var focus: Vector2=(player.position+water)/2+Vector2(0,-8)
+		camera.position=focus+(get_viewport().get_visible_rect().size/2-ui.fishing_view_rect().get_center())/camera.zoom
+		return
+	if anchor_id!=null and ui!=null:
+		var bounds: Dictionary=region.cameraBounds
+		var room:=Rect2(bounds.x,bounds.y,bounds.width,bounds.height)
+		var safe:=ui.room_view_rect(room.size)
+		var zoom_factor:=minf(2,minf(safe.size.x/room.size.x,safe.size.y/room.size.y))
+		camera.zoom=Vector2.ONE*zoom_factor
+		var viewport_center:=get_viewport().get_visible_rect().size/2
+		var screen_center:=viewport_center+(room.get_center()-camera.position)*zoom_factor
+		var half_room:=room.size*zoom_factor/2
+		screen_center=screen_center.clamp(safe.position+half_room,safe.end-half_room)
+		camera.position=room.get_center()-(screen_center-viewport_center)/zoom_factor
 
 ## 目标提示与操作使用同一个格子，摆放可用性来自同一领域预检。
 func _draw() -> void:
@@ -243,8 +272,13 @@ func _draw() -> void:
 	if ui.mode=="" and _held()=="": return
 	var cell:=Vector2i(floori(aim.x/16.0),floori(aim.y/16.0)); var valid:=true; var width:=1
 	if ui.mode=="placement":
-		var kind: String="chest" if ui.placement_request.type=="place-world-object" else "shipping-bin"; width=1 if kind=="chest" else 2
+		var kind: String=state.inventory[ui.placement_request.inventoryIndex].itemId if ui.placement_request.type=="place-world-object" else "shipping-bin"; width=2 if kind=="shipping-bin" else 1
 		valid=session.world.placement(state,kind,display_region,cell.x,cell.y,ui.placement_request.get("objectId",""),session.npcs.snapshot()).allowed
+		if kind=="scarecrow" and display_region=="farm":
+			var preview: Dictionary={"kind":"scarecrow","regionId":"farm","column":cell.x,"row":cell.y}
+			for y in range(cell.y-8,cell.y+9):
+				for x in range(cell.x-8,cell.x+9):
+					if FarmCropProtection.protects(preview,x,y): draw_rect(Rect2(x*16,y*16,16,16),Color(0.45,0.72,0.5,0.12))
 	else: valid=session.resource_rules.near_tile(state,cell.x,cell.y)
 	draw_rect(Rect2(cell.x*16,cell.y*16,width*16,16),Color("f8ecc1") if valid else Color("d27363"),false,1)
 
@@ -265,8 +299,10 @@ func _perform(tool: bool, target: Vector2) -> void:
 	var item:=_held()
 	if not tool or item=="": await _interact(target); return
 	var cell:=Vector2i(floori(target.x/16.0),floori(target.y/16.0))
-	if item=="chest": ui.request_placement({"type":"place-world-object","inventoryIndex":ui.selected_index}); aim=target; pointer_aim=true; return
+	if item in ["chest","scarecrow"]: ui.request_placement({"type":"place-world-object","inventoryIndex":ui.selected_index}); aim=target; pointer_aim=true; return
 	var object:=_object_at(target)
+	if object.get("kind")=="scarecrow" and item in ["axe","pickaxe","hoe"]:
+		await _tool_command({"type":"recover-scarecrow","objectId":object.id,"itemId":item},target); return
 	if not object.is_empty() and object.kind=="chest":
 		var empty: bool=object.slots.all(func(slot:Dictionary)->bool:return slot.itemId=="")
 		if empty: await _tool_command({"type":"recover-empty-chest","objectId":object.id,"itemId":item},target); return
@@ -280,7 +316,13 @@ func _perform(tool: bool, target: Vector2) -> void:
 			if result.get("tone")=="success": ui.show_fishing()
 		return
 	if item=="watering-can" and session.world.mask(state.player.regionId,"waterTiles",cell.x,cell.y): await _tool_command({"type":"refill-watering-can","column":cell.x,"row":cell.y},target); return
-	var kind: String={"axe":"tree","pickaxe":"stone","scythe":"weed"}.get(item,"")
+	if item=="axe" and state.player.regionId=="farm":
+		var crop_tile: Dictionary=state.farmTiles.get("farm:%d:%d"%[cell.x,cell.y],{})
+		if session.world.crops.get(crop_tile.get("cropId",""),{}).get("isRaised",false):
+			await _tool_command({"type":"use-item-on-tile","itemId":item,"column":cell.x,"row":cell.y,"facing":facing},target); return
+	if item=="scythe":
+		await _tool_command({"type":"sweep-scythe","itemId":item,"facing":facing},target); return
+	var kind: String={"axe":"tree","pickaxe":"stone"}.get(item,"")
 	if kind!="":
 		var spawn:=_resource_at(target,kind)
 		if not spawn.is_empty(): await _tool_command({"type":"use-item-on-target","itemId":item,"targetId":spawn.entityId,"facing":facing},target)
@@ -399,7 +441,7 @@ func _placement_confirmed() -> void:
 ## 显示共享摆放判定结果，不提前清理耕地或移动伙伴。
 func _placement_hint() -> void:
 	var request: Dictionary=ui.placement_request
-	var kind: String="chest" if request.type=="place-world-object" else "shipping-bin"
+	var kind: String=state.inventory[request.inventoryIndex].itemId if request.type=="place-world-object" else "shipping-bin"
 	var result:=session.world.placement(state,kind,display_region,floori(aim.x/16),floori(aim.y/16),request.get("objectId",""),session.npcs.snapshot())
 	ui._feedback({"tone":"success" if result.allowed else "error","message":result.message+" 点击确认摆放。"})
 
@@ -416,8 +458,53 @@ func _punch() -> void:
 ## 将成功反馈映射到原音效，失败不播放获得物品的声音。
 func _feedback(result: Dictionary) -> void:
 	if result.get("tone")!="success": return
+	if result.has("daySummary"):
+		crow_events=result.daySummary.get("crowEvents",[]).duplicate(true)
+		var committed:=session.snapshot()
+		crow_day=int(committed.day); crow_seed=int(committed.worldSeed)
 	var mapping: Dictionary={"tilled":"hoe","watered":"watering","refilled":"watering","chopped":"axe","stump-cleared":"axe","mined":"stone","cut":"harvest","harvested":"harvest","collected":"pickup","caught":"pickup","bought":"buy","sold":"sell","talked":"dialogue-page","transitioned":"door","slept":"sleep"}
 	if mapping.has(result.code): audio.cue(mapping[result.code])
+
+## 当天第一次回到农场时消费已提交的临时事件；换天或新农场丢弃，重复投影不会重播。
+func _start_crow_departures() -> void:
+	if crow_events.is_empty(): return
+	if int(state.day)!=crow_day or int(state.worldSeed)!=crow_seed:
+		crow_events.clear(); return
+	if display_region!="farm" or state.player.regionId!="farm" or ui.locks_world(): return
+	for index in range(mini(4,crow_events.size())):
+		var crow:=FarmCrowDeparture.new()
+		crow.configure(assets,crow_events[index],index); crow_actors.add_child(crow)
+	crow_events.clear()
+
+## 只在已打开的钓鱼界面投影运行态；关闭或终止会话立即释放表现，鱼获须等待保存成功。
+func _sync_fishing_view(delta: float) -> void:
+	var runtime: Dictionary=session.fishing.runtime
+	if ui.mode!="fishing" or runtime.is_empty():
+		if is_instance_valid(fishing_view): fishing_view.get_parent().remove_child(fishing_view); fishing_view.queue_free(); fishing_view=null
+		return
+	if not is_instance_valid(fishing_view):
+		var zone: Dictionary=session.world.zones[runtime.zoneId]
+		fishing_view=FarmFishingView.new(); actors.add_child(fishing_view)
+		fishing_view.configure(player,assets,_fishing_water_point(zone))
+	fishing_view.project(runtime,session.fishing.bite(),session.save_phase=="idle" and not session.busy,delta)
+
+## 在钓位附近有限网格中选择真正的水面；水域内可通行的码头格不能作为浮漂落点。
+func _fishing_water_point(zone: Dictionary) -> Vector2:
+	var center:=Vector2(zone.x+zone.width/2,zone.y+zone.height/2)
+	var direction:=center-player.position
+	if direction.length_squared()<1: direction=Vector2.DOWN
+	var preferred:=center+direction.normalized()*48
+	var target:=center
+	var distance:=INF
+	var collision: Dictionary=session.world.regions[display_region].collision
+	for row in range(floori(center.y/16)-5,floori(center.y/16)+6):
+		for column in range(floori(center.x/16)-5,floori(center.x/16)+6):
+			if not session.world.mask(display_region,"waterTiles",column,row): continue
+			if not collision.blocked[row*int(collision.columns)+column]: continue
+			var point:=Vector2(column*16+8,row*16+8)
+			var score:=point.distance_squared_to(preferred)
+			if score<distance: distance=score; target=point
+	return target
 
 ## 从原昼夜关键帧表读取颜色和透明度，区分室内外。
 func _lighting() -> void:

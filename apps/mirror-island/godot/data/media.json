@@ -1606,7 +1606,7 @@
         }
       }
     },
-    "turnip-seed": {
+    "parsnip-seed": {
       "kind": "atlas",
       "url": "/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png?v=de4dbbb5",
       "sourceWidth": 160,
@@ -1626,17 +1626,39 @@
       "width": 16,
       "height": 16
     },
-    "turnip": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 176,
-      "y": 112,
-      "width": 16,
-      "height": 16
+    "parsnip": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "................",
+          "......g..g......",
+          ".....glgglh.....",
+          "......glhg......",
+          ".......gg.......",
+          ".....twwct......",
+          "....twwwact.....",
+          "....twwacct.....",
+          ".....twact......",
+          ".....twct.......",
+          "......tct.......",
+          "......tt........",
+          ".......t........",
+          "................"
+        ],
+        "palette": {
+          "a": "#f0d09a",
+          "c": "#e2d9ad",
+          "g": "#579563",
+          "h": "#c0d991",
+          "l": "#8abc70",
+          "t": "#ba965d",
+          "w": "#fff1d4"
+        }
+      }
     },
-    "bok-choy-seed": {
+    "kale-seed": {
       "kind": "atlas",
       "url": "/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png?v=de4dbbb5",
       "sourceWidth": 160,
@@ -1646,15 +1668,35 @@
       "width": 16,
       "height": 16
     },
-    "bok-choy": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 112,
-      "y": 48,
-      "width": 16,
-      "height": 16
+    "kale": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "................",
+          ".......ss.......",
+          "....sssmms......",
+          "...smhmmsmss....",
+          "...smlsmmsmhs...",
+          "..smhmlmlmlms...",
+          "..smlsmhlmmss...",
+          "...smmmlmsmms...",
+          "...ssmlhmmss....",
+          "....smlmlms.....",
+          ".....smlms......",
+          "......sgs.......",
+          "......gg........",
+          "................"
+        ],
+        "palette": {
+          "g": "#579563",
+          "h": "#c0d991",
+          "l": "#8abc70",
+          "m": "#7bb49d",
+          "s": "#427c68"
+        }
+      }
     },
     "cauliflower-seed": {
       "kind": "atlas",
@@ -1667,14 +1709,35 @@
       "height": 16
     },
     "cauliflower": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 112,
-      "y": 16,
-      "width": 16,
-      "height": 16
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "................",
+          "................",
+          "......cccc......",
+          "....ccwwwwcc....",
+          "...cwwwwwwwwc...",
+          "..cwwwcwwcwwwc..",
+          "..cwwwwwwwwwwc..",
+          "..gcwcwwwwcwcd..",
+          "..glcwwcwwccgd..",
+          "...glcccccllg...",
+          "...dglhlhllgd...",
+          "....dgglgggd....",
+          "......dggd......",
+          "................"
+        ],
+        "palette": {
+          "c": "#e2d9ad",
+          "d": "#38634e",
+          "g": "#579563",
+          "h": "#c0d991",
+          "l": "#8abc70",
+          "w": "#fff1d4"
+        }
+      }
     },
     "spring-wildflower": {
       "kind": "pixels",
@@ -1734,7 +1797,7 @@
         }
       }
     },
-    "green-pea-seed": {
+    "bean-starter": {
       "kind": "atlas",
       "url": "/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png?v=de4dbbb5",
       "sourceWidth": 160,
@@ -1744,17 +1807,35 @@
       "width": 16,
       "height": 16
     },
-    "green-pea": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 48,
-      "y": 48,
-      "width": 16,
-      "height": 16
+    "green-bean": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "................",
+          "........g.......",
+          ".......glg......",
+          "......glhg......",
+          ".....glhlg......",
+          ".....glhlg.g....",
+          "....glhlg.glg...",
+          "....glhlg.glhg..",
+          "....glhg..glhg..",
+          "....glhg.glhlg..",
+          ".....gg..glhg...",
+          ".........glg....",
+          ".........gg.....",
+          "................"
+        ],
+        "palette": {
+          "g": "#579563",
+          "h": "#c0d991",
+          "l": "#8abc70"
+        }
+      }
     },
-    "spring-potato-seed": {
+    "potato-seed": {
       "kind": "atlas",
       "url": "/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png?v=de4dbbb5",
       "sourceWidth": 160,
@@ -1764,17 +1845,35 @@
       "width": 16,
       "height": 16
     },
-    "spring-potato": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 240,
-      "y": 112,
-      "width": 16,
-      "height": 16
+    "potato": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......bbbb.....",
+          ".....bbpaaab....",
+          "....bpaapaapb...",
+          "...bpaaaaappb...",
+          "...baapaaapppb..",
+          "...bpaaappbppb..",
+          "...bpaapppppb...",
+          "....bppbppppb...",
+          ".....bbpppbb....",
+          ".......bbb......",
+          "................",
+          "................"
+        ],
+        "palette": {
+          "a": "#f0d09a",
+          "b": "#8e684b",
+          "p": "#d8b278"
+        }
+      }
     },
-    "rapeseed-seed": {
+    "jazz-seed": {
       "kind": "atlas",
       "url": "/game-media/v1/assets/vendor/ivoryred/gardens-2026-08-27/original/all-the-icons-gardens.png?v=de4dbbb5",
       "sourceWidth": 160,
@@ -1784,15 +1883,36 @@
       "width": 16,
       "height": 16
     },
-    "rapeseed-flower": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 224,
-      "y": 144,
-      "width": 16,
-      "height": 16
+    "blue-jazz": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "......vvv.......",
+          "....vvuiuvv.....",
+          "...vuiiiiuuv....",
+          "...vuiiuiiuv....",
+          "...vuuuiuuuv....",
+          "....vuuuuuv.....",
+          ".....vvvvv......",
+          ".......g........",
+          "....gl.gg.......",
+          "....ghlg.gl.....",
+          ".....glgghg.....",
+          ".......ggg......",
+          ".......g........",
+          "................"
+        ],
+        "palette": {
+          "g": "#579563",
+          "h": "#c0d991",
+          "i": "#c2e0e7",
+          "l": "#8abc70",
+          "u": "#84afd0",
+          "v": "#557ea9"
+        }
+      }
     },
     "fishing-rod": {
       "kind": "pixels",
@@ -2025,6 +2145,74 @@
       "y": 0,
       "width": 32,
       "height": 32
+    },
+    "coal": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          "................",
+          "................",
+          "......oooo......",
+          "....oohhhhoo....",
+          "...ohhllllhho...",
+          "..ohllllssllho..",
+          ".ohhlllssssllho.",
+          ".ohlllsssssssho.",
+          ".ossssssssssso..",
+          "..osssddddsso...",
+          "...osddddsso....",
+          "....oossssoo....",
+          "......oooo......",
+          "................",
+          "................"
+        ],
+        "palette": {
+          "o": "#202829",
+          "h": "#667071",
+          "l": "#414b4d",
+          "s": "#303a3d",
+          "d": "#252c30"
+        }
+      }
+    },
+    "scarecrow": {
+      "kind": "pixels",
+      "art": {
+        "rows": [
+          "................",
+          ".....oooooo.....",
+          "....oyyyyyyo....",
+          "...oyyyyyyyyo...",
+          "..oooooooooooo..",
+          ".....osssso.....",
+          ".....ososoo.....",
+          ".....osssso.....",
+          "......oooo......",
+          "oooottttttttoooo",
+          "oyyottttttttoyyo",
+          "ooooottttttooooo",
+          "....otttttto....",
+          "....otttttto....",
+          "....oooooooo....",
+          ".....oyyyo......",
+          "......owwo......",
+          "......owwo......",
+          "......owwo......",
+          "......owwo......",
+          "......owwo......",
+          "......owwo......",
+          ".....owwwwo.....",
+          "................"
+        ],
+        "palette": {
+          "o": "#465044",
+          "y": "#e0bd75",
+          "s": "#efd4a5",
+          "t": "#77a791",
+          "w": "#94704e"
+        }
+      }
     }
   },
   "badges": {
@@ -2035,75 +2223,39 @@
     "scythe": null,
     "stone": null,
     "fiber": null,
-    "turnip-seed": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 176,
-      "y": 112,
-      "width": 16,
-      "height": 16
+    "parsnip-seed": {
+      "kind": "item",
+      "itemId": "parsnip"
     },
     "watering-can": null,
-    "turnip": null,
-    "bok-choy-seed": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 112,
-      "y": 48,
-      "width": 16,
-      "height": 16
+    "parsnip": null,
+    "kale-seed": {
+      "kind": "item",
+      "itemId": "kale"
     },
-    "bok-choy": null,
+    "kale": null,
     "cauliflower-seed": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 112,
-      "y": 16,
-      "width": 16,
-      "height": 16
+      "kind": "item",
+      "itemId": "cauliflower"
     },
     "cauliflower": null,
     "spring-wildflower": null,
     "bamboo-shoot": null,
-    "green-pea-seed": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 48,
-      "y": 48,
-      "width": 16,
-      "height": 16
+    "bean-starter": {
+      "kind": "item",
+      "itemId": "green-bean"
     },
-    "green-pea": null,
-    "spring-potato-seed": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 240,
-      "y": 112,
-      "width": 16,
-      "height": 16
+    "green-bean": null,
+    "potato-seed": {
+      "kind": "item",
+      "itemId": "potato"
     },
-    "spring-potato": null,
-    "rapeseed-seed": {
-      "kind": "atlas",
-      "url": "/game-media/v1/assets/vendor/vectoraith/farming-sim-v1.08/original/16x16/tilesets-compact/vectoraith_tileset_farmingsims_crops.png?v=ac174d7c",
-      "sourceWidth": 256,
-      "sourceHeight": 256,
-      "x": 224,
-      "y": 144,
-      "width": 16,
-      "height": 16
+    "potato": null,
+    "jazz-seed": {
+      "kind": "item",
+      "itemId": "blue-jazz"
     },
-    "rapeseed-flower": null,
+    "blue-jazz": null,
     "fishing-rod": null,
     "lake-carp": null,
     "silver-minnow": null,
@@ -2355,110 +2507,6 @@
           "height": 16
         }
       },
-      "farmCrops": {
-        "turnip": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-turnip-growing",
-            "x": 144,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-turnip-mature",
-            "x": 176,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "bok-choy": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-bok-choy-growing",
-            "x": 80,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-bok-choy-mature",
-            "x": 112,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "cauliflower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-cauliflower-growing",
-            "x": 80,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-cauliflower-mature",
-            "x": 112,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "green-pea": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-green-pea-growing",
-            "x": 16,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-green-pea-mature",
-            "x": 48,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "spring-potato": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-spring-potato-growing",
-            "x": 208,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-spring-potato-mature",
-            "x": 240,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "rapeseed-flower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-rapeseed-growing",
-            "x": 208,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-rapeseed-mature",
-            "x": 224,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          }
-        }
-      },
       "forage": {
         "spring-wildflower": {
           "textureKey": "item-original-spring-wildflower",
@@ -2582,110 +2630,6 @@
           "height": 16
         }
       },
-      "farmCrops": {
-        "turnip": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-turnip-growing",
-            "x": 144,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-turnip-mature",
-            "x": 176,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "bok-choy": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-bok-choy-growing",
-            "x": 80,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-bok-choy-mature",
-            "x": 112,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "cauliflower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-cauliflower-growing",
-            "x": 80,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-cauliflower-mature",
-            "x": 112,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "green-pea": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-green-pea-growing",
-            "x": 16,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-green-pea-mature",
-            "x": 48,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "spring-potato": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-spring-potato-growing",
-            "x": 208,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-spring-potato-mature",
-            "x": 240,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "rapeseed-flower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-rapeseed-growing",
-            "x": 208,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-rapeseed-mature",
-            "x": 224,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          }
-        }
-      },
       "forage": {
         "spring-wildflower": {
           "textureKey": "item-original-spring-wildflower",
@@ -2807,110 +2751,6 @@
           "y": 48,
           "width": 16,
           "height": 16
-        }
-      },
-      "farmCrops": {
-        "turnip": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-turnip-growing",
-            "x": 144,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-turnip-mature",
-            "x": 176,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "bok-choy": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-bok-choy-growing",
-            "x": 80,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-bok-choy-mature",
-            "x": 112,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "cauliflower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-cauliflower-growing",
-            "x": 80,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-cauliflower-mature",
-            "x": 112,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "green-pea": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-green-pea-growing",
-            "x": 16,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-green-pea-mature",
-            "x": 48,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "spring-potato": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-spring-potato-growing",
-            "x": 208,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-spring-potato-mature",
-            "x": 240,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "rapeseed-flower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-rapeseed-growing",
-            "x": 208,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-rapeseed-mature",
-            "x": 224,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          }
         }
       },
       "forage": {
@@ -3642,110 +3482,6 @@
           "height": 16
         }
       },
-      "farmCrops": {
-        "turnip": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-turnip-growing",
-            "x": 144,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-turnip-mature",
-            "x": 176,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "bok-choy": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-bok-choy-growing",
-            "x": 80,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-bok-choy-mature",
-            "x": 112,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "cauliflower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-cauliflower-growing",
-            "x": 80,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-cauliflower-mature",
-            "x": 112,
-            "y": 16,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "green-pea": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-green-pea-growing",
-            "x": 16,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-green-pea-mature",
-            "x": 48,
-            "y": 48,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "spring-potato": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-spring-potato-growing",
-            "x": 208,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-spring-potato-mature",
-            "x": 240,
-            "y": 112,
-            "width": 16,
-            "height": 16
-          }
-        },
-        "rapeseed-flower": {
-          "textureKey": "vectoraith-crops",
-          "growingFrame": {
-            "name": "vectoraith-rapeseed-growing",
-            "x": 208,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          },
-          "matureFrame": {
-            "name": "vectoraith-rapeseed-mature",
-            "x": 224,
-            "y": 144,
-            "width": 16,
-            "height": 16
-          }
-        }
-      },
       "forage": {
         "spring-wildflower": {
           "textureKey": "item-original-spring-wildflower",
@@ -4049,5 +3785,1131 @@
         "loop": true
       }
     ]
+  },
+  "cropPalette": {
+    "d": "#38634e",
+    "g": "#579563",
+    "l": "#8abc70",
+    "h": "#c0d991",
+    "s": "#427c68",
+    "m": "#7bb49d",
+    "w": "#fff1d4",
+    "c": "#e2d9ad",
+    "t": "#ba965d",
+    "b": "#8e684b",
+    "p": "#d8b278",
+    "a": "#f0d09a",
+    "v": "#557ea9",
+    "u": "#84afd0",
+    "i": "#c2e0e7",
+    "q": "#d8b974"
+  },
+  "crops": {
+    "parsnip": {
+      "stageDays": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "stages": [
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....tp..pt.....",
+          "....btb..btb....",
+          ".......pt.......",
+          ".......bb.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....gl..lg.....",
+          ".....ghgglg.....",
+          "......dggd......",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "........lg......",
+          ".....gl.ghg.....",
+          ".....ghgglg.....",
+          "......glgg......",
+          "...gl..gg..lg...",
+          "...ghlgggghlg...",
+          "....gggggggg....",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......glg......",
+          "....gl.ghlg.....",
+          "...ghlgghlg.....",
+          "....ghlggg......",
+          "..gl.gggg.glg...",
+          "..ghlgggghhlg...",
+          "...ghlggghlg....",
+          "....ggggggg.....",
+          ".....glgglg.....",
+          "......gggg......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......gl.......",
+          "....gl.ghg......",
+          "....ghgghg......",
+          ".....ghgg.gl....",
+          "..gl..gggghg....",
+          "..ghlgggghg.....",
+          "...ggggggg......",
+          ".....twwct......",
+          "....twwwact.....",
+          ".....twwct......",
+          "......bcb.......",
+          ".......b........",
+          "................"
+        ]
+      ]
+    },
+    "cauliflower": {
+      "stageDays": [
+        1,
+        2,
+        4,
+        4,
+        1
+      ],
+      "stages": [
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....tp..pt.....",
+          "....btb..btb....",
+          ".......pt.......",
+          ".......bb.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....gl..lg.....",
+          ".....ghgglg.....",
+          "......dggd......",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "........lg......",
+          ".....gl.ghg.....",
+          ".....ghgglg.....",
+          "......glgg......",
+          "...gl..gg..lg...",
+          "...ghlgggghlg...",
+          "....gggggggg....",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......glg......",
+          "....gl.ghlg.....",
+          "...ghlgghlg.....",
+          "....ghlggg......",
+          "..gl.gggg.glg...",
+          "..ghlgggghhlg...",
+          "...ghlggghlg....",
+          "....ggggggg.....",
+          ".....glgglg.....",
+          "......gggg......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......glg......",
+          "..gl..ghlg..lg..",
+          "..ghlgggggghlg..",
+          "...gggggggglg...",
+          "...ggllllggg....",
+          "..gllllllllg....",
+          ".gglllgllgllgg..",
+          ".glgllllllgllg..",
+          "..glggllggglg...",
+          "...gllgggggg....",
+          "....ggllggg.....",
+          "......ggg.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......glg......",
+          "..gl..ghlg..lg..",
+          "..ghlgggggghlg..",
+          "...ggccccgglg...",
+          "...ccwwwwccg....",
+          "..cwwwwwwwwc....",
+          ".gcwwwcwwcwwcg..",
+          ".glcwwwwwwcwlg..",
+          "..glccwwccclg...",
+          "...gllccccgg....",
+          "....ggllggg.....",
+          "......ggg.......",
+          "................"
+        ]
+      ]
+    },
+    "kale": {
+      "stageDays": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "stages": [
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....tp..pt.....",
+          "....btb..btb....",
+          ".......pt.......",
+          ".......bb.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....gl..lg.....",
+          ".....ghgglg.....",
+          "......dggd......",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "........lg......",
+          ".....gl.ghg.....",
+          ".....ghgglg.....",
+          "......glgg......",
+          "...gl..gg..lg...",
+          "...ghlgggghlg...",
+          "....gggggggg....",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......ss.......",
+          "....sssggs......",
+          "...sggggsgss....",
+          "...sglsggsggs...",
+          "..sggglglglgs...",
+          "..sglsgglggss...",
+          "...sggglgsggs...",
+          "..sggglgggss....",
+          "...ssglglggs....",
+          "....sglgglss....",
+          ".....sglgs......",
+          "......ggg.......",
+          ".......d........",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......ss.......",
+          "....sssmms......",
+          "...smhmmsmss....",
+          "...smlsmmsmhs...",
+          "..smhmlmlmlms...",
+          "..smlsmhlmmss...",
+          "...smmmlmsmms...",
+          "..smhmlhmmss....",
+          "...ssmlmlmms....",
+          "....smlhmlss....",
+          ".....sglgs......",
+          "......ggg.......",
+          ".......d........",
+          "................"
+        ]
+      ]
+    },
+    "potato": {
+      "stageDays": [
+        1,
+        1,
+        1,
+        2,
+        1
+      ],
+      "stages": [
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....tp..pt.....",
+          "....btb..btb....",
+          ".......pt.......",
+          ".......bb.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....gl..lg.....",
+          ".....ghgglg.....",
+          "......dggd......",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "........lg......",
+          ".....gl.ghg.....",
+          ".....ghgglg.....",
+          "......glgg......",
+          "...gl..gg..lg...",
+          "...ghlgggghlg...",
+          "....gggggggg....",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......glg......",
+          "....gl.ghlg.....",
+          "...ghlgghlg.....",
+          "....ghlggg......",
+          "..gl.gggg.glg...",
+          "..ghlgggghhlg...",
+          "...ghlggghlg....",
+          "....ggggggg.....",
+          ".....glgglg.....",
+          "......gggg......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......c........",
+          "......cwc.......",
+          "...glgqcqgg.....",
+          "..ghhlgglg......",
+          "...glgggg.glg...",
+          "....gggggghhlg..",
+          "..glgghlgghlg...",
+          "..ghlggggggg....",
+          "...ggglgglg.....",
+          ".....ggggg......",
+          "......ggg.......",
+          ".......d........",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".......glg......",
+          "...glgghhlg.....",
+          "..ghhlgglg......",
+          "...glgggg.glg...",
+          "....gggggghhlg..",
+          "..glgghlgghlg...",
+          "..ghlggggggg....",
+          "...ggglgglg.....",
+          ".....ggggg......",
+          "....bpabgpab....",
+          "...bpaapbpppb...",
+          "....bbbbbbbb....",
+          "................"
+        ]
+      ]
+    },
+    "blue-jazz": {
+      "stageDays": [
+        1,
+        2,
+        2,
+        2
+      ],
+      "stages": [
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....tp..pt.....",
+          "....btb..btb....",
+          ".......pt.......",
+          ".......bb.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....gl..lg.....",
+          ".....ghgglg.....",
+          "......dggd......",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "........lg......",
+          ".....gl.ghg.....",
+          ".....ghgglg.....",
+          "......glgg......",
+          "...gl..gg..lg...",
+          "...ghlgggghlg...",
+          "....gggggggg....",
+          ".......gg.......",
+          ".......db.......",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "......gug.......",
+          "......glg.......",
+          ".......g........",
+          ".......g........",
+          "....gl.gg.......",
+          "....ghlg.gl.....",
+          ".....glgghg.....",
+          ".......ggg......",
+          ".......g........",
+          ".......d........",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "......vvv.......",
+          "....vvuiuvv.....",
+          "...vuiiiiuuv....",
+          "...vuiiuiiuv....",
+          "...vuuuiuuuv....",
+          "....vuuuuuv.....",
+          ".....vvvvv......",
+          ".......g........",
+          "....gl.gg.......",
+          "....ghlg.gl.....",
+          ".....glgghg.....",
+          ".......ggg......",
+          ".......g........",
+          "................"
+        ]
+      ]
+    },
+    "green-bean": {
+      "stageDays": [
+        1,
+        1,
+        1,
+        3,
+        4
+      ],
+      "stages": [
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tbtp..pttb...",
+          "...tbtb..btbb...",
+          "...tb..pt..tb...",
+          "...tb..bb..tb...",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbglbblgbbb..",
+          "...tbghgglgtb...",
+          "...tb.dggd.tb...",
+          "...tb..gg..tb...",
+          "...tb..db..tb...",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb...lg.tb...",
+          "...tbgl.ghgtb...",
+          "...tbghgglgtb...",
+          "..ppppglggpppp..",
+          "..bglbbggbblgb..",
+          "...ghlgggghlg...",
+          "...tggggggggb...",
+          "...tb..gg..tb...",
+          "...tb..db..tb...",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb..glg.tb...",
+          "...tgl.ghlgtb...",
+          "...ghlgghlgtb...",
+          "...tghlggg.tb...",
+          "..glbgggg.glg...",
+          "..ghlgggghhlgp..",
+          "..bghlggghlgbb..",
+          "...tgggggggtb...",
+          "...tbglgglgtb...",
+          "...tb.gggg.tb...",
+          "...tb..db..tb...",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbbbbbbbbb..",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb......tb...",
+          "...tb.glgg.tb...",
+          "...tbghhlg.tb...",
+          "...tb.gggg.tb...",
+          "...tb..gg.glg...",
+          "...tb..ggghhlg..",
+          "..pppglggglggp..",
+          "..bbghhlgggbbb..",
+          "...tbglggg.tb...",
+          "...tb.ggg..tb...",
+          "...tb.ggg..tb...",
+          "...tb..gg..tb...",
+          "...tbglgg.glg...",
+          "...tghhlgghhlg..",
+          "..pppglggglggp..",
+          "..bbbbbgggbbbb..",
+          "...tb..gg..tb...",
+          "...tb..gg..tb...",
+          "...tb..gg..tb...",
+          "...tb..gg..tb...",
+          "................"
+        ],
+        [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          "...tb......tb...",
+          "...tb......tb...",
+          "..pppppppppppp..",
+          "..bbbbblgbbbbb..",
+          "...tb..hg..tb...",
+          "...tb..lg..tb...",
+          "...tb..hg..tb...",
+          "...tb.glgg.tb...",
+          "...tbghhlg.tb...",
+          "...tb.gggg.tb...",
+          "...tb..gg.glg...",
+          "...tb.lggghhlg..",
+          "..pppghggglggp..",
+          "..bbghlggggbbb..",
+          "...tbghggg.tb...",
+          "...tb.lgg..tb...",
+          "...tb.ggg.lgb...",
+          "...tb..gg.hgb...",
+          "...tbglgg.lgg...",
+          "...tghhlgghglg..",
+          "..pppglggglggp..",
+          "..bbbbbgggbbbb..",
+          "...tb..gg..tb...",
+          "...tb..gg..tb...",
+          "...tb..gg..tb...",
+          "...tb..gg..tb...",
+          "................"
+        ]
+      ],
+      "regrowing": [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "...tb......tb...",
+        "...tb......tb...",
+        "..pppppppppppp..",
+        "..bbbbbbbbbbbb..",
+        "...tb......tb...",
+        "...tb......tb...",
+        "...tb......tb...",
+        "...tb.glgg.tb...",
+        "...tbghhlg.tb...",
+        "...tb.gggg.tb...",
+        "...tb..gg.glg...",
+        "...tb..ggghhlg..",
+        "..pppglggglggp..",
+        "..bbghhlgggbbb..",
+        "...tbglggg.tb...",
+        "...tb.ggg..tb...",
+        "...tb.ggg..tb...",
+        "...tb..gg..tb...",
+        "...tbglgg.glg...",
+        "...tghhlgghhlg..",
+        "..pppglggglggp..",
+        "..bbbbbgggbbbb..",
+        "...tb..gg..tb...",
+        "...tb..gg..tb...",
+        "...tb..gg..tb...",
+        "...tb..gg..tb...",
+        "................"
+      ]
+    }
+  },
+  "wildlife": {
+    "crow": {
+      "palette": {
+        "d": "#293d44",
+        "s": "#405764",
+        "m": "#6e8b93",
+        "h": "#fff1d4",
+        "b": "#80704f"
+      },
+      "frames": {
+        "perched": [
+          "................",
+          "................",
+          "................",
+          ".........ddd....",
+          "........dhssd...",
+          "........dssddb..",
+          ".....dddssssbb..",
+          "....dssssssd....",
+          "...dssmssssd....",
+          "..dssmmsssd.....",
+          ".dddssssdd......",
+          "....dddd........",
+          "......b.b.......",
+          ".....bb.bb......",
+          "................",
+          "................"
+        ],
+        "peck": [
+          "................",
+          "................",
+          "................",
+          "................",
+          "................",
+          ".....dddd.......",
+          "....dssssdd.....",
+          "...dssmssssdd...",
+          "..dssmmsssssdd..",
+          ".dddssssdddssdb.",
+          "....dddd...dbb..",
+          "......b.b.......",
+          ".....bb.bb......",
+          "................",
+          "................",
+          "................"
+        ],
+        "wings-up": [
+          "...dd...........",
+          "...dsd..........",
+          "...dmsd.........",
+          "....dmsd........",
+          "....dmsddddd....",
+          ".....dsddhssd...",
+          ".....dssssddb...",
+          ".....dsssssbb...",
+          "...dddssssd.....",
+          "..dssssssd......",
+          ".dddssddd.......",
+          "....dd..........",
+          "................",
+          "................",
+          "................",
+          "................"
+        ],
+        "wings-level": [
+          "................",
+          "................",
+          "................",
+          ".........ddd....",
+          "........dhssd...",
+          "....ddddsssddb..",
+          ".dddmmsssssssbb.",
+          "dmmssssssssd....",
+          ".ddddsssssdd....",
+          "....dssssdd.....",
+          "...ddddd........",
+          "................",
+          "................",
+          "................",
+          "................",
+          "................"
+        ],
+        "wings-down": [
+          "................",
+          "................",
+          "................",
+          ".........ddd....",
+          "........dhssd...",
+          ".....dddsssddb..",
+          "....dssssssssbb.",
+          "...dsssssssd....",
+          "..dddssssd......",
+          ".dddssmsdd......",
+          "....dsmssd......",
+          ".....dsmssd.....",
+          "......dsssd.....",
+          ".......ddd......",
+          "................",
+          "................"
+        ]
+      }
+    }
   }
 }

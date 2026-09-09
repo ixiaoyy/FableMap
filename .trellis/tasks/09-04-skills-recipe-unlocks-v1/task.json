@@ -21,10 +21,14 @@
   "children": [],
   "parent": "09-04-pre-pivot-life-sim-foundation",
   "relatedFiles": [],
-  "notes": "2026-09-08 用户确认实施 S0：统一体力基准、小数精度、基础耗能、正常/晚睡恢复与界面校验。仅该前置批次进入实施，完整技能、职业与配方要求继续保留。",
+  "notes": "S2-B 稻草人配方学习、煤炭柜台、制作/摆放/回收、乌鸦保护和持久报告已接入；封套8/状态20。最小检查、隔离浏览器制作/摆放检查、两端导出通过。其余配方、品质、职业、钓鱼与真人验收继续补齐。",
   "meta": {
-    "currentBatch": "S0-energy-baseline",
+    "currentBatch": "S2-B-scarecrow-reward",
     "batchStatus": "implemented-awaiting-user-validation",
-    "verification": "verification-s0.md"
+    "verification": "verification-s2b.md",
+    "temporaryExceptions": [
+      "T-SCYTHE-01",
+      "T-SCYTHE-02"
+    ]
   }
 }

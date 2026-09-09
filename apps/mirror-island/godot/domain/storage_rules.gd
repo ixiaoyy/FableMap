@@ -42,12 +42,16 @@ func apply(state: Dictionary, npcs: Array, command: Dictionary) -> String:
 	if kind=="craft-item": return craft(state,command.recipeId,command.quantity,command.targetIndex)
 	if kind=="place-world-object":
 		var index := int(command.inventoryIndex)
-		if index<0 or index>=state.inventory.size() or state.inventory[index].itemId!="chest": return "missing-item"
+		if index<0 or index>=state.inventory.size() or state.inventory[index].itemId not in ["chest","scarecrow"]: return "missing-item"
+		var item_id: String=state.inventory[index].itemId
 		if FarmWorldRules.point(state.player).distance_to(Vector2(command.column*16+8,command.row*16+8))>48: return "too-far"
-		var plan := world.placement(state,"chest",state.player.regionId,command.column,command.row,"",npcs)
+		var plan := world.placement(state,item_id,state.player.regionId,command.column,command.row,"",npcs)
 		if not plan.allowed or state.nextWorldEntitySequence>=FarmWorldRules.LIMIT: return "blocked"
 		inventory.consume_at(state.inventory,index,1)
-		state.worldObjects.append({"id":allocate(state),"kind":"chest","regionId":state.player.regionId,"column":command.column,"row":command.row,"colorId":"default","slots":FarmInventory.empty_slots(36)})
+		var object: Dictionary={"id":allocate(state),"kind":item_id,"regionId":state.player.regionId,"column":command.column,"row":command.row}
+		if item_id=="chest": object.merge({"colorId":"default","slots":FarmInventory.empty_slots(36)})
+		else: object.scaredCount=0
+		state.worldObjects.append(object)
 		return "placed"
 	if kind=="buy-backpack-upgrade": return backpack(state,command.interactionId)
 	if kind=="collect-world-drop":
@@ -59,12 +63,21 @@ func apply(state: Dictionary, npcs: Array, command: Dictionary) -> String:
 			return "collected"
 		return "missing-drop"
 	if kind=="dismiss-day-settlement":
+		if state.unacknowledgedShippingReport==null: return "no-effect"
+		for id: String in state.unacknowledgedShippingReport.recipeUnlocks:
+			if id not in state.knownRecipes: state.knownRecipes.append(id)
 		state.unacknowledgedShippingReport=null
 		return "changed"
 	if kind in ["build-shipping-bin","move-farm-building","demolish-farm-building"]: return building(state,npcs,command)
 	var object := FarmWorldRules.object_by_id(state,command.get("objectId",""))
 	if object.is_empty(): return "missing-object"
 	if not reachable(state,object): return "too-far"
+	if kind=="recover-scarecrow":
+		if object.kind!="scarecrow": return "missing-object"
+		if command.get("itemId") not in ["axe","pickaxe","hoe"] or inventory.quantity(state.inventory,command.itemId)<1: return "wrong-tool"
+		if not inventory.add(state.inventory,"scarecrow",1): return "inventory-full"
+		state.worldObjects.erase(object)
+		return "recovered-scarecrow"
 	if kind in ["ship-item","reclaim-last-shipment"]:
 		if object.kind!="shipping-bin": return "missing-object"
 		if kind=="reclaim-last-shipment":
@@ -126,7 +139,7 @@ func apply(state: Dictionary, npcs: Array, command: Dictionary) -> String:
 func craft(state: Dictionary, recipe_id: String, amount: int, target: int) -> String:
 	if amount not in [1,5,25]: return "invalid-quantity"
 	var recipe: Dictionary=rules.recipes.get(recipe_id,{})
-	if recipe.is_empty() or not recipe.knownByDefault: return "unknown-recipe"
+	if recipe.is_empty() or recipe_id not in state.knownRecipes: return "unknown-recipe"
 	var candidate: Array=state.inventory.duplicate(true)
 	for ingredient: Dictionary in recipe.ingredients:
 		if not inventory.consume(candidate,ingredient.itemId,int(ingredient.quantity)*amount): return "requirements-not-met"
